@@ -1,0 +1,157 @@
+// ═══════════════════════════════════════════════════════════
+// TABLAS AUXILIARES — Rubros, Marcas, Proveedores, etc.
+// ═══════════════════════════════════════════════════════════
+
+let TABLAS = {};
+let tabActiva = 'RUBR';
+let tabSelIdx = null;
+
+const TAB_CONFIG = {
+  MARC: { label:'Marcas',           lbl1:'Info',       lbl2:'' },
+  RUBR: { label:'Rubros',           lbl1:'Grupo',      lbl2:'' },
+  PROV: { label:'Proveedores',      lbl1:'Info',       lbl2:'' },
+  VEND: { label:'Vendedores',       lbl1:'Info',       lbl2:'' },
+  CPAG: { label:'Cond. de Pago',    lbl1:'Info',       lbl2:'' },
+  PCIA: { label:'Provincias',       lbl1:'% IIBB',     lbl2:'Conv.' },
+  GRUP: { label:'Grupos',           lbl1:'Info',       lbl2:'' },
+  CATE: { label:'Categorías',       lbl1:'Info',       lbl2:'' },
+};
+
+
+
+function setTabActiva(t, el) {
+  tabActiva = t; tabSelIdx = null;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-q').value = '';
+  renderTab();
+}
+
+function getTabRows() {
+  const q = document.getElementById('tab-q').value.toLowerCase();
+  return (TABLAS[tabActiva]||[]).filter(r =>
+    !q || r.CODIGO.toLowerCase().includes(q) || r.DETALLE.toLowerCase().includes(q)
+  ).sort((a,b)=>(a.CODIGO||'').localeCompare(b.CODIGO||''));
+}
+
+function renderTab() {
+  const list = getTabRows();
+  const body = document.getElementById('tab-body');
+  const cfg = TAB_CONFIG[tabActiva];
+  if (!list.length) { body.innerHTML='<div class="empty">🔍 Sin resultados</div>'; return; }
+  body.innerHTML = list.map((r,i) => {
+    const sel = tabSelIdx===i?'sel':'';
+    return `<div class="tr-tab ${sel}" onclick="selTab(${i})">
+      <span class="col-cod">${esc(r.CODIGO)}</span>
+      <span class="col-des">${esc(r.DETALLE)}</span>
+      <span class="col-sm">${esc(r.STRING1||'')}</span>
+      <span class="col-sm">${esc(r.STRING2||'')}</span>
+    </div>`;
+  }).join('');
+
+}
+
+function selTab(i) { tabSelIdx=i; renderTab(); }
+
+function tAlta() {
+  clrTabForm();
+  document.getElementById('tf-cod').disabled = false;
+  document.getElementById('tab-mtit').textContent = TAB_CONFIG[tabActiva].label + ' — Nuevo';
+  setMtag('tab-mtag','ALTA','tag-a');
+  setTabLabels();
+  document.getElementById('ov-tab').classList.add('open');
+  window._te = 'A';
+}
+function tModif() {
+  if (tabSelIdx===null) { toast('Seleccioná un registro','err'); return; }
+  const r = getTabRows()[tabSelIdx];
+  document.getElementById('tf-cod').value = r.CODIGO;
+  document.getElementById('tf-cod').disabled = true;
+  document.getElementById('tf-det').value = r.DETALLE;
+  document.getElementById('tf-s1').value  = r.STRING1||'';
+  document.getElementById('tf-s2').value  = r.STRING2||'';
+  document.getElementById('tab-mtit').textContent = TAB_CONFIG[tabActiva].label + ' — Modificar';
+  setMtag('tab-mtag','MODIFICACIÓN','tag-m');
+  setTabLabels();
+  document.getElementById('ov-tab').classList.add('open');
+  window._te = 'M';
+}
+function tBaja() {
+  if (tabSelIdx===null) { toast('Seleccioná un registro','err'); return; }
+  const r = getTabRows()[tabSelIdx];
+  confirm2('¿Dar de baja "'+r.CODIGO+'"?', '"'+r.DETALLE+'" será eliminado.', ()=>{
+    const idx = TABLAS[tabActiva].findIndex(x=>x.CODIGO===r.CODIGO);
+    if (idx>=0) TABLAS[tabActiva].splice(idx,1);
+    tabSelIdx=null; deleteTabRow(tabActiva, r.CODIGO); renderTab();
+    toast('Registro eliminado','scs');
+  });
+}
+function clrTabForm() {
+  ['tf-cod','tf-det','tf-s1','tf-s2'].forEach(i=>document.getElementById(i).value='');
+}
+function setTabLabels() {
+  const cfg = TAB_CONFIG[tabActiva];
+  document.getElementById('tf-lbl1').textContent = cfg.lbl1 || 'Dato 1';
+  document.getElementById('tf-lbl2').textContent = cfg.lbl2 || 'Dato 2';
+}
+function saveTab() {
+  // Si viene de subtabla (MARC/RUBR), usar _tabEditTipo
+  if (_tabEditTipo && ['MARC','RUBR'].includes(_tabEditTipo)) {
+    const cod = document.getElementById('tf-cod').value.trim().toUpperCase();
+    const det = document.getElementById('tf-det').value.trim().toUpperCase();
+    if (!cod||!det) { toast('Código y detalle son obligatorios','err'); return; }
+    const d = {TABLA:_tabEditTipo,CODIGO:cod,DETALLE:det,
+      STRING1:document.getElementById('tf-s1').value.trim(),
+      STRING2:document.getElementById('tf-s2').value.trim(),STRING3:'',FECHA1:''};
+    if (!TABLAS[_tabEditTipo]) TABLAS[_tabEditTipo]=[];
+    if (_tabEditMode==='A') {
+      if (TABLAS[_tabEditTipo].find(r=>r.CODIGO===cod)) { toast('Código ya existe','err'); return; }
+      TABLAS[_tabEditTipo].push(d);
+      TABLAS[_tabEditTipo].sort((a,b)=>a.CODIGO.localeCompare(b.CODIGO));
+      toast('Registro dado de alta','scs');
+    } else {
+      const idx=(TABLAS[_tabEditTipo]||[]).findIndex(r=>r.CODIGO===cod);
+      if(idx>=0) TABLAS[_tabEditTipo][idx]=d;
+      toast('Registro modificado','scs');
+    }
+    saveTablas(); saveTabRow(d); closeOv('ov-tab');
+    renderTabGral(_tabEditTipo);
+    _tabEditTipo='';
+    return;
+  }
+  const cod = document.getElementById('tf-cod').value.trim().toUpperCase();
+  const det = document.getElementById('tf-det').value.trim().toUpperCase();
+  if (!cod||!det) { toast('Código y detalle son obligatorios','err'); return; }
+  const d = {
+    TABLA: tabActiva, CODIGO: cod, DETALLE: det,
+    STRING1: document.getElementById('tf-s1').value.trim(),
+    STRING2: document.getElementById('tf-s2').value.trim(),
+    STRING3: '', FECHA1: ''
+  };
+  if (!TABLAS[tabActiva]) TABLAS[tabActiva] = [];
+  if (window._te==='A') {
+    if (TABLAS[tabActiva].find(r=>r.CODIGO===cod)) { toast('Código ya existe','err'); return; }
+    TABLAS[tabActiva].push(d);
+    TABLAS[tabActiva].sort((a,b)=>a.CODIGO.localeCompare(b.CODIGO));
+    toast('Registro dado de alta','scs');
+  } else {
+    const idx = TABLAS[tabActiva].findIndex(r=>r.CODIGO===cod);
+    if (idx>=0) TABLAS[tabActiva][idx] = d;
+    toast('Registro modificado','scs');
+  }
+  saveTablas(); saveTabRow(d); closeOv('ov-tab'); renderTab();
+}
+
+
+// ── SUBPÁGINAS DE MENÚ DESPLEGABLE ────────────────────────────────
+function showSubPage(menu, sub) {
+  // Cerrar todos los dropdowns
+  document.querySelectorAll('.dd-menu').forEach(m=>m.classList.remove('open'));
+  document.querySelectorAll('.dd-arrow').forEach(a=>a.classList.remove('open'));
+  // Ocultar todas las páginas
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  // Quitar active de todos los tnav
+  document.querySelectorAll('.tnav').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.dd-item').forEach(t=>t.classList.remove('active'));
+  // Activar el tnav del menú padre
+  document.getElementById('tnav-'+menu)?.classList.add('active');
