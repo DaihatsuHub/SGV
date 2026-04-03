@@ -622,6 +622,7 @@
 sbLoad().then(async ok => {
   if (ok) {
     await loadUsuarios();
+    await loadAllConfigUI();
     await sbLoadDesps();
     renderArts();
     renderClis();

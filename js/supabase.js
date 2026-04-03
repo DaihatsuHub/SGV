@@ -5,9 +5,6 @@
 const IVA = {I:'Inscripto',N:'No Inscripto',C:'Cons. Final',E:'Exento',M:'Monotributo',L:'Ley 19640'};
 const PCIA = {B:'Bs. As.',C:'C.A.B.A.',X:'Córdoba',S:'Santa Fe',M:'Mendoza',T:'Tucumán',E:'Entre Ríos',A:'Salta',J:'San Juan',H:'Chaco',N:'Misiones',Q:'Neuquén',R:'Río Negro',W:'Corrientes',P:'Formosa',U:'Chubut',V:'T. del Fuego',Z:'Sta. Cruz'};
 
-// ═══════════════════════════════════════════════════════════
-// SUPABASE — PERSISTENCIA EN LA NUBE
-// ═══════════════════════════════════════════════════════════
 const SB_URL  = 'https://blwxnrzrsgxscmsquwlz.supabase.co';
 const SB_KEY  = 'sb_publishable_ClOenbz_NYB1iAPn0VqOAw_Fe6RTlGR';
 const SB_HDR  = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
@@ -17,7 +14,6 @@ function syncStatus(txt, color='#93b4d8') {
   if (el) { el.textContent = txt; el.style.color = color; }
 }
 
-// ── Helpers Supabase REST ────────────────────────────────
 async function sbGet(table, params='') {
   const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
     headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
@@ -44,7 +40,6 @@ async function sbDelete(table, match) {
   if (!r.ok) throw new Error(`sbDelete ${r.status}`);
 }
 
-// ── Mapeo DB → objeto JS ─────────────────────────────────
 function dbToArt(r) {
   return { ART_COD:r.art_cod, ART_DES:r.art_des, ART_RUB:r.art_rub, ART_MARCA:r.art_marca,
     ART_PRE:r.art_pre, ART_PREMAY:r.art_premay, ART_PREESP:r.art_preesp,
@@ -83,16 +78,7 @@ function cliToDb(c) {
     cli_abc:c.CLI_ABC||null, cli_icred:c.CLI_ICRED||0, cli_fcred:c.CLI_FCRED||null,
     cli_estado:c.CLI_ESTADO||null, cli_email:c.CLI_EMAIL||null, cli_cate:c.CLI_CATE||null };
 }
-function dbToTab(r) {
-  return { TABLA:r.tabla, CODIGO:r.codigo, DETALLE:r.detalle,
-    STRING1:r.string1||'', STRING2:r.string2||'', STRING3:r.string3||'', FECHA1:r.fecha1||'', NIVEL:r.nivel||0 };
-}
-function tabToDb(t) {
-  return { tabla:t.TABLA, codigo:t.CODIGO, detalle:t.DETALLE||'',
-    string1:t.STRING1||'', string2:t.STRING2||'', string3:t.STRING3||'', fecha1:t.FECHA1||'', nivel:t.NIVEL||0 };
-}
 
-// ── Carga inicial desde Supabase ─────────────────────────
 async function sbLoad() {
   syncStatus('☁️ Cargando...');
   try {
@@ -111,7 +97,6 @@ async function sbLoad() {
     ]);
     ARTS = dArts.map(dbToArt);
     CLIS = dClis.map(dbToCli);
-    // Armar TABLAS con el mismo formato que usaba el sistema
     TABLAS = {};
     const mapTab = (key, rows, extra) => {
       TABLAS[key] = rows.map(r => ({
@@ -119,15 +104,9 @@ async function sbLoad() {
         STRING1: extra ? (r[extra]||'') : '', STRING2:'', STRING3:'', FECHA1:'', NIVEL:0
       }));
     };
-    mapTab('RUBR', dRubr);
-    mapTab('MARC', dMarc);
-    mapTab('PROV', dProv, 'direccion');
-    mapTab('VEND', dVend);
-    mapTab('CPAG', dCpag);
-    mapTab('PCIA', dPcia, 'alicuota');
-    mapTab('GRUP', dGrup);
-    mapTab('CATE', dCate);
-    mapTab('EXPR', dExpr, 'direccion');
+    mapTab('RUBR', dRubr); mapTab('MARC', dMarc); mapTab('PROV', dProv, 'direccion');
+    mapTab('VEND', dVend); mapTab('CPAG', dCpag); mapTab('PCIA', dPcia, 'alicuota');
+    mapTab('GRUP', dGrup); mapTab('CATE', dCate); mapTab('EXPR', dExpr, 'direccion');
     syncStatus('☁️ Conectado', '#4ade80');
     setTimeout(()=>syncStatus('☁️ Supabase', '#93b4d8'), 2500);
     return true;
@@ -138,7 +117,6 @@ async function sbLoad() {
   }
 }
 
-// ── Guardar artículo ─────────────────────────────────────
 async function sbSaveArt(art) {
   syncStatus('💾 Guardando...', '#93b4d8');
   try {
@@ -148,7 +126,6 @@ async function sbSaveArt(art) {
   } catch(e) { syncStatus('⚠️ Error al guardar', '#f87171'); console.error(e); }
 }
 
-// ── Guardar cliente ───────────────────────────────────────
 async function sbSaveCli(cli) {
   syncStatus('💾 Guardando...', '#93b4d8');
   try {
@@ -158,28 +135,24 @@ async function sbSaveCli(cli) {
   } catch(e) { syncStatus('⚠️ Error al guardar', '#f87171'); console.error(e); }
 }
 
-// ── Eliminar artículo ────────────────────────────────────
 async function deleteArt(cod) {
   try { await sbDelete('articulos', { art_cod: cod }); }
   catch(e) { console.error('deleteArt:', e); }
 }
 
-// ── Eliminar cliente ─────────────────────────────────────
 async function deleteCli(cod) {
   try { await sbDelete('clientes', { cli_codigo: cod }); }
   catch(e) { console.error('deleteCli:', e); }
 }
 
-// Mapa TABLA → nombre de tabla en Supabase
 const TAB_MAP = {
   RUBR:'rubros', MARC:'marcas', PROV:'proveedores', VEND:'vendedores',
   CPAG:'condpago', PCIA:'provincias', GRUP:'grupos', CATE:'categorias', EXPR:'expresos'
 };
 
-// ── Guardar tabla auxiliar ────────────────────────────────
 async function saveTabRow(row) {
   const tbl = TAB_MAP[row.TABLA];
-  if (!tbl) { console.warn('saveTabRow: tabla desconocida', row.TABLA); return; }
+  if (!tbl) return;
   const data = { codigo: row.CODIGO, detalle: row.DETALLE||'' };
   if (tbl === 'proveedores' || tbl === 'expresos') data.direccion = row.STRING1||'';
   if (tbl === 'provincias') data.alicuota = parseFloat(row.STRING1)||0;
@@ -187,7 +160,6 @@ async function saveTabRow(row) {
   catch(e) { console.error('saveTabRow:', e); }
 }
 
-// ── Eliminar fila de tabla auxiliar ──────────────────────
 async function deleteTabRow(tabla, codigo) {
   const tbl = TAB_MAP[tabla];
   if (!tbl) return;
@@ -195,24 +167,49 @@ async function deleteTabRow(tabla, codigo) {
   catch(e) { console.error('deleteTabRow:', e); }
 }
 
-// ── Guardar usuario ───────────────────────────────────────
 async function saveUsuario(cod, pass, nivel) {
-  try {
-    await sbUpsert('usuarios', { codigo: cod, password: pass, nivel });
-  } catch(e) { console.error('saveUsuario:', e); }
+  try { await sbUpsert('usuarios', { codigo: cod, password: pass, nivel }); }
+  catch(e) { console.error('saveUsuario:', e); }
 }
 async function deleteUsuario(cod) {
   try { await sbDelete('usuarios', { codigo: cod }); }
   catch(e) { console.error('deleteUsuario:', e); }
 }
 
-// ── Cargar usuarios ───────────────────────────────────────
 async function loadUsuarios() {
   try {
     const d = await sbGet('usuarios');
     if (!TABLAS['USUA']) TABLAS['USUA'] = [];
     TABLAS['USUA'] = d.map(r => ({ TABLA:'USUA', CODIGO:r.codigo, DETALLE:r.password||'', NIVEL:r.nivel||50, STRING1:'', STRING2:'', STRING3:'', FECHA1:'' }));
   } catch(e) { console.warn('loadUsuarios:', e); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// CONFIG UI — Configuración global de pantallas en Supabase
+// Una fila por pantalla: orden, columnas activas y títulos
+// ═══════════════════════════════════════════════════════════
+const _configUICache = {};
+
+async function loadAllConfigUI() {
+  try {
+    const rows = await sbGet('config_ui');
+    rows.forEach(r => {
+      _configUICache[r.pantalla] = {
+        orden:   r.orden   || [],
+        activas: r.activas || [],
+        labels:  r.labels  || {}
+      };
+    });
+  } catch(e) { console.warn('loadAllConfigUI:', e); }
+}
+
+function getConfigUI(pantalla) {
+  return _configUICache[pantalla] || null;
+}
+
+async function saveConfigUI(pantalla, orden, activas, labels) {
+  await sbUpsert('config_ui', { pantalla, orden, activas, labels });
+  _configUICache[pantalla] = { orden, activas, labels };
 }
 
 function save() {}

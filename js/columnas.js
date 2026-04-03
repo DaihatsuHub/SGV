@@ -1,14 +1,12 @@
 // ═══════════════════════════════════════════════════════════
 // COLUMNAS CONFIGURABLES — solo RGRDELTA
+// La config se guarda en Supabase (tabla config_ui)
+// para que sea global y se aplique a todos los usuarios
 // ═══════════════════════════════════════════════════════════
-
 
 let artSelIdx=null, artFilt='todos', artOfe=false;
 let cliSelIdx=null, cliFilt='todos';
 
-// ═══════════════════════════════════════════════════════════
-// COLUMNAS CONFIGURABLES — solo RGRDELTA
-// ═══════════════════════════════════════════════════════════
 const COL_DEFS = {
   art: [
     {field:'ART_COD',   label:'Código',      width:'110px', active:true},
@@ -43,58 +41,56 @@ const COL_DEFS = {
 
 const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true} };
 
+// Devuelve las columnas activas en el orden correcto con labels personalizados
+// Lee desde el cache de Supabase (getConfigUI), con fallback a los defaults
 function getActiveCols(grid) {
-  const savedRaw = localStorage.getItem('sgv_cols2_'+grid);
-  if (savedRaw) {
-    const cfg = JSON.parse(savedRaw);
-    const defs = COL_DEFS[grid];
-    const ordered = (cfg.order || [])
-      .map(f => defs.find(d => d.field === f))
-      .filter(Boolean);
-    // Agregar columnas nuevas no guardadas
-    defs.forEach(d => { if (!ordered.find(o => o.field === d.field)) ordered.push(d); });
-    return ordered
-      .filter(c => (cfg.active || []).includes(c.field))
-      .map(c => cfg.labels && cfg.labels[c.field]
-        ? { ...c, label: cfg.labels[c.field] } : c);
+  const cfg = getConfigUI(grid);
+  const defs = COL_DEFS[grid];
+  if (!cfg || !cfg.activas || cfg.activas.length === 0) {
+    return defs.filter(c => c.active);
   }
-  // Compatibilidad con formato viejo
-  const savedOld = localStorage.getItem('sgv_cols_'+grid);
-  if (savedOld) { const s=JSON.parse(savedOld); return COL_DEFS[grid].filter(c=>s.includes(c.field)); }
-  return COL_DEFS[grid].filter(c=>c.active);
+  // Ordenar según cfg.orden
+  let ordered = (cfg.orden || [])
+    .map(f => defs.find(d => d.field === f))
+    .filter(Boolean);
+  // Agregar columnas nuevas no guardadas al final
+  defs.forEach(d => { if (!ordered.find(o => o.field === d.field)) ordered.push(d); });
+  // Filtrar solo las activas
+  return ordered
+    .filter(c => cfg.activas.includes(c.field))
+    .map(c => cfg.labels && cfg.labels[c.field]
+      ? { ...c, label: cfg.labels[c.field] } : c);
 }
-function toggleSort(grid,field) {
-  if(SORT_STATE[grid].col===field) SORT_STATE[grid].asc=!SORT_STATE[grid].asc;
-  else { SORT_STATE[grid].col=field; SORT_STATE[grid].asc=true; }
-  if(grid==='art') renderArts(); else if(grid==='cli') renderClis();
+
+function toggleSort(grid, field) {
+  if (SORT_STATE[grid].col===field) SORT_STATE[grid].asc = !SORT_STATE[grid].asc;
+  else { SORT_STATE[grid].col = field; SORT_STATE[grid].asc = true; }
+  if (grid==='art') renderArts(); else if (grid==='cli') renderClis();
 }
-function sortArrow(grid,field) {
-  const s=SORT_STATE[grid]; if(s.col!==field) return ''; return s.asc?' ▲':' ▼';
+
+function sortArrow(grid, field) {
+  const s = SORT_STATE[grid];
+  if (s.col !== field) return '';
+  return s.asc ? ' ▲' : ' ▼';
 }
+
 function openColCfg(grid) {
   const defs = COL_DEFS[grid];
-  // Cargar config guardada (orden + activos + labels)
-  const savedRaw = localStorage.getItem('sgv_cols2_'+grid);
-  let savedCfg = savedRaw ? JSON.parse(savedRaw) : null;
-  // Construir lista ordenada
+  const cfg  = getConfigUI(grid);
+
   let ordered;
-  if (savedCfg && savedCfg.order) {
-    // Reordenar según config guardada, agregar nuevas columnas al final
-    ordered = savedCfg.order
-      .map(f => defs.find(d => d.field === f))
-      .filter(Boolean);
+  if (cfg && cfg.orden && cfg.orden.length > 0) {
+    ordered = cfg.orden.map(f => defs.find(d => d.field === f)).filter(Boolean);
     defs.forEach(d => { if (!ordered.find(o => o.field === d.field)) ordered.push(d); });
   } else {
     ordered = [...defs];
   }
-  document.getElementById('col-cfg-title').textContent = 'Columnas — '+(grid==='art'?'Artículos':'Clientes');
+
+  document.getElementById('col-cfg-title').textContent = 'Columnas — ' + (grid==='art' ? 'Artículos' : 'Clientes');
   const body = document.getElementById('col-cfg-body');
   body.innerHTML = ordered.map(c => {
-    const isActive = savedCfg
-      ? (savedCfg.active || []).includes(c.field)
-      : c.active;
-    const customLabel = savedCfg && savedCfg.labels && savedCfg.labels[c.field]
-      ? savedCfg.labels[c.field] : c.label;
+    const isActive = cfg ? (cfg.activas || []).includes(c.field) : c.active;
+    const customLabel = cfg && cfg.labels && cfg.labels[c.field] ? cfg.labels[c.field] : c.label;
     return `<div class="col-cfg-row" data-field="${c.field}" draggable="true"
       style="display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px solid var(--b1);border-radius:4px;transition:background .1s;cursor:default">
       <span style="color:var(--t3);font-size:14px;cursor:grab;padding:0 4px" title="Arrastrar">☰</span>
@@ -106,8 +102,8 @@ function openColCfg(grid) {
       <span style="font-family:var(--mono);font-size:10px;color:var(--t4);flex-shrink:0">${c.field}</span>
     </div>`;
   }).join('');
+
   document.getElementById('col-cfg-grid').value = grid;
-  // Drag & drop
   initColDrag(body);
   document.getElementById('ov-col-cfg').classList.add('open');
 }
@@ -128,7 +124,6 @@ function initColDrag(container) {
     row.addEventListener('dragover', e => {
       e.preventDefault();
       if (!dragEl || dragEl === row) return;
-      e.dataTransfer.dropEffect = 'move';
       const rect = row.getBoundingClientRect();
       const after = e.clientY > rect.top + rect.height / 2;
       container.querySelectorAll('.col-cfg-row').forEach(r => r.style.background='');
@@ -140,35 +135,36 @@ function initColDrag(container) {
   });
 }
 
-function saveColCfg() {
-  const grid = document.getElementById('col-cfg-grid').value;
-  const rows = document.querySelectorAll('#col-cfg-body .col-cfg-row');
-  const order = [...rows].map(r => r.dataset.field);
-  const active = [...document.querySelectorAll('#col-cfg-body input[type=checkbox]:checked')].map(c => c.dataset.field);
+async function saveColCfg() {
+  const grid   = document.getElementById('col-cfg-grid').value;
+  const rows   = document.querySelectorAll('#col-cfg-body .col-cfg-row');
+  const orden  = [...rows].map(r => r.dataset.field);
+  const activas = [...document.querySelectorAll('#col-cfg-body input[type=checkbox]:checked')].map(c => c.dataset.field);
   const labels = {};
   document.querySelectorAll('#col-cfg-body .col-lbl-inp').forEach(inp => {
     const def = COL_DEFS[grid].find(d => d.field === inp.dataset.field);
     const val = inp.value.trim();
     if (val && val !== (def ? def.label : '')) labels[inp.dataset.field] = val;
   });
-  localStorage.setItem('sgv_cols2_'+grid, JSON.stringify({ order, active, labels }));
-  // Limpiar clave vieja si existe
-  localStorage.removeItem('sgv_cols_'+grid);
-  document.getElementById('ov-col-cfg').classList.remove('open');
-  if (grid==='art') renderArts(); else if (grid==='cli') renderClis();
+
+  try {
+    await saveConfigUI(grid, orden, activas, labels);
+    document.getElementById('ov-col-cfg').classList.remove('open');
+    if (grid==='art') renderArts(); else if (grid==='cli') renderClis();
+    toast('Configuración guardada para todos los usuarios', 'scs');
+  } catch(e) {
+    console.error('saveColCfg:', e);
+    toast('Error al guardar la configuración', 'err');
+  }
 }
 
-function resetColCfg() {
-  const grid = document.getElementById('col-cfg-grid').value;
-  if (!confirm('¿Restaurar columnas a valores predeterminados?')) return;
-  localStorage.removeItem('sgv_cols2_'+grid);
-  localStorage.removeItem('sgv_cols_'+grid);
-  document.getElementById('ov-col-cfg').classList.remove('open');
-  if (grid==='art') renderArts(); else if (grid==='cli') renderClis();
-}
 function showDevTools() {
-  ['btn-cfg-art','btn-cfg-cli'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=''; });
+  ['btn-cfg-art','btn-cfg-cli'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = '';
+  });
 }
-const _stEl=document.createElement('style');
-_stEl.textContent='.th-sortable{cursor:pointer;user-select:none}.th-sortable:hover{color:#fff!important}';
+
+const _stEl = document.createElement('style');
+_stEl.textContent = '.th-sortable{cursor:pointer;user-select:none}.th-sortable:hover{color:#fff!important}';
 document.head.appendChild(_stEl);
