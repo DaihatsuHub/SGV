@@ -69,12 +69,10 @@
     <button class="btn dng" onclick="aBaja()">✕ Baja</button>
     <button class="btn scs" onclick="printArt()">🖨 Imprimir</button>
     <button class="btn" id="btn-cfg-art" style="display:none" onclick="openColCfg('art')" title="Configurar columnas">⚙️ Columnas</button>
-    <button class="chip" id="af-stock" onclick="togArtStock()" style="margin-left:4px">📦 Con Stock</button>
     <div class="spacer"></div>
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
       <input class="srch" id="art-q" placeholder="Buscar código o descripción..." oninput="renderArts()">
-      <button class="srch-clr" id="art-q-clr" onclick="clrSrch('art-q',renderArts)" title="Limpiar">✕</button>
     </div>
   </div>
   <div class="dpanel" id="art-dp">
@@ -102,7 +100,6 @@
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
       <input class="srch" id="cli-q" placeholder="Buscar código o razón social..." oninput="renderClis()">
-      <button class="srch-clr" id="cli-q-clr" onclick="clrSrch('cli-q',renderClis)" title="Limpiar">✕</button>
     </div>
   </div>
   <div class="filters">
@@ -148,7 +145,6 @@
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
       <input class="srch" id="tab-q" placeholder="Buscar código o detalle..." oninput="renderTab()">
-      <button class="srch-clr" onclick="clrSrch('tab-q',function(){renderTab()})" title="Limpiar">✕</button>
     </div>
   </div>
   <div class="tbl-wrap">
@@ -166,7 +162,6 @@
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="marc-q" placeholder="Buscar..." oninput="renderTabGral('MARC')">
-      <button class="srch-clr" onclick="clrSrch('marc-q',function(){renderTabGral('MARC')})" title="Limpiar">✕</button>
     </div>
   </div>
   <div class="tbl-wrap">
@@ -184,7 +179,6 @@
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="rubr-q" placeholder="Buscar..." oninput="renderTabGral('RUBR')">
-      <button class="srch-clr" onclick="clrSrch('rubr-q',function(){renderTabGral('RUBR')})" title="Limpiar">✕</button>
     </div>
   </div>
   <div class="tbl-wrap">
@@ -202,7 +196,6 @@
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="prov-q" placeholder="Buscar..." oninput="renderTabGral('PROV')">
-      <button class="srch-clr" onclick="clrSrch('prov-q',function(){renderTabGral('PROV')})" title="Limpiar">✕</button>
     </div>
   </div>
   <div class="tbl-wrap">
@@ -220,7 +213,6 @@
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="cpag-q" placeholder="Buscar..." oninput="renderTabGral('CPAG')">
-      <button class="srch-clr" onclick="clrSrch('cpag-q',function(){renderTabGral('CPAG')})" title="Limpiar">✕</button>
     </div>
   </div>
   <div class="tbl-wrap">
@@ -237,7 +229,6 @@
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="vend-q" placeholder="Buscar..." oninput="renderTabGral('VEND')">
-      <button class="srch-clr" onclick="clrSrch('vend-q',function(){renderTabGral('VEND')})" title="Limpiar">✕</button>
     </div>
   </div>
   <div class="tbl-wrap">
@@ -254,7 +245,6 @@
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="cate-q" placeholder="Buscar..." oninput="renderTabGral('CATE')">
-      <button class="srch-clr" onclick="clrSrch('cate-q',function(){renderTabGral('CATE')})" title="Limpiar">✕</button>
     </div>
   </div>
   <div class="tbl-wrap">
@@ -271,7 +261,6 @@
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="grup-q" placeholder="Buscar..." oninput="renderTabGral('GRUP')">
-      <button class="srch-clr" onclick="clrSrch('grup-q',function(){renderTabGral('GRUP')})" title="Limpiar">✕</button>
     </div>
   </div>
   <div class="tbl-wrap">
@@ -290,7 +279,6 @@
     <select class="fsel" id="desp-nro" onchange="renderDesp()"><option value="">Todos los despachos</option></select>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="desp-q" placeholder="Buscar despacho o artículo..." oninput="renderDesp()">
-      <button class="srch-clr" onclick="clrSrch('desp-q',function(){renderDesp()})" title="Limpiar">✕</button>
     </div>
   </div>
   <div class="tbl-wrap">
@@ -356,7 +344,6 @@
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="usua-q" placeholder="Buscar usuario..." oninput="renderUsua()">
-      <button class="srch-clr" onclick="clrSrch('usua-q',function(){renderUsua()})" title="Limpiar">✕</button>
     </div>
   </div>
   <div class="tbl-wrap">

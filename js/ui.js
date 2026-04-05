@@ -67,3 +67,21 @@ document.addEventListener('DOMContentLoaded', function(){
   const lu = document.getElementById('l-user');
   if(lu) lu.addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('l-pass').focus(); });
 });
+
+// ── Limpiar buscador ──────────────────────────────────────
+function clrSrch(inputId, renderFn) {
+  const el = document.getElementById(inputId);
+  if (el) { el.value = ''; el.focus(); }
+  if (typeof renderFn === 'function') renderFn();
+  // Ocultar botón X
+  const clr = document.getElementById(inputId + '-clr');
+  if (clr) clr.style.display = 'none';
+}
+
+// Mostrar/ocultar botón X según contenido del input
+document.addEventListener('input', function(e) {
+  if (e.target.classList.contains('srch')) {
+    const clr = document.getElementById(e.target.id + '-clr');
+    if (clr) clr.style.display = e.target.value ? 'flex' : 'none';
+  }
+});
