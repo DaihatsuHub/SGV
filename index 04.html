@@ -291,7 +291,6 @@
     <button class="btn pri" onclick="despAlta()">＋ Alta</button>
     <button class="btn" onclick="despModif()">✏️ Modificar</button>
     <button class="btn dng" onclick="despBaja()">✕ Baja</button>
-    <button class="btn" id="btn-cfg-desp" style="display:none" onclick="openColCfg('desp')" title="Configurar columnas">⚙️ Columnas</button>
     <div class="spacer"></div>
     <select class="fsel" id="desp-nro" onchange="renderDesp()"><option value="">Todos los despachos</option></select>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
@@ -597,7 +596,6 @@ sbLoad().then(async ok => {
   if (ok) {
     await loadUsuarios();
     await loadAllConfigUI();
-    await sbLoadDesps();
     renderArts();
     renderClis();
     renderTab && renderTab();

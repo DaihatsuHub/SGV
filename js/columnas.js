@@ -22,6 +22,22 @@ const COL_DEFS = {
     {field:'ART_PROV',  label:'Prov',        width:'60px',  active:false},
     {field:'CODCASIO',  label:'Cód.Casio',   width:'90px',  active:false},
   ],
+  desp: [
+    {field:'DEP_DESP',  label:'Despacho',    width:'130px', active:true},
+    {field:'DEP_SUB',   label:'Sub',         width:'45px',  active:true},
+    {field:'DEP_FEC',   label:'Fecha',       width:'90px',  active:true},
+    {field:'DEP_ART',   label:'Artículo',    width:'110px', active:true},
+    {field:'DEP_DES',   label:'Descripción', width:'1fr',   active:true},
+    {field:'DEP_PROC',  label:'Procedencia', width:'90px',  active:true},
+    {field:'DEP_ENT',   label:'Ingreso',     width:'70px',  align:'right', active:true},
+    {field:'DEP_SAL',   label:'Egreso',      width:'70px',  align:'right', active:true},
+    {field:'DEP_STK',   label:'Stock',       width:'70px',  align:'right', active:true},
+    {field:'DEP_ADUA',  label:'Aduana',      width:'60px',  active:false},
+    {field:'DEP_FOB',   label:'FOB',         width:'80px',  align:'right', active:false},
+    {field:'DEP_GAS',   label:'Gastos 1',    width:'80px',  align:'right', active:false},
+    {field:'DEP_GAS2',  label:'Gastos 2',    width:'80px',  align:'right', active:false},
+    {field:'DEP_MONEDA',label:'Moneda',      width:'65px',  active:false},
+  ],
   cli: [
     {field:'CLI_CODIGO', label:'Código',       width:'75px',  active:true},
     {field:'CLI_RAZON',  label:'Razón Social', width:'1fr',   active:true},
@@ -46,7 +62,7 @@ const COL_DEFS = {
   ]
 };
 
-const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true} };
+const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true}, desp:{col:null,asc:true} };
 
 function getActiveCols(grid) {
   const cfg  = getConfigUI(grid);
@@ -62,7 +78,7 @@ function getActiveCols(grid) {
 function toggleSort(grid, field) {
   if (SORT_STATE[grid].col===field) SORT_STATE[grid].asc = !SORT_STATE[grid].asc;
   else { SORT_STATE[grid].col = field; SORT_STATE[grid].asc = true; }
-  if (grid==='art') renderArts(); else if (grid==='cli') renderClis();
+  if (grid==='art') renderArts(); else if (grid==='cli') renderClis(); else if (grid==='desp') renderDesp();
 }
 function sortArrow(grid, field) {
   const s = SORT_STATE[grid];
@@ -79,7 +95,8 @@ function openColCfg(grid) {
   } else {
     ordered = [...defs];
   }
-  document.getElementById('col-cfg-title').textContent = 'Columnas — ' + (grid==='art' ? 'Artículos' : 'Clientes');
+  const titles = {art:'Artículos', cli:'Clientes', desp:'Despachos'};
+  document.getElementById('col-cfg-title').textContent = 'Columnas — ' + (titles[grid]||grid);
   const body = document.getElementById('col-cfg-body');
   body.innerHTML = ordered.map(c => {
     const isActive    = cfg ? (cfg.activas || []).includes(c.field) : c.active;
@@ -132,7 +149,7 @@ async function saveColCfg() {
   try {
     await saveConfigUI(grid, orden, activas, labels);
     document.getElementById('ov-col-cfg').classList.remove('open');
-    if (grid==='art') renderArts(); else if (grid==='cli') renderClis();
+    if (grid==='art') renderArts(); else if (grid==='cli') renderClis(); else if (grid==='desp') renderDesp(); else if (grid==='desp') renderDesp();
     toast('Configuración guardada para todos los usuarios', 'scs');
   } catch(e) {
     console.error('saveColCfg:', e);
@@ -141,7 +158,7 @@ async function saveColCfg() {
 }
 
 function showDevTools() {
-  ['btn-cfg-art','btn-cfg-cli'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display=''; });
+  ['btn-cfg-art','btn-cfg-cli','btn-cfg-desp'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display=''; });
 }
 
 const _stEl = document.createElement('style');
