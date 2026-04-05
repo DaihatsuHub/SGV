@@ -52,8 +52,8 @@
     </div>
   </div>
   <div class="topbar-right">
-    <span class="badge ok" id="b-art">97 artículos</span>
-    <span class="badge ok" id="b-cli">122 clientes</span>
+    <span class="badge ok" id="b-art">— artículos</span>
+    <span class="badge ok" id="b-cli">— clientes</span>
     <span class="badge" id="b-sync" style="cursor:pointer;transition:all .3s" onclick="syncNow()" title="Sincronizar ahora">☁️ Conectando...</span>
     <span class="badge" id="b-user" style="color:#fff;cursor:default">—</span>
     <button class="tnav" id="ddi-usua" style="display:none;font-size:12px;padding:4px 10px" onclick="showPage('usua',this)">🔑 Usuarios</button>
@@ -63,7 +63,6 @@
 
 <!-- ══════════════════ ARTÍCULOS ══════════════════ -->
 <div class="page active" id="page-art">
-
   <div class="toolbar">
     <button class="btn pri" onclick="aAlta()">＋ Alta</button>
     <button class="btn" onclick="aModif()">✏️ Modificar</button>
@@ -76,7 +75,6 @@
       <input class="srch" id="art-q" placeholder="Buscar código o descripción..." oninput="renderArts()">
     </div>
   </div>
-
   <div class="dpanel" id="art-dp">
     <div class="dp-hd">
       <span class="dp-title" id="art-dp-tit">—</span>
@@ -85,22 +83,13 @@
     <div class="dp-grid" id="art-dp-body"></div>
   </div>
   <div class="tbl-wrap">
-    <div class="th-art">
-      <span>Código</span><span>Descripción</span><span>Rubro</span>
-      <span style="text-align:right">Precio</span>
-      <span style="text-align:right">Stk Hat</span>
-      <span style="text-align:right">Stk Tre</span>
-      <span style="text-align:center">Est</span>
-      <span style="text-align:center">Act</span>
-      <span>Grupo</span>
-    </div>
+    <div class="th-art"><span>Código</span><span>Descripción</span><span>Rubro</span><span style="text-align:right">Precio</span><span style="text-align:right">Stk Hat</span><span style="text-align:right">Stk Tre</span><span style="text-align:center">Est</span><span style="text-align:center">Act</span><span>Grupo</span></div>
     <div class="tbl-body" id="art-body"></div>
   </div>
 </div>
 
 <!-- ══════════════════ CLIENTES ══════════════════ -->
 <div class="page" id="page-cli">
-
   <div class="toolbar">
     <button class="btn pri" onclick="cAlta()">＋ Alta</button>
     <button class="btn" onclick="cModif()">✏️ Modificar</button>
@@ -132,21 +121,13 @@
     <div class="dp-grid" id="cli-dp-body"></div>
   </div>
   <div class="tbl-wrap">
-    <div class="th-cli">
-      <span>Código</span><span>Razón Social</span><span>Domicilio</span>
-      <span>Localidad</span><span>CUIT</span><span>IVA</span>
-      <span>Cond.Pago</span><span style="text-align:center">Estado</span>
-    </div>
+    <div class="th-cli"><span>Código</span><span>Razón Social</span><span>Domicilio</span><span>Localidad</span><span>CUIT</span><span>IVA</span><span>Cond.Pago</span><span style="text-align:center">Estado</span></div>
     <div class="tbl-body" id="cli-body"></div>
   </div>
 </div>
 
-
 <!-- ══════════════════ TABLAS ══════════════════ -->
 <div class="page" id="page-tab">
-
-
-  <!-- SELECTOR DE TABLA -->
   <div class="tab-selector">
     <button class="tab-btn active" id="tb-rubr" onclick="setTabActiva('RUBR',this)">📦 Rubros</button>
     <button class="tab-btn" id="tb-prov" onclick="setTabActiva('PROV',this)">🏭 Proveedores</button>
@@ -156,7 +137,6 @@
     <button class="tab-btn" id="tb-grup" onclick="setTabActiva('GRUP',this)">🏢 Grupos</button>
     <button class="tab-btn" id="tb-cate" onclick="setTabActiva('CATE',this)">🏷️ Categorías</button>
   </div>
-
   <div class="toolbar" style="margin-top:14px">
     <button class="btn pri" onclick="tAlta()">＋ Alta</button>
     <button class="btn" onclick="tModif()">✏️ Modificar</button>
@@ -167,19 +147,14 @@
       <input class="srch" id="tab-q" placeholder="Buscar código o detalle..." oninput="renderTab()">
     </div>
   </div>
-
   <div class="tbl-wrap">
-    <div class="th-tab">
-      <span>Código</span><span>Detalle</span><span>Dato 1</span><span>Dato 2</span>
-    </div>
+    <div class="th-tab"><span>Código</span><span>Detalle</span><span>Dato 1</span><span>Dato 2</span></div>
     <div class="tbl-body" id="tab-body"></div>
   </div>
 </div>
 
-
 <!-- ══════ MARCAS ══════ -->
 <div class="page" id="page-marc">
-
   <div class="toolbar">
     <button class="btn pri" onclick="tabAlta('MARC')">＋ Alta</button>
     <button class="btn" onclick="tabModif('MARC')">✏️ Modificar</button>
@@ -197,7 +172,6 @@
 
 <!-- ══════ RUBROS ══════ -->
 <div class="page" id="page-rubr">
-
   <div class="toolbar">
     <button class="btn pri" onclick="tabAlta('RUBR')">＋ Alta</button>
     <button class="btn" onclick="tabModif('RUBR')">✏️ Modificar</button>
@@ -213,8 +187,7 @@
   </div>
 </div>
 
-
-<!-- ══════ PROVEEDORES (en menú Artículos) ══════ -->
+<!-- ══════ PROVEEDORES ══════ -->
 <div class="page" id="page-prov">
   <div class="toolbar">
     <button class="btn pri" onclick="tabAlta('PROV')">＋ Alta</button>
@@ -310,14 +283,10 @@
   </div>
   <div class="tbl-wrap">
     <div class="th-desp">
-      <span class="col-desp-nro">Despacho</span>
-      <span class="col-desp-fec">Fecha</span>
-      <span class="col-cod">Artículo</span>
-      <span class="col-des">Descripción</span>
+      <span class="col-desp-nro">Despacho</span><span class="col-desp-fec">Fecha</span>
+      <span class="col-cod">Artículo</span><span class="col-des">Descripción</span>
       <span class="col-desp-proc">Procedencia</span>
-      <span class="col-desp-num">Ingreso</span>
-      <span class="col-desp-num">Egreso</span>
-      <span class="col-desp-num">Stock</span>
+      <span class="col-desp-num">Ingreso</span><span class="col-desp-num">Egreso</span><span class="col-desp-num">Stock</span>
     </div>
     <div class="tbl-body" id="desp-body"></div>
   </div>
@@ -366,10 +335,8 @@
   </div>
 </div>
 
-
 <!-- ══════ USUARIOS ══════ -->
 <div class="page" id="page-usua">
-
   <div class="toolbar">
     <button class="btn pri" onclick="usuaAlta()">＋ Alta</button>
     <button class="btn" onclick="usuaModif()">✏️ Modificar</button>
@@ -404,19 +371,29 @@
         <div class="fgrp"><label class="flbl2">Proveedor</label><select class="finp" id="af-prov"><option value="">— Sin proveedor —</option></select></div>
         <div class="fgrp"><label class="flbl2">Rubro</label><select class="finp" id="af-rub"><option value="">— Sin rubro —</option></select></div>
         <div class="fgrp"><label class="flbl2">Sub-Rubro</label><select class="finp" id="af-srub"><option value="">— Sin sub-rubro —</option></select></div>
-        <div class="fgrp"><label class="flbl2">Grupo</label><input class="finp" id="af-grup" maxlength="3" style="text-transform:uppercase"></div>
+        <div class="fgrp"><label class="flbl2">Grupo</label><input class="finp" id="af-grup" maxlength="5" style="text-transform:uppercase"></div>
         <div class="fgrp"><label class="flbl2">Sexo</label>
           <select class="finp" id="af-sex"><option value="">—</option><option value="M">Masculino</option><option value="F">Femenino</option><option value="U">Unisex</option></select>
         </div>
         <div class="fgrp"><label class="flbl2">Estuche</label><input class="finp" id="af-estu" maxlength="1" style="text-transform:uppercase" placeholder="S/N"></div>
       </div>
       <div class="fsec">Precio y Stock</div>
-      <div class="fg">
-        <div class="fgrp"><label class="flbl2">Precio Lista $</label><input class="finp" id="af-pre" type="number" step="0.01"></div>
-        <div class="fgrp"><label class="flbl2">Stock Hatsu</label><input class="finp" id="af-stk" type="number"></div>
-        <div class="fgrp"><label class="flbl2">Stock Tressa</label><input class="finp" id="af-stkt" type="number"></div>
+      <div class="fg3">
+        <div class="fgrp"><label class="flbl2">Precio Lista $</label><input class="finp" id="af-pre" type="number" step="0.01" value="0"></div>
+        <div class="fgrp"><label class="flbl2">Stock Hatsu</label><input class="finp" id="af-stk" type="number" value="0"></div>
+        <div class="fgrp"><label class="flbl2">Stock Tressa</label><input class="finp" id="af-stkt" type="number" value="0"></div>
       </div>
       <div class="fsec">Estado</div>
+      <div class="tog-row">
+        <div class="tog-wrap"><button class="tog on" id="atog-act" onclick="togBtn('atog-act','af-act')"></button><span class="tog-lbl">Activo</span><input type="hidden" id="af-act" value="S"></div>
+      </div>
+    </div>
+    <div class="mft">
+      <button class="btn" onclick="closeOv('ov-art')">Cancelar</button>
+      <button class="btn pri" onclick="saveArt()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL CLIENTES -->
 <div class="ov" id="ov-cli">
@@ -429,11 +406,11 @@
       <div class="fsec">Identificación</div>
       <div class="fg">
         <div class="fgrp"><label class="flbl2">Código *</label><input class="finp" id="cf-cod" maxlength="6"></div>
-        <div class="fgrp"><label class="flbl2">ABC / Grupo</label>
+        <div class="fgrp"><label class="flbl2">ABC</label>
           <select class="finp" id="cf-abc"><option value="">—</option><option value="A">A</option><option value="B">B</option><option value="C">C</option></select>
         </div>
         <div class="fgrp"><label class="flbl2">Categoría</label>
-          <select class="finp" id="cf-cate"><option value="">—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
+          <select class="finp" id="cf-cate"><option value="">—</option><option value="F">Franquicia</option><option value="M">Mayorista</option><option value="J">Joyería</option><option value="I">Impacto</option><option value="*">Varios</option></select>
         </div>
         <div class="fgrp full"><label class="flbl2">Razón Social *</label><input class="finp" id="cf-razon" maxlength="30" style="text-transform:uppercase"></div>
         <div class="fgrp full"><label class="flbl2">Domicilio</label><input class="finp" id="cf-domic" maxlength="30"></div>
@@ -442,17 +419,21 @@
         <div class="fgrp"><label class="flbl2">Provincia</label>
           <select class="finp" id="cf-prov">
             <option value="">—</option><option value="B">Buenos Aires</option><option value="C">Cap. Federal</option>
-            <option value="X">Córdoba</option><option value="S">Santa Fe</option><option value="M">Mendoza</option>
-            <option value="T">Tucumán</option><option value="E">Entre Ríos</option><option value="A">Salta</option>
-            <option value="J">San Juan</option><option value="H">Chaco</option><option value="N">Misiones</option>
-            <option value="Q">Neuquén</option><option value="R">Río Negro</option><option value="W">Corrientes</option>
+            <option value="X">Córdoba</option><option value="F">Santa Fe</option><option value="M">Mendoza</option>
+            <option value="T">Tucumán</option><option value="E">Entre Ríos</option><option value="S">Salta</option>
+            <option value="J">San Juan</option><option value="H">Chaco</option><option value="K">Misiones</option>
+            <option value="Q">Neuquén</option><option value="N">Río Negro</option><option value="I">Corrientes</option>
+            <option value="L">La Pampa</option><option value="A">Catamarca</option><option value="U">Chubut</option>
+            <option value="O">Formosa</option><option value="Y">Jujuy</option><option value="R">La Rioja</option>
+            <option value="Z">Santa Cruz</option><option value="W">San Luis</option><option value="D">Santiago del Estero</option>
+            <option value="V">Tierra del Fuego</option>
           </select>
         </div>
       </div>
       <div class="fsec">Contacto</div>
       <div class="fg">
         <div class="fgrp"><label class="flbl2">Teléfono</label><input class="finp" id="cf-tel" maxlength="30"></div>
-        <div class="fgrp"><label class="flbl2">E-mail</label><input class="finp" id="cf-email" maxlength="30" type="email"></div>
+        <div class="fgrp"><label class="flbl2">E-mail</label><input class="finp" id="cf-email" maxlength="40" type="email"></div>
         <div class="fgrp"><label class="flbl2">Vendedor</label><input class="finp" id="cf-vend" maxlength="2" style="text-transform:uppercase"></div>
         <div class="fgrp"><label class="flbl2">Expreso</label><input class="finp" id="cf-expre" maxlength="3" style="text-transform:uppercase"></div>
       </div>
@@ -467,7 +448,7 @@
           </select>
         </div>
         <div class="fgrp"><label class="flbl2">Cond. de Pago</label><input class="finp" id="cf-conpag" maxlength="3" style="text-transform:uppercase"></div>
-        <div class="fgrp"><label class="flbl2">Dto %</label><input class="finp" id="cf-dto" type="number" min="0"></div>
+        <div class="fgrp"><label class="flbl2">Dto %</label><input class="finp" id="cf-dto" type="number" min="0" value="0"></div>
         <div class="fgrp"><label class="flbl2">Nro. Ing. Brutos</label><input class="finp" id="cf-nroib" maxlength="10"></div>
         <div class="fgrp"><label class="flbl2">Tipo IB</label>
           <select class="finp" id="cf-tipoib"><option value="0">0 - Otros</option><option value="1">1 - Cap. Federal</option><option value="2">2 - Convenio</option></select>
@@ -475,7 +456,7 @@
       </div>
       <div class="fsec">Crédito y Observaciones</div>
       <div class="fg">
-        <div class="fgrp"><label class="flbl2">Crédito otorgado $</label><input class="finp" id="cf-icred" type="number" step="0.01"></div>
+        <div class="fgrp"><label class="flbl2">Crédito otorgado $</label><input class="finp" id="cf-icred" type="number" step="0.01" value="0"></div>
         <div class="fgrp"><label class="flbl2">Vto. Crédito</label><input class="finp" id="cf-fcred" type="date"></div>
         <div class="fgrp full"><label class="flbl2">Observaciones</label><input class="finp" id="cf-obs" maxlength="30"></div>
       </div>
@@ -493,7 +474,6 @@
     </div>
   </div>
 </div>
-
 
 <!-- MODAL TABLAS -->
 <div class="ov" id="ov-tab">
@@ -517,7 +497,6 @@
   </div>
 </div>
 
-
 <!-- MODAL USUARIOS -->
 <div class="ov" id="ov-usua">
   <div class="modal" style="width:420px">
@@ -528,7 +507,7 @@
     <div class="mbdy">
       <div class="fg">
         <div class="fgrp full"><label class="flbl2">Usuario *</label>
-          <input class="finp" id="uf-cod" maxlength="6" style="text-transform:uppercase" placeholder="máx. 6 caracteres">
+          <input class="finp" id="uf-cod" maxlength="10" style="text-transform:uppercase" placeholder="máx. 10 caracteres">
         </div>
         <div class="fgrp full"><label class="flbl2">Contraseña *</label>
           <input class="finp" id="uf-pass" maxlength="30" placeholder="contraseña de acceso">
@@ -561,7 +540,6 @@
   </div>
 </div>
 
-<!-- TOAST -->
 <!-- MODAL CONFIGURACIÓN COLUMNAS -->
 <div class="ov" id="ov-col-cfg">
   <div class="modal" style="max-width:460px">
@@ -575,8 +553,6 @@
     <div class="mbdy" id="col-cfg-body" style="max-height:60vh;overflow-y:auto;padding:4px 14px"></div>
     <input type="hidden" id="col-cfg-grid">
     <div class="mft">
-      <button class="btn" onclick="resetColCfg()">↺ Restaurar</button>
-      <div style="flex:1"></div>
       <button class="btn" onclick="document.getElementById('ov-col-cfg').classList.remove('open')">Cancelar</button>
       <button class="btn pri" onclick="saveColCfg()">💾 Guardar</button>
     </div>
@@ -584,7 +560,6 @@
 </div>
 
 <div class="toast" id="toast"><div class="tdot"></div><span id="toast-msg"></span></div>
-
 
 <!-- ══════════════════════════════════════════════════════ -->
 <!-- JAVASCRIPT — carga en orden de dependencias           -->
@@ -599,12 +574,10 @@
 <script src="js/usuarios.js"></script>
 
 <script>
-// ── INICIO — cargar datos desde Supabase al arrancar ────
 sbLoad().then(async ok => {
   if (ok) {
     await loadUsuarios();
     await loadAllConfigUI();
-    await sbLoadDesps();
     renderArts();
     renderClis();
     renderTab && renderTab();
