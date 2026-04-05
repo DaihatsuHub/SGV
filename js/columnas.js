@@ -1,7 +1,5 @@
 // ═══════════════════════════════════════════════════════════
 // COLUMNAS CONFIGURABLES — solo RGRDELTA
-// La config se guarda en Supabase (tabla config_ui)
-// para que sea global y se aplique a todos los usuarios
 // ═══════════════════════════════════════════════════════════
 
 let artSelIdx=null, artFilt='todos', artOfe=false;
@@ -9,26 +7,20 @@ let cliSelIdx=null, cliFilt='todos';
 
 const COL_DEFS = {
   art: [
-    {field:'ART_COD',    label:'Código',       width:'110px', active:true},
-    {field:'ART_DES',    label:'Descripción',  width:'1fr',   active:true},
-    {field:'ART_RUB',    label:'Rubro',        width:'70px',  active:true},
-    {field:'ART_PRE',    label:'Precio',       width:'95px',  align:'right', active:true},
-    {field:'ART_STK',    label:'Stk Hat',      width:'68px',  align:'right', active:true},
-    {field:'ART_STKT',   label:'Stk Tre',      width:'68px',  align:'right', active:true},
-    {field:'ART_ESTU',   label:'Est',          width:'52px',  align:'center',active:true},
-    {field:'ART_ACT',    label:'Act',          width:'52px',  align:'center',active:true},
-    {field:'ART_GRUP',   label:'Grupo',        width:'75px',  active:true},
-    {field:'ART_MARCA',  label:'Marca',        width:'70px',  active:false},
-    {field:'ART_PROV',   label:'Prov',         width:'60px',  active:false},
-    {field:'ART_PREMAY', label:'P.Mayor',      width:'90px',  align:'right', active:false},
-    {field:'ART_PREESP', label:'P.Esp.',       width:'90px',  align:'right', active:false},
-    {field:'ART_SUBCOD', label:'Sub-Código',   width:'80px',  active:false},
-    {field:'ART_FRANQ',  label:'Franquicia',   width:'90px',  align:'right', active:false},
-    {field:'ART_RESERV', label:'Reservado',    width:'75px',  align:'right', active:false},
-    {field:'ART_PED',    label:'Pedido',       width:'70px',  align:'right', active:false},
-    {field:'ART_DTO',    label:'Dto %',        width:'60px',  align:'right', active:false},
-    {field:'ART_OFERTA', label:'Oferta',       width:'55px',  align:'center',active:false},
-    {field:'ART_SEX',    label:'Sexo',         width:'50px',  active:false},
+    {field:'ART_COD',   label:'Código',      width:'110px', active:true},
+    {field:'ART_DES',   label:'Descripción', width:'1fr',   active:true},
+    {field:'ART_RUB',   label:'Rubro',       width:'70px',  active:true},
+    {field:'ART_SRUB',  label:'Sub-Rubro',   width:'70px',  active:false},
+    {field:'ART_PRE',   label:'Precio',      width:'95px',  align:'right', active:true},
+    {field:'ART_STK',   label:'Stk Hat',     width:'68px',  align:'right', active:true},
+    {field:'ART_STKT',  label:'Stk Tre',     width:'68px',  align:'right', active:true},
+    {field:'ART_ESTU',  label:'Est',         width:'52px',  align:'center',active:true},
+    {field:'ART_ACT',   label:'Act',         width:'52px',  align:'center',active:true},
+    {field:'ART_GRUP',  label:'Grupo',       width:'75px',  active:true},
+    {field:'ART_SEX',   label:'Sexo',        width:'50px',  active:false},
+    {field:'ART_MARCA', label:'Marca',       width:'70px',  active:false},
+    {field:'ART_PROV',  label:'Prov',        width:'60px',  active:false},
+    {field:'CODCASIO',  label:'Cód.Casio',   width:'90px',  active:false},
   ],
   cli: [
     {field:'CLI_CODIGO', label:'Código',       width:'75px',  active:true},
@@ -59,17 +51,12 @@ const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true} };
 function getActiveCols(grid) {
   const cfg  = getConfigUI(grid);
   const defs = COL_DEFS[grid];
-  if (!cfg || !cfg.activas || cfg.activas.length === 0) {
-    return defs.filter(c => c.active);
-  }
-  let ordered = (cfg.orden || [])
-    .map(f => defs.find(d => d.field === f))
-    .filter(Boolean);
+  if (!cfg || !cfg.activas || cfg.activas.length === 0) return defs.filter(c => c.active);
+  let ordered = (cfg.orden || []).map(f => defs.find(d => d.field === f)).filter(Boolean);
   defs.forEach(d => { if (!ordered.find(o => o.field === d.field)) ordered.push(d); });
   return ordered
     .filter(c => cfg.activas.includes(c.field))
-    .map(c => cfg.labels && cfg.labels[c.field]
-      ? { ...c, label: cfg.labels[c.field] } : c);
+    .map(c => cfg.labels && cfg.labels[c.field] ? { ...c, label: cfg.labels[c.field] } : c);
 }
 
 function toggleSort(grid, field) {
@@ -77,17 +64,14 @@ function toggleSort(grid, field) {
   else { SORT_STATE[grid].col = field; SORT_STATE[grid].asc = true; }
   if (grid==='art') renderArts(); else if (grid==='cli') renderClis();
 }
-
 function sortArrow(grid, field) {
   const s = SORT_STATE[grid];
-  if (s.col !== field) return '';
-  return s.asc ? ' ▲' : ' ▼';
+  return s.col !== field ? '' : (s.asc ? ' ▲' : ' ▼');
 }
 
 function openColCfg(grid) {
   const defs = COL_DEFS[grid];
   const cfg  = getConfigUI(grid);
-
   let ordered;
   if (cfg && cfg.orden && cfg.orden.length > 0) {
     ordered = cfg.orden.map(f => defs.find(d => d.field === f)).filter(Boolean);
@@ -95,12 +79,11 @@ function openColCfg(grid) {
   } else {
     ordered = [...defs];
   }
-
   document.getElementById('col-cfg-title').textContent = 'Columnas — ' + (grid==='art' ? 'Artículos' : 'Clientes');
   const body = document.getElementById('col-cfg-body');
   body.innerHTML = ordered.map(c => {
-    const isActive     = cfg ? (cfg.activas || []).includes(c.field) : c.active;
-    const customLabel  = cfg && cfg.labels && cfg.labels[c.field] ? cfg.labels[c.field] : c.label;
+    const isActive    = cfg ? (cfg.activas || []).includes(c.field) : c.active;
+    const customLabel = cfg && cfg.labels && cfg.labels[c.field] ? cfg.labels[c.field] : c.label;
     return `<div class="col-cfg-row" data-field="${c.field}" draggable="true"
       style="display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px solid var(--b1);border-radius:4px;transition:background .1s;cursor:default">
       <span style="color:var(--t3);font-size:14px;cursor:grab;padding:0 4px" title="Arrastrar">☰</span>
@@ -112,7 +95,6 @@ function openColCfg(grid) {
       <span style="font-family:var(--mono);font-size:10px;color:var(--t4);flex-shrink:0">${c.field}</span>
     </div>`;
   }).join('');
-
   document.getElementById('col-cfg-grid').value = grid;
   initColDrag(body);
   document.getElementById('ov-col-cfg').classList.add('open');
@@ -121,27 +103,18 @@ function openColCfg(grid) {
 function initColDrag(container) {
   let dragEl = null;
   container.querySelectorAll('.col-cfg-row').forEach(row => {
-    row.addEventListener('dragstart', e => {
-      dragEl = row;
-      setTimeout(()=>row.style.opacity='0.4', 0);
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    row.addEventListener('dragend', () => {
-      row.style.opacity = '';
-      container.querySelectorAll('.col-cfg-row').forEach(r => r.style.background='');
-      dragEl = null;
-    });
+    row.addEventListener('dragstart', e => { dragEl = row; setTimeout(()=>row.style.opacity='0.4',0); e.dataTransfer.effectAllowed='move'; });
+    row.addEventListener('dragend', () => { row.style.opacity=''; container.querySelectorAll('.col-cfg-row').forEach(r=>r.style.background=''); dragEl=null; });
     row.addEventListener('dragover', e => {
       e.preventDefault();
-      if (!dragEl || dragEl === row) return;
+      if (!dragEl || dragEl===row) return;
       const rect = row.getBoundingClientRect();
-      const after = e.clientY > rect.top + rect.height / 2;
-      container.querySelectorAll('.col-cfg-row').forEach(r => r.style.background='');
-      row.style.background = 'var(--s3)';
-      if (after) container.insertBefore(dragEl, row.nextSibling);
+      container.querySelectorAll('.col-cfg-row').forEach(r=>r.style.background='');
+      row.style.background='var(--s3)';
+      if (e.clientY > rect.top + rect.height/2) container.insertBefore(dragEl, row.nextSibling);
       else container.insertBefore(dragEl, row);
     });
-    row.addEventListener('drop', e => { e.preventDefault(); });
+    row.addEventListener('drop', e => e.preventDefault());
   });
 }
 
@@ -168,10 +141,7 @@ async function saveColCfg() {
 }
 
 function showDevTools() {
-  ['btn-cfg-art','btn-cfg-cli'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = '';
-  });
+  ['btn-cfg-art','btn-cfg-cli'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display=''; });
 }
 
 const _stEl = document.createElement('style');

@@ -14,7 +14,6 @@ function syncStatus(txt, color='#93b4d8') {
   if (el) { el.textContent = txt; el.style.color = color; }
 }
 
-// ── GET con soporte de rango ──────────────────────────────
 async function sbGet(table, params='') {
   const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
     headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
@@ -23,11 +22,9 @@ async function sbGet(table, params='') {
   return r.json();
 }
 
-// ── GET con paginación automática (para tablas grandes) ───
 async function sbGetAll(table, orderField, extraParams='') {
   const PAGE = 1000;
-  let all = [];
-  let offset = 0;
+  let all = [], offset = 0;
   while (true) {
     const params = `order=${orderField}.asc&limit=${PAGE}&offset=${offset}${extraParams ? '&'+extraParams : ''}`;
     const rows = await sbGet(table, params);
@@ -67,23 +64,43 @@ async function sbDelete(table, match) {
 
 // ── Mapeo DB → objeto JS ─────────────────────────────────
 function dbToArt(r) {
-  return { ART_COD:r.art_cod, ART_DES:r.art_des, ART_RUB:r.art_rub, ART_SRUB:r.art_srub,
-    ART_MARCA:r.art_marca, ART_PRE:r.art_pre, ART_PREMAY:r.art_premay, ART_PREESP:r.art_preesp,
-    ART_STK:r.art_stk, ART_STKT:r.art_stkt, ART_PED:r.art_ped, ART_DTO:r.art_dto,
-    ART_ACT:r.art_act, ART_ESTU:r.art_estu, ART_SERVIC:r.art_servic, ART_RESERV:r.art_reserv,
-    ART_OFERTA:r.art_oferta, ART_SUBCOD:r.art_subcod, ART_GRUP:r.art_grup, ART_SEX:r.art_sex,
-    ART_PROV:r.art_prov, ART_FRANQ:r.art_franq, ART_TAPA:r.art_tapa, CODCASIO:r.codcasio };
+  return {
+    ART_COD:   r.art_cod,
+    ART_DES:   r.art_des,
+    ART_RUB:   r.art_rub,
+    ART_SRUB:  r.art_srub,
+    ART_MARCA: r.art_marca,
+    ART_PRE:   r.art_pre,
+    ART_STK:   r.art_stk,
+    ART_STKT:  r.art_stkt,
+    ART_ACT:   r.art_act,
+    ART_ESTU:  r.art_estu,
+    ART_GRUP:  r.art_grup,
+    ART_SEX:   r.art_sex,
+    ART_PROV:  r.art_prov,
+    CODCASIO:  r.codcasio
+  };
 }
+
 function artToDb(a) {
-  return { art_cod:a.ART_COD, art_des:a.ART_DES, art_rub:a.ART_RUB, art_srub:a.ART_SRUB||null,
-    art_marca:a.ART_MARCA||null, art_pre:a.ART_PRE||null, art_premay:a.ART_PREMAY||null,
-    art_preesp:a.ART_PREESP||null, art_stk:a.ART_STK||0, art_stkt:a.ART_STKT||0,
-    art_ped:a.ART_PED||0, art_dto:a.ART_DTO||0, art_act:a.ART_ACT||'S',
-    art_estu:a.ART_ESTU||null, art_servic:!!a.ART_SERVIC, art_reserv:!!a.ART_RESERV,
-    art_oferta:!!(a.ART_OFERTA===true||a.ART_OFERTA==='T'), art_subcod:a.ART_SUBCOD||null,
-    art_grup:a.ART_GRUP||null, art_sex:a.ART_SEX||null, art_prov:a.ART_PROV||null,
-    art_franq:a.ART_FRANQ||null, art_tapa:a.ART_TAPA||null, codcasio:a.CODCASIO||null };
+  return {
+    art_cod:   a.ART_COD,
+    art_des:   a.ART_DES,
+    art_rub:   a.ART_RUB   || null,
+    art_srub:  a.ART_SRUB  || null,
+    art_marca: a.ART_MARCA || null,
+    art_pre:   a.ART_PRE   || null,
+    art_stk:   a.ART_STK   || 0,
+    art_stkt:  a.ART_STKT  || 0,
+    art_act:   a.ART_ACT   || 'S',
+    art_estu:  a.ART_ESTU  || null,
+    art_grup:  a.ART_GRUP  || null,
+    art_sex:   a.ART_SEX   || null,
+    art_prov:  a.ART_PROV  || null,
+    codcasio:  a.CODCASIO  || null
+  };
 }
+
 function dbToCli(r) {
   return { CLI_CODIGO:r.cli_codigo, CLI_RAZON:r.cli_razon, CLI_DOMIC:r.cli_domic,
     CLI_LOCAL:r.cli_local, CLI_CODPOS:r.cli_codpos, CLI_PROVIN:r.cli_provin,
@@ -94,6 +111,7 @@ function dbToCli(r) {
     CLI_ABC:r.cli_abc, CLI_ICRED:r.cli_icred, CLI_FCRED:r.cli_fcred,
     CLI_ESTADO:r.cli_estado, CLI_EMAIL:r.cli_email, CLI_CATE:r.cli_cate };
 }
+
 function cliToDb(c) {
   return { cli_codigo:c.CLI_CODIGO, cli_razon:c.CLI_RAZON||null, cli_domic:c.CLI_DOMIC||null,
     cli_local:c.CLI_LOCAL||null, cli_codpos:c.CLI_CODPOS||null, cli_provin:c.CLI_PROVIN||null,
@@ -106,16 +124,14 @@ function cliToDb(c) {
     cli_estado:c.CLI_ESTADO||null, cli_email:c.CLI_EMAIL||null, cli_cate:c.CLI_CATE||null };
 }
 
-// ── Carga inicial desde Supabase ─────────────────────────
+// ── Carga inicial ─────────────────────────────────────────
 async function sbLoad() {
   syncStatus('☁️ Cargando...');
   try {
-    // Tablas grandes con paginación automática
     const [dArts, dClis] = await Promise.all([
       sbGetAll('articulos', 'art_cod'),
       sbGetAll('clientes',  'cli_codigo'),
     ]);
-    // Tablas auxiliares (pocas filas, sin paginación)
     const [dRubr, dSrub, dMarc, dProv, dVend, dCpag, dPcia, dGrup, dCate, dExpr] = await Promise.all([
       sbGet('rubros',      'order=codigo.asc'),
       sbGet('subrubros',   'order=codigo.asc'),
@@ -128,10 +144,8 @@ async function sbLoad() {
       sbGet('categorias',  'order=codigo.asc'),
       sbGet('expresos',    'order=codigo.asc'),
     ]);
-
     ARTS = dArts.map(dbToArt);
     CLIS = dClis.map(dbToCli);
-
     TABLAS = {};
     const mapTab = (key, rows, extra) => {
       TABLAS[key] = rows.map(r => ({
@@ -139,17 +153,10 @@ async function sbLoad() {
         STRING1: extra ? (r[extra]||'') : '', STRING2:'', STRING3:'', FECHA1:'', NIVEL:0
       }));
     };
-    mapTab('RUBR', dRubr);
-    mapTab('SRUB', dSrub);
-    mapTab('MARC', dMarc);
-    mapTab('PROV', dProv, 'direccion');
-    mapTab('VEND', dVend);
-    mapTab('CPAG', dCpag);
-    mapTab('PCIA', dPcia, 'alicuota');
-    mapTab('GRUP', dGrup);
-    mapTab('CATE', dCate);
+    mapTab('RUBR', dRubr); mapTab('SRUB', dSrub); mapTab('MARC', dMarc);
+    mapTab('PROV', dProv, 'direccion'); mapTab('VEND', dVend); mapTab('CPAG', dCpag);
+    mapTab('PCIA', dPcia, 'alicuota'); mapTab('GRUP', dGrup); mapTab('CATE', dCate);
     mapTab('EXPR', dExpr, 'direccion');
-
     syncStatus(`☁️ ${ARTS.length} art · ${CLIS.length} cli`, '#4ade80');
     setTimeout(()=>syncStatus('☁️ Supabase', '#93b4d8'), 3000);
     return true;
@@ -160,7 +167,6 @@ async function sbLoad() {
   }
 }
 
-// ── Guardar artículo ──────────────────────────────────────
 async function sbSaveArt(art) {
   syncStatus('💾 Guardando...', '#93b4d8');
   try {
@@ -170,7 +176,6 @@ async function sbSaveArt(art) {
   } catch(e) { syncStatus('⚠️ Error al guardar', '#f87171'); console.error(e); }
 }
 
-// ── Guardar cliente ───────────────────────────────────────
 async function sbSaveCli(cli) {
   syncStatus('💾 Guardando...', '#93b4d8');
   try {
@@ -180,29 +185,24 @@ async function sbSaveCli(cli) {
   } catch(e) { syncStatus('⚠️ Error al guardar', '#f87171'); console.error(e); }
 }
 
-// ── Eliminar artículo ─────────────────────────────────────
 async function deleteArt(cod) {
   try { await sbDelete('articulos', { art_cod: cod }); }
   catch(e) { console.error('deleteArt:', e); }
 }
-
-// ── Eliminar cliente ──────────────────────────────────────
 async function deleteCli(cod) {
   try { await sbDelete('clientes', { cli_codigo: cod }); }
   catch(e) { console.error('deleteCli:', e); }
 }
 
-// Mapa TABLA → nombre de tabla en Supabase
 const TAB_MAP = {
   RUBR:'rubros', SRUB:'subrubros', MARC:'marcas', PROV:'proveedores',
   VEND:'vendedores', CPAG:'condpago', PCIA:'provincias',
   GRUP:'grupos', CATE:'categorias', EXPR:'expresos'
 };
 
-// ── Guardar tabla auxiliar ────────────────────────────────
 async function saveTabRow(row) {
   const tbl = TAB_MAP[row.TABLA];
-  if (!tbl) { console.warn('saveTabRow: tabla desconocida', row.TABLA); return; }
+  if (!tbl) return;
   const data = { codigo: row.CODIGO, detalle: row.DETALLE||'' };
   if (tbl === 'proveedores' || tbl === 'expresos') data.direccion = row.STRING1||'';
   if (tbl === 'provincias') data.alicuota = parseFloat(row.STRING1)||0;
@@ -210,7 +210,6 @@ async function saveTabRow(row) {
   catch(e) { console.error('saveTabRow:', e); }
 }
 
-// ── Eliminar fila de tabla auxiliar ──────────────────────
 async function deleteTabRow(tabla, codigo) {
   const tbl = TAB_MAP[tabla];
   if (!tbl) return;
@@ -218,7 +217,6 @@ async function deleteTabRow(tabla, codigo) {
   catch(e) { console.error('deleteTabRow:', e); }
 }
 
-// ── Usuarios ──────────────────────────────────────────────
 async function saveUsuario(cod, pass, nivel) {
   try { await sbUpsert('usuarios', { codigo: cod, password: pass, nivel }); }
   catch(e) { console.error('saveUsuario:', e); }
@@ -235,27 +233,19 @@ async function loadUsuarios() {
   } catch(e) { console.warn('loadUsuarios:', e); }
 }
 
-// ═══════════════════════════════════════════════════════════
-// CONFIG UI — Configuración global de pantallas en Supabase
-// ═══════════════════════════════════════════════════════════
+// ── CONFIG UI ─────────────────────────────────────────────
 const _configUICache = {};
 
 async function loadAllConfigUI() {
   try {
     const rows = await sbGet('config_ui');
     rows.forEach(r => {
-      _configUICache[r.pantalla] = {
-        orden:   r.orden   || [],
-        activas: r.activas || [],
-        labels:  r.labels  || {}
-      };
+      _configUICache[r.pantalla] = { orden: r.orden||[], activas: r.activas||[], labels: r.labels||{} };
     });
   } catch(e) { console.warn('loadAllConfigUI:', e); }
 }
 
-function getConfigUI(pantalla) {
-  return _configUICache[pantalla] || null;
-}
+function getConfigUI(pantalla) { return _configUICache[pantalla] || null; }
 
 async function saveConfigUI(pantalla, orden, activas, labels) {
   await sbUpsertOnConflict('config_ui', { pantalla, orden, activas, labels }, 'pantalla');
