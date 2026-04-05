@@ -3,17 +3,18 @@
 // ═══════════════════════════════════════════════════════════
 
 const IVA = {I:'Inscripto',N:'No Inscripto',C:'Cons. Final',E:'Exento',M:'Monotributo',L:'Ley 19640'};
-const PCIA = {B:'Bs. As.',C:'C.A.B.A.',X:'Córdoba',S:'Santa Fe',M:'Mendoza',T:'Tucumán',E:'Entre Ríos',A:'Salta',J:'San Juan',H:'Chaco',N:'Misiones',Q:'Neuquén',R:'Río Negro',W:'Corrientes',P:'Formosa',U:'Chubut',V:'T. del Fuego',Z:'Sta. Cruz'};
+const PCIA = {B:'Bs. As.',C:'C.A.B.A.',X:'Córdoba',F:'Santa Fe',M:'Mendoza',T:'Tucumán',E:'Entre Ríos',S:'Salta',J:'San Juan',H:'Chaco',K:'Misiones',Q:'Neuquén',N:'Río Negro',I:'Corrientes',L:'La Pampa',A:'Catamarca',U:'Chubut',O:'Formosa',Y:'Jujuy',R:'La Rioja',Z:'Santa Cruz',W:'San Luis',D:'Santiago del Estero',V:'Tierra del Fuego',G:'Uruguay'};
 
-const SB_URL  = 'https://blwxnrzrsgxscmsquwlz.supabase.co';
-const SB_KEY  = 'sb_publishable_ClOenbz_NYB1iAPn0VqOAw_Fe6RTlGR';
-const SB_HDR  = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+const SB_URL = 'https://blwxnrzrsgxscmsquwlz.supabase.co';
+const SB_KEY = 'sb_publishable_ClOenbz_NYB1iAPn0VqOAw_Fe6RTlGR';
+const SB_HDR = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
 
 function syncStatus(txt, color='#93b4d8') {
   const el = document.getElementById('b-sync');
   if (el) { el.textContent = txt; el.style.color = color; }
 }
 
+// ── GET con soporte de rango ──────────────────────────────
 async function sbGet(table, params='') {
   const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
     headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
@@ -22,8 +23,32 @@ async function sbGet(table, params='') {
   return r.json();
 }
 
+// ── GET con paginación automática (para tablas grandes) ───
+async function sbGetAll(table, orderField, extraParams='') {
+  const PAGE = 1000;
+  let all = [];
+  let offset = 0;
+  while (true) {
+    const params = `order=${orderField}.asc&limit=${PAGE}&offset=${offset}${extraParams ? '&'+extraParams : ''}`;
+    const rows = await sbGet(table, params);
+    all = all.concat(rows);
+    if (rows.length < PAGE) break;
+    offset += PAGE;
+  }
+  return all;
+}
+
 async function sbUpsert(table, data) {
   const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: { ...SB_HDR, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(data)
+  });
+  if (!r.ok) { const t=await r.text(); throw new Error(`sbUpsert ${r.status}: ${t.substring(0,150)}`); }
+}
+
+async function sbUpsertOnConflict(table, data, conflictCol) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?on_conflict=${conflictCol}`, {
     method: 'POST',
     headers: { ...SB_HDR, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify(data)
@@ -40,19 +65,21 @@ async function sbDelete(table, match) {
   if (!r.ok) throw new Error(`sbDelete ${r.status}`);
 }
 
+// ── Mapeo DB → objeto JS ─────────────────────────────────
 function dbToArt(r) {
-  return { ART_COD:r.art_cod, ART_DES:r.art_des, ART_RUB:r.art_rub, ART_MARCA:r.art_marca,
-    ART_PRE:r.art_pre, ART_PREMAY:r.art_premay, ART_PREESP:r.art_preesp,
+  return { ART_COD:r.art_cod, ART_DES:r.art_des, ART_RUB:r.art_rub, ART_SRUB:r.art_srub,
+    ART_MARCA:r.art_marca, ART_PRE:r.art_pre, ART_PREMAY:r.art_premay, ART_PREESP:r.art_preesp,
     ART_STK:r.art_stk, ART_STKT:r.art_stkt, ART_PED:r.art_ped, ART_DTO:r.art_dto,
     ART_ACT:r.art_act, ART_ESTU:r.art_estu, ART_SERVIC:r.art_servic, ART_RESERV:r.art_reserv,
     ART_OFERTA:r.art_oferta, ART_SUBCOD:r.art_subcod, ART_GRUP:r.art_grup, ART_SEX:r.art_sex,
     ART_PROV:r.art_prov, ART_FRANQ:r.art_franq, ART_TAPA:r.art_tapa, CODCASIO:r.codcasio };
 }
 function artToDb(a) {
-  return { art_cod:a.ART_COD, art_des:a.ART_DES, art_rub:a.ART_RUB, art_marca:a.ART_MARCA,
-    art_pre:a.ART_PRE||null, art_premay:a.ART_PREMAY||null, art_preesp:a.ART_PREESP||null,
-    art_stk:a.ART_STK||0, art_stkt:a.ART_STKT||0, art_ped:a.ART_PED||0, art_dto:a.ART_DTO||0,
-    art_act:a.ART_ACT||'S', art_estu:a.ART_ESTU||null, art_servic:!!a.ART_SERVIC, art_reserv:!!a.ART_RESERV,
+  return { art_cod:a.ART_COD, art_des:a.ART_DES, art_rub:a.ART_RUB, art_srub:a.ART_SRUB||null,
+    art_marca:a.ART_MARCA||null, art_pre:a.ART_PRE||null, art_premay:a.ART_PREMAY||null,
+    art_preesp:a.ART_PREESP||null, art_stk:a.ART_STK||0, art_stkt:a.ART_STKT||0,
+    art_ped:a.ART_PED||0, art_dto:a.ART_DTO||0, art_act:a.ART_ACT||'S',
+    art_estu:a.ART_ESTU||null, art_servic:!!a.ART_SERVIC, art_reserv:!!a.ART_RESERV,
     art_oferta:!!(a.ART_OFERTA===true||a.ART_OFERTA==='T'), art_subcod:a.ART_SUBCOD||null,
     art_grup:a.ART_GRUP||null, art_sex:a.ART_SEX||null, art_prov:a.ART_PROV||null,
     art_franq:a.ART_FRANQ||null, art_tapa:a.ART_TAPA||null, codcasio:a.CODCASIO||null };
@@ -79,13 +106,19 @@ function cliToDb(c) {
     cli_estado:c.CLI_ESTADO||null, cli_email:c.CLI_EMAIL||null, cli_cate:c.CLI_CATE||null };
 }
 
+// ── Carga inicial desde Supabase ─────────────────────────
 async function sbLoad() {
   syncStatus('☁️ Cargando...');
   try {
-    const [dArts, dClis, dRubr, dMarc, dProv, dVend, dCpag, dPcia, dGrup, dCate, dExpr] = await Promise.all([
-      sbGet('articulos',   'order=art_cod.asc&limit=5000'),
-      sbGet('clientes',    'order=cli_codigo.asc&limit=5000'),
+    // Tablas grandes con paginación automática
+    const [dArts, dClis] = await Promise.all([
+      sbGetAll('articulos', 'art_cod'),
+      sbGetAll('clientes',  'cli_codigo'),
+    ]);
+    // Tablas auxiliares (pocas filas, sin paginación)
+    const [dRubr, dSrub, dMarc, dProv, dVend, dCpag, dPcia, dGrup, dCate, dExpr] = await Promise.all([
       sbGet('rubros',      'order=codigo.asc'),
+      sbGet('subrubros',   'order=codigo.asc'),
       sbGet('marcas',      'order=codigo.asc'),
       sbGet('proveedores', 'order=codigo.asc'),
       sbGet('vendedores',  'order=codigo.asc'),
@@ -95,8 +128,10 @@ async function sbLoad() {
       sbGet('categorias',  'order=codigo.asc'),
       sbGet('expresos',    'order=codigo.asc'),
     ]);
+
     ARTS = dArts.map(dbToArt);
     CLIS = dClis.map(dbToCli);
+
     TABLAS = {};
     const mapTab = (key, rows, extra) => {
       TABLAS[key] = rows.map(r => ({
@@ -104,11 +139,19 @@ async function sbLoad() {
         STRING1: extra ? (r[extra]||'') : '', STRING2:'', STRING3:'', FECHA1:'', NIVEL:0
       }));
     };
-    mapTab('RUBR', dRubr); mapTab('MARC', dMarc); mapTab('PROV', dProv, 'direccion');
-    mapTab('VEND', dVend); mapTab('CPAG', dCpag); mapTab('PCIA', dPcia, 'alicuota');
-    mapTab('GRUP', dGrup); mapTab('CATE', dCate); mapTab('EXPR', dExpr, 'direccion');
-    syncStatus('☁️ Conectado', '#4ade80');
-    setTimeout(()=>syncStatus('☁️ Supabase', '#93b4d8'), 2500);
+    mapTab('RUBR', dRubr);
+    mapTab('SRUB', dSrub);
+    mapTab('MARC', dMarc);
+    mapTab('PROV', dProv, 'direccion');
+    mapTab('VEND', dVend);
+    mapTab('CPAG', dCpag);
+    mapTab('PCIA', dPcia, 'alicuota');
+    mapTab('GRUP', dGrup);
+    mapTab('CATE', dCate);
+    mapTab('EXPR', dExpr, 'direccion');
+
+    syncStatus(`☁️ ${ARTS.length} art · ${CLIS.length} cli`, '#4ade80');
+    setTimeout(()=>syncStatus('☁️ Supabase', '#93b4d8'), 3000);
     return true;
   } catch(e) {
     syncStatus('⚠️ Sin conexión', '#fbbf24');
@@ -117,6 +160,7 @@ async function sbLoad() {
   }
 }
 
+// ── Guardar artículo ──────────────────────────────────────
 async function sbSaveArt(art) {
   syncStatus('💾 Guardando...', '#93b4d8');
   try {
@@ -126,6 +170,7 @@ async function sbSaveArt(art) {
   } catch(e) { syncStatus('⚠️ Error al guardar', '#f87171'); console.error(e); }
 }
 
+// ── Guardar cliente ───────────────────────────────────────
 async function sbSaveCli(cli) {
   syncStatus('💾 Guardando...', '#93b4d8');
   try {
@@ -135,24 +180,29 @@ async function sbSaveCli(cli) {
   } catch(e) { syncStatus('⚠️ Error al guardar', '#f87171'); console.error(e); }
 }
 
+// ── Eliminar artículo ─────────────────────────────────────
 async function deleteArt(cod) {
   try { await sbDelete('articulos', { art_cod: cod }); }
   catch(e) { console.error('deleteArt:', e); }
 }
 
+// ── Eliminar cliente ──────────────────────────────────────
 async function deleteCli(cod) {
   try { await sbDelete('clientes', { cli_codigo: cod }); }
   catch(e) { console.error('deleteCli:', e); }
 }
 
+// Mapa TABLA → nombre de tabla en Supabase
 const TAB_MAP = {
-  RUBR:'rubros', MARC:'marcas', PROV:'proveedores', VEND:'vendedores',
-  CPAG:'condpago', PCIA:'provincias', GRUP:'grupos', CATE:'categorias', EXPR:'expresos'
+  RUBR:'rubros', SRUB:'subrubros', MARC:'marcas', PROV:'proveedores',
+  VEND:'vendedores', CPAG:'condpago', PCIA:'provincias',
+  GRUP:'grupos', CATE:'categorias', EXPR:'expresos'
 };
 
+// ── Guardar tabla auxiliar ────────────────────────────────
 async function saveTabRow(row) {
   const tbl = TAB_MAP[row.TABLA];
-  if (!tbl) return;
+  if (!tbl) { console.warn('saveTabRow: tabla desconocida', row.TABLA); return; }
   const data = { codigo: row.CODIGO, detalle: row.DETALLE||'' };
   if (tbl === 'proveedores' || tbl === 'expresos') data.direccion = row.STRING1||'';
   if (tbl === 'provincias') data.alicuota = parseFloat(row.STRING1)||0;
@@ -160,6 +210,7 @@ async function saveTabRow(row) {
   catch(e) { console.error('saveTabRow:', e); }
 }
 
+// ── Eliminar fila de tabla auxiliar ──────────────────────
 async function deleteTabRow(tabla, codigo) {
   const tbl = TAB_MAP[tabla];
   if (!tbl) return;
@@ -167,6 +218,7 @@ async function deleteTabRow(tabla, codigo) {
   catch(e) { console.error('deleteTabRow:', e); }
 }
 
+// ── Usuarios ──────────────────────────────────────────────
 async function saveUsuario(cod, pass, nivel) {
   try { await sbUpsert('usuarios', { codigo: cod, password: pass, nivel }); }
   catch(e) { console.error('saveUsuario:', e); }
@@ -175,7 +227,6 @@ async function deleteUsuario(cod) {
   try { await sbDelete('usuarios', { codigo: cod }); }
   catch(e) { console.error('deleteUsuario:', e); }
 }
-
 async function loadUsuarios() {
   try {
     const d = await sbGet('usuarios');
@@ -186,7 +237,6 @@ async function loadUsuarios() {
 
 // ═══════════════════════════════════════════════════════════
 // CONFIG UI — Configuración global de pantallas en Supabase
-// Una fila por pantalla: orden, columnas activas y títulos
 // ═══════════════════════════════════════════════════════════
 const _configUICache = {};
 
@@ -208,14 +258,10 @@ function getConfigUI(pantalla) {
 }
 
 async function saveConfigUI(pantalla, orden, activas, labels) {
-  const r = await fetch(`${SB_URL}/rest/v1/config_ui?on_conflict=pantalla`, {
-    method: 'POST',
-    headers: { ...SB_HDR, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({ pantalla, orden, activas, labels })
-  });
-  if (!r.ok) { const t=await r.text(); throw new Error(`saveConfigUI ${r.status}: ${t.substring(0,150)}`); }
+  await sbUpsertOnConflict('config_ui', { pantalla, orden, activas, labels }, 'pantalla');
   _configUICache[pantalla] = { orden, activas, labels };
 }
+
 function save() {}
 function saveTablas() {}
 function syncNow() { sbLoad().then(ok => { if(ok){ renderArts(); renderClis(); renderTab&&renderTab(); renderUsua&&renderUsua(); }}); }
