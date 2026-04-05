@@ -74,7 +74,9 @@ function renderArts(){
 
 function togArtStock() {
   artSoloStock = !artSoloStock;
-  document.getElementById('af-stock').classList.toggle('on', artSoloStock);
+  const btn = document.getElementById('af-stock');
+  btn.classList.toggle('on', artSoloStock);
+  btn.textContent = artSoloStock ? '📦 Todos' : '📦 Con Stock';
   renderArts();
 }
 

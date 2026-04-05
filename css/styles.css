@@ -202,3 +202,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:10
 
 @keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 .tr-art,.tr-cli{animation:fi .12s ease both}
+
+/* CLEAR BUTTON en buscadores */
+.srch-wrap{position:relative;display:flex;align-items:center}
+.srch{padding-right:28px}
+.srch-clr{display:none;position:absolute;right:9px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:13px;line-height:1;padding:2px;border-radius:3px;transition:color .15s;z-index:1}
+.srch-clr:hover{color:var(--red)}
