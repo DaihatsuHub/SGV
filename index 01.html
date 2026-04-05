@@ -397,26 +397,45 @@
     <div class="mbdy">
       <div class="fsec">Identificación</div>
       <div class="fg">
-        <div class="fgrp"><label class="flbl2">Código *</label><input class="finp" id="af-cod" maxlength="15" style="text-transform:uppercase"></div>
-        <div class="fgrp"><label class="flbl2">Cód. Casio</label><input class="finp" id="af-codcasio" maxlength="15"></div>
+        <div class="fgrp"><label class="flbl2">Código *</label><input class="finp" id="af-cod" maxlength="10" style="text-transform:uppercase"></div>
+        <div class="fgrp"><label class="flbl2">Sub-Código</label><input class="finp" id="af-sub" maxlength="12"></div>
         <div class="fgrp full"><label class="flbl2">Descripción *</label><input class="finp" id="af-des" maxlength="30"></div>
         <div class="fgrp"><label class="flbl2">Marca</label><select class="finp" id="af-marc"><option value="">— Sin marca —</option></select></div>
-        <div class="fgrp"><label class="flbl2">Proveedor</label><select class="finp" id="af-prov"><option value="">— Sin proveedor —</option></select></div>
         <div class="fgrp"><label class="flbl2">Rubro</label><select class="finp" id="af-rub"><option value="">— Sin rubro —</option></select></div>
-        <div class="fgrp"><label class="flbl2">Sub-Rubro</label><select class="finp" id="af-srub"><option value="">— Sin sub-rubro —</option></select></div>
+        <div class="fgrp"><label class="flbl2">Proveedor</label><select class="finp" id="af-prov"><option value="">— Sin proveedor —</option></select></div>
+        <div class="fgrp"><label class="flbl2">Cód. Casio</label><input class="finp" id="af-casio" maxlength="15"></div>
         <div class="fgrp"><label class="flbl2">Grupo</label><input class="finp" id="af-grup" maxlength="3" style="text-transform:uppercase"></div>
         <div class="fgrp"><label class="flbl2">Sexo</label>
           <select class="finp" id="af-sex"><option value="">—</option><option value="M">Masculino</option><option value="F">Femenino</option><option value="U">Unisex</option></select>
         </div>
         <div class="fgrp"><label class="flbl2">Estuche</label><input class="finp" id="af-estu" maxlength="1" style="text-transform:uppercase" placeholder="S/N"></div>
       </div>
-      <div class="fsec">Precio y Stock</div>
-      <div class="fg">
+      <div class="fsec">Precios</div>
+      <div class="fg3">
         <div class="fgrp"><label class="flbl2">Precio Lista $</label><input class="finp" id="af-pre" type="number" step="0.01"></div>
+        <div class="fgrp"><label class="flbl2">Precio Franquicia $</label><input class="finp" id="af-franq" type="number" step="0.01"></div>
+        <div class="fgrp"><label class="flbl2">Precio Especial $</label><input class="finp" id="af-preesp" type="number" step="0.01"></div>
+        <div class="fgrp"><label class="flbl2">Precio Mayor $</label><input class="finp" id="af-premay" type="number" step="0.01"></div>
+        <div class="fgrp"><label class="flbl2">Tapa</label><input class="finp" id="af-tapa" maxlength="6"></div>
+        <div class="fgrp"><label class="flbl2">Dto %</label><input class="finp" id="af-dto" type="number" min="0" max="100"></div>
+      </div>
+      <div class="fsec">Stock</div>
+      <div class="fg">
         <div class="fgrp"><label class="flbl2">Stock Hatsu</label><input class="finp" id="af-stk" type="number"></div>
         <div class="fgrp"><label class="flbl2">Stock Tressa</label><input class="finp" id="af-stkt" type="number"></div>
       </div>
-      <div class="fsec">Estado</div>
+      <div class="fsec">Flags</div>
+      <div class="tog-row">
+        <div class="tog-wrap"><button class="tog on" id="atog-act" onclick="togBtn('atog-act','af-act')"></button><span class="tog-lbl">Activo</span><input type="hidden" id="af-act" value="S"></div>
+        <div class="tog-wrap"><button class="tog" id="atog-ofe" onclick="togBtn('atog-ofe','af-ofe')"></button><span class="tog-lbl">En Oferta</span><input type="hidden" id="af-ofe" value="0"></div>
+      </div>
+    </div>
+    <div class="mft">
+      <button class="btn" onclick="closeOv('ov-art')">Cancelar</button>
+      <button class="btn pri" onclick="saveArt()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL CLIENTES -->
 <div class="ov" id="ov-cli">
