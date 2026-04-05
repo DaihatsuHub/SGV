@@ -208,10 +208,14 @@ function getConfigUI(pantalla) {
 }
 
 async function saveConfigUI(pantalla, orden, activas, labels) {
-  await sbUpsert('config_ui', { pantalla, orden, activas, labels });
+  const r = await fetch(`${SB_URL}/rest/v1/config_ui?on_conflict=pantalla`, {
+    method: 'POST',
+    headers: { ...SB_HDR, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ pantalla, orden, activas, labels })
+  });
+  if (!r.ok) { const t=await r.text(); throw new Error(`saveConfigUI ${r.status}: ${t.substring(0,150)}`); }
   _configUICache[pantalla] = { orden, activas, labels };
 }
-
 function save() {}
 function saveTablas() {}
 function syncNow() { sbLoad().then(ok => { if(ok){ renderArts(); renderClis(); renderTab&&renderTab(); renderUsua&&renderUsua(); }}); }
