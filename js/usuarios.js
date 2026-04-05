@@ -1,101 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// USUARIOS, AUTH y DESPACHOS
-// ═══════════════════════════════════════════════════════════
-
-  document.getElementById('page-'+sub)?.classList.add('active');
-  // Cargar datos
-  if (sub==='art') renderArts();
-  else if (sub==='marc') renderTabGral('MARC');
-  else if (sub==='rubr') renderTabGral('RUBR');
-  else if (sub==='prov') renderTabGral('PROV');
-  else if (sub==='desp') renderDesp();
-  else if (sub==='cli')  renderClis();
-  else if (sub==='cpag') renderTabGral('CPAG');
-  else if (sub==='vend') renderTabGral('VEND');
-  else if (sub==='cate') renderTabGral('CATE');
-  else if (sub==='grup') renderTabGral('GRUP');
-  else if (sub==='usua') renderUsua();
-}
-
-// ── ABM GENÉRICO PARA SUBTABLAS ────────────────────────────────────
-let _tabGralSel = {};   // {MARC: idx, RUBR: idx, ...}
-
-function getTabGralRows(tipo) {
-  const qId = tipo.toLowerCase()+'-q';
-  const qEl = document.getElementById(qId);
-  const q = qEl ? qEl.value.toLowerCase() : '';
-  return (TABLAS[tipo]||[]).filter(r =>
-    !q || r.CODIGO.toLowerCase().includes(q) || r.DETALLE.toLowerCase().includes(q)
-  );
-}
-
-function renderTabGral(tipo) {
-  const list = getTabGralRows(tipo);
-  const bodyId = tipo.toLowerCase()+'-body';
-  const body = document.getElementById(bodyId);
-  if (!body) return;
-  if (!list.length) { body.innerHTML='<div class="empty">🔍 Sin resultados</div>'; return; }
-  body.innerHTML = list.map((r,i) => {
-    const sel = _tabGralSel[tipo]===i?'sel':'';
-    return `<div class="tr-tab ${sel}" onclick="selTabGral('${tipo}',${i})">
-      <span class="col-cod">${esc(r.CODIGO)}</span>
-      <span class="col-des">${esc(r.DETALLE)}</span>
-      <span class="col-sm">${esc(r.STRING1||'')}</span>
-      <span></span>
-    </div>`;
-  }).join('');
-}
-
-function selTabGral(tipo, i) { _tabGralSel[tipo]=i; renderTabGral(tipo); }
-
-function tabAlta(tipo) {
-  _tabEditTipo = tipo; _tabEditMode = 'A';
-  clrTabForm();
-  document.getElementById('tf-cod').disabled = false;
-  document.getElementById('tab-mtit').textContent = (tipo==='MARC'?'Marcas':'Rubros') + ' — Nuevo';
-  setMtag('tab-mtag','ALTA','tag-a');
-  document.getElementById('tf-lbl1').textContent = tipo==='RUBR'?'Grupo':'Info';
-  document.getElementById('tf-lbl2').textContent = '';
-  document.getElementById('tf-s2').closest('.fgrp').style.display = tipo==='RUBR'?'none':'flex';
-  document.getElementById('ov-tab').classList.add('open');
-}
-
-function tabModif(tipo) {
-  const idx = _tabGralSel[tipo];
-  if (idx===undefined||idx===null) { toast('Seleccioná un registro','err'); return; }
-  const r = getTabGralRows(tipo)[idx];
-  if (!r) { toast('Seleccioná un registro','err'); return; }
-  _tabEditTipo = tipo; _tabEditMode = 'M';
-  document.getElementById('tf-cod').value = r.CODIGO;
-  document.getElementById('tf-cod').disabled = true;
-  document.getElementById('tf-det').value = r.DETALLE;
-  document.getElementById('tf-s1').value  = r.STRING1||'';
-  document.getElementById('tf-s2').value  = r.STRING2||'';
-  document.getElementById('tab-mtit').textContent = (tipo==='MARC'?'Marcas':'Rubros') + ' — Modificar';
-  setMtag('tab-mtag','MODIFICACIÓN','tag-m');
-  document.getElementById('tf-lbl1').textContent = tipo==='RUBR'?'Grupo':'Info';
-  document.getElementById('tf-lbl2').textContent = '';
-  document.getElementById('tf-s2').closest('.fgrp').style.display = tipo==='RUBR'?'none':'flex';
-  document.getElementById('ov-tab').classList.add('open');
-}
-
-function tabBaja(tipo) {
-  const idx = _tabGralSel[tipo];
-  if (idx===undefined||idx===null) { toast('Seleccioná un registro','err'); return; }
-  const r = getTabGralRows(tipo)[idx];
-  if (!r) { toast('Seleccioná un registro','err'); return; }
-  confirm2('¿Dar de baja "'+r.CODIGO+'"?', '"'+r.DETALLE+'" será eliminado.', ()=>{
-    const i = (TABLAS[tipo]||[]).findIndex(x=>x.CODIGO===r.CODIGO);
-    if (i>=0) TABLAS[tipo].splice(i,1);
-    _tabGralSel[tipo]=null; deleteTabRow(tipo, r.CODIGO); renderTabGral(tipo);
-    toast('Registro eliminado','scs');
-  });
-}
-
-let _tabEditTipo = '', _tabEditMode = 'A';
-
-
-// ══════════════════════════════════════════════
 // USUARIOS
 // ══════════════════════════════════════════════
 if (!TABLAS['USUA']) TABLAS['USUA'] = [];
@@ -142,10 +44,7 @@ function loginOk() {
   document.getElementById('b-user').textContent = usuarioActual.codigo;
   const ddiUsua = document.getElementById('ddi-usua');
   if (ddiUsua) ddiUsua.style.display = usuarioActual.nivel > 80 ? 'block' : 'none';
-  ['btn-cfg-art','btn-cfg-cli'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.style.display = usuarioActual.codigo==='RGRDELTA' ? '' : 'none';
-  });
+  if (usuarioActual.codigo === 'RGRDELTA') showDevTools();
   renderArts();
   renderUsua && renderUsua();
 }
@@ -331,3 +230,171 @@ function renderDesp() {
 }
 
 function updDespNros() {
+  const sv = document.getElementById('desp-nro').value;
+  const nros = [...new Map(DESPS.map(d=>[d.DEP_DESP+d.DEP_SUB, d])).values()]
+    .sort((a,b)=>b.DEP_FEC.localeCompare(a.DEP_FEC));
+  document.getElementById('desp-nro').innerHTML =
+    '<option value="">Todos los despachos</option>' +
+    nros.map(d=>{
+      const k=d.DEP_DESP+(d.DEP_SUB?'-'+d.DEP_SUB:'');
+      const fec=d.DEP_FEC?d.DEP_FEC.substring(0,10).split('-').reverse().join('/'):'';
+      return `<option value="${d.DEP_DESP+d.DEP_SUB}"${d.DEP_DESP+d.DEP_SUB===sv?' selected':''}>${k} (${fec})</option>`;
+    }).join('');
+}
+
+function selDesp(i) { despSelIdx=i; renderDesp(); }
+
+function fillDespArtSelect(selVal) {
+  const sorted = [...ARTS].sort((a,b)=>(a.ART_COD||'').localeCompare(b.ART_COD||''));
+  document.getElementById('df-art').innerHTML =
+    '<option value="">— Seleccionar artículo —</option>' +
+    sorted.map(a=>`<option value="${a.ART_COD}"${a.ART_COD===selVal?' selected':''}>${a.ART_COD} — ${a.ART_DES}</option>`).join('');
+}
+
+function clrDespForm() {
+  document.getElementById('df-desp').value='';
+  document.getElementById('df-sub').value='';
+  document.getElementById('df-fec').value=new Date().toISOString().substring(0,10);
+  document.getElementById('df-adua').value='';
+  document.getElementById('df-proc').value='';
+  document.getElementById('df-moneda').value='';
+  document.getElementById('df-ent').value=0;
+  document.getElementById('df-fob').value=0;
+  document.getElementById('df-gas').value=0;
+  document.getElementById('df-gas2').value=0;
+  fillDespArtSelect('');
+}
+
+function fillDespForm(d) {
+  document.getElementById('df-desp').value=d.DEP_DESP;
+  document.getElementById('df-sub').value=d.DEP_SUB||'';
+  document.getElementById('df-fec').value=d.DEP_FEC?d.DEP_FEC.substring(0,10):'';
+  document.getElementById('df-adua').value=d.DEP_ADUA||'';
+  document.getElementById('df-proc').value=d.DEP_PROC||'';
+  document.getElementById('df-moneda').value=d.DEP_MONEDA||'';
+  document.getElementById('df-ent').value=d.DEP_ENT||0;
+  document.getElementById('df-fob').value=d.DEP_FOB||0;
+  document.getElementById('df-gas').value=d.DEP_GAS||0;
+  document.getElementById('df-gas2').value=d.DEP_GAS2||0;
+  fillDespArtSelect(d.DEP_ART);
+}
+
+function despAlta() {
+  clrDespForm();
+  document.getElementById('df-desp').disabled=false;
+  document.getElementById('df-art').disabled=false;
+  document.getElementById('desp-mtit').textContent='Nuevo Despacho';
+  setMtag('desp-mtag','ALTA','tag-a');
+  document.getElementById('ov-desp').classList.add('open');
+  window._de='A';
+}
+
+function despModif() {
+  if(despSelIdx===null){toast('Seleccioná un registro','err');return;}
+  fillDespForm(DESPS[despSelIdx]);
+  document.getElementById('df-desp').disabled=true;
+  document.getElementById('df-art').disabled=true;
+  document.getElementById('desp-mtit').textContent='Modificar despacho';
+  setMtag('desp-mtag','MODIFICACIÓN','tag-m');
+  document.getElementById('ov-desp').classList.add('open');
+  window._de='M';
+}
+
+function despBaja() {
+  if(despSelIdx===null){toast('Seleccioná un registro','err');return;}
+  const d=DESPS[despSelIdx];
+  confirm2(`¿Dar de baja "${d.DEP_DESP}" — ${d.DEP_ART}?`,
+    'Se eliminará el registro y se revertirá el stock.', async ()=>{
+      // Revertir stock
+      const art = ARTS.find(a=>a.ART_COD===d.DEP_ART);
+      if(art) {
+        const cant = d.DEP_ENT - d.DEP_SAL;
+        if(d.DEP_DESP.startsWith('H')||d.DEP_DESP.startsWith('h'))
+          art.ART_STK = (art.ART_STK||0) - cant;
+        else
+          art.ART_STKT = (art.ART_STKT||0) - cant;
+        sbSaveArt(art);
+      }
+      await sbDeleteDesp(d.id);
+      DESPS.splice(despSelIdx,1);
+      despSelIdx=null;
+      renderDesp();
+      toast('Despacho eliminado','scs');
+    });
+}
+
+async function saveDesp() {
+  const desp = document.getElementById('df-desp').value.trim().toUpperCase();
+  const art  = document.getElementById('df-art').value;
+  const ent  = parseInt(document.getElementById('df-ent').value)||0;
+  const fec  = document.getElementById('df-fec').value;
+  if(!desp||!art){toast('Despacho y artículo son obligatorios','err');return;}
+  if(ent<=0){toast('El ingreso debe ser mayor a 0','err');return;}
+
+  const d = {
+    DEP_DESP: desp,
+    DEP_SUB:  document.getElementById('df-sub').value.trim().toUpperCase(),
+    DEP_FEC:  fec||null,
+    DEP_ADUA: document.getElementById('df-adua').value.trim().toUpperCase(),
+    DEP_PROC: document.getElementById('df-proc').value.trim().toUpperCase(),
+    DEP_MONEDA: document.getElementById('df-moneda').value,
+    DEP_ART:  art,
+    DEP_ENT:  ent,
+    DEP_SAL:  window._de==='M' ? (DESPS[despSelIdx]?.DEP_SAL||0) : 0,
+    DEP_FOB:  parseFloat(document.getElementById('df-fob').value)||0,
+    DEP_GAS:  parseFloat(document.getElementById('df-gas').value)||0,
+    DEP_GAS2: parseFloat(document.getElementById('df-gas2').value)||0,
+  };
+
+  if(window._de==='A') {
+    // Verificar que no exista
+    const existe = DESPS.find(x=>x.DEP_DESP===d.DEP_DESP&&x.DEP_SUB===d.DEP_SUB&&x.DEP_ART===d.DEP_ART);
+    if(existe){toast('Ya existe ese artículo en ese despacho','err');return;}
+    // Actualizar stock
+    const artObj = ARTS.find(a=>a.ART_COD===art);
+    if(artObj) {
+      if(desp.startsWith('H')||desp.startsWith('h'))
+        artObj.ART_STK = (artObj.ART_STK||0) + ent;
+      else
+        artObj.ART_STKT = (artObj.ART_STKT||0) + ent;
+      sbSaveArt(artObj);
+    }
+    DESPS.unshift(d);
+    despSelIdx=0;
+    toast('Despacho dado de alta','scs');
+  } else {
+    d.id = DESPS[despSelIdx].id;
+    // Ajustar stock por diferencia de ingreso
+    const anterior = DESPS[despSelIdx].DEP_ENT||0;
+    const diff = ent - anterior;
+    if(diff!==0) {
+      const artObj = ARTS.find(a=>a.ART_COD===art);
+      if(artObj) {
+        if(desp.startsWith('H')||desp.startsWith('h'))
+          artObj.ART_STK = (artObj.ART_STK||0) + diff;
+        else
+          artObj.ART_STKT = (artObj.ART_STKT||0) + diff;
+        sbSaveArt(artObj);
+      }
+    }
+    DESPS[despSelIdx]=d;
+    toast('Despacho modificado','scs');
+  }
+  await sbSaveDesp(d);
+  closeOv('ov-desp');
+  renderDesp();
+}
+
+// INIT — cargar datos desde Neon al arrancar
+sbLoad().then(async ok => {
+  if (ok) {
+    await loadUsuarios();
+    await sbLoadDesps();
+    renderArts(); renderClis(); renderTab && renderTab(); renderUsua && renderUsua();
+    const ddiUsua = document.getElementById('ddi-usua');
+    if (ddiUsua && usuarioActual) ddiUsua.style.display = usuarioActual.nivel > 80 ? 'block' : 'none';
+  }
+});
+
+
+

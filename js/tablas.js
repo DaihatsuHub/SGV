@@ -1,7 +1,5 @@
-// ═══════════════════════════════════════════════════════════
-// TABLAS AUXILIARES — Rubros, Marcas, Proveedores, etc.
-// ═══════════════════════════════════════════════════════════
-
+// TABLAS
+// ══════════════════════════════════════════════
 let TABLAS = {};
 let tabActiva = 'RUBR';
 let tabSelIdx = null;
@@ -155,3 +153,100 @@ function showSubPage(menu, sub) {
   document.querySelectorAll('.dd-item').forEach(t=>t.classList.remove('active'));
   // Activar el tnav del menú padre
   document.getElementById('tnav-'+menu)?.classList.add('active');
+  // Activar el item del dropdown
+  document.getElementById('ddi-'+sub)?.classList.add('active');
+  // Mostrar la página
+  document.getElementById('page-'+sub)?.classList.add('active');
+  // Cargar datos
+  if (sub==='art') renderArts();
+  else if (sub==='marc') renderTabGral('MARC');
+  else if (sub==='rubr') renderTabGral('RUBR');
+  else if (sub==='prov') renderTabGral('PROV');
+  else if (sub==='desp') renderDesp();
+  else if (sub==='cli')  renderClis();
+  else if (sub==='cpag') renderTabGral('CPAG');
+  else if (sub==='vend') renderTabGral('VEND');
+  else if (sub==='cate') renderTabGral('CATE');
+  else if (sub==='grup') renderTabGral('GRUP');
+  else if (sub==='usua') renderUsua();
+}
+
+// ── ABM GENÉRICO PARA SUBTABLAS ────────────────────────────────────
+let _tabGralSel = {};   // {MARC: idx, RUBR: idx, ...}
+
+function getTabGralRows(tipo) {
+  const qId = tipo.toLowerCase()+'-q';
+  const qEl = document.getElementById(qId);
+  const q = qEl ? qEl.value.toLowerCase() : '';
+  return (TABLAS[tipo]||[]).filter(r =>
+    !q || r.CODIGO.toLowerCase().includes(q) || r.DETALLE.toLowerCase().includes(q)
+  );
+}
+
+function renderTabGral(tipo) {
+  const list = getTabGralRows(tipo);
+  const bodyId = tipo.toLowerCase()+'-body';
+  const body = document.getElementById(bodyId);
+  if (!body) return;
+  if (!list.length) { body.innerHTML='<div class="empty">🔍 Sin resultados</div>'; return; }
+  body.innerHTML = list.map((r,i) => {
+    const sel = _tabGralSel[tipo]===i?'sel':'';
+    return `<div class="tr-tab ${sel}" onclick="selTabGral('${tipo}',${i})">
+      <span class="col-cod">${esc(r.CODIGO)}</span>
+      <span class="col-des">${esc(r.DETALLE)}</span>
+      <span class="col-sm">${esc(r.STRING1||'')}</span>
+      <span></span>
+    </div>`;
+  }).join('');
+}
+
+function selTabGral(tipo, i) { _tabGralSel[tipo]=i; renderTabGral(tipo); }
+
+function tabAlta(tipo) {
+  _tabEditTipo = tipo; _tabEditMode = 'A';
+  clrTabForm();
+  document.getElementById('tf-cod').disabled = false;
+  document.getElementById('tab-mtit').textContent = (tipo==='MARC'?'Marcas':'Rubros') + ' — Nuevo';
+  setMtag('tab-mtag','ALTA','tag-a');
+  document.getElementById('tf-lbl1').textContent = tipo==='RUBR'?'Grupo':'Info';
+  document.getElementById('tf-lbl2').textContent = '';
+  document.getElementById('tf-s2').closest('.fgrp').style.display = tipo==='RUBR'?'none':'flex';
+  document.getElementById('ov-tab').classList.add('open');
+}
+
+function tabModif(tipo) {
+  const idx = _tabGralSel[tipo];
+  if (idx===undefined||idx===null) { toast('Seleccioná un registro','err'); return; }
+  const r = getTabGralRows(tipo)[idx];
+  if (!r) { toast('Seleccioná un registro','err'); return; }
+  _tabEditTipo = tipo; _tabEditMode = 'M';
+  document.getElementById('tf-cod').value = r.CODIGO;
+  document.getElementById('tf-cod').disabled = true;
+  document.getElementById('tf-det').value = r.DETALLE;
+  document.getElementById('tf-s1').value  = r.STRING1||'';
+  document.getElementById('tf-s2').value  = r.STRING2||'';
+  document.getElementById('tab-mtit').textContent = (tipo==='MARC'?'Marcas':'Rubros') + ' — Modificar';
+  setMtag('tab-mtag','MODIFICACIÓN','tag-m');
+  document.getElementById('tf-lbl1').textContent = tipo==='RUBR'?'Grupo':'Info';
+  document.getElementById('tf-lbl2').textContent = '';
+  document.getElementById('tf-s2').closest('.fgrp').style.display = tipo==='RUBR'?'none':'flex';
+  document.getElementById('ov-tab').classList.add('open');
+}
+
+function tabBaja(tipo) {
+  const idx = _tabGralSel[tipo];
+  if (idx===undefined||idx===null) { toast('Seleccioná un registro','err'); return; }
+  const r = getTabGralRows(tipo)[idx];
+  if (!r) { toast('Seleccioná un registro','err'); return; }
+  confirm2('¿Dar de baja "'+r.CODIGO+'"?', '"'+r.DETALLE+'" será eliminado.', ()=>{
+    const i = (TABLAS[tipo]||[]).findIndex(x=>x.CODIGO===r.CODIGO);
+    if (i>=0) TABLAS[tipo].splice(i,1);
+    _tabGralSel[tipo]=null; deleteTabRow(tipo, r.CODIGO); renderTabGral(tipo);
+    toast('Registro eliminado','scs');
+  });
+}
+
+let _tabEditTipo = '', _tabEditMode = 'A';
+
+
+// ══════════════════════════════════════════════

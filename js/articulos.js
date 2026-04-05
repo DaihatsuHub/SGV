@@ -1,7 +1,7 @@
+// ARTÍCULOS
 // ═══════════════════════════════════════════════════════════
-// ARTÍCULOS — Listado, filtros, ABM
-// ═══════════════════════════════════════════════════════════
-
+function filtArts(){
+  const q=document.getElementById('art-q').value.toLowerCase();
   let list=ARTS.filter(a=>!q||a.ART_COD.toLowerCase().includes(q)||a.ART_DES.toLowerCase().includes(q));
   // Ordenar por columna activa
   const s=SORT_STATE['art'];

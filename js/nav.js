@@ -1,8 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// NAVEGACIÓN
-// ═══════════════════════════════════════════════════════════
-
-// ─── NAVIGATION ──────────────────────────────────────────
 function showPage(pg,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tnav').forEach(t=>t.classList.remove('active'));
@@ -14,7 +9,3 @@ function showPage(pg,el){
 }
 
 // ═══════════════════════════════════════════════════════════
-// ARTÍCULOS
-// ═══════════════════════════════════════════════════════════
-function filtArts(){
-  const q=document.getElementById('art-q').value.toLowerCase();
