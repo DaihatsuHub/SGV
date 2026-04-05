@@ -9,53 +9,63 @@ let cliSelIdx=null, cliFilt='todos';
 
 const COL_DEFS = {
   art: [
-    {field:'ART_COD',   label:'Código',      width:'110px', active:true},
-    {field:'ART_DES',   label:'Descripción', width:'1fr',   active:true},
-    {field:'ART_RUB',   label:'Rubro',       width:'70px',  active:true},
-    {field:'ART_PRE',   label:'Precio',      width:'95px',  align:'right', active:true},
-    {field:'ART_STK',   label:'Stk Hat',     width:'68px',  align:'right', active:true},
-    {field:'ART_STKT',  label:'Stk Tre',     width:'68px',  align:'right', active:true},
-    {field:'ART_ESTU',  label:'Est',         width:'52px',  align:'center',active:true},
-    {field:'ART_ACT',   label:'Act',         width:'52px',  align:'center',active:true},
-    {field:'ART_GRUP',  label:'Grupo',       width:'75px',  active:true},
-    {field:'ART_MARCA', label:'Marca',       width:'70px',  active:false},
-    {field:'ART_PROV',  label:'Prov',        width:'60px',  active:false},
-    {field:'ART_PREMAY',label:'P.Mayor',     width:'90px',  align:'right', active:false},
-    {field:'ART_PREESP',label:'P.Esp.',      width:'90px',  align:'right', active:false},
+    {field:'ART_COD',    label:'Código',       width:'110px', active:true},
+    {field:'ART_DES',    label:'Descripción',  width:'1fr',   active:true},
+    {field:'ART_RUB',    label:'Rubro',        width:'70px',  active:true},
+    {field:'ART_PRE',    label:'Precio',       width:'95px',  align:'right', active:true},
+    {field:'ART_STK',    label:'Stk Hat',      width:'68px',  align:'right', active:true},
+    {field:'ART_STKT',   label:'Stk Tre',      width:'68px',  align:'right', active:true},
+    {field:'ART_ESTU',   label:'Est',          width:'52px',  align:'center',active:true},
+    {field:'ART_ACT',    label:'Act',          width:'52px',  align:'center',active:true},
+    {field:'ART_GRUP',   label:'Grupo',        width:'75px',  active:true},
+    {field:'ART_MARCA',  label:'Marca',        width:'70px',  active:false},
+    {field:'ART_PROV',   label:'Prov',         width:'60px',  active:false},
+    {field:'ART_PREMAY', label:'P.Mayor',      width:'90px',  align:'right', active:false},
+    {field:'ART_PREESP', label:'P.Esp.',       width:'90px',  align:'right', active:false},
+    {field:'ART_SUBCOD', label:'Sub-Código',   width:'80px',  active:false},
+    {field:'ART_FRANQ',  label:'Franquicia',   width:'90px',  align:'right', active:false},
+    {field:'ART_RESERV', label:'Reservado',    width:'75px',  align:'right', active:false},
+    {field:'ART_PED',    label:'Pedido',       width:'70px',  align:'right', active:false},
+    {field:'ART_DTO',    label:'Dto %',        width:'60px',  align:'right', active:false},
+    {field:'ART_OFERTA', label:'Oferta',       width:'55px',  align:'center',active:false},
+    {field:'ART_SEX',    label:'Sexo',         width:'50px',  active:false},
   ],
   cli: [
-    {field:'CLI_CODIGO', label:'Código',      width:'75px',  active:true},
-    {field:'CLI_RAZON',  label:'Razón Social',width:'1fr',   active:true},
-    {field:'CLI_DOMIC',  label:'Domicilio',   width:'155px', active:true},
-    {field:'CLI_LOCAL',  label:'Localidad',   width:'110px', active:true},
-    {field:'CLI_CUIT',   label:'CUIT',        width:'115px', active:true},
-    {field:'CLI_IVA',    label:'IVA',         width:'80px',  active:true},
-    {field:'CLI_CONPAG', label:'C.Pago',      width:'75px',  active:true},
-    {field:'CLI_ESTADO', label:'Estado',      width:'60px',  active:true},
-    {field:'CLI_VEND',   label:'Vend',        width:'55px',  active:false},
-    {field:'CLI_EXPRE',  label:'Expreso',     width:'60px',  active:false},
-    {field:'CLI_TELEF',  label:'Teléfono',    width:'120px', active:false},
-    {field:'CLI_EMAIL',  label:'Email',       width:'140px', active:false},
+    {field:'CLI_CODIGO', label:'Código',       width:'75px',  active:true},
+    {field:'CLI_RAZON',  label:'Razón Social', width:'1fr',   active:true},
+    {field:'CLI_DOMIC',  label:'Domicilio',    width:'155px', active:true},
+    {field:'CLI_LOCAL',  label:'Localidad',    width:'110px', active:true},
+    {field:'CLI_CUIT',   label:'CUIT',         width:'115px', active:true},
+    {field:'CLI_IVA',    label:'IVA',          width:'80px',  active:true},
+    {field:'CLI_CONPAG', label:'C.Pago',       width:'75px',  active:true},
+    {field:'CLI_ESTADO', label:'Estado',       width:'60px',  active:true},
+    {field:'CLI_PROVIN', label:'Provincia',    width:'100px', active:false},
+    {field:'CLI_CODPOS', label:'Cód.Postal',   width:'80px',  active:false},
+    {field:'CLI_VEND',   label:'Vendedor',     width:'55px',  active:false},
+    {field:'CLI_EXPRE',  label:'Expreso',      width:'60px',  active:false},
+    {field:'CLI_TELEF',  label:'Teléfono',     width:'120px', active:false},
+    {field:'CLI_EMAIL',  label:'Email',        width:'140px', active:false},
+    {field:'CLI_ABC',    label:'ABC',          width:'45px',  active:false},
+    {field:'CLI_ICRED',  label:'Crédito',      width:'90px',  align:'right', active:false},
+    {field:'CLI_NROIB',  label:'Nro IB',       width:'100px', active:false},
+    {field:'CLI_OBS',    label:'Observaciones',width:'150px', active:false},
+    {field:'CLI_CATE',   label:'Categoría',    width:'80px',  active:false},
+    {field:'CLI_DTO',    label:'Dto %',        width:'55px',  align:'right', active:false},
   ]
 };
 
 const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true} };
 
-// Devuelve las columnas activas en el orden correcto con labels personalizados
-// Lee desde el cache de Supabase (getConfigUI), con fallback a los defaults
 function getActiveCols(grid) {
-  const cfg = getConfigUI(grid);
+  const cfg  = getConfigUI(grid);
   const defs = COL_DEFS[grid];
   if (!cfg || !cfg.activas || cfg.activas.length === 0) {
     return defs.filter(c => c.active);
   }
-  // Ordenar según cfg.orden
   let ordered = (cfg.orden || [])
     .map(f => defs.find(d => d.field === f))
     .filter(Boolean);
-  // Agregar columnas nuevas no guardadas al final
   defs.forEach(d => { if (!ordered.find(o => o.field === d.field)) ordered.push(d); });
-  // Filtrar solo las activas
   return ordered
     .filter(c => cfg.activas.includes(c.field))
     .map(c => cfg.labels && cfg.labels[c.field]
@@ -89,8 +99,8 @@ function openColCfg(grid) {
   document.getElementById('col-cfg-title').textContent = 'Columnas — ' + (grid==='art' ? 'Artículos' : 'Clientes');
   const body = document.getElementById('col-cfg-body');
   body.innerHTML = ordered.map(c => {
-    const isActive = cfg ? (cfg.activas || []).includes(c.field) : c.active;
-    const customLabel = cfg && cfg.labels && cfg.labels[c.field] ? cfg.labels[c.field] : c.label;
+    const isActive     = cfg ? (cfg.activas || []).includes(c.field) : c.active;
+    const customLabel  = cfg && cfg.labels && cfg.labels[c.field] ? cfg.labels[c.field] : c.label;
     return `<div class="col-cfg-row" data-field="${c.field}" draggable="true"
       style="display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px solid var(--b1);border-radius:4px;transition:background .1s;cursor:default">
       <span style="color:var(--t3);font-size:14px;cursor:grab;padding:0 4px" title="Arrastrar">☰</span>
@@ -136,17 +146,16 @@ function initColDrag(container) {
 }
 
 async function saveColCfg() {
-  const grid   = document.getElementById('col-cfg-grid').value;
-  const rows   = document.querySelectorAll('#col-cfg-body .col-cfg-row');
-  const orden  = [...rows].map(r => r.dataset.field);
+  const grid    = document.getElementById('col-cfg-grid').value;
+  const rows    = document.querySelectorAll('#col-cfg-body .col-cfg-row');
+  const orden   = [...rows].map(r => r.dataset.field);
   const activas = [...document.querySelectorAll('#col-cfg-body input[type=checkbox]:checked')].map(c => c.dataset.field);
-  const labels = {};
+  const labels  = {};
   document.querySelectorAll('#col-cfg-body .col-lbl-inp').forEach(inp => {
     const def = COL_DEFS[grid].find(d => d.field === inp.dataset.field);
     const val = inp.value.trim();
     if (val && val !== (def ? def.label : '')) labels[inp.dataset.field] = val;
   });
-
   try {
     await saveConfigUI(grid, orden, activas, labels);
     document.getElementById('ov-col-cfg').classList.remove('open');
