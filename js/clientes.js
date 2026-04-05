@@ -1,5 +1,7 @@
-// CLIENTES
 // ═══════════════════════════════════════════════════════════
+// CLIENTES — Listado, filtros, ABM
+// ═══════════════════════════════════════════════════════════
+
 function filtClis(){
   const q=document.getElementById('cli-q').value.toLowerCase();
   const pv=document.getElementById('cli-prov').value;
@@ -13,47 +15,87 @@ function filtClis(){
     const mp=!pv||c.CLI_PROVIN===pv;
     const mv=!vd||c.CLI_VEND===vd;
     return mq&&me&&mp&&mv;
-  }).sort((a,b)=>(a.CLI_CODIGO||'')
-    .localeCompare(b.CLI_CODIGO||''));
+  }).sort((a,b)=>{
+    const s=SORT_STATE['cli'];
+    if(s&&s.col){
+      const va=a[s.col]||'', vb=b[s.col]||'';
+      const r=typeof va==='number'?va-vb:String(va).localeCompare(String(vb));
+      return s.asc?r:-r;
+    }
+    return (a.CLI_CODIGO||'').localeCompare(b.CLI_CODIGO||'');
+  });
 }
+
 function renderClis(){
   const list=filtClis();
   const body=document.getElementById('cli-body');
+  const cols=getActiveCols('cli');
+  const gridTpl=cols.map(c=>c.width||'1fr').join(' ');
+
+  // Render cabecera dinámica
+  const thCli=document.querySelector('.th-cli');
+  if(thCli){
+    thCli.style.gridTemplateColumns=gridTpl;
+    thCli.innerHTML=cols.map(c=>
+      `<span class="th-sortable" onclick="toggleSort('cli','${c.field}')" style="${c.align?'text-align:'+c.align:''}">${c.label}${sortArrow('cli',c.field)}</span>`
+    ).join('');
+  }
+
   if(!list.length){body.innerHTML='<div class="empty">🔍 Sin resultados</div>';updCliFilts();return;}
+
   body.innerHTML=list.map(c=>{
     const idx=CLIS.indexOf(c);
     const sel=cliSelIdx===idx?'sel':'';
     const cls=c.CLI_INCOB?'incob':c.CLI_NODAR?'nodar':'';
     const st=c.CLI_INCOB?`<span class="pill pn">INCOB</span>`:c.CLI_PREINC?`<span class="pill po">PRE-INC</span>`:c.CLI_NODAR?`<span class="pill pp">NO DAR</span>`:`<span class="pill ps">OK</span>`;
-    return `<div class="tr-cli ${sel} ${cls}" onclick="selCli(${idx})" ondblclick="cliDetail(${idx})">
-      <span class="col-cod">${esc(c.CLI_CODIGO)}</span>
-      <span class="col-des">${esc(c.CLI_RAZON||'')}</span>
-      <span class="col-sm">${esc(c.CLI_DOMIC||'')}</span>
-      <span class="col-sm">${esc(c.CLI_LOCAL||'')}</span>
-      <span style="font-family:var(--mono);font-size:12px;color:var(--t2)">${esc(c.CLI_CUIT||'')}</span>
-      <span class="col-sm">${IVA[c.CLI_IVA]||c.CLI_IVA||'—'}</span>
-      <span style="font-family:var(--mono);font-size:12px;text-align:center">${esc(c.CLI_CONPAG||'—')}</span>
-      <span class="col-ctr">${st}</span>
-    </div>`;
+
+    return `<div class="tr-cli ${sel} ${cls}" style="grid-template-columns:${gridTpl}" onclick="selCli(${idx})" ondblclick="cliDetail(${idx})">` +
+      cols.map(col=>{
+        if(col.field==='CLI_CODIGO') return `<span class="col-cod">${esc(c.CLI_CODIGO)}</span>`;
+        if(col.field==='CLI_RAZON')  return `<span class="col-des">${esc(c.CLI_RAZON||'')}</span>`;
+        if(col.field==='CLI_DOMIC')  return `<span class="col-sm">${esc(c.CLI_DOMIC||'')}</span>`;
+        if(col.field==='CLI_LOCAL')  return `<span class="col-sm">${esc(c.CLI_LOCAL||'')}</span>`;
+        if(col.field==='CLI_CODPOS') return `<span class="col-sm">${esc(c.CLI_CODPOS||'')}</span>`;
+        if(col.field==='CLI_PROVIN') return `<span class="col-sm">${esc(PCIA[c.CLI_PROVIN]||c.CLI_PROVIN||'')}</span>`;
+        if(col.field==='CLI_CUIT')   return `<span style="font-family:var(--mono);font-size:12px;color:var(--t2)">${esc(c.CLI_CUIT||'')}</span>`;
+        if(col.field==='CLI_IVA')    return `<span class="col-sm">${IVA[c.CLI_IVA]||c.CLI_IVA||'—'}</span>`;
+        if(col.field==='CLI_CONPAG') return `<span style="font-family:var(--mono);font-size:12px;text-align:center">${esc(c.CLI_CONPAG||'—')}</span>`;
+        if(col.field==='CLI_ESTADO') return `<span class="col-ctr">${st}</span>`;
+        if(col.field==='CLI_VEND')   return `<span class="col-sm">${esc(c.CLI_VEND||'')}</span>`;
+        if(col.field==='CLI_EXPRE')  return `<span class="col-sm">${esc(c.CLI_EXPRE||'')}</span>`;
+        if(col.field==='CLI_TELEF')  return `<span class="col-sm">${esc(c.CLI_TELEF||'')}</span>`;
+        if(col.field==='CLI_EMAIL')  return `<span class="col-sm">${esc(c.CLI_EMAIL||'')}</span>`;
+        if(col.field==='CLI_ABC')    return `<span class="col-sm">${esc(c.CLI_ABC||'')}</span>`;
+        if(col.field==='CLI_DTO')    return `<span class="col-num">${c.CLI_DTO||0}%</span>`;
+        if(col.field==='CLI_ICRED')  return `<span class="col-num">$${fmt(c.CLI_ICRED)}</span>`;
+        return `<span class="col-sm">${esc(String(c[col.field]||''))}</span>`;
+      }).join('') +
+    `</div>`;
   }).join('');
+
   updCliFilts();
   document.getElementById('b-cli').textContent=CLIS.length+' clientes';
 }
+
 function updCliFilts(){
-  const ps=document.getElementById('cli-prov').value;
-  const vs=document.getElementById('cli-vend').value;
+  const pv=document.getElementById('cli-prov');
+  const vd=document.getElementById('cli-vend');
+  if(!pv||!vd) return;
+  const curPv=pv.value, curVd=vd.value;
   const provs=[...new Set(CLIS.map(c=>c.CLI_PROVIN).filter(Boolean))].sort();
   const vends=[...new Set(CLIS.map(c=>c.CLI_VEND).filter(Boolean))].sort();
-  document.getElementById('cli-prov').innerHTML='<option value="">Todas</option>'+provs.map(p=>`<option value="${p}"${p===ps?' selected':''}>${PCIA[p]||p}</option>`).join('');
-  document.getElementById('cli-vend').innerHTML='<option value="">Todos</option>'+vends.map(v=>`<option value="${v}"${v===vs?' selected':''}>${v}</option>`).join('');
+  pv.innerHTML='<option value="">Todas las provincias</option>'+provs.map(p=>`<option value="${p}"${p===curPv?' selected':''}>${PCIA[p]||p}</option>`).join('');
+  vd.innerHTML='<option value="">Todos los vendedores</option>'+vends.map(v=>`<option value="${v}"${v===curVd?' selected':''}>${v}</option>`).join('');
 }
+
 function selCli(i){cliSelIdx=i;renderClis();}
 function setCliFilt(v){
   cliFilt=v;
-  ['todos','ok','inc','nov'].forEach(k=>document.getElementById('cf-'+k).classList.remove('on'));
-  document.getElementById('cf-'+v).classList.add('on');
+  ['todos','ok','inc','nov'].forEach(k=>document.getElementById('cf-'+k)?.classList.remove('on'));
+  document.getElementById('cf-'+v)?.classList.add('on');
   renderClis();
 }
+
 function cliDetail(idx){
   const c=CLIS[idx];
   document.getElementById('cli-dp-tit').textContent=c.CLI_CODIGO+' — '+c.CLI_RAZON;
@@ -68,7 +110,6 @@ function cliDetail(idx){
   document.getElementById('cli-dp').classList.add('open');
 }
 
-// CLI ABM
 function cAlta(){
   clrCliForm();document.getElementById('cf-cod').disabled=false;
   document.getElementById('cli-mtit').textContent='Nuevo Cliente';
@@ -165,5 +206,3 @@ function printCli(){
   const rows=list.map(c=>`<tr><td style="font-family:monospace">${esc(c.CLI_CODIGO)}</td><td>${esc(c.CLI_RAZON||'')}</td><td>${esc(c.CLI_DOMIC||'')}</td><td>${esc(c.CLI_LOCAL||'')}</td><td style="font-family:monospace">${esc(c.CLI_CUIT||'')}</td><td>${IVA[c.CLI_IVA]||'—'}</td><td>${esc(c.CLI_CONPAG||'')}</td></tr>`).join('');
   openPrint('👥 Listado de Clientes',`<table><thead><tr><th>CÓDIGO</th><th>RAZÓN SOCIAL</th><th>DOMICILIO</th><th>LOCALIDAD</th><th>CUIT</th><th>IVA</th><th>COND.PAGO</th></tr></thead><tbody>${rows}</tbody></table>`,list.length);
 }
-
-// ═══════════════════════════════════════════════════════════
