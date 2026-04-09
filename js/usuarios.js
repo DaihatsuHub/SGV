@@ -45,7 +45,9 @@ function loginOk() {
     const el = document.getElementById(id);
     if (el) el.style.display = usuarioActual.codigo === 'RGRDELTA' ? '' : 'none';
   });
-  renderArts();
+  // Mostrar pantalla de bienvenida
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-welcome')?.classList.add('active');
   renderUsua && renderUsua();
 }
 
@@ -376,4 +378,3 @@ async function saveDesp() {
   closeOv('ov-desp');
   renderDesp();
 }
- 

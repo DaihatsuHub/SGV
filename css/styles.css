@@ -58,7 +58,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:10
 
 /* TABLE */
 .tbl-wrap{background:var(--s1);border:1px solid var(--b1);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)}
-.tbl-body{max-height:calc(100vh - 290px);overflow-y:auto}
+.tbl-body{height:calc(100vh - 210px);overflow-y:auto}
 
 /* ART TABLE */
 .th-art,.tr-art{display:grid;grid-template-columns:110px 1fr 70px 95px 68px 68px 52px 52px 75px;gap:6px;padding:11px 16px;align-items:center}
