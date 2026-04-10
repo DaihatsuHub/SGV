@@ -41,10 +41,11 @@ function loginOk() {
   document.getElementById('b-user').textContent = usuarioActual.codigo;
   const ddiUsua = document.getElementById('ddi-usua');
   if (ddiUsua) ddiUsua.style.display = usuarioActual.nivel > 80 ? 'block' : 'none';
-  ['btn-cfg-art','btn-cfg-cli'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = usuarioActual.codigo === 'RGRDELTA' ? '' : 'none';
-  });
+  // Botón permisos solo para RGRDELTA
+  const btnPerm = document.getElementById('btn-permisos');
+  if (btnPerm) btnPerm.style.display = usuarioActual.codigo === 'RGRDELTA' ? '' : 'none';
+  // Aplicar permisos a la UI
+  if (typeof aplicarPermisos === 'function') aplicarPermisos();
   // Mostrar pantalla de bienvenida
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-welcome')?.classList.add('active');
@@ -202,15 +203,24 @@ async function sbDeleteDesp(dep_id) {
 }
 
 function filtDesps() {
-  const q   = document.getElementById('desp-q').value.toLowerCase();
-  const nro = document.getElementById('desp-nro').value;
-  return DESPS.filter(d => {
+  const q    = document.getElementById('desp-q')?.value.toLowerCase()||'';
+  const nro  = document.getElementById('desp-nro')?.value||'';
+  const sort = document.getElementById('desp-sort')?.value||'fec-desc';
+  let list = DESPS.filter(d => {
     const mq = !q || (d.DEP_DESP+(d.DEP_SUB?'-'+d.DEP_SUB:'')).toLowerCase().includes(q) ||
                (d.DEP_ART||'').toLowerCase().includes(q) ||
                (d.DEP_PROC||'').toLowerCase().includes(q);
     const mn = !nro || (d.DEP_DESP+(d.DEP_SUB||'')) === nro;
     return mq && mn;
   });
+  list.sort((a,b) => {
+    if (sort==='fec-desc') return (b.DEP_FEC||'').localeCompare(a.DEP_FEC||'');
+    if (sort==='fec-asc')  return (a.DEP_FEC||'').localeCompare(b.DEP_FEC||'');
+    if (sort==='nro-asc')  return (a.DEP_DESP||'').localeCompare(b.DEP_DESP||'');
+    if (sort==='nro-desc') return (b.DEP_DESP||'').localeCompare(a.DEP_DESP||'');
+    return 0;
+  });
+  return list;
 }
 
 function renderDesp() {
