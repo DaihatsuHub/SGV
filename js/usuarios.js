@@ -262,7 +262,15 @@ function renderDesp() {
         if(c.field==='DEP_FOB')    return `<span class="col-desp-num">$${fmt(d.DEP_FOB)}</span>`;
         if(c.field==='DEP_GAS')    return `<span class="col-desp-num">$${fmt(d.DEP_GAS)}</span>`;
         if(c.field==='DEP_GAS2')   return `<span class="col-desp-num">$${fmt(d.DEP_GAS2)}</span>`;
-        if(c.field==='DEP_MONEDA') return `<span class="col-sm">${esc(d.DEP_MONEDA||'$')}</span>`;
+        if(c.field==='DEP_COSTO') {
+          const costo = (d.DEP_GAS2 && d.DEP_GAS2 !== 0) ? d.DEP_FOB * d.DEP_GAS2 : d.DEP_FOB;
+          const mon = d.DEP_MONEDA==='P' ? '$' : 'u$s';
+          return `<span class="col-desp-num" style="color:var(--grn)">${mon}${fmt(costo)}</span>`;
+        }
+        if(c.field==='DEP_MONEDA') {
+          const mon = d.DEP_MONEDA==='P' ? '$' : (d.DEP_MONEDA ? 'u$s' : '$');
+          return `<span class="col-sm">${mon}</span>`;
+        }
         return `<span>${esc(String(d[c.field]||''))}</span>`;
       }).join('') +
     `</div>`;

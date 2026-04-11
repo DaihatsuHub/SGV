@@ -37,6 +37,7 @@ const COL_DEFS = {
     {field:'DEP_GAS',   label:'Gastos 1',    width:'80px',  align:'right', active:false},
     {field:'DEP_GAS2',  label:'Gastos 2',    width:'80px',  align:'right', active:false},
     {field:'DEP_MONEDA',label:'Moneda',      width:'65px',  active:false},
+    {field:'DEP_COSTO', label:'Costo',       width:'90px',  align:'right', active:false},
   ],
   cli: [
     {field:'CLI_CODIGO', label:'Código',       width:'75px',  active:true},
