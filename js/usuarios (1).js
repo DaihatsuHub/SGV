@@ -263,7 +263,9 @@ function renderDesp() {
         if(c.field==='DEP_GAS')    return `<span class="col-desp-num">$${fmt(d.DEP_GAS)}</span>`;
         if(c.field==='DEP_GAS2')   return `<span class="col-desp-num">$${fmt(d.DEP_GAS2)}</span>`;
         if(c.field==='DEP_COSTO') {
-          const costo = (d.DEP_GAS2 && d.DEP_GAS2 !== 0) ? d.DEP_FOB * d.DEP_GAS2 : d.DEP_FOB;
+          const fob = d.DEP_FOB || 0;
+          const gas2 = d.DEP_GAS2 || 0;
+          const costo = gas2 !== 0 ? fob + (fob * gas2 / 100) : fob;
           const mon = d.DEP_MONEDA==='P' ? '$' : 'u$s';
           return `<span class="col-desp-num" style="color:var(--grn)">${mon}${fmt(costo)}</span>`;
         }
