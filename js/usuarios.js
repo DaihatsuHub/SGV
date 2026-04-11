@@ -382,13 +382,38 @@ async function saveDesp() {
     DEP_GAS2:   parseFloat(document.getElementById('df-gas2').value)||0,
   };
 
+  // Determinar campo de stock según prefijo del despacho
+  const esH = desp.toUpperCase().startsWith('H');
+  const esT = desp.toUpperCase().startsWith('T');
+  const campoStk = esH ? 'ART_STK' : esT ? 'ART_STKT' : null;
+
   if(window._de==='A') {
     const existe = DESPS.find(x=>x.DEP_DESP===d.DEP_DESP&&(x.DEP_SUB||'')===d.DEP_SUB&&x.DEP_ART===d.DEP_ART);
     if(existe){toast('Ya existe ese artículo en ese despacho','err');return;}
+    // Alta: sumar ingreso al stock
+    if(campoStk) {
+      const artObj = ARTS.find(a=>a.ART_COD===art);
+      if(artObj) {
+        artObj[campoStk] = (artObj[campoStk]||0) + ent;
+        sbSaveArt(artObj);
+      }
+    }
     DESPS.unshift(d); despSelIdx=0;
     toast('Despacho dado de alta','scs');
   } else {
-    d.dep_id = DESPS[despSelIdx].dep_id;
+    const anterior = DESPS[despSelIdx];
+    d.dep_id = anterior.dep_id;
+    // Modificación: ajustar por diferencia de ingreso
+    if(campoStk) {
+      const diff = ent - (anterior.DEP_ENT||0);
+      if(diff !== 0) {
+        const artObj = ARTS.find(a=>a.ART_COD===art);
+        if(artObj) {
+          artObj[campoStk] = (artObj[campoStk]||0) + diff;
+          sbSaveArt(artObj);
+        }
+      }
+    }
     DESPS[despSelIdx]=d;
     toast('Despacho modificado','scs');
   }
