@@ -41,12 +41,7 @@ function aplicarPermisos() {
   controles.forEach(({ selector, modulo, accion }) => {
     const el = document.querySelector(selector);
     if (!el) return;
-    if (accion === 'columnas' && usuarioActual.codigo !== 'RGRDELTA') {
-      el.style.display = 'none'; return;
-    }
-    if (accion !== 'columnas') {
-      el.style.display = puedeh(modulo, accion) ? '' : 'none';
-    }
+    el.style.display = puedeh(modulo, accion) ? '' : 'none';
   });
 }
 
