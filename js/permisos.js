@@ -21,7 +21,7 @@ function puedeh(modulo, accion) {
   if (usuarioActual.codigo === 'RGRDELTA') return true;
   const p = _permisos.find(x => x.modulo === modulo && x.accion === accion);
   if (!p) return false;
-  return usuarioActual.nivel >= p.nivel_min;
+  return (usuarioActual.nivel || 0) >= (p.nivel_min || 99);
 }
 
 // Aplicar permisos a la UI — ocultar/mostrar botones según nivel
@@ -85,6 +85,7 @@ const ACCIONES = [
 ];
 
 function openPermisos() {
+  if (!usuarioActual || usuarioActual.nivel < 88) { toast('Sin acceso','err'); return; }
   const ov = document.getElementById('ov-permisos');
   if (!ov) return;
   renderPermisosPanel();
@@ -108,7 +109,7 @@ function renderPermisosPanel() {
           <tr style="border-bottom:1px solid var(--b1)">
             <td style="padding:10px 12px;font-weight:500;color:var(--txt)">${m.label}</td>
             ${ACCIONES.map(a => {
-              const p = _permisos.find(x=>x.modulo===m.key&&x.accion===a.accion);
+              const p = _permisos.find(x=>x.modulo===m.key&&x.accion===a.key);
               const nivel = p ? p.nivel_min : 99;
               return `<td style="padding:6px;text-align:center">
                 <input type="number" min="1" max="99"
@@ -117,7 +118,7 @@ function renderPermisosPanel() {
                   style="width:52px;text-align:center;background:var(--s2);border:1px solid var(--b1);border-radius:4px;padding:4px;font-size:13px;font-family:var(--mono);color:var(--txt);outline:none"
                   onfocus="this.style.borderColor='var(--acc)'"
                   onblur="this.style.borderColor='var(--b1)'"
-                  title="Nivel mínimo para ${a.label}">
+                  title="Nivel mínimo requerido: ${a.label}">
               </td>`;
             }).join('')}
           </tr>
@@ -137,17 +138,31 @@ async function savePermisos() {
     const modulo = inp.dataset.modulo;
     const accion = inp.dataset.accion;
     const nivel_min = parseInt(inp.value)||1;
-    updates.push({ modulo, accion, nivel_min });
+    if (modulo && accion) updates.push({ modulo, accion, nivel_min });
   });
 
   try {
-    // Borrar todos y reinsertar
-    await fetch(`${SB_URL}/rest/v1/permisos?id=gt.0`, {
-      method: 'DELETE',
-      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    // Actualizar cada permiso individualmente por modulo+accion
+    for (const u of updates) {
+      const existing = _permisos.find(x=>x.modulo===u.modulo&&x.accion===u.accion);
+      if (existing) {
+        // Update
+        await fetch(`${SB_URL}/rest/v1/permisos?modulo=eq.${u.modulo}&accion=eq.${u.accion}`, {
+          method: 'PATCH',
+          headers: { ...SB_HDR },
+          body: JSON.stringify({ nivel_min: u.nivel_min })
+        });
+      } else {
+        // Insert
+        await sbUpsert('permisos', u);
+      }
+    }
+    // Update cache
+    updates.forEach(u => {
+      const idx = _permisos.findIndex(x=>x.modulo===u.modulo&&x.accion===u.accion);
+      if (idx>=0) _permisos[idx].nivel_min = u.nivel_min;
+      else _permisos.push(u);
     });
-    await sbUpsert('permisos', updates);
-    _permisos = updates.map((u,i) => ({...u, id: i+1}));
     document.getElementById('ov-permisos').classList.remove('open');
     toast('Permisos guardados', 'scs');
     aplicarPermisos();
