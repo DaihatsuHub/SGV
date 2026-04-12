@@ -41,7 +41,7 @@ function renderArts(){
 
   if (!list.length) {
     body.innerHTML = '<div class="empty">🔍 Sin resultados</div>';
-    document.getElementById('b-art').textContent = ARTS.length + ' artículos';
+    const bArt = document.getElementById('b-art'); if(bArt) bArt.textContent = ARTS.length + ' artículos';
     return;
   }
 
@@ -69,7 +69,7 @@ function renderArts(){
       }).join('') +
     `</div>`;
   }).join('');
-  document.getElementById('b-art').textContent = ARTS.length + ' artículos';
+  const bArt = document.getElementById('b-art'); if(bArt) bArt.textContent = ARTS.length + ' artículos';
 }
 
 function togArtStock() {
