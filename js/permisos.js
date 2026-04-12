@@ -24,24 +24,59 @@ function puedeh(modulo, accion) {
 function aplicarPermisos() {
   if (!usuarioActual) return;
   const controles = [
+    // Artículos
     { selector: '#page-art .btn.pri',          modulo:'art',      accion:'alta' },
     { selector: '#page-art .btn:nth-child(2)',  modulo:'art',      accion:'modif' },
     { selector: '#page-art .btn.dng',           modulo:'art',      accion:'baja' },
     { selector: '#btn-cfg-art',                 modulo:'art',      accion:'columnas' },
+    // Clientes
     { selector: '#page-cli .btn.pri',           modulo:'cli',      accion:'alta' },
     { selector: '#page-cli .btn:nth-child(2)',  modulo:'cli',      accion:'modif' },
     { selector: '#page-cli .btn.dng',           modulo:'cli',      accion:'baja' },
     { selector: '#btn-cfg-cli',                 modulo:'cli',      accion:'columnas' },
+    // Despachos
     { selector: '#page-desp .btn.pri',          modulo:'desp',     accion:'alta' },
     { selector: '#page-desp .btn:nth-child(2)', modulo:'desp',     accion:'modif' },
     { selector: '#page-desp .btn.dng',          modulo:'desp',     accion:'baja' },
     { selector: '#btn-cfg-desp',                modulo:'desp',     accion:'columnas' },
+    // Facturación
+    { selector: '#page-fac .btn.pri',           modulo:'fac',      accion:'alta' },
+    { selector: '#page-fac .btn:nth-child(2)',   modulo:'fac',      accion:'modif' },
+    { selector: '#page-fac .btn.dng',           modulo:'fac',      accion:'baja' },
+    // Tipos de Comprobantes
+    { selector: '#page-ctip .btn.pri',          modulo:'ctip',     accion:'alta' },
+    { selector: '#page-ctip .btn:nth-child(2)', modulo:'ctip',     accion:'modif' },
+    { selector: '#page-ctip .btn.dng',          modulo:'ctip',     accion:'baja' },
+    // Usuarios
     { selector: '#ddi-usua',                    modulo:'usuarios', accion:'ver' },
   ];
   controles.forEach(({ selector, modulo, accion }) => {
     const el = document.querySelector(selector);
     if (!el) return;
     el.style.display = puedeh(modulo, accion) ? '' : 'none';
+  });
+
+  // Ocultar menús completos si no tiene acceso a ningún subitem
+  const menuVer = {
+    'tnav-art': puedeh('art','ver'),
+    'tnav-cli': puedeh('cli','ver'),
+    'tnav-cmp': puedeh('desp','ver'),
+    'tnav-ven': puedeh('fac','ver') || puedeh('ctip','ver'),
+  };
+  Object.entries(menuVer).forEach(([id, puede]) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = puede ? '' : 'none';
+  });
+
+  // Subitems de Ventas
+  const ddiVer = {
+    'ddi-fac':  puedeh('fac','ver'),
+    'ddi-ctip': puedeh('ctip','ver'),
+    'ddi-desp': puedeh('desp','ver'),
+  };
+  Object.entries(ddiVer).forEach(([id, puede]) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = puede ? '' : 'none';
   });
 }
 
@@ -50,6 +85,8 @@ const MODULOS_PERM = [
   { key:'art',      label:'📦 Artículos' },
   { key:'cli',      label:'👥 Clientes' },
   { key:'desp',     label:'🚢 Despachos' },
+  { key:'fac',      label:'🧾 Facturación' },
+  { key:'ctip',     label:'📋 Tipos de Comprobantes' },
   { key:'tablas',   label:'📋 Tablas Auxiliares' },
   { key:'usuarios', label:'🔑 Usuarios' },
 ];

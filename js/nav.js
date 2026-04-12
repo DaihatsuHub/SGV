@@ -9,7 +9,7 @@ function showPage(pg, el){
   if(pageEl) pageEl.classList.add('active');
   if(el) el.classList.add('active');
   if(pg==='art') renderArts();
-  else if(pg==='usua') { renderUsua(); }
+  else if(pg==='usua') renderUsua();
 }
 
 function showSubPage(menu, sub) {
