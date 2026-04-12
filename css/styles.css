@@ -228,3 +228,5 @@ body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:10
 .fac-det-row span:first-child{color:var(--t2)}
 .fac-det-row span:last-child{font-family:var(--mono);color:var(--txt)}
 .fac-cae{background:var(--acc);color:#fff;border-radius:4px;padding:6px 12px;font-family:var(--mono);font-size:12px;text-align:center;margin:10px 0;letter-spacing:1px}
+
+.fac-lista .tbl-body{height:100%;overflow-y:auto}
