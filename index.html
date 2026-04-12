@@ -50,6 +50,13 @@
       </div>
     </div>
     <div class="dd-wrap">
+      <button class="tnav" id="tnav-ven" onclick="toggleDD('dd-ven',this)">🧾 Ventas <span class="dd-arrow" id="arr-ven">▼</span></button>
+      <div class="dd-menu" id="dd-ven">
+        <button class="dd-item" id="ddi-fac" onclick="showSubPage('ven','fac')">📄 Facturación</button>
+        <button class="dd-item" id="ddi-ctip" onclick="showSubPage('ven','ctip')">📋 Tipos de Comprobantes</button>
+      </div>
+    </div>
+    <div class="dd-wrap">
       <button class="tnav" id="tnav-cmp" onclick="toggleDD('dd-cmp',this)">🛒 Compras <span class="dd-arrow" id="arr-cmp">▼</span></button>
       <div class="dd-menu" id="dd-cmp">
         <button class="dd-item" id="ddi-desp" onclick="showSubPage('cmp','desp')">🚢 Despachos</button>
@@ -290,6 +297,101 @@
   <div class="tbl-wrap">
     <div class="th-tab"><span>Código</span><span>Descripción</span><span>Info</span><span></span></div>
     <div class="tbl-body" id="grup-body"></div>
+  </div>
+</div>
+
+<!-- ══════ FACTURACIÓN ══════ -->
+<div class="page" id="page-fac">
+  <div class="toolbar">
+    <button class="btn pri" onclick="facAlta()">＋ Nueva</button>
+    <button class="btn" onclick="facModif()">✏️ Modificar</button>
+    <button class="btn dng" onclick="facBaja()">✕ Anular</button>
+    <button class="btn scs" onclick="facImprimir()">🖨 Imprimir</button>
+    <div class="spacer"></div>
+    <select class="fsel" id="fac-empresa" onchange="renderFac()">
+      <option value="">Ambas empresas</option>
+      <option value="H">Hatsu Electronics</option>
+      <option value="T">Tressa Argentina</option>
+    </select>
+    <div class="srch-wrap">
+      <span class="srch-ico">⌕</span>
+      <input class="srch" id="fac-q" placeholder="Buscar factura o cliente..." oninput="renderFac()">
+      <button class="srch-clr" onclick="clrSrch('fac-q',renderFac)" title="Limpiar">✕</button>
+    </div>
+  </div>
+  <div class="fac-layout">
+    <div class="fac-lista">
+      <div class="th-fac">
+        <span>Comprobante</span><span>Fecha</span><span>Cliente</span>
+      </div>
+      <div class="tbl-body" id="fac-body"></div>
+    </div>
+    <div class="fac-detalle" id="fac-detalle">
+      <div class="fac-det-placeholder">← Seleccioná una factura</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TIPOS DE COMPROBANTES ══════ -->
+<div class="page" id="page-ctip">
+  <div class="toolbar">
+    <button class="btn pri" onclick="ctipAlta()">＋ Alta</button>
+    <button class="btn" onclick="ctipModif()">✏️ Modificar</button>
+    <button class="btn dng" onclick="ctipBaja()">✕ Baja</button>
+    <div class="spacer"></div>
+    <div class="srch-wrap">
+      <span class="srch-ico">⌕</span>
+      <input class="srch" id="ctip-q" placeholder="Buscar..." oninput="renderCtip()">
+      <button class="srch-clr" onclick="clrSrch('ctip-q',renderCtip)" title="Limpiar">✕</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <div style="display:grid;grid-template-columns:60px 80px 80px 1fr 80px 80px;gap:8px;padding:11px 16px;background:#1e3a6e;border-bottom:1px solid #152d57;font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#93b4d8;font-weight:600">
+      <span>Empresa</span><span>Prefijo</span><span>Tipo</span><span>Descripción</span><span style="text-align:right">Último Nro</span><span style="text-align:center">Contable</span>
+    </div>
+    <div class="tbl-body" id="ctip-body"></div>
+  </div>
+</div>
+
+<!-- MODAL TIPOS DE COMPROBANTE -->
+<div class="ov" id="ov-ctip">
+  <div class="modal" style="width:480px">
+    <div class="mhd">
+      <div class="mtit"><span id="ctip-mtit">Tipo de Comprobante</span><span class="mtag tag-a" id="ctip-mtag">ALTA</span></div>
+      <button class="mcls" onclick="closeOv('ov-ctip')">✕</button>
+    </div>
+    <div class="mbdy">
+      <div class="fg">
+        <div class="fgrp"><label class="flbl2">Empresa *</label>
+          <select class="finp" id="ctip-empresa">
+            <option value="H">H — Hatsu Electronics SA</option>
+            <option value="T">T — Tressa Argentina SA</option>
+          </select>
+        </div>
+        <div class="fgrp"><label class="flbl2">Prefijo * (3 dígitos)</label>
+          <input class="finp" id="ctip-prefijo" maxlength="3" style="text-transform:uppercase" placeholder="Ej: HA4">
+        </div>
+        <div class="fgrp"><label class="flbl2">Tipo *</label>
+          <select class="finp" id="ctip-tipo">
+            <option value="F">F — Factura</option>
+            <option value="C">C — Nota de Crédito</option>
+            <option value="D">D — Nota de Débito</option>
+            <option value="R">R — Cheque Rechazado</option>
+          </select>
+        </div>
+        <div class="fgrp"><label class="flbl2">Último número usado</label>
+          <input class="finp" id="ctip-ultimo" type="number" min="0" value="0">
+        </div>
+      </div>
+      <div class="fsec">Opciones</div>
+      <div class="tog-row">
+        <div class="tog-wrap"><button class="tog on" id="ctip-tog-cont" onclick="togBtn('ctip-tog-cont','ctip-contable')"></button><span class="tog-lbl">Contable</span><input type="hidden" id="ctip-contable" value="1"></div>
+      </div>
+    </div>
+    <div class="mft">
+      <button class="btn" onclick="closeOv('ov-ctip')">Cancelar</button>
+      <button class="btn pri" onclick="saveCtip()">💾 Guardar</button>
+    </div>
   </div>
 </div>
 
@@ -621,6 +723,7 @@
 <script src="js/tablas.js"></script>
 <script src="js/usuarios.js"></script>
 <script src="js/permisos.js"></script>
+<script src="js/facturacion.js"></script>
 
 <script>
 sbLoad().then(async ok => {
@@ -629,6 +732,8 @@ sbLoad().then(async ok => {
     await loadAllConfigUI();
     await sbLoadDesps();
     await loadPermisos();
+    await sbLoadFacs();
+    await sbLoadCtips();
     aplicarPermisos();
     renderArts();
     renderClis();
