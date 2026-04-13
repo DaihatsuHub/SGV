@@ -157,12 +157,30 @@ function renderFac() {
     const fec = f.fac_fec ? f.fac_fec.substring(0,10).split('-').reverse().join('/') : '—';
     const cli = CLIS.find(c=>c.CLI_CODIGO===(f.fac_cli||'').trim());
     const nomCli = cli ? cli.CLI_RAZON : f.fac_cli||'—';
-    return `<div class="tr-fac ${sel}" onclick="selFac(${i})">
+    return `<div class="tr-fac ${sel}" data-idx="${i}" onmouseenter="selFac(${i})" onclick="selFac(${i})">
       <span class="col-cod" style="font-family:var(--mono)">${esc(f.fac_nro||'')}</span>
       <span style="font-size:12px;color:var(--t2)">${fec}</span>
       <span style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(nomCli)}</span>
     </div>`;
   }).join('');
+
+  // Keyboard navigation
+  body.onkeydown = null;
+  document.onkeydown = function(e) {
+    const page = document.getElementById('page-fac');
+    if (!page || !page.classList.contains('active')) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const total = filtFacs().length;
+      if (total === 0) return;
+      let next = facSelIdx === null ? 0 : (e.key === 'ArrowDown' ? facSelIdx + 1 : facSelIdx - 1);
+      next = Math.max(0, Math.min(next, total - 1));
+      selFac(next);
+      // Scroll into view
+      const el = body.querySelector(`[data-idx="${next}"]`);
+      if (el) el.scrollIntoView({ block: 'nearest' });
+    }
+  };
 }
 
 async function selFac(i) {
