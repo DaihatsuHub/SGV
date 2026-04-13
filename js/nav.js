@@ -32,6 +32,6 @@ function showSubPage(menu, sub) {
   else if (sub==='cate') renderTabGral('CATE');
   else if (sub==='grup') renderTabGral('GRUP');
   else if (sub==='usua') renderUsua();
-  else if (sub==='fac')  setTimeout(renderFac, 50);
-  else if (sub==='ctip') setTimeout(renderCtip, 50);
+  else if (sub==='fac')  requestAnimationFrame(()=>requestAnimationFrame(renderFac));
+  else if (sub==='ctip') requestAnimationFrame(()=>requestAnimationFrame(renderCtip));
 }
