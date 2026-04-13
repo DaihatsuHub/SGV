@@ -141,35 +141,7 @@ function saveTab() {
 }
 
 
-// ── SUBPÁGINAS DE MENÚ DESPLEGABLE ────────────────────────────────
-function showSubPage(menu, sub) {
-  // Cerrar todos los dropdowns
-  document.querySelectorAll('.dd-menu').forEach(m=>m.classList.remove('open'));
-  document.querySelectorAll('.dd-arrow').forEach(a=>a.classList.remove('open'));
-  // Ocultar todas las páginas
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  // Quitar active de todos los tnav
-  document.querySelectorAll('.tnav').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.dd-item').forEach(t=>t.classList.remove('active'));
-  // Activar el tnav del menú padre
-  document.getElementById('tnav-'+menu)?.classList.add('active');
-  // Activar el item del dropdown
-  document.getElementById('ddi-'+sub)?.classList.add('active');
-  // Mostrar la página
-  document.getElementById('page-'+sub)?.classList.add('active');
-  // Cargar datos
-  if (sub==='art') renderArts();
-  else if (sub==='marc') renderTabGral('MARC');
-  else if (sub==='rubr') renderTabGral('RUBR');
-  else if (sub==='prov') renderTabGral('PROV');
-  else if (sub==='desp') renderDesp();
-  else if (sub==='cli')  renderClis();
-  else if (sub==='cpag') renderTabGral('CPAG');
-  else if (sub==='vend') renderTabGral('VEND');
-  else if (sub==='cate') renderTabGral('CATE');
-  else if (sub==='grup') renderTabGral('GRUP');
-  else if (sub==='usua') renderUsua();
-}
+
 
 // ── ABM GENÉRICO PARA SUBTABLAS ────────────────────────────────────
 let _tabGralSel = {};   // {MARC: idx, RUBR: idx, ...}
