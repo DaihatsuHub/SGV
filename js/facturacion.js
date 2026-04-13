@@ -151,6 +151,7 @@ function filtFacs() {
 function renderFac() {
   const list = filtFacs();
   const body = document.getElementById('fac-body');
+  console.log('renderFac called, list:', list.length, 'body:', !!body);
   if(!list.length){body.innerHTML='<div class="empty">🔍 Sin resultados</div>';return;}
   body.innerHTML = list.map((f,i) => {
     const sel = facSelIdx===i ? 'sel' : '';
