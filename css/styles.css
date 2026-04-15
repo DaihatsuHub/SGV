@@ -215,7 +215,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:10
 .th-fac{display:grid;grid-template-columns:140px 80px 1fr;gap:8px;padding:11px 16px;background:#1e3a6e;border-bottom:1px solid #152d57;font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#93b4d8;font-weight:600;position:sticky;top:0;z-index:1}
 .tr-fac{display:grid;grid-template-columns:140px 80px 1fr;gap:8px;padding:9px 16px;border-bottom:1px solid var(--b1);cursor:pointer;transition:background .1s;font-size:13px}
 .tr-fac:hover{background:var(--s2)}
-.tr-fac.sel{background:var(--sel)}
+.tr-fac.sel{background:var(--acc);color:#fff}.tr-fac.sel span{color:#fff!important}
 .fac-detalle{overflow-y:auto;padding:20px 24px;background:var(--s1)}
 .fac-det-placeholder{display:flex;align-items:center;justify-content:center;height:100%;color:var(--t3);font-size:14px;font-family:var(--mono)}
 .fac-det-hdr{margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--b1)}
