@@ -138,14 +138,28 @@ function proximoNro(empresa, prefijo, tipo) {
 
 // ── FACTURACIÓN ────────────────────────────────────────────
 function filtFacs() {
-  const q   = (document.getElementById('fac-q')?.value||'').toLowerCase();
   const emp = document.getElementById('fac-empresa')?.value||'';
-  return FACS.filter(f => {
-    const me = !emp || (f.fac_nro||'').startsWith(emp);
-    const mq = !q || (f.fac_nro||'').toLowerCase().includes(q) ||
-               (f.fac_cli||'').toLowerCase().includes(q);
-    return me && mq;
-  });
+  // Filtrar solo por empresa, nunca por búsqueda (búsqueda es posicional)
+  return FACS.filter(f => !emp || (f.fac_nro||'').startsWith(emp));
+}
+
+function buscarFac() {
+  const q = (document.getElementById('fac-q')?.value||'').toLowerCase().trim();
+  if (!q) { facSelIdx = 0; renderFac(); return; }
+  const list = filtFacs();
+  const idx = list.findIndex(f =>
+    (f.fac_nro||'').toLowerCase().includes(q) ||
+    (f.fac_cli||'').toLowerCase().includes(q) ||
+    (CLIS.find(c=>c.CLI_CODIGO===(f.fac_cli||'').trim())?.CLI_RAZON||'').toLowerCase().includes(q)
+  );
+  if (idx >= 0) {
+    facSelIdx = idx;
+    renderFac();
+    // Scroll al elemento encontrado
+    const body = document.getElementById('fac-body');
+    const el = body.querySelector(`[data-idx="${idx}"]`);
+    if (el) el.scrollIntoView({ block: 'center' });
+  }
 }
 
 function renderFac() {
@@ -216,7 +230,7 @@ async function renderFacDetalle(f) {
   const tipoChar = (f.fac_nro||'').slice(-1);
 
   det.innerHTML = `
-    <div class="fac-det-hdr">
+    <div class="fac-det-hdr" style="position:sticky;top:0;background:var(--s1);z-index:1;padding-bottom:8px">
       <div class="fac-det-nro">${esc(f.fac_nro||'')} &nbsp;<span style="font-size:13px;color:var(--t2)">${tipoLabel[tipoChar]||''}</span></div>
       <div class="fac-det-cli">${cli?cli.CLI_RAZON:f.fac_cli||'—'}</div>
       <div class="fac-det-sub">${cli?cli.CLI_DOMIC+' — '+cli.CLI_LOCAL:''}</div>
@@ -230,17 +244,22 @@ async function renderFacDetalle(f) {
     <div style="margin-bottom:12px">
       <div style="font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:6px;letter-spacing:1px">ITEMS (${items.length})</div>
       <div style="background:var(--s2);border-radius:6px;overflow:hidden;max-height:200px;overflow-y:auto">
-        <div style="display:grid;grid-template-columns:110px 1fr 60px 90px 90px;gap:6px;padding:6px 10px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase">
-          <span>Artículo</span><span>Despacho</span><span style="text-align:right">Cant</span><span style="text-align:right">P.Unit</span><span style="text-align:right">Importe</span>
+        <div style="display:grid;grid-template-columns:110px 1fr 60px 90px 90px 65px;gap:6px;padding:6px 10px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase;position:sticky;top:0;z-index:1">
+          <span>Artículo</span><span>Despacho</span><span style="text-align:right">Cant</span><span style="text-align:right">P.Unit</span><span style="text-align:right">Importe</span><span style="text-align:right">Dto%</span>
         </div>
         ${items.length ? items.map(it => {
           const art = ARTS.find(a=>a.ART_COD===it.ite_art);
-          return `<div style="display:grid;grid-template-columns:110px 1fr 60px 90px 90px;gap:6px;padding:7px 10px;border-bottom:1px solid var(--b1);font-size:12px">
+          const dto = it.ite_costo && it.ite_costo > 0
+            ? ((1 - it.ite_uni / it.ite_costo) * 100).toFixed(1)
+            : '—';
+          const dtoColor = parseFloat(dto) > 0 ? 'color:var(--grn)' : 'color:var(--t3)';
+          return `<div style="display:grid;grid-template-columns:110px 1fr 60px 90px 90px 65px;gap:6px;padding:7px 10px;border-bottom:1px solid var(--b1);font-size:12px">
             <span class="col-cod">${esc(it.ite_art||'')}</span>
             <span style="color:var(--t2);font-size:11px">${esc(it.ite_desp||'')}</span>
             <span style="text-align:right;font-family:var(--mono)">${it.ite_can||0}</span>
             <span style="text-align:right;font-family:var(--mono)">${mon}${fmt(it.ite_uni)}</span>
             <span style="text-align:right;font-family:var(--mono);color:var(--grn)">${mon}${fmt(it.ite_imp)}</span>
+            <span style="text-align:right;font-family:var(--mono);${dtoColor}">${dto}%</span>
           </div>`;
         }).join('') : '<div style="padding:12px;text-align:center;color:var(--t3);font-size:12px">Sin ítems</div>'}
       </div>
