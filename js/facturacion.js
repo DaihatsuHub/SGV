@@ -179,9 +179,9 @@ function renderFac() {
     const ctip = CTIPS.find(c=>c.prefijo === prefijo);
     const contColor = ctip ? (ctip.contable ? 'var(--acc)' : 'var(--red)') : 'var(--t2)';
     return `<div class="tr-fac ${sel}" data-idx="${i}" onclick="selFac(${i})">
-      <span class="col-cod" style="font-family:var(--mono);color:${contColor}">${esc(f.fac_nro||'')}</span>
-      <span style="font-size:12px;color:var(--t2)">${fec}</span>
-      <span style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(nomCli)}</span>
+      <span style="font-size:12px;color:var(--t2);flex-shrink:0">${fec}</span>
+      <span class="col-cod" style="font-family:var(--mono);color:${contColor};flex-shrink:0">${esc(f.fac_nro||'')}</span>
+      <span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nomCli)}</span>
     </div>`;
   }).join('');
 
@@ -232,9 +232,13 @@ async function renderFacDetalle(f) {
   const tipoLabel = { F:'Factura', C:'Nota de Crédito', D:'Nota de Débito', R:'Cheque Rechazado' };
   const tipoChar = (f.fac_nro||'').slice(-1);
 
+  const prefijo2 = (f.fac_nro||'').substring(0,3);
+  const ctip2 = CTIPS.find(c=>c.prefijo === prefijo2);
+  const contColor2 = ctip2 ? (ctip2.contable ? 'var(--acc)' : 'var(--red)') : 'var(--acc)';
+
   det.innerHTML = `
     <div class="fac-det-hdr" style="position:sticky;top:0;background:var(--s1);z-index:1;padding-bottom:8px">
-      <div class="fac-det-nro">${esc(f.fac_nro||'')} &nbsp;<span style="font-size:13px;color:var(--t2)">${tipoLabel[tipoChar]||''}</span></div>
+      <div class="fac-det-nro" style="color:${contColor2}">${esc(f.fac_nro||'')} &nbsp;<span style="font-size:13px;color:var(--t2)">${tipoLabel[tipoChar]||''}</span></div>
       <div class="fac-det-cli">${cli?cli.CLI_RAZON:f.fac_cli||'—'}</div>
       <div class="fac-det-sub">${cli?cli.CLI_DOMIC+' — '+cli.CLI_LOCAL:''}</div>
       <div class="fac-det-sub" style="margin-top:4px">
