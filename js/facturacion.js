@@ -175,8 +175,11 @@ function renderFac() {
     const fec = f.fac_fec ? f.fac_fec.substring(0,10).split('-').reverse().join('/') : '—';
     const cli = CLIS.find(c=>c.CLI_CODIGO===(f.fac_cli||'').trim());
     const nomCli = cli ? cli.CLI_RAZON : f.fac_cli||'—';
+    const prefijo = (f.fac_nro||'').substring(0,3);
+    const ctip = CTIPS.find(c=>c.empresa+c.prefijo === prefijo);
+    const contColor = ctip ? (ctip.contable ? 'var(--acc)' : 'var(--red)') : 'var(--t2)';
     return `<div class="tr-fac ${sel}" data-idx="${i}" onclick="selFac(${i})">
-      <span class="col-cod" style="font-family:var(--mono)">${esc(f.fac_nro||'')}</span>
+      <span class="col-cod" style="font-family:var(--mono);color:${contColor}">${esc(f.fac_nro||'')}</span>
       <span style="font-size:12px;color:var(--t2)">${fec}</span>
       <span style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(nomCli)}</span>
     </div>`;
