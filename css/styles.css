@@ -210,10 +210,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:10
 .srch-clr:hover{color:var(--red)}
 
 /* ── FACTURACIÓN ─────────────────────────────────────────── */
-.fac-layout{display:grid;grid-template-columns:380px 1fr;gap:0;height:calc(100vh - 72px);overflow:hidden}
+.fac-layout{display:grid;grid-template-columns:460px 1fr;gap:0;height:calc(100vh - 72px);overflow:hidden}
 .fac-lista{border-right:1px solid var(--b1);overflow-y:auto;display:flex;flex-direction:column}
-.th-fac{display:grid;grid-template-columns:80px 130px 1fr;gap:8px;padding:11px 16px;background:#1e3a6e;border-bottom:1px solid #152d57;font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#93b4d8;font-weight:600;position:sticky;top:0;z-index:1}
-.tr-fac{display:grid;grid-template-columns:80px 130px 1fr;gap:8px;padding:9px 16px;border-bottom:1px solid var(--b1);cursor:pointer;transition:background .1s;font-size:13px}
+.th-fac{display:grid;grid-template-columns:75px 120px 1fr;gap:8px;padding:11px 16px;background:#1e3a6e;border-bottom:1px solid #152d57;font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#93b4d8;font-weight:600;position:sticky;top:0;z-index:1}
+.tr-fac{display:grid;grid-template-columns:75px 120px 1fr;gap:8px;padding:9px 16px;border-bottom:1px solid var(--b1);cursor:pointer;transition:background .1s;font-size:13px}
 .tr-fac:hover{background:var(--s2)}
 .tr-fac.sel{background:var(--acc);color:#fff}.tr-fac.sel span{color:#fff!important}
 .fac-detalle{overflow-y:auto;padding:20px 24px;background:var(--s1)}
