@@ -6,6 +6,8 @@ let FACS   = [];
 let CTIPS  = [];
 let facSelIdx  = null;
 let ctipSelIdx = null;
+let facSort = { col: 'fac_fec', asc: true };
+let facFechaBusq = '';
 
 // ── Cargar datos desde Supabase ───────────────────────────
 async function sbLoadFacs() {
@@ -139,8 +141,50 @@ function proximoNro(empresa, prefijo, tipo) {
 // ── FACTURACIÓN ────────────────────────────────────────────
 function filtFacs() {
   const emp = document.getElementById('fac-empresa')?.value||'';
-  // Filtrar solo por empresa, nunca por búsqueda (búsqueda es posicional)
-  return FACS.filter(f => !emp || (f.fac_nro||'').startsWith(emp));
+  const fecBusq = facFechaBusq;
+  let list = FACS.filter(f => {
+    const me = !emp || (f.fac_nro||'').startsWith(emp);
+    const mf = !fecBusq || (f.fac_fec||'').includes(fecBusq);
+    return me && mf;
+  });
+  // Ordenar: primero por columna seleccionada, secundario por fac_nro
+  list = list.slice().sort((a,b) => {
+    const va = a[facSort.col]||'', vb = b[facSort.col]||'';
+    const r = String(va).localeCompare(String(vb));
+    if (r !== 0) return facSort.asc ? r : -r;
+    // secundario por fac_nro asc
+    return (a.fac_nro||'').localeCompare(b.fac_nro||'');
+  });
+  return list;
+}
+
+function toggleFacSort(col) {
+  if (facSort.col === col) facSort.asc = !facSort.asc;
+  else { facSort.col = col; facSort.asc = true; }
+  facSelIdx = null;
+  renderFac();
+  // After render, posicionar en ultima fecha si ordena por fecha
+  if (col === 'fac_fec') posicionarUltimaFecha();
+}
+
+function setFacFecha(val) {
+  facFechaBusq = val;
+  facSelIdx = null;
+  renderFac();
+  if (!val) posicionarUltimaFecha();
+}
+
+function posicionarUltimaFecha() {
+  const list = filtFacs();
+  if (!list.length) return;
+  const ultimaFecha = list.map(f=>f.fac_fec||'').filter(Boolean).reduce((a,b)=>a>b?a:b,'');
+  const idx = list.findIndex(f=>f.fac_fec===ultimaFecha);
+  if (idx >= 0) {
+    facSelIdx = idx;
+    renderFac();
+    const el = document.getElementById('fac-body')?.querySelector('[data-idx="'+idx+'"]');
+    if (el) el.scrollIntoView({ block: 'center' });
+  }
 }
 
 function buscarFac() {
@@ -167,8 +211,22 @@ function renderFac() {
   const body = document.getElementById('fac-body');
   if(!list.length){body.innerHTML='<div class="empty">🔍 Sin resultados</div>';return;}
 
-  // Si no hay selección, seleccionar el primero (ya viene ordenado por fecha desc)
-  if (facSelIdx === null || facSelIdx >= list.length) facSelIdx = 0;
+  // Si no hay selección, posicionar en primera fila de la última fecha
+  if (facSelIdx === null || facSelIdx >= list.length) {
+    const ultimaFecha = list.map(f=>f.fac_fec||'').filter(Boolean).reduce((a,b)=>a>b?a:b,'');
+    facSelIdx = list.findIndex(f=>f.fac_fec===ultimaFecha);
+    if (facSelIdx < 0) facSelIdx = 0;
+  }
+
+  // Update header arrows
+  const thFac = document.querySelector('.th-fac');
+  if (thFac) {
+    const arr = col => facSort.col===col ? (facSort.asc?' ▲':' ▼') : ' ↕';
+    thFac.innerHTML = `
+      <span style="cursor:pointer" onclick="toggleFacSort('fac_fec')">Fecha${arr('fac_fec')}</span>
+      <span style="cursor:pointer" onclick="toggleFacSort('fac_nro')">Comprobante${arr('fac_nro')}</span>
+      <span style="cursor:pointer" onclick="toggleFacSort('fac_cli')">Cliente${arr('fac_cli')}</span>`;
+  }
 
   body.innerHTML = list.map((f,i) => {
     const sel = facSelIdx===i ? 'sel' : '';

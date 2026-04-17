@@ -31,7 +31,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:10
 .c-blue{color:var(--acc)} .c-grn{color:var(--grn)} .c-yel{color:var(--yel)} .c-red{color:var(--red)} .c-pur{color:var(--pur)}
 
 /* TOOLBAR */
-.toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.toolbar{position:sticky;top:52px;z-index:10;display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
 .btn{display:flex;align-items:center;gap:5px;padding:8px 15px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--b2);background:var(--s2);color:var(--txt);transition:all .15s;font-family:var(--sans)}
 .btn:hover{border-color:var(--acc);color:var(--acc)}
 .btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
