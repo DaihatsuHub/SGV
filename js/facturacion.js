@@ -453,13 +453,13 @@ async function calcTop10() {
       return;
     }
 
-    // Traer items de esas facturas — en lotes de 100 nros
+    // Traer items de esas facturas — en lotes usando sintaxis IN de Supabase
     const nrosArr = [...facNros];
     const allItems = [];
-    for (let i = 0; i < nrosArr.length; i += 100) {
-      const lote = nrosArr.slice(i, i+100);
-      const q = lote.map(n => `ite_nro=eq.${encodeURIComponent(n)}`).join('&');
-      const items = await sbGet('fac_items', q + '&select=ite_art,ite_can,ite_imp');
+    for (let i = 0; i < nrosArr.length; i += 200) {
+      const lote = nrosArr.slice(i, i+200);
+      const inList = lote.map(n => n.trim()).join(',');
+      const items = await sbGet('fac_items', `ite_nro=in.(${encodeURIComponent(inList)})&select=ite_art,ite_can,ite_imp&limit=10000`);
       allItems.push(...items);
     }
 
