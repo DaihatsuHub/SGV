@@ -168,10 +168,25 @@ function toggleFacSort(col) {
 }
 
 function setFacFecha(val) {
-  facFechaBusq = val;
-  facSelIdx = null;
+  if (!val) {
+    facFechaBusq = '';
+    facSelIdx = null;
+    posicionarUltimaFecha();
+    return;
+  }
+  // Ordenar por fecha y posicionar en la más próxima
+  facSort = { col: 'fac_fec', asc: true };
+  facFechaBusq = '';
+  const list = filtFacs();
+  let idx = list.findIndex(f => (f.fac_fec||'') === val);
+  if (idx < 0) idx = list.findIndex(f => (f.fac_fec||'') >= val);
+  if (idx < 0) idx = list.length - 1;
+  facSelIdx = idx;
   renderFac();
-  if (!val) posicionarUltimaFecha();
+  const el = document.getElementById('fac-body')?.querySelector('[data-idx="'+idx+'"]');
+  if (el) el.scrollIntoView({ block: 'center' });
+  // Limpiar el date picker
+  document.getElementById('fac-fecha').value = '';
 }
 
 function posicionarUltimaFecha() {
@@ -189,20 +204,75 @@ function posicionarUltimaFecha() {
 
 function buscarFac() {
   const q = (document.getElementById('fac-q')?.value||'').toLowerCase().trim();
-  if (!q) { facSelIdx = 0; renderFac(); return; }
-  const list = filtFacs();
-  const idx = list.findIndex(f =>
-    (f.fac_nro||'').toLowerCase().includes(q) ||
-    (f.fac_cli||'').toLowerCase().includes(q) ||
-    (CLIS.find(c=>c.CLI_CODIGO===(f.fac_cli||'').trim())?.CLI_RAZON||'').toLowerCase().includes(q)
-  );
-  if (idx >= 0) {
+  if (!q) { facSelIdx = null; posicionarUltimaFecha(); return; }
+
+  // Detectar si es una fecha (formato dd/mm/aaaa, dd-mm-aaaa, o aaaa-mm-dd)
+  const esFecha = /^\d{2}[\/-]\d{2}[\/-]\d{4}$/.test(q) || /^\d{4}-\d{2}-\d{2}$/.test(q);
+  
+  if (esFecha) {
+    // Convertir a formato ISO para comparar
+    let fechaISO = q;
+    if (q.includes('/') || (q.includes('-') && q.indexOf('-') === 2)) {
+      const p = q.replace(/\//g,'-').split('-');
+      fechaISO = p[2]+'-'+p[1]+'-'+p[0];
+    }
+    // Ordenar por fecha y buscar la más próxima
+    facSort = { col: 'fac_fec', asc: true };
+    const list = filtFacs();
+    // Buscar exacta primero, si no la más próxima siguiente
+    let idx = list.findIndex(f => (f.fac_fec||'') === fechaISO);
+    if (idx < 0) {
+      idx = list.findIndex(f => (f.fac_fec||'') >= fechaISO);
+    }
+    if (idx < 0) idx = list.length - 1;
     facSelIdx = idx;
+    document.getElementById('fac-q').value = '';
     renderFac();
-    // Scroll al elemento encontrado
-    const body = document.getElementById('fac-body');
-    const el = body.querySelector(`[data-idx="${idx}"]`);
+    const el = document.getElementById('fac-body')?.querySelector('[data-idx="'+idx+'"]');
     if (el) el.scrollIntoView({ block: 'center' });
+    return;
+  }
+
+  // Detectar si parece un número de factura (empieza con H o T)
+  const esFactura = /^[ht]/i.test(q);
+  if (esFactura) {
+    facSort = { col: 'fac_nro', asc: true };
+    const list = filtFacs();
+    const idx = list.findIndex(f => (f.fac_nro||'').toLowerCase().includes(q));
+    if (idx >= 0) {
+      facSelIdx = idx;
+      document.getElementById('fac-q').value = '';
+      renderFac();
+      const el = document.getElementById('fac-body')?.querySelector('[data-idx="'+idx+'"]');
+      if (el) el.scrollIntoView({ block: 'center' });
+    }
+    return;
+  }
+
+  // Buscar por cliente — ordenar por cliente
+  facSort = { col: 'fac_cli', asc: true };
+  // Ordenar por razón social
+  const listCli = FACS.filter(f => {
+    const emp = document.getElementById('fac-empresa')?.value||'';
+    return !emp || (f.fac_nro||'').startsWith(emp);
+  }).map(f => {
+    const cli = CLIS.find(c=>c.CLI_CODIGO===(f.fac_cli||'').trim());
+    return { ...f, _razon: (cli?.CLI_RAZON||f.fac_cli||'').toLowerCase() };
+  }).filter(f => f._razon.includes(q))
+    .sort((a,b) => a._razon.localeCompare(b._razon));
+  
+  if (listCli.length > 0) {
+    const target = listCli[0];
+    facSort = { col: 'fac_cli', asc: true };
+    const list = filtFacs();
+    const idx = list.findIndex(f => f.fac_nro === target.fac_nro);
+    if (idx >= 0) {
+      facSelIdx = idx;
+      document.getElementById('fac-q').value = '';
+      renderFac();
+      const el = document.getElementById('fac-body')?.querySelector('[data-idx="'+idx+'"]');
+      if (el) el.scrollIntoView({ block: 'center' });
+    }
   }
 }
 
