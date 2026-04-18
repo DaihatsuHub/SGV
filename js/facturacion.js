@@ -513,3 +513,143 @@ async function calcTop10() {
     body.innerHTML = '<div style="text-align:center;color:var(--red);padding:20px">Error al calcular</div>';
   }
 }
+
+
+// ── CONSULTA EN LENGUAJE NATURAL ─────────────────────────
+let consultaHistory = [];
+
+function openConsulta() {
+  const ov = document.getElementById('ov-consulta');
+  if (!ov) return;
+  ov.classList.add('open');
+  document.getElementById('consulta-input').focus();
+}
+
+async function enviarConsulta() {
+  const input = document.getElementById('consulta-input');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+
+  const msgDiv = document.getElementById('consulta-msgs');
+
+  // Agregar mensaje del usuario
+  msgDiv.innerHTML += `<div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+    <div style="background:var(--acc);color:#fff;border-radius:12px 12px 2px 12px;padding:8px 14px;max-width:80%;font-size:13px">${esc(q)}</div>
+  </div>`;
+  msgDiv.scrollTop = msgDiv.scrollHeight;
+
+  // Agregar indicador de carga
+  const loadId = 'load-'+Date.now();
+  msgDiv.innerHTML += `<div id="${loadId}" style="display:flex;margin-bottom:10px">
+    <div style="background:var(--s3);border-radius:12px 12px 12px 2px;padding:8px 14px;font-size:13px;color:var(--t2)">⏳ Consultando...</div>
+  </div>`;
+  msgDiv.scrollTop = msgDiv.scrollHeight;
+
+  // Contexto del sistema para Claude
+  const systemPrompt = `Sos un asistente de consultas para un sistema de facturación llamado SGV.
+Tenés acceso a las siguientes tablas en Supabase (PostgreSQL):
+
+- facturas: fac_nro (PK), fac_fec (date), fac_cli (código cliente), fac_tiva, fac_sub, fac_percib, fac_total, fac_saldo, fac_moneda, fac_transp, fac_remito
+- fac_items: id, ite_nro (FK→fac_nro), ite_art (código artículo), ite_can, ite_uni, ite_imp, ite_desp, ite_impu, ite_costo
+- clientes: cli_codigo (PK), cli_razon, cli_domic, cli_local, cli_provin, cli_cuit, cli_iva, cli_conpag, cli_saldo
+- articulos: art_cod (PK), art_des, art_rub, art_marca, art_pre, art_stk, art_stkt
+
+Reglas importantes:
+- Las facturas que empiezan con H son de Hatsu Electronics SA
+- Las facturas que empiezan con T son de Tressa Argentina SA
+- fac_saldo > 0 significa factura impaga
+- Las fechas están en formato YYYY-MM-DD
+
+Tu tarea es:
+1. Interpretar la pregunta del usuario
+2. Generar una URL de consulta REST de Supabase (NO SQL, usar la API REST de PostgREST)
+3. Ejecutar la consulta
+4. Responder en español de forma clara y concisa
+
+Formato de respuesta: JSON con esta estructura:
+{
+  "query": "tabla?parametros",
+  "respuesta": "texto de respuesta al usuario (después de ver los datos)",
+  "necesita_datos": true
+}
+
+Si no necesitás consultar datos, devolvé necesita_datos: false y la respuesta directamente.
+La URL base es: https://blwxnrzrsgxscmsquwlz.supabase.co/rest/v1/`;
+
+  consultaHistory.push({ role: 'user', content: q });
+
+  try {
+    // Paso 1: Claude genera la query
+    const resp1 = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: consultaHistory
+      })
+    });
+    const data1 = await resp1.json();
+    const text1 = data1.content?.[0]?.text || '';
+
+    let parsed;
+    try {
+      const clean = text1.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(clean);
+    } catch(e) {
+      parsed = { necesita_datos: false, respuesta: text1 };
+    }
+
+    let respuestaFinal = parsed.respuesta || '';
+
+    if (parsed.necesita_datos && parsed.query) {
+      // Paso 2: ejecutar la query en Supabase
+      const sbResp = await fetch(`${SB_URL}/rest/v1/${parsed.query}`, {
+        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+      });
+      const sbData = await sbResp.json();
+
+      // Paso 3: Claude interpreta los resultados
+      const resp2 = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: systemPrompt,
+          messages: [
+            ...consultaHistory,
+            { role: 'assistant', content: text1 },
+            { role: 'user', content: `Resultados de la consulta: ${JSON.stringify(sbData).substring(0, 3000)}. Ahora respondé la pregunta del usuario de forma clara y concisa en español.` }
+          ]
+        })
+      });
+      const data2 = await resp2.json();
+      respuestaFinal = data2.content?.[0]?.text || 'No pude interpretar los resultados.';
+    }
+
+    consultaHistory.push({ role: 'assistant', content: respuestaFinal });
+
+    // Reemplazar indicador de carga con respuesta
+    document.getElementById(loadId).outerHTML = `<div style="display:flex;margin-bottom:10px">
+      <div style="background:var(--s3);border-radius:12px 12px 12px 2px;padding:8px 14px;max-width:85%;font-size:13px;color:var(--txt);line-height:1.5">${esc(respuestaFinal).replace(/\n/g,'<br>')}</div>
+    </div>`;
+    msgDiv.scrollTop = msgDiv.scrollHeight;
+
+  } catch(e) {
+    console.error('consulta:', e);
+    document.getElementById(loadId).outerHTML = `<div style="display:flex;margin-bottom:10px">
+      <div style="background:var(--s3);border-radius:12px 12px 12px 2px;padding:8px 14px;font-size:13px;color:var(--red)">Error al procesar la consulta.</div>
+    </div>`;
+  }
+}
+
+function limpiarConsulta() {
+  consultaHistory = [];
+  document.getElementById('consulta-msgs').innerHTML = `<div style="text-align:center;color:var(--t3);font-size:12px;padding:20px">
+    Hacé tus preguntas sobre facturación en lenguaje natural.<br>
+    <span style="font-size:11px">Ej: "¿Cuánto vendió el cliente 5800 este mes?" · "¿Cuáles son las facturas impagas?"</span>
+  </div>`;
+}
