@@ -307,7 +307,6 @@
     <button class="btn" onclick="facModif()">✏️ Modificar</button>
     <button class="btn dng" onclick="facBaja()">✕ Anular</button>
     <button class="btn scs" onclick="facImprimir()">🖨 Imprimir</button>
-    <button class="btn" onclick="openTop10()" title="Top 10 productos más vendidos">🏆 Top 10</button>
     <div class="spacer"></div>
     <select class="fsel" id="fac-empresa" onchange="renderFac()">
       <option value="">Ambas empresas</option>
@@ -693,36 +692,6 @@
       <button class="btn" onclick="document.getElementById('ov-col-cfg').classList.remove('open')">Cancelar</button>
       <button class="btn pri" onclick="saveColCfg()">💾 Guardar</button>
     </div>
-  </div>
-</div>
-
-<!-- MODAL TOP 10 -->
-<div class="ov" id="ov-top10">
-  <div class="modal" style="max-width:680px">
-    <div class="mhd">
-      <div class="mtit"><span>🏆 Top 10 Productos Más Vendidos</span></div>
-      <button class="mcls" onclick="document.getElementById('ov-top10').classList.remove('open')">✕</button>
-    </div>
-    <div style="display:flex;gap:10px;align-items:flex-end;padding:14px 22px 10px;border-bottom:1px solid var(--b1);flex-wrap:wrap">
-      <div>
-        <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:4px">Desde</label>
-        <input type="date" class="finp" id="top10-desde" style="width:140px">
-      </div>
-      <div>
-        <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:4px">Hasta</label>
-        <input type="date" class="finp" id="top10-hasta" style="width:140px">
-      </div>
-      <div>
-        <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:4px">Empresa</label>
-        <select class="finp" id="top10-emp" style="width:160px">
-          <option value="">Ambas</option>
-          <option value="H">Hatsu Electronics</option>
-          <option value="T">Tressa Argentina</option>
-        </select>
-      </div>
-      <button class="btn pri" onclick="calcTop10()">📊 Calcular</button>
-    </div>
-    <div class="mbdy" id="top10-body" style="padding:0;overflow-y:auto;max-height:55vh"></div>
   </div>
 </div>
 

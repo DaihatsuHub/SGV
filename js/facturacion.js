@@ -413,3 +413,103 @@ function facAlta()    { toast('Próximamente: Alta de factura','scs'); }
 function facModif()   { if(facSelIdx===null){toast('Seleccioná una factura','err');return;} toast('Próximamente: Modificar factura','scs'); }
 function facBaja()    { if(facSelIdx===null){toast('Seleccioná una factura','err');return;} toast('Próximamente: Anular factura','scs'); }
 function facImprimir(){ if(facSelIdx===null){toast('Seleccioná una factura','err');return;} toast('Próximamente: Imprimir factura','scs'); }
+
+
+// ── TOP 10 PRODUCTOS MÁS VENDIDOS ────────────────────────
+async function openTop10() {
+  const ov = document.getElementById('ov-top10');
+  if (!ov) return;
+  // Set default dates: current year
+  const hoy = new Date();
+  const anio = hoy.getFullYear();
+  document.getElementById('top10-desde').value = `${anio}-01-01`;
+  document.getElementById('top10-hasta').value = `${anio}-12-31`;
+  document.getElementById('top10-emp').value = '';
+  document.getElementById('top10-body').innerHTML = '<div style="text-align:center;color:var(--t3);padding:20px">Presioná Calcular para ver los resultados</div>';
+  ov.classList.add('open');
+}
+
+async function calcTop10() {
+  const desde  = document.getElementById('top10-desde').value;
+  const hasta  = document.getElementById('top10-hasta').value;
+  const emp    = document.getElementById('top10-emp').value;
+  const body   = document.getElementById('top10-body');
+
+  body.innerHTML = '<div style="text-align:center;color:var(--t3);padding:20px">⏳ Calculando...</div>';
+
+  try {
+    // Traer facturas del período
+    let facParams = `select=fac_nro&fac_fec=gte.${desde}&fac_fec=lte.${hasta}&limit=10000`;
+    const facsResp = await sbGetAll('facturas', 'fac_nro', `fac_fec=gte.${desde}&fac_fec=lte.${hasta}`);
+    let facNros = new Set(facsResp.map(f => f.fac_nro));
+
+    // Filtrar por empresa si corresponde
+    if (emp) {
+      facNros = new Set([...facNros].filter(n => (n||'').startsWith(emp)));
+    }
+
+    if (!facNros.size) {
+      body.innerHTML = '<div style="text-align:center;color:var(--t3);padding:20px">Sin facturas en el período</div>';
+      return;
+    }
+
+    // Traer items de esas facturas — en lotes de 100 nros
+    const nrosArr = [...facNros];
+    const allItems = [];
+    for (let i = 0; i < nrosArr.length; i += 100) {
+      const lote = nrosArr.slice(i, i+100);
+      const q = lote.map(n => `ite_nro=eq.${encodeURIComponent(n)}`).join('&');
+      const items = await sbGet('fac_items', q + '&select=ite_art,ite_can,ite_imp');
+      allItems.push(...items);
+    }
+
+    // Agrupar por artículo
+    const agg = {};
+    allItems.forEach(it => {
+      const cod = (it.ite_art||'').trim();
+      if (!cod) return;
+      if (!agg[cod]) agg[cod] = { cant: 0, imp: 0 };
+      agg[cod].cant += (it.ite_can||0);
+      agg[cod].imp  += (it.ite_imp||0);
+    });
+
+    // Top 10 por cantidad
+    const top10 = Object.entries(agg)
+      .sort((a,b) => b[1].cant - a[1].cant)
+      .slice(0, 10);
+
+    if (!top10.length) {
+      body.innerHTML = '<div style="text-align:center;color:var(--t3);padding:20px">Sin datos</div>';
+      return;
+    }
+
+    body.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--s3)">
+            <th style="padding:8px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1)">#</th>
+            <th style="padding:8px;text-align:left;font-family:var(--mono);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1)">Código</th>
+            <th style="padding:8px;text-align:left;font-family:var(--mono);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1)">Descripción</th>
+            <th style="padding:8px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1)">Cantidad</th>
+            <th style="padding:8px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1)">Importe</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${top10.map(([cod, d], i) => {
+            const art = ARTS.find(a=>a.ART_COD===cod);
+            const des = art ? art.ART_DES : '—';
+            return `<tr style="border-bottom:1px solid var(--b1)">
+              <td style="padding:9px 8px;text-align:center;font-family:var(--mono);color:var(--t3)">${i+1}</td>
+              <td style="padding:9px 8px;font-family:var(--mono);color:var(--acc)">${esc(cod)}</td>
+              <td style="padding:9px 8px;color:var(--txt)">${esc(des)}</td>
+              <td style="padding:9px 8px;text-align:right;font-family:var(--mono);color:var(--grn)">${d.cant.toLocaleString('es-AR')}</td>
+              <td style="padding:9px 8px;text-align:right;font-family:var(--mono);color:var(--txt)">$${fmt(d.imp)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) {
+    console.error('calcTop10:', e);
+    body.innerHTML = '<div style="text-align:center;color:var(--red);padding:20px">Error al calcular</div>';
+  }
+}
