@@ -581,7 +581,7 @@ La URL base es: https://blwxnrzrsgxscmsquwlz.supabase.co/rest/v1/`;
 
   try {
     // Paso 1: Claude genera la query
-    const resp1 = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp1 = await fetch('/api/consulta', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -612,7 +612,7 @@ La URL base es: https://blwxnrzrsgxscmsquwlz.supabase.co/rest/v1/`;
       const sbData = await sbResp.json();
 
       // Paso 3: Claude interpreta los resultados
-      const resp2 = await fetch('https://api.anthropic.com/v1/messages', {
+      const resp2 = await fetch('/api/consulta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
