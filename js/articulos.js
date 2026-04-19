@@ -55,7 +55,7 @@ function renderArts(){
         if(c.field==='ART_DES')   return `<span class="col-des">${esc(a.ART_DES)}</span>`;
         if(c.field==='ART_RUB')   return `<span style="font-family:var(--mono);font-size:12px;color:var(--t2)">${esc(a.ART_RUB||'')}</span>`;
         if(c.field==='ART_SRUB')  return `<span style="font-family:var(--mono);font-size:12px;color:var(--t3)">${esc(a.ART_SRUB||'')}</span>`;
-        if(c.field==='ART_PRE')   return `<span class="col-num" style="color:var(--grn)">$${fmt(a.ART_PRE)}</span>`;
+        if(c.field==='ART_PRE')   { const mone=(TABLAS['MONE']||[]).find(m=>m.CODIGO===a.ART_MONEDA); const signo=mone?mone.STRING1:'$'; return `<span class="col-num" style="color:var(--grn)">${signo}${fmt(a.ART_PRE)}</span>`; }
         if(c.field==='ART_STK')   return `<span class="col-num" style="${sH===0?'color:var(--red)':''}">${sH}</span>`;
         if(c.field==='ART_STKT')  return `<span class="col-num" style="${sT===0?'color:var(--red)':''}">${sT}</span>`;
         if(c.field==='ART_ESTU')  return `<span class="col-ctr"><span class="pill ${a.ART_ESTU==='S'?'pi':'pn'}">${a.ART_ESTU||'—'}</span></span>`;
@@ -128,19 +128,23 @@ function aBaja(){
   });
 }
 
-function fillArtSelects(selMarc, selRub, selSrub, selProv) {
+function fillArtSelects(selMarc, selRub, selSrub, selProv, selMone='P') {
   const opts = (tab, sel) => '<option value="">— Sin —</option>' +
     (TABLAS[tab]||[]).map(r=>`<option value="${r.CODIGO}"${r.CODIGO===sel?' selected':''}>${r.CODIGO} — ${r.DETALLE}</option>`).join('');
   document.getElementById('af-marc').innerHTML = opts('MARC', selMarc);
   document.getElementById('af-rub').innerHTML  = opts('RUBR', selRub);
   document.getElementById('af-srub').innerHTML = opts('SRUB', selSrub);
   document.getElementById('af-prov').innerHTML = opts('PROV', selProv);
+  // Monedas
+  const moneEl = document.getElementById('af-moneda');
+  if (moneEl) moneEl.innerHTML = (TABLAS['MONE']||[]).map(m=>`<option value="${m.CODIGO}"${m.CODIGO===selMone?' selected':''}>${m.STRING1} ${m.DETALLE}</option>`).join('');
 }
 
 function clrArtForm(){
   ['af-cod','af-des','af-grup','af-sex','af-estu','af-codcasio'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
   ['af-pre','af-stk','af-stkt'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=0; });
   const act = document.getElementById('af-act'); if(act) act.value='S';
+  fillArtSelects('','','','','P');
   const tog = document.getElementById('atog-act'); if(tog) tog.classList.add('on');
   fillArtSelects('','','','');
 }
@@ -161,7 +165,7 @@ function fillArtForm(a){
   const actTog = document.getElementById('atog-act');
   if(actInp) actInp.value = actVal;
   if(actTog) actTog.classList.toggle('on', actVal==='S');
-  fillArtSelects(a.ART_MARCA, a.ART_RUB, a.ART_SRUB, a.ART_PROV);
+  fillArtSelects(a.ART_MARCA, a.ART_RUB, a.ART_SRUB, a.ART_PROV, a.ART_MONEDA||'P');
 }
 
 function saveArt(){
@@ -181,8 +185,9 @@ function saveArt(){
     ART_ESTU:  document.getElementById('af-estu').value,
     ART_GRUP:  document.getElementById('af-grup').value.trim().toUpperCase(),
     ART_SEX:   document.getElementById('af-sex').value.trim().toUpperCase(),
-    ART_PROV:  document.getElementById('af-prov').value,
-    CODCASIO:  document.getElementById('af-codcasio')?.value.trim()||null,
+    ART_PROV:   document.getElementById('af-prov').value,
+    ART_MONEDA: document.getElementById('af-moneda')?.value||'P',
+    CODCASIO:   document.getElementById('af-codcasio')?.value.trim()||null,
   };
   if(window._ae==='A'){
     if(ARTS.find(a=>a.ART_COD===cod)){ toast('Código ya existe','err'); return; }

@@ -260,8 +260,7 @@ function renderDesp() {
         if(c.field==='DEP_SAL')    return `<span class="col-desp-num">${d.DEP_SAL}</span>`;
         if(c.field==='DEP_STK')    return `<span class="col-desp-num" style="color:${stk>0?'var(--grn)':stk<0?'var(--red)':'var(--t3)'}">${stk}</span>`;
         if(c.field==='DEP_FOB')    return `<span class="col-desp-num">$${fmt(d.DEP_FOB)}</span>`;
-        if(c.field==='DEP_GAS')    return `<span class="col-desp-num">$${fmt(d.DEP_GAS)}</span>`;
-        if(c.field==='DEP_GAS2')   return `<span class="col-desp-num">$${fmt(d.DEP_GAS2)}</span>`;
+        if(c.field==='DEP_GAS2')   return `<span class="col-desp-num">${d.DEP_GAS2||0}%</span>`;
         if(c.field==='DEP_COSTO') {
           const fob = d.DEP_FOB || 0;
           const gas2 = d.DEP_GAS2 || 0;
@@ -309,7 +308,6 @@ function clrDespForm() {
   document.getElementById('df-moneda').value='';
   document.getElementById('df-ent').value=0;
   document.getElementById('df-fob').value=0;
-  document.getElementById('df-gas').value=0;
   document.getElementById('df-gas2').value=0;
   fillDespArtSelect('');
 }
@@ -323,7 +321,6 @@ function fillDespForm(d) {
   document.getElementById('df-moneda').value = d.DEP_MONEDA||'';
   document.getElementById('df-ent').value    = d.DEP_ENT||0;
   document.getElementById('df-fob').value    = d.DEP_FOB||0;
-  document.getElementById('df-gas').value    = d.DEP_GAS||0;
   document.getElementById('df-gas2').value   = d.DEP_GAS2||0;
   fillDespArtSelect(d.DEP_ART);
 }
@@ -380,7 +377,7 @@ async function saveDesp() {
     DEP_ENT:    ent,
     DEP_SAL:    window._de==='M' ? (DESPS[despSelIdx]?.DEP_SAL||0) : 0,
     DEP_FOB:    parseFloat(document.getElementById('df-fob').value)||0,
-    DEP_GAS:    parseFloat(document.getElementById('df-gas').value)||0,
+    DEP_GAS:    0,
     DEP_GAS2:   parseFloat(document.getElementById('df-gas2').value)||0,
   };
 

@@ -13,6 +13,7 @@ const TAB_CONFIG = {
   PCIA: { label:'Provincias',       lbl1:'% IIBB',     lbl2:'Conv.' },
   GRUP: { label:'Grupos',           lbl1:'Info',       lbl2:'' },
   CATE: { label:'Categorías',       lbl1:'Info',       lbl2:'' },
+  MONE: { label:'Monedas',           lbl1:'Signo',      lbl2:'Cotización' },
 };
 
 

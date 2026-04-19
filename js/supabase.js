@@ -78,6 +78,7 @@ function dbToArt(r) {
     ART_GRUP:  r.art_grup,
     ART_SEX:   r.art_sex,
     ART_PROV:  r.art_prov,
+    ART_MONEDA:r.art_moneda||'P',
     CODCASIO:  r.codcasio
   };
 }
@@ -97,6 +98,7 @@ function artToDb(a) {
     art_grup:  a.ART_GRUP  || null,
     art_sex:   a.ART_SEX   || null,
     art_prov:  a.ART_PROV  || null,
+    art_moneda:a.ART_MONEDA|| 'P',
     codcasio:  a.CODCASIO  || null
   };
 }
@@ -132,7 +134,7 @@ async function sbLoad() {
       sbGetAll('articulos', 'art_cod'),
       sbGetAll('clientes',  'cli_codigo'),
     ]);
-    const [dRubr, dSrub, dMarc, dProv, dVend, dCpag, dPcia, dGrup, dCate, dExpr] = await Promise.all([
+    const [dRubr, dSrub, dMarc, dProv, dVend, dCpag, dPcia, dGrup, dCate, dExpr, dMone] = await Promise.all([
       sbGet('rubros',      'order=codigo.asc'),
       sbGet('subrubros',   'order=codigo.asc'),
       sbGet('marcas',      'order=codigo.asc'),
@@ -143,6 +145,7 @@ async function sbLoad() {
       sbGet('grupos',      'order=codigo.asc'),
       sbGet('categorias',  'order=codigo.asc'),
       sbGet('expresos',    'order=codigo.asc'),
+      sbGet('monedas',     'order=codigo.asc'),
     ]);
     ARTS = dArts.map(dbToArt);
     CLIS = dClis.map(dbToCli);
@@ -157,6 +160,7 @@ async function sbLoad() {
     mapTab('PROV', dProv, 'direccion'); mapTab('VEND', dVend); mapTab('CPAG', dCpag);
     mapTab('PCIA', dPcia, 'alicuota'); mapTab('GRUP', dGrup); mapTab('CATE', dCate);
     mapTab('EXPR', dExpr, 'direccion');
+    mapTab('MONE', dMone);
     syncStatus(`☁️ ${ARTS.length} art · ${CLIS.length} cli`, '#4ade80');
     setTimeout(()=>syncStatus('☁️ Supabase', '#93b4d8'), 3000);
     return true;
@@ -197,7 +201,7 @@ async function deleteCli(cod) {
 const TAB_MAP = {
   RUBR:'rubros', SRUB:'subrubros', MARC:'marcas', PROV:'proveedores',
   VEND:'vendedores', CPAG:'condpago', PCIA:'provincias',
-  GRUP:'grupos', CATE:'categorias', EXPR:'expresos'
+  GRUP:'grupos', CATE:'categorias', EXPR:'expresos', MONE:'monedas'
 };
 
 async function saveTabRow(row) {
@@ -206,6 +210,7 @@ async function saveTabRow(row) {
   const data = { codigo: row.CODIGO, detalle: row.DETALLE||'' };
   if (tbl === 'proveedores' || tbl === 'expresos') data.direccion = row.STRING1||'';
   if (tbl === 'provincias') data.alicuota = parseFloat(row.STRING1)||0;
+  if (tbl === 'monedas') { data.signo = row.STRING1||'$'; data.cotizacion = parseFloat(row.STRING2)||1; }
   try { await sbUpsert(tbl, data); }
   catch(e) { console.error('saveTabRow:', e); }
 }

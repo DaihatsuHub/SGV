@@ -34,4 +34,5 @@ function showSubPage(menu, sub) {
   else if (sub==='usua') renderUsua();
   else if (sub==='fac')  renderFac();
   else if (sub==='ctip') renderCtip();
+  else if (sub==='mone') renderTabGral('MONE');
 }

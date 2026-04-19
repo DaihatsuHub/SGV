@@ -37,6 +37,7 @@
         <button class="dd-item" id="ddi-marc" onclick="showSubPage('art','marc')">🏷️ Tabla de Marcas</button>
         <button class="dd-item" id="ddi-rubr" onclick="showSubPage('art','rubr')">📦 Tabla de Rubros</button>
         <button class="dd-item" id="ddi-prov" onclick="showSubPage('art','prov')">🏭 Tabla de Proveedores</button>
+        <button class="dd-item" id="ddi-mone" onclick="showSubPage('art','mone')">💱 Monedas</button>
       </div>
     </div>
     <div class="dd-wrap">
@@ -397,6 +398,26 @@
   </div>
 </div>
 
+<!-- ══════ MONEDAS ══════ -->
+<div class="page" id="page-mone">
+  <div class="toolbar">
+    <button class="btn pri" onclick="tabAlta('MONE')">＋ Alta</button>
+    <button class="btn" onclick="tabModif('MONE')">✏️ Modificar</button>
+    <button class="btn dng" onclick="tabBaja('MONE')">✕ Baja</button>
+    <div class="spacer"></div>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" id="mone-q" placeholder="Buscar..." oninput="renderTabGral('MONE')">
+      <button class="srch-clr" onclick="clrSrch('mone-q',function(){renderTabGral('MONE')})" title="Limpiar">✕</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <div style="display:grid;grid-template-columns:60px 1fr 70px 110px;gap:8px;padding:11px 16px;background:#1e3a6e;border-bottom:1px solid #152d57;font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#93b4d8;font-weight:600">
+      <span>Código</span><span>Descripción</span><span>Signo</span><span style="text-align:right">Cotización</span>
+    </div>
+    <div class="tbl-body" id="mone-body"></div>
+  </div>
+</div>
+
 <!-- ══════ DESPACHOS ══════ -->
 <div class="page" id="page-desp">
   <div class="toolbar">
@@ -460,8 +481,7 @@
       <div class="fsec">Costos</div>
       <div class="fg3">
         <div class="fgrp"><label class="flbl2">FOB</label><input class="finp" id="df-fob" type="number" step="0.01" value="0"></div>
-        <div class="fgrp"><label class="flbl2">Gastos 1</label><input class="finp" id="df-gas" type="number" step="0.01" value="0"></div>
-        <div class="fgrp"><label class="flbl2">Gastos 2</label><input class="finp" id="df-gas2" type="number" step="0.01" value="0"></div>
+        <div class="fgrp"><label class="flbl2">Gastos %</label><input class="finp" id="df-gas2" type="number" step="0.01" value="0"></div>
       </div>
     </div>
     <div class="mft">
@@ -516,7 +536,8 @@
       </div>
       <div class="fsec">Precio y Stock</div>
       <div class="fg3">
-        <div class="fgrp"><label class="flbl2">Precio Lista $</label><input class="finp" id="af-pre" type="number" step="0.01" value="0"></div>
+        <div class="fgrp"><label class="flbl2">Moneda</label><select class="finp" id="af-moneda"><option value="P">$ Pesos</option></select></div>
+        <div class="fgrp"><label class="flbl2">Precio</label><input class="finp" id="af-pre" type="number" step="0.01" value="0"></div>
         <div class="fgrp"><label class="flbl2">Stock Hatsu</label><input class="finp" id="af-stk" type="number" value="0"></div>
         <div class="fgrp"><label class="flbl2">Stock Tressa</label><input class="finp" id="af-stkt" type="number" value="0"></div>
       </div>
