@@ -181,8 +181,9 @@ function tabAlta(tipo) {
   document.getElementById('tf-cod').disabled = false;
   document.getElementById('tab-mtit').textContent = (tipo==='MARC'?'Marcas':'Rubros') + ' — Nuevo';
   setMtag('tab-mtag','ALTA','tag-a');
-  document.getElementById('tf-lbl1').textContent = tipo==='RUBR'?'Grupo':'Info';
-  document.getElementById('tf-lbl2').textContent = '';
+  const cfgT = TAB_CONFIG[tipo]||{};
+  document.getElementById('tf-lbl1').textContent = cfgT.lbl1||'Dato 1';
+  document.getElementById('tf-lbl2').textContent = cfgT.lbl2||'';
   document.getElementById('tf-s2').closest('.fgrp').style.display = tipo==='RUBR'?'none':'flex';
   document.getElementById('ov-tab').classList.add('open');
 }
@@ -200,8 +201,9 @@ function tabModif(tipo) {
   document.getElementById('tf-s2').value  = r.STRING2||'';
   document.getElementById('tab-mtit').textContent = (tipo==='MARC'?'Marcas':'Rubros') + ' — Modificar';
   setMtag('tab-mtag','MODIFICACIÓN','tag-m');
-  document.getElementById('tf-lbl1').textContent = tipo==='RUBR'?'Grupo':'Info';
-  document.getElementById('tf-lbl2').textContent = '';
+  const cfgM = TAB_CONFIG[tipo]||{};
+  document.getElementById('tf-lbl1').textContent = cfgM.lbl1||'Dato 1';
+  document.getElementById('tf-lbl2').textContent = cfgM.lbl2||'';
   document.getElementById('tf-s2').closest('.fgrp').style.display = tipo==='RUBR'?'none':'flex';
   document.getElementById('ov-tab').classList.add('open');
 }

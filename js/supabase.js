@@ -160,7 +160,10 @@ async function sbLoad() {
     mapTab('PROV', dProv, 'direccion'); mapTab('VEND', dVend); mapTab('CPAG', dCpag);
     mapTab('PCIA', dPcia, 'alicuota'); mapTab('GRUP', dGrup); mapTab('CATE', dCate);
     mapTab('EXPR', dExpr, 'direccion');
-    mapTab('MONE', dMone);
+    TABLAS['MONE'] = dMone.map(r => ({
+      TABLA:'MONE', CODIGO:r.codigo, DETALLE:r.descripcion||'',
+      STRING1:r.signo||'$', STRING2:String(r.cotizacion||1), STRING3:'', FECHA1:'', NIVEL:0
+    }));
     syncStatus(`☁️ ${ARTS.length} art · ${CLIS.length} cli`, '#4ade80');
     setTimeout(()=>syncStatus('☁️ Supabase', '#93b4d8'), 3000);
     return true;
