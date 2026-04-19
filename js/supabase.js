@@ -213,7 +213,13 @@ async function saveTabRow(row) {
   const data = { codigo: row.CODIGO, detalle: row.DETALLE||'' };
   if (tbl === 'proveedores' || tbl === 'expresos') data.direccion = row.STRING1||'';
   if (tbl === 'provincias') data.alicuota = parseFloat(row.STRING1)||0;
-  if (tbl === 'monedas') { data.signo = row.STRING1||'$'; data.cotizacion = parseFloat(row.STRING2)||1; }
+  if (tbl === 'monedas') {
+    // monedas usa 'descripcion' en lugar de 'detalle'
+    delete data.detalle;
+    data.descripcion = row.DETALLE||'';
+    data.signo = row.STRING1||'$';
+    data.cotizacion = parseFloat(row.STRING2)||1;
+  }
   try { await sbUpsert(tbl, data); }
   catch(e) { console.error('saveTabRow:', e); }
 }
