@@ -95,7 +95,7 @@ function setTabLabels() {
 }
 function saveTab() {
   // Si viene de subtabla (MARC/RUBR), usar _tabEditTipo
-  if (_tabEditTipo && ['MARC','RUBR'].includes(_tabEditTipo)) {
+  if (_tabEditTipo && ['MARC','RUBR','PROV','VEND','CPAG','PCIA','GRUP','CATE','EXPR','SRUB','MONE'].includes(_tabEditTipo)) {
     const cod = document.getElementById('tf-cod').value.trim().toUpperCase();
     const det = document.getElementById('tf-det').value.trim().toUpperCase();
     if (!cod||!det) { toast('Código y detalle son obligatorios','err'); return; }
@@ -179,7 +179,7 @@ function tabAlta(tipo) {
   _tabEditTipo = tipo; _tabEditMode = 'A';
   clrTabForm();
   document.getElementById('tf-cod').disabled = false;
-  document.getElementById('tab-mtit').textContent = (tipo==='MARC'?'Marcas':'Rubros') + ' — Nuevo';
+  document.getElementById('tab-mtit').textContent = (TAB_CONFIG[tipo]?.label||tipo) + ' — Nuevo';
   setMtag('tab-mtag','ALTA','tag-a');
   const cfgT = TAB_CONFIG[tipo]||{};
   document.getElementById('tf-lbl1').textContent = cfgT.lbl1||'Dato 1';
@@ -199,7 +199,7 @@ function tabModif(tipo) {
   document.getElementById('tf-det').value = r.DETALLE;
   document.getElementById('tf-s1').value  = r.STRING1||'';
   document.getElementById('tf-s2').value  = r.STRING2||'';
-  document.getElementById('tab-mtit').textContent = (tipo==='MARC'?'Marcas':'Rubros') + ' — Modificar';
+  document.getElementById('tab-mtit').textContent = (TAB_CONFIG[tipo]?.label||tipo) + ' — Modificar';
   setMtag('tab-mtag','MODIFICACIÓN','tag-m');
   const cfgM = TAB_CONFIG[tipo]||{};
   document.getElementById('tf-lbl1').textContent = cfgM.lbl1||'Dato 1';
