@@ -162,6 +162,27 @@ function getTabGralRows(tipo) {
 }
 
 function renderTabGral(tipo) {
+  // Caso especial MONE — muestra cotización numérica
+  if (tipo === 'MONE') {
+    const q = (document.getElementById('mone-q')?.value||'').toLowerCase();
+    const body = document.getElementById('mone-body');
+    if (!body) return;
+    const list = (TABLAS['MONE']||[]).filter(r =>
+      !q || r.CODIGO.toLowerCase().includes(q) || r.DETALLE.toLowerCase().includes(q)
+    );
+    if (!list.length) { body.innerHTML='<div class="empty">🔍 Sin resultados</div>'; return; }
+    body.innerHTML = list.map((r,i) => {
+      const sel = (_tabGralSel['MONE']===i) ? 'sel' : '';
+      return `<div class="tr-tab ${sel}" style="display:grid;grid-template-columns:60px 1fr 70px 110px;gap:8px;padding:11px 16px;font-size:13px;cursor:pointer" onclick="selTabGral('MONE',${i})">
+        <span class="col-cod">${esc(r.CODIGO)}</span>
+        <span>${esc(r.DETALLE)}</span>
+        <span style="font-family:var(--mono);text-align:center">${esc(r.STRING1||'')}</span>
+        <span style="text-align:right;font-family:var(--mono);color:var(--grn)">${parseFloat(r.STRING2||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</span>
+      </div>`;
+    }).join('');
+    return;
+  }
+
   const list = getTabGralRows(tipo);
   const bodyId = tipo.toLowerCase()+'-body';
   const body = document.getElementById(bodyId);
