@@ -184,7 +184,9 @@ function tabAlta(tipo) {
   const cfgT = TAB_CONFIG[tipo]||{};
   document.getElementById('tf-lbl1').textContent = cfgT.lbl1||'Dato 1';
   document.getElementById('tf-lbl2').textContent = cfgT.lbl2||'';
-  document.getElementById('tf-s2').closest('.fgrp').style.display = tipo==='RUBR'?'none':'flex';
+  const s2inp = document.getElementById('tf-s2');
+  s2inp.type = tipo==='MONE' ? 'number' : 'text';
+  s2inp.closest('.fgrp').style.display = tipo==='RUBR'?'none':'flex';
   document.getElementById('ov-tab').classList.add('open');
 }
 
@@ -204,7 +206,9 @@ function tabModif(tipo) {
   const cfgM = TAB_CONFIG[tipo]||{};
   document.getElementById('tf-lbl1').textContent = cfgM.lbl1||'Dato 1';
   document.getElementById('tf-lbl2').textContent = cfgM.lbl2||'';
-  document.getElementById('tf-s2').closest('.fgrp').style.display = tipo==='RUBR'?'none':'flex';
+  const s2inpM = document.getElementById('tf-s2');
+  s2inpM.type = tipo==='MONE' ? 'number' : 'text';
+  s2inpM.closest('.fgrp').style.display = tipo==='RUBR'?'none':'flex';
   document.getElementById('ov-tab').classList.add('open');
 }
 
