@@ -190,7 +190,7 @@ function tabAlta(tipo) {
   document.getElementById('tf-lbl1').textContent = cfgT.lbl1||'Dato 1';
   document.getElementById('tf-lbl2').textContent = cfgT.lbl2||'';
   document.getElementById('tf-s2').type = 'text';
-  document.getElementById('tf-s2').closest('.fgrp').style.display = tipo==='RUBR'?'none':'flex';
+  document.getElementById('tf-s2').closest('.fgrp').style.display = (tipo==='RUBR'||tipo==='MONE')?'none':'flex';
   // Campo numérico
   const numGrp = document.getElementById('tf-num-grp');
   const cfgNum = TAB_CONFIG[tipo]||{};
@@ -220,7 +220,7 @@ function tabModif(tipo) {
   const cfgM = TAB_CONFIG[tipo]||{};
   document.getElementById('tf-lbl1').textContent = cfgM.lbl1||'Dato 1';
   document.getElementById('tf-lbl2').textContent = cfgM.lbl2||'';
-  document.getElementById('tf-s2').closest('.fgrp').style.display = tipo==='RUBR'?'none':'flex';
+  document.getElementById('tf-s2').closest('.fgrp').style.display = (tipo==='RUBR'||tipo==='MONE')?'none':'flex';
   // Campo numérico
   const numGrpM = document.getElementById('tf-num-grp');
   const cfgNumM = TAB_CONFIG[tipo]||{};
