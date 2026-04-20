@@ -13,7 +13,8 @@ const TAB_CONFIG = {
   PCIA: { label:'Provincias',       lbl1:'% IIBB',     lbl2:'Conv.' },
   GRUP: { label:'Grupos',           lbl1:'Info',       lbl2:'' },
   CATE: { label:'Categorías',       lbl1:'Info',       lbl2:'' },
-  MONE: { label:'Monedas',           lbl1:'Signo',      lbl2:'Cotización' },
+  MONE: { label:'Monedas',           lbl1:'Signo',      lbl2:'',           lblNum:'Cotización' },
+  PCIA: { label:'Provincias',         lbl1:'Alícuota IB', lbl2:'' },
 };
 
 
@@ -99,9 +100,13 @@ function saveTab() {
     const cod = document.getElementById('tf-cod').value.trim().toUpperCase();
     const det = document.getElementById('tf-det').value.trim().toUpperCase();
     if (!cod||!det) { toast('Código y detalle son obligatorios','err'); return; }
+    const numGrpSave = document.getElementById('tf-num-grp');
+    const s2val = numGrpSave && numGrpSave.style.display!=='none'
+      ? String(document.getElementById('tf-num').value)
+      : document.getElementById('tf-s2').value.trim();
     const d = {TABLA:_tabEditTipo,CODIGO:cod,DETALLE:det,
       STRING1:document.getElementById('tf-s1').value.trim(),
-      STRING2:document.getElementById('tf-s2').value.trim(),STRING3:'',FECHA1:''};
+      STRING2:s2val,STRING3:'',FECHA1:''};
     if (!TABLAS[_tabEditTipo]) TABLAS[_tabEditTipo]=[];
     if (_tabEditMode==='A') {
       if (TABLAS[_tabEditTipo].find(r=>r.CODIGO===cod)) { toast('Código ya existe','err'); return; }
@@ -184,9 +189,18 @@ function tabAlta(tipo) {
   const cfgT = TAB_CONFIG[tipo]||{};
   document.getElementById('tf-lbl1').textContent = cfgT.lbl1||'Dato 1';
   document.getElementById('tf-lbl2').textContent = cfgT.lbl2||'';
-  const s2inp = document.getElementById('tf-s2');
-  s2inp.type = tipo==='MONE' ? 'number' : 'text';
-  s2inp.closest('.fgrp').style.display = tipo==='RUBR'?'none':'flex';
+  document.getElementById('tf-s2').type = 'text';
+  document.getElementById('tf-s2').closest('.fgrp').style.display = tipo==='RUBR'?'none':'flex';
+  // Campo numérico
+  const numGrp = document.getElementById('tf-num-grp');
+  const cfgNum = TAB_CONFIG[tipo]||{};
+  if (cfgNum.lblNum) {
+    numGrp.style.display = 'flex';
+    document.getElementById('tf-lbl-num').textContent = cfgNum.lblNum;
+    document.getElementById('tf-num').value = 0;
+  } else {
+    numGrp.style.display = 'none';
+  }
   document.getElementById('ov-tab').classList.add('open');
 }
 
@@ -206,9 +220,17 @@ function tabModif(tipo) {
   const cfgM = TAB_CONFIG[tipo]||{};
   document.getElementById('tf-lbl1').textContent = cfgM.lbl1||'Dato 1';
   document.getElementById('tf-lbl2').textContent = cfgM.lbl2||'';
-  const s2inpM = document.getElementById('tf-s2');
-  s2inpM.type = tipo==='MONE' ? 'number' : 'text';
-  s2inpM.closest('.fgrp').style.display = tipo==='RUBR'?'none':'flex';
+  document.getElementById('tf-s2').closest('.fgrp').style.display = tipo==='RUBR'?'none':'flex';
+  // Campo numérico
+  const numGrpM = document.getElementById('tf-num-grp');
+  const cfgNumM = TAB_CONFIG[tipo]||{};
+  if (cfgNumM.lblNum) {
+    numGrpM.style.display = 'flex';
+    document.getElementById('tf-lbl-num').textContent = cfgNumM.lblNum;
+    document.getElementById('tf-num').value = parseFloat(r.STRING2)||0;
+  } else {
+    numGrpM.style.display = 'none';
+  }
   document.getElementById('ov-tab').classList.add('open');
 }
 
