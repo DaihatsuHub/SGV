@@ -55,7 +55,7 @@ function renderArts(){
         if(c.field==='ART_DES')   return `<span class="col-des">${esc(a.ART_DES)}</span>`;
         if(c.field==='ART_RUB')   return `<span style="font-family:var(--mono);font-size:12px;color:var(--t2)">${esc(a.ART_RUB||'')}</span>`;
         if(c.field==='ART_SRUB')  return `<span style="font-family:var(--mono);font-size:12px;color:var(--t3)">${esc(a.ART_SRUB||'')}</span>`;
-        if(c.field==='ART_PRE')   { const mone=(TABLAS['MONE']||[]).find(m=>m.CODIGO===a.ART_MONEDA); const signo=mone?mone.STRING1:'$'; return `<span class="col-num" style="color:var(--grn)">${signo}${fmt(a.ART_PRE)}</span>`; }
+        if(c.field==='ART_PRE')   { const mone=(TABLAS['MONE']||[]).find(m=>m.CODIGO===a.ART_MONEDA); const signo=mone?mone.STRING1:'$'; return `<span class="col-num" style="color:var(--grn)">${signo} ${fmt(a.ART_PRE)}</span>`; }
         if(c.field==='ART_STK')   return `<span class="col-num" style="${sH===0?'color:var(--red)':''}">${sH}</span>`;
         if(c.field==='ART_STKT')  return `<span class="col-num" style="${sT===0?'color:var(--red)':''}">${sT}</span>`;
         if(c.field==='ART_ESTU')  return `<span class="col-ctr"><span class="pill ${a.ART_ESTU==='S'?'pi':'pn'}">${a.ART_ESTU||'—'}</span></span>`;
