@@ -8,7 +8,7 @@ function filtArts(){
   const q = document.getElementById('art-q').value.toLowerCase();
   let list = ARTS.filter(a => {
     const mq = !q || a.ART_COD.toLowerCase().includes(q) || a.ART_DES.toLowerCase().includes(q);
-    const ms = !artSoloStock || ((a.ART_STK||0) + (a.ART_STKT||0)) > 0;
+    const ms = !artSoloStock || ((a.ART_STK||0) + (a.ART_STKT||0) + (a.ART_DEPT||0) + (a.ART_DEPH||0)) > 0;
     return mq && ms;
   });
   const s = SORT_STATE['art'];
@@ -30,7 +30,6 @@ function renderArts(){
   const cols  = getActiveCols('art');
   const gridTpl = cols.map(c => c.width||'1fr').join(' ');
 
-  // Cabecera dinámica
   const thArt = document.querySelector('.th-art');
   if (thArt) {
     thArt.style.gridTemplateColumns = gridTpl;
@@ -49,6 +48,7 @@ function renderArts(){
     const idx = ARTS.indexOf(a);
     const sel = artSelIdx===idx ? 'sel' : '';
     const sH  = a.ART_STK||0, sT = a.ART_STKT||0;
+    const sDH = a.ART_DEPH||0, sDT = a.ART_DEPT||0;
     return `<div class="tr-art ${sel}" style="grid-template-columns:${gridTpl}" onclick="selArt(${idx})" ondblclick="artDetail(${idx})">` +
       cols.map(c => {
         if(c.field==='ART_COD')   return `<span class="col-cod">${esc(a.ART_COD)}</span>`;
@@ -58,6 +58,8 @@ function renderArts(){
         if(c.field==='ART_PRE')   { const mone=(TABLAS['MONE']||[]).find(m=>m.CODIGO===a.ART_MONEDA); const signo=mone?mone.STRING1:'$'; return `<span class="col-num" style="color:var(--grn)">${signo} ${fmt(a.ART_PRE)}</span>`; }
         if(c.field==='ART_STK')   return `<span class="col-num" style="${sH===0?'color:var(--red)':''}">${sH}</span>`;
         if(c.field==='ART_STKT')  return `<span class="col-num" style="${sT===0?'color:var(--red)':''}">${sT}</span>`;
+        if(c.field==='ART_DEPH')  return `<span class="col-num" style="${sDH===0?'color:var(--red)':''}">${sDH}</span>`;
+        if(c.field==='ART_DEPT')  return `<span class="col-num" style="${sDT===0?'color:var(--red)':''}">${sDT}</span>`;
         if(c.field==='ART_ESTU')  return `<span class="col-ctr"><span class="pill ${a.ART_ESTU==='S'?'pi':'pn'}">${a.ART_ESTU||'—'}</span></span>`;
         if(c.field==='ART_ACT')   return `<span class="col-ctr"><span class="pill ${a.ART_ACT==='S'?'ps':'pn'}">${a.ART_ACT||'N'}</span></span>`;
         if(c.field==='ART_GRUP')  return `<span style="font-family:var(--mono);font-size:12px;color:var(--t3)">${esc((a.ART_GRUP||'')+(a.ART_SEX?'-'+a.ART_SEX:''))}</span>`;
@@ -81,12 +83,6 @@ function togArtStock() {
 }
 
 function selArt(i){ artSelIdx=i; renderArts(); }
-function setArtFilt(v){
-  artFilt=v;
-  ['todos','s','n'].forEach(k=>document.getElementById('af-'+k)?.classList.remove('on'));
-  document.getElementById('af-'+v.toLowerCase())?.classList.add('on');
-  renderArts();
-}
 
 function artDetail(idx){
   const a = ARTS[idx];
@@ -96,6 +92,7 @@ function artDetail(idx){
     ['Marca',a.ART_MARCA||'—'],['Proveedor',a.ART_PROV||'—'],
     ['Precio','$'+fmt(a.ART_PRE)],
     ['Stock Hatsu',a.ART_STK||0],['Stock Tressa',a.ART_STKT||0],
+    ['Depósito Hatsu',a.ART_DEPH||0],['Depósito Tressa',a.ART_DEPT||0],
     ['Grupo',a.ART_GRUP||'—'],['Sexo',a.ART_SEX||'—'],['Estuche',a.ART_ESTU||'—'],
     ['Activo',a.ART_ACT==='S'?'Sí':'No'],['Cód.Casio',a.CODCASIO||'—'],
   ].map(([l,v])=>`<div class="dpi"><span class="dpi-lbl">${l}</span><span class="dpi-val">${esc(String(v))}</span></div>`).join('');
@@ -135,18 +132,16 @@ function fillArtSelects(selMarc, selRub, selSrub, selProv, selMone='P') {
   document.getElementById('af-rub').innerHTML  = opts('RUBR', selRub);
   document.getElementById('af-srub').innerHTML = opts('SRUB', selSrub);
   document.getElementById('af-prov').innerHTML = opts('PROV', selProv);
-  // Monedas
   const moneEl = document.getElementById('af-moneda');
   if (moneEl) moneEl.innerHTML = (TABLAS['MONE']||[]).map(m=>`<option value="${m.CODIGO}"${m.CODIGO===selMone?' selected':''}>${m.STRING1} ${m.DETALLE}</option>`).join('');
 }
 
 function clrArtForm(){
   ['af-cod','af-des','af-grup','af-sex','af-estu','af-codcasio'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
-  ['af-pre','af-stk','af-stkt'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=0; });
+  ['af-pre','af-stk','af-stkt','af-deph','af-dept'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=0; });
   const act = document.getElementById('af-act'); if(act) act.value='S';
   fillArtSelects('','','','','P');
   const tog = document.getElementById('atog-act'); if(tog) tog.classList.add('on');
-  fillArtSelects('','','','');
 }
 
 function fillArtForm(a){
@@ -155,11 +150,12 @@ function fillArtForm(a){
   document.getElementById('af-pre').value     = a.ART_PRE||0;
   document.getElementById('af-stk').value     = a.ART_STK||0;
   document.getElementById('af-stkt').value    = a.ART_STKT||0;
+  document.getElementById('af-deph').value    = a.ART_DEPH||0;
+  document.getElementById('af-dept').value    = a.ART_DEPT||0;
   document.getElementById('af-estu').value    = a.ART_ESTU||'';
   document.getElementById('af-grup').value    = a.ART_GRUP||'';
   document.getElementById('af-sex').value     = a.ART_SEX||'';
   const cc = document.getElementById('af-codcasio'); if(cc) cc.value = a.CODCASIO||'';
-  // Toggle activo
   const actVal = a.ART_ACT||'S';
   const actInp = document.getElementById('af-act');
   const actTog = document.getElementById('atog-act');
@@ -181,13 +177,15 @@ function saveArt(){
     ART_PRE:   parseFloat(document.getElementById('af-pre').value)||0,
     ART_STK:   parseInt(document.getElementById('af-stk').value)||0,
     ART_STKT:  parseInt(document.getElementById('af-stkt').value)||0,
+    ART_DEPH:  parseInt(document.getElementById('af-deph').value)||0,
+    ART_DEPT:  parseInt(document.getElementById('af-dept').value)||0,
     ART_ACT:   document.getElementById('af-act').value||'S',
     ART_ESTU:  document.getElementById('af-estu').value,
     ART_GRUP:  document.getElementById('af-grup').value.trim().toUpperCase(),
     ART_SEX:   document.getElementById('af-sex').value.trim().toUpperCase(),
-    ART_PROV:   document.getElementById('af-prov').value,
-    ART_MONEDA: document.getElementById('af-moneda')?.value||'P',
-    CODCASIO:   document.getElementById('af-codcasio')?.value.trim()||null,
+    ART_PROV:  document.getElementById('af-prov').value,
+    ART_MONEDA:document.getElementById('af-moneda')?.value||'P',
+    CODCASIO:  document.getElementById('af-codcasio')?.value.trim()||null,
   };
   if(window._ae==='A'){
     if(ARTS.find(a=>a.ART_COD===cod)){ toast('Código ya existe','err'); return; }
@@ -200,6 +198,18 @@ function saveArt(){
 
 function printArt(){
   const list = filtArts();
-  const rows = list.map(a=>`<tr><td style="font-family:monospace;color:#4f8ef7">${esc(a.ART_COD)}</td><td>${esc(a.ART_DES||'')}</td><td>${esc(a.ART_RUB||'')}</td><td style="text-align:right">$${fmt(a.ART_PRE)}</td><td style="text-align:right">${a.ART_STK||0}</td><td style="text-align:right">${a.ART_STKT||0}</td></tr>`).join('');
-  openPrint('📦 Listado de Artículos',`<table><thead><tr><th>CÓDIGO</th><th>DESCRIPCIÓN</th><th>RUBRO</th><th>PRECIO</th><th>STK HAT</th><th>STK TRE</th></tr></thead><tbody>${rows}</tbody></table>`,list.length);
+  const rows = list.map(a=>`<tr>
+    <td style="font-family:monospace;color:#4f8ef7">${esc(a.ART_COD)}</td>
+    <td>${esc(a.ART_DES||'')}</td>
+    <td>${esc(a.ART_RUB||'')}</td>
+    <td style="text-align:right">$${fmt(a.ART_PRE)}</td>
+    <td style="text-align:right">${a.ART_STK||0}</td>
+    <td style="text-align:right">${a.ART_STKT||0}</td>
+    <td style="text-align:right">${a.ART_DEPH||0}</td>
+    <td style="text-align:right">${a.ART_DEPT||0}</td>
+  </tr>`).join('');
+  openPrint('📦 Listado de Artículos',`<table><thead><tr>
+    <th>CÓDIGO</th><th>DESCRIPCIÓN</th><th>RUBRO</th><th>PRECIO</th>
+    <th>STK HAT</th><th>STK TRE</th><th>DEP HAT</th><th>DEP TRE</th>
+  </tr></thead><tbody>${rows}</tbody></table>`,list.length);
 }

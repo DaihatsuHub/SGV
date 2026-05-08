@@ -73,6 +73,8 @@ function dbToArt(r) {
     ART_PRE:   r.art_pre,
     ART_STK:   r.art_stk,
     ART_STKT:  r.art_stkt,
+    ART_DEPH:  r.art_deph || 0,   // Stock depósito Hatsu
+    ART_DEPT:  r.art_dept || 0,   // Stock depósito Tressa
     ART_ACT:   r.art_act,
     ART_ESTU:  r.art_estu,
     ART_GRUP:  r.art_grup,
@@ -93,6 +95,8 @@ function artToDb(a) {
     art_pre:   a.ART_PRE   || null,
     art_stk:   a.ART_STK   || 0,
     art_stkt:  a.ART_STKT  || 0,
+    art_deph:  a.ART_DEPH  || 0,
+    art_dept:  a.ART_DEPT  || 0,
     art_act:   a.ART_ACT   || 'S',
     art_estu:  a.ART_ESTU  || null,
     art_grup:  a.ART_GRUP  || null,
