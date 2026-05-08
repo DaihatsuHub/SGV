@@ -9,6 +9,10 @@ let ctipSelIdx = null;
 let facSort = { col: 'fac_fec', asc: true };
 let facFechaBusq = '';
 
+// Estado del modal de nueva factura
+let FAC_ITEMS_NUEVA = [];
+let FAC_MODO = 'A';
+
 // ── Cargar datos desde Supabase ───────────────────────────
 async function sbLoadFacs() {
   try {
@@ -128,31 +132,19 @@ async function saveCtip() {
   } catch(e) { console.error(e); toast('Error al guardar','err'); }
 }
 
-// Generar próximo número de comprobante
-function proximoNro(empresa, prefijo, tipo) {
-  const ct = CTIPS.find(c=>c.empresa===empresa&&c.prefijo===prefijo&&c.tipo===tipo);
-  if(!ct) return null;
-  const nro = (ct.ultimo_nro||0) + 1;
-  // Formato: prefijo + espacio(s) + numero 6 dig sin ceros + tipo
-  const nroStr = String(nro).padStart(6, ' ');
-  return { nro, str: `${empresa}${prefijo}${nroStr}${tipo}`, ctip: ct };
-}
-
 // ── FACTURACIÓN ────────────────────────────────────────────
 function filtFacs() {
   const emp = document.getElementById('fac-empresa')?.value||'';
   const fecBusq = facFechaBusq;
   let list = FACS.filter(f => {
-    const me = !emp || (f.fac_nro||'').startsWith(emp);
+    const me = !emp || (f.fac_empresa||'') === emp || (f.fac_nro||'').startsWith(emp);
     const mf = !fecBusq || (f.fac_fec||'').includes(fecBusq);
     return me && mf;
   });
-  // Ordenar: primero por columna seleccionada, secundario por fac_nro
   list = list.slice().sort((a,b) => {
     const va = a[facSort.col]||'', vb = b[facSort.col]||'';
     const r = String(va).localeCompare(String(vb));
     if (r !== 0) return facSort.asc ? r : -r;
-    // secundario por fac_nro asc
     return (a.fac_nro||'').localeCompare(b.fac_nro||'');
   });
   return list;
@@ -163,18 +155,11 @@ function toggleFacSort(col) {
   else { facSort.col = col; facSort.asc = true; }
   facSelIdx = null;
   renderFac();
-  // After render, posicionar en ultima fecha si ordena por fecha
   if (col === 'fac_fec') posicionarUltimaFecha();
 }
 
 function setFacFecha(val) {
-  if (!val) {
-    facFechaBusq = '';
-    facSelIdx = null;
-    posicionarUltimaFecha();
-    return;
-  }
-  // Ordenar por fecha y posicionar en la más próxima
+  if (!val) { facFechaBusq=''; facSelIdx=null; posicionarUltimaFecha(); return; }
   facSort = { col: 'fac_fec', asc: true };
   facFechaBusq = '';
   const list = filtFacs();
@@ -185,7 +170,6 @@ function setFacFecha(val) {
   renderFac();
   const el = document.getElementById('fac-body')?.querySelector('[data-idx="'+idx+'"]');
   if (el) el.scrollIntoView({ block: 'center' });
-  // Limpiar el date picker
   document.getElementById('fac-fecha').value = '';
 }
 
@@ -206,24 +190,17 @@ function buscarFac() {
   const q = (document.getElementById('fac-q')?.value||'').toLowerCase().trim();
   if (!q) { facSelIdx = null; posicionarUltimaFecha(); return; }
 
-  // Detectar si es una fecha (formato dd/mm/aaaa, dd-mm-aaaa, o aaaa-mm-dd)
   const esFecha = /^\d{2}[\/-]\d{2}[\/-]\d{4}$/.test(q) || /^\d{4}-\d{2}-\d{2}$/.test(q);
-  
   if (esFecha) {
-    // Convertir a formato ISO para comparar
     let fechaISO = q;
     if (q.includes('/') || (q.includes('-') && q.indexOf('-') === 2)) {
       const p = q.replace(/\//g,'-').split('-');
       fechaISO = p[2]+'-'+p[1]+'-'+p[0];
     }
-    // Ordenar por fecha y buscar la más próxima
     facSort = { col: 'fac_fec', asc: true };
     const list = filtFacs();
-    // Buscar exacta primero, si no la más próxima siguiente
     let idx = list.findIndex(f => (f.fac_fec||'') === fechaISO);
-    if (idx < 0) {
-      idx = list.findIndex(f => (f.fac_fec||'') >= fechaISO);
-    }
+    if (idx < 0) idx = list.findIndex(f => (f.fac_fec||'') >= fechaISO);
     if (idx < 0) idx = list.length - 1;
     facSelIdx = idx;
     document.getElementById('fac-q').value = '';
@@ -233,7 +210,6 @@ function buscarFac() {
     return;
   }
 
-  // Detectar si parece un número de factura (empieza con H o T)
   const esFactura = /^[ht]/i.test(q);
   if (esFactura) {
     facSort = { col: 'fac_nro', asc: true };
@@ -249,21 +225,18 @@ function buscarFac() {
     return;
   }
 
-  // Buscar por cliente — ordenar por cliente
   facSort = { col: 'fac_cli', asc: true };
-  // Ordenar por razón social
   const listCli = FACS.filter(f => {
     const emp = document.getElementById('fac-empresa')?.value||'';
-    return !emp || (f.fac_nro||'').startsWith(emp);
+    return !emp || (f.fac_empresa||'') === emp || (f.fac_nro||'').startsWith(emp);
   }).map(f => {
-    const cli = CLIS.find(c=>c.CLI_CODIGO===(f.fac_cli||'').trim());
-    return { ...f, _razon: (cli?.CLI_RAZON||f.fac_cli||'').toLowerCase() };
+    const cli = CLIS.find(c=>c.cli_codigo===(f.fac_cli||'').trim());
+    return { ...f, _razon: (cli?.cli_razon||f.fac_cli||'').toLowerCase() };
   }).filter(f => f._razon.includes(q))
     .sort((a,b) => a._razon.localeCompare(b._razon));
-  
+
   if (listCli.length > 0) {
     const target = listCli[0];
-    facSort = { col: 'fac_cli', asc: true };
     const list = filtFacs();
     const idx = list.findIndex(f => f.fac_nro === target.fac_nro);
     if (idx >= 0) {
@@ -281,14 +254,12 @@ function renderFac() {
   const body = document.getElementById('fac-body');
   if(!list.length){body.innerHTML='<div class="empty">🔍 Sin resultados</div>';return;}
 
-  // Si no hay selección, posicionar en primera fila de la última fecha
   if (facSelIdx === null || facSelIdx >= list.length) {
     const ultimaFecha = list.map(f=>f.fac_fec||'').filter(Boolean).reduce((a,b)=>a>b?a:b,'');
     facSelIdx = list.findIndex(f=>f.fac_fec===ultimaFecha);
     if (facSelIdx < 0) facSelIdx = 0;
   }
 
-  // Update header arrows
   const thFac = document.querySelector('.th-fac');
   if (thFac) {
     const arr = col => facSort.col===col ? (facSort.asc?' ▲':' ▼') : ' ↕';
@@ -301,27 +272,27 @@ function renderFac() {
   body.innerHTML = list.map((f,i) => {
     const sel = facSelIdx===i ? 'sel' : '';
     const fec = f.fac_fec ? f.fac_fec.substring(0,10).split('-').reverse().join('/') : '—';
-    const cli = CLIS.find(c=>c.CLI_CODIGO===(f.fac_cli||'').trim());
-    const nomCli = cli ? cli.CLI_RAZON : f.fac_cli||'—';
-    const prefijo = (f.fac_nro||'').substring(0,3);
+    const cli = CLIS.find(c=>c.cli_codigo===(f.fac_cli||'').trim());
+    const nomCli = cli ? cli.cli_razon : f.fac_cli||'—';
+    const prefijo = (f.fac_ctip || (f.fac_nro||'').substring(0,3));
     const ctip = CTIPS.find(c=>c.prefijo === prefijo);
     const contColor = ctip ? (ctip.contable ? 'var(--acc)' : 'var(--red)') : 'var(--t2)';
+    const caeBadge = f.fac_cae
+      ? `<span style="font-size:10px;background:#1a3a1a;color:#4ade80;padding:1px 6px;border-radius:4px;margin-left:4px">CAE</span>`
+      : `<span style="font-size:10px;background:#2a2a1a;color:#facc15;padding:1px 6px;border-radius:4px;margin-left:4px">BORR</span>`;
     return `<div class="tr-fac ${sel}" data-idx="${i}" onclick="selFac(${i})">
       <span style="font-size:12px;color:var(--t2);flex-shrink:0">${fec}</span>
-      <span class="col-cod" style="font-family:var(--mono);color:${contColor};flex-shrink:0">${esc(f.fac_nro||'')}</span>
+      <span class="col-cod" style="font-family:var(--mono);color:${contColor};flex-shrink:0">${esc(f.fac_nro||'')}${caeBadge}</span>
       <span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nomCli)}</span>
     </div>`;
   }).join('');
 
-  // Scroll al elemento seleccionado
   const selEl = body.querySelector('.tr-fac.sel');
   if (selEl) selEl.scrollIntoView({ block: 'nearest' });
 
-  // Mostrar detalle del primero si es la carga inicial
   const f = list[facSelIdx];
   if (f) renderFacDetalle(f);
 
-  // Navegación con teclado
   document.onkeydown = function(e) {
     const page = document.getElementById('page-fac');
     if (!page || !page.classList.contains('active')) return;
@@ -329,8 +300,8 @@ function renderFac() {
     e.preventDefault();
     const total = filtFacs().length;
     if (!total) return;
-    let next = e.key === 'ArrowDown' ? (facSelIdx||0) + 1 : (facSelIdx||0) - 1;
-    next = Math.max(0, Math.min(next, total - 1));
+    let next = e.key === 'ArrowDown' ? (facSelIdx||0)+1 : (facSelIdx||0)-1;
+    next = Math.max(0, Math.min(next, total-1));
     selFac(next);
     const el = body.querySelector(`[data-idx="${next}"]`);
     if (el) el.scrollIntoView({ block: 'nearest' });
@@ -339,7 +310,6 @@ function renderFac() {
 
 async function selFac(i) {
   facSelIdx = i;
-  // Update highlight
   document.querySelectorAll('#fac-body .tr-fac').forEach((el,idx) => {
     el.classList.toggle('sel', idx===i);
   });
@@ -351,77 +321,355 @@ async function selFac(i) {
 async function renderFacDetalle(f) {
   const det = document.getElementById('fac-detalle');
   const fec = f.fac_fec ? f.fac_fec.substring(0,10).split('-').reverse().join('/') : '—';
-  const cli = CLIS.find(c=>c.CLI_CODIGO===(f.fac_cli||'').trim());
-  const mon = f.fac_moneda==='P' ? '$' : 'u$s';
-
-  // Cargar items
+  const cli = CLIS.find(c=>c.cli_codigo===(f.fac_cli||'').trim());
+  const mon = f.fac_moneda==='U' ? 'u$s' : '$';
   const items = await sbLoadItemsFac(f.fac_nro);
-
-  const tipoLabel = { F:'Factura', C:'Nota de Crédito', D:'Nota de Débito', R:'Cheque Rechazado' };
-  const tipoChar = (f.fac_nro||'').slice(-1);
-
-  const prefijo2 = (f.fac_nro||'').substring(0,3);
+  const prefijo2 = f.fac_ctip || (f.fac_nro||'').substring(0,3);
   const ctip2 = CTIPS.find(c=>c.prefijo === prefijo2);
   const contColor2 = ctip2 ? (ctip2.contable ? 'var(--acc)' : 'var(--red)') : 'var(--acc)';
 
+  const caeInfo = f.fac_cae
+    ? `<div style="margin-top:6px;background:#1a3a1a;border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:11px;color:#4ade80">
+        ✅ CAE: ${f.fac_cae} &nbsp;·&nbsp; Vto: ${f.fac_cae_vto||'—'}
+       </div>`
+    : `<div style="margin-top:6px;background:#2a2a1a;border-radius:6px;padding:6px 10px;font-size:11px;color:#facc15">
+        ⚠️ Borrador — pendiente de autorización AFIP
+       </div>`;
+
   det.innerHTML = `
     <div class="fac-det-hdr" style="position:sticky;top:0;background:var(--s1);z-index:1;padding-bottom:8px">
-      <div class="fac-det-nro" style="color:${contColor2}">${esc(f.fac_nro||'')} &nbsp;<span style="font-size:13px;color:var(--t2)">${tipoLabel[tipoChar]||''}</span></div>
-      <div class="fac-det-cli">${cli?cli.CLI_RAZON:f.fac_cli||'—'}</div>
-      <div class="fac-det-sub">${cli?cli.CLI_DOMIC+' — '+cli.CLI_LOCAL:''}</div>
+      <div class="fac-det-nro" style="color:${contColor2}">${esc(f.fac_nro||'')}</div>
+      <div class="fac-det-cli">${cli ? cli.cli_razon : f.fac_cli||'—'}</div>
+      <div class="fac-det-sub">${cli ? (cli.cli_domic||'')+(cli.cli_local?' — '+cli.cli_local:'') : ''}</div>
       <div class="fac-det-sub" style="margin-top:4px">
-        ${cli?'Cond.Pago: '+( cli.CLI_CONPAG||'—'):''}
+        ${cli ? 'Cond.Pago: '+(cli.cli_conpag||'—') : ''}
         &nbsp;·&nbsp; IVA: (${f.fac_tiva||'—'})
         &nbsp;·&nbsp; Fecha: ${fec}
       </div>
+      ${caeInfo}
     </div>
-
     <div style="margin-bottom:12px">
       <div style="font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:6px;letter-spacing:1px">ITEMS (${items.length})</div>
-      <div style="background:var(--s2);border-radius:6px;overflow:hidden;max-height:200px;overflow-y:auto">
-        <div style="display:grid;grid-template-columns:110px 1fr 60px 90px 90px 65px;gap:6px;padding:6px 10px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase;position:sticky;top:0;z-index:1">
-          <span>Artículo</span><span>Despacho</span><span style="text-align:right">Cant</span><span style="text-align:right">P.Unit</span><span style="text-align:right">Importe</span><span style="text-align:right">Dto%</span>
+      <div style="background:var(--s2);border-radius:6px;overflow:hidden;max-height:220px;overflow-y:auto">
+        <div style="display:grid;grid-template-columns:1fr 55px 90px 90px;gap:6px;padding:6px 10px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase;position:sticky;top:0">
+          <span>Descripción</span><span style="text-align:right">Cant</span><span style="text-align:right">P.Unit</span><span style="text-align:right">Importe</span>
         </div>
-        ${items.length ? items.map(it => {
-          const art = ARTS.find(a=>a.ART_COD===it.ite_art);
-          const dto = it.ite_costo && it.ite_costo > 0
-            ? ((1 - it.ite_uni / it.ite_costo) * 100).toFixed(1)
-            : '—';
-          const dtoColor = parseFloat(dto) > 0 ? 'color:var(--grn)' : 'color:var(--t3)';
-          return `<div style="display:grid;grid-template-columns:110px 1fr 60px 90px 90px 65px;gap:6px;padding:7px 10px;border-bottom:1px solid var(--b1);font-size:12px">
-            <span class="col-cod">${esc(it.ite_art||'')}</span>
-            <span style="color:var(--t2);font-size:11px">${esc(it.ite_desp||'')}</span>
+        ${items.length ? items.map(it=>`
+          <div style="display:grid;grid-template-columns:1fr 55px 90px 90px;gap:6px;padding:7px 10px;border-bottom:1px solid var(--b1);font-size:12px">
+            <span style="color:var(--t2)">${esc(it.ite_desp||it.ite_art||'')}</span>
             <span style="text-align:right;font-family:var(--mono)">${it.ite_can||0}</span>
             <span style="text-align:right;font-family:var(--mono)">${mon}${fmt(it.ite_uni)}</span>
             <span style="text-align:right;font-family:var(--mono);color:var(--grn)">${mon}${fmt(it.ite_imp)}</span>
-            <span style="text-align:right;font-family:var(--mono);${dtoColor}">${dto}%</span>
-          </div>`;
-        }).join('') : '<div style="padding:12px;text-align:center;color:var(--t3);font-size:12px">Sin ítems</div>'}
+          </div>`).join('')
+          : '<div style="padding:12px;text-align:center;color:var(--t3);font-size:12px">Sin ítems</div>'}
       </div>
     </div>
-
     <div class="fac-det-totales">
+      ${(f.fac_iva||0)>0 ? `
+        <div class="fac-det-row"><span>Subtotal neto</span><span>${mon} ${fmt((f.fac_sub||0)-(f.fac_iva||0))}</span></div>
+        <div class="fac-det-row"><span>IVA</span><span>${mon} ${fmt(f.fac_iva)}</span></div>` : ''}
       <div class="fac-det-row"><span>Subtotal</span><span>${mon} ${fmt(f.fac_sub)}</span></div>
       ${(f.fac_percib||0)>0?`<div class="fac-det-row"><span>Percepción IIBB</span><span>${mon} ${fmt(f.fac_percib)}</span></div>`:''}
-      <div class="fac-det-row"><span>Total</span><span>${mon} ${fmt(f.fac_total)}</span></div>
+      <div class="fac-det-row total"><span>Total</span><span>${mon} ${fmt(f.fac_total)}</span></div>
       <div class="fac-det-row"><span>Saldo</span><span style="color:${(f.fac_saldo||0)>0?'var(--red)':'var(--grn)'}">${mon} ${fmt(f.fac_saldo)}</span></div>
-    </div>
-  `;
+    </div>`;
 }
 
-function facAlta()    { toast('Próximamente: Alta de factura','scs'); }
-function facModif()   { if(facSelIdx===null){toast('Seleccioná una factura','err');return;} toast('Próximamente: Modificar factura','scs'); }
-function facBaja()    { if(facSelIdx===null){toast('Seleccioná una factura','err');return;} toast('Próximamente: Anular factura','scs'); }
-function facImprimir(){ if(facSelIdx===null){toast('Seleccioná una factura','err');return;} toast('Próximamente: Imprimir factura','scs'); }
+// ══════════════════════════════════════════════════════════
+// NUEVA FACTURA
+// ══════════════════════════════════════════════════════════
 
+function facAlta() {
+  FAC_ITEMS_NUEVA = [];
+  FAC_MODO = 'A';
+  const hoy = new Date().toISOString().substring(0,10);
+  document.getElementById('nf-empresa').value = 'H';
+  document.getElementById('nf-fecha').value   = hoy;
+  document.getElementById('nf-moneda').value  = 'P';
+  document.getElementById('nf-dto').value     = '0';
+  ['nf-ctip','nf-cli','nf-razon','nf-conpag','nf-tiva','nf-transp','nf-remito'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  nfFiltrarCtips('H');
+  nfRenderItems();
+  nfCalcTotales();
+  document.getElementById('nf-mtit').textContent = 'Nueva Factura';
+  setMtag('nf-mtag','ALTA','tag-a');
+  document.getElementById('ov-nf').classList.add('open');
+  setTimeout(()=>document.getElementById('nf-cli')?.focus(), 100);
+}
 
-// ── TOP 10 PRODUCTOS MÁS VENDIDOS ────────────────────────
+function facModif()    { if(facSelIdx===null){toast('Seleccioná una factura','err');return;} toast('Próximamente: Modificar factura','scs'); }
+function facBaja()     { if(facSelIdx===null){toast('Seleccioná una factura','err');return;} toast('Próximamente: Anular factura','scs'); }
+function facImprimir() { if(facSelIdx===null){toast('Seleccioná una factura','err');return;} toast('Próximamente: Imprimir factura','scs'); }
+
+// ── Filtrar CTIPs por empresa ─────────────────────────────
+function nfFiltrarCtips(empresa) {
+  const sel = document.getElementById('nf-ctip');
+  if (!sel) return;
+  const lista = CTIPS.filter(c => c.empresa===empresa && ['F','C','D'].includes(c.tipo));
+  sel.innerHTML = '<option value="">— Seleccionar —</option>' +
+    lista.map(c=>`<option value="${c.prefijo}|${c.tipo}">${c.prefijo} — ${TIPO_LABEL[c.tipo]||c.tipo}</option>`).join('');
+  nfOnCtipChange();
+}
+
+function nfOnEmpresaChange() {
+  nfFiltrarCtips(document.getElementById('nf-empresa').value);
+}
+
+function nfOnCtipChange() {
+  const val = document.getElementById('nf-ctip')?.value||'';
+  const el  = document.getElementById('nf-preview-nro');
+  if (!val) { if(el) el.textContent='—'; return; }
+  const [prefijo, tipo] = val.split('|');
+  const emp = document.getElementById('nf-empresa').value;
+  const ct  = CTIPS.find(c=>c.empresa===emp&&c.prefijo===prefijo&&c.tipo===tipo);
+  if (ct && el) el.textContent = `${prefijo}-${String((ct.ultimo_nro||0)+1).padStart(6,'0')}`;
+  nfRenderItems();
+  nfCalcTotales();
+}
+
+function nfOnCliChange() {
+  const cod = (document.getElementById('nf-cli')?.value||'').trim().toUpperCase();
+  const cli = CLIS.find(c=>c.cli_codigo===cod);
+  if (cli) {
+    document.getElementById('nf-razon').value  = cli.cli_razon||'';
+    document.getElementById('nf-conpag').value = cli.cli_conpag||'';
+    document.getElementById('nf-tiva').value   = cli.cli_iva||'';
+    document.getElementById('nf-dto').value    = cli.cli_dto||0;
+    nfCalcTotales();
+  } else {
+    document.getElementById('nf-razon').value = '';
+    document.getElementById('nf-tiva').value  = '';
+  }
+  nfRenderItems();
+}
+
+// Factura A = tipo F + cliente Inscripto
+function nfEsFacturaA() {
+  const val  = document.getElementById('nf-ctip')?.value||'';
+  const tiva = document.getElementById('nf-tiva')?.value||'';
+  if (!val) return false;
+  const [,tipo] = val.split('|');
+  return tipo==='F' && tiva==='I';
+}
+
+// ── Items ─────────────────────────────────────────────────
+function nfAgregarItem() {
+  FAC_ITEMS_NUEVA.push({ ite_desp:'', ite_can:1, ite_uni:0, ite_iva_porc:21, ite_imp:0, ite_iva_imp:0 });
+  nfRenderItems();
+  nfCalcTotales();
+  setTimeout(()=>{
+    const des = document.querySelectorAll('.nf-item-des');
+    if(des.length) des[des.length-1].focus();
+  },50);
+}
+
+function nfEliminarItem(idx) {
+  FAC_ITEMS_NUEVA.splice(idx,1);
+  nfRenderItems();
+  nfCalcTotales();
+}
+
+function nfItemChange(idx, campo, valor) {
+  FAC_ITEMS_NUEVA[idx][campo] = valor;
+  const it = FAC_ITEMS_NUEVA[idx];
+  const esA = nfEsFacturaA();
+  const div = 1 + (it.ite_iva_porc||0)/100;
+  const neto = esA ? it.ite_uni/div : it.ite_uni;
+  it.ite_imp     = neto * (it.ite_can||1);
+  it.ite_iva_imp = esA ? (it.ite_uni - neto) * (it.ite_can||1) : 0;
+  nfRenderItems();
+  nfCalcTotales();
+}
+
+function nfRenderItems() {
+  const body = document.getElementById('nf-items-body');
+  if (!body) return;
+  const esA = nfEsFacturaA();
+
+  // Cabecera de la grilla
+  document.getElementById('nf-items-hdr').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 70px 110px ${esA?'90px 100px 90px':''} 110px 36px;gap:6px;padding:7px 10px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase;border-radius:6px 6px 0 0">
+      <span>Descripción</span>
+      <span style="text-align:right">Cant</span>
+      <span style="text-align:right">Precio c/IVA</span>
+      ${esA ? '<span style="text-align:center">% IVA</span><span style="text-align:right">Neto</span><span style="text-align:right">IVA</span>' : ''}
+      <span style="text-align:right">Importe</span>
+      <span></span>
+    </div>`;
+
+  if (!FAC_ITEMS_NUEVA.length) {
+    body.innerHTML = `<div style="text-align:center;color:var(--t3);font-size:12px;padding:20px;background:var(--s2);border-radius:0 0 6px 6px">
+      Sin ítems — usá <strong>＋ Agregar ítem</strong> para comenzar
+    </div>`;
+    return;
+  }
+
+  body.innerHTML = FAC_ITEMS_NUEVA.map((it,i) => {
+    const div  = 1 + (it.ite_iva_porc||0)/100;
+    const neto = esA ? it.ite_uni/div : it.ite_uni;
+    const ivaU = esA ? it.ite_uni - neto : 0;
+    const imp  = neto * (it.ite_can||1);
+    const ivaT = ivaU * (it.ite_can||1);
+    return `<div style="display:grid;grid-template-columns:1fr 70px 110px ${esA?'90px 100px 90px':''} 110px 36px;gap:6px;padding:8px 10px;border-bottom:1px solid var(--b1);align-items:center;background:var(--s2)">
+      <input class="nf-item-des finp" value="${esc(it.ite_desp||'')}" placeholder="Descripción..."
+        style="font-size:13px" oninput="nfItemChange(${i},'ite_desp',this.value)">
+      <input class="finp" type="number" min="0.01" step="1" value="${it.ite_can||1}"
+        style="text-align:right;font-size:13px" oninput="nfItemChange(${i},'ite_can',parseFloat(this.value)||1)">
+      <input class="finp" type="number" min="0" step="0.01" value="${it.ite_uni||''}"
+        placeholder="0.00" style="text-align:right;font-size:13px"
+        oninput="nfItemChange(${i},'ite_uni',parseFloat(this.value)||0)">
+      ${esA ? `
+        <select class="finp" style="font-size:12px" onchange="nfItemChange(${i},'ite_iva_porc',parseFloat(this.value))">
+          <option value="21"  ${(it.ite_iva_porc||21)===21   ?'selected':''}>21%</option>
+          <option value="10.5"${(it.ite_iva_porc||21)===10.5 ?'selected':''}>10.5%</option>
+          <option value="0"   ${(it.ite_iva_porc||21)===0    ?'selected':''}>Exento</option>
+        </select>
+        <span style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--t2)">$${fmt(neto)}</span>
+        <span style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--acc)">$${fmt(ivaT)}</span>` : ''}
+      <span style="text-align:right;font-family:var(--mono);font-weight:600;color:var(--grn)">$${fmt(imp)}</span>
+      <button class="btn dng" onclick="nfEliminarItem(${i})" style="padding:3px 8px;font-size:12px">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// ── Totales ───────────────────────────────────────────────
+function nfCalcTotales() {
+  const esA = nfEsFacturaA();
+  const dto  = parseFloat(document.getElementById('nf-dto')?.value||0)||0;
+  let neto=0, iva=0;
+  FAC_ITEMS_NUEVA.forEach(it => {
+    const div  = 1+(it.ite_iva_porc||0)/100;
+    const n    = esA ? it.ite_uni/div : it.ite_uni;
+    const can  = it.ite_can||1;
+    neto += n*can;
+    if(esA) iva += (it.ite_uni-n)*can;
+  });
+  const subtotal = neto+iva;
+  const dtoImp   = subtotal*dto/100;
+  const total    = subtotal-dtoImp;
+  const mon      = document.getElementById('nf-moneda')?.value==='U' ? 'u$s' : '$';
+
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('nf-tot-neto',  `${mon} ${fmt(neto)}`);
+  set('nf-tot-iva',   `${mon} ${fmt(iva)}`);
+  set('nf-tot-sub',   `${mon} ${fmt(subtotal)}`);
+  set('nf-tot-dto',   dto>0 ? `- ${mon} ${fmt(dtoImp)}` : '—');
+  set('nf-tot-total', `${mon} ${fmt(total)}`);
+
+  const filaIva = document.getElementById('nf-fila-iva');
+  if (filaIva) filaIva.style.display = esA ? '' : 'none';
+  const filaDto = document.getElementById('nf-fila-dto');
+  if (filaDto) filaDto.style.display = dto>0 ? '' : 'none';
+
+  window._nfTotales = { neto, iva, subtotal, dtoImp, total };
+}
+
+// ── Guardar borrador ──────────────────────────────────────
+async function nfGuardar() {
+  const empresa = document.getElementById('nf-empresa').value;
+  const ctipVal = document.getElementById('nf-ctip').value;
+  const cliCod  = (document.getElementById('nf-cli')?.value||'').trim().toUpperCase();
+  const fecha   = document.getElementById('nf-fecha').value;
+  const moneda  = document.getElementById('nf-moneda').value;
+  const tiva    = document.getElementById('nf-tiva').value;
+
+  if (!empresa)             { toast('Seleccioná una empresa','err'); return; }
+  if (!ctipVal)             { toast('Seleccioná un tipo de comprobante','err'); return; }
+  if (!cliCod)              { toast('Ingresá un código de cliente','err'); return; }
+  if (!fecha)               { toast('Ingresá la fecha','err'); return; }
+  if (!FAC_ITEMS_NUEVA.length) { toast('Agregá al menos un ítem','err'); return; }
+
+  // Validar cliente existe
+  const cli = CLIS.find(c=>c.cli_codigo===cliCod);
+  if (!cli) { toast(`Cliente ${cliCod} no encontrado`,'err'); return; }
+
+  // Validar ítems
+  for (let i=0; i<FAC_ITEMS_NUEVA.length; i++) {
+    const it = FAC_ITEMS_NUEVA[i];
+    if (!it.ite_desp?.trim()) { toast(`Ítem ${i+1}: falta descripción`,'err'); return; }
+    if (!(it.ite_uni>0))      { toast(`Ítem ${i+1}: precio debe ser mayor a 0`,'err'); return; }
+  }
+
+  const [prefijo, tipo] = ctipVal.split('|');
+  const ct = CTIPS.find(c=>c.empresa===empresa&&c.prefijo===prefijo&&c.tipo===tipo);
+  if (!ct) { toast('Tipo de comprobante no encontrado','err'); return; }
+
+  const nroSig = (ct.ultimo_nro||0)+1;
+  const facNro = `${prefijo}-${String(nroSig).padStart(6,'0')}`;
+
+  if (FACS.find(f=>f.fac_nro===facNro)) { toast(`El número ${facNro} ya existe`,'err'); return; }
+
+  const esA = nfEsFacturaA();
+  const tot = window._nfTotales||{};
+  const dto = parseFloat(document.getElementById('nf-dto')?.value||0)||0;
+
+  const facData = {
+    fac_nro:     facNro,
+    fac_fec:     fecha,
+    fac_cli:     cliCod,
+    fac_empresa: empresa,
+    fac_ctip:    prefijo,
+    fac_tiva:    tiva,
+    fac_moneda:  moneda,
+    fac_sub:     tot.subtotal||0,
+    fac_iva:     esA ? (tot.iva||0) : 0,
+    fac_total:   tot.total||0,
+    fac_saldo:   tot.total||0,
+    fac_percib:  0,
+    fac_transp:  document.getElementById('nf-transp')?.value||'',
+    fac_remito:  document.getElementById('nf-remito')?.value||'',
+    fac_monpor:  dto,
+    fac_afip_st: 'pendiente',
+    fac_cae:     null,
+    fac_cae_vto: null
+  };
+
+  try {
+    await sbUpsert('facturas', facData);
+
+    for (const it of FAC_ITEMS_NUEVA) {
+      const div  = 1+(it.ite_iva_porc||0)/100;
+      const neto = esA ? it.ite_uni/div : it.ite_uni;
+      await sbUpsert('fac_items', {
+        ite_nro:      facNro,
+        ite_art:      '',
+        ite_desp:     it.ite_desp,
+        ite_can:      it.ite_can,
+        ite_uni:      it.ite_uni,
+        ite_imp:      neto*(it.ite_can||1),
+        ite_iva_porc: esA ? (it.ite_iva_porc||21) : 0,
+        ite_iva_imp:  esA ? (it.ite_uni-neto)*(it.ite_can||1) : 0,
+        ite_impu:     0,
+        ite_costo:    0
+      });
+    }
+
+    // Incrementar último número
+    await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${ct.id}`, {
+      method:'PATCH', headers:{...SB_HDR}, body:JSON.stringify({ultimo_nro:nroSig})
+    });
+    ct.ultimo_nro = nroSig;
+
+    await sbLoadFacs();
+    closeOv('ov-nf');
+    renderFac();
+    toast(`✓ Factura ${facNro} guardada como borrador`,'scs');
+    const idx = filtFacs().findIndex(f=>f.fac_nro===facNro);
+    if(idx>=0) selFac(idx);
+
+  } catch(e) {
+    console.error('nfGuardar:', e);
+    toast('Error al guardar','err');
+  }
+}
+
+// ── TOP 10 ────────────────────────────────────────────────
 async function openTop10() {
   const ov = document.getElementById('ov-top10');
   if (!ov) return;
-  // Set default dates: current year
-  const hoy = new Date();
-  const anio = hoy.getFullYear();
+  const anio = new Date().getFullYear();
   document.getElementById('top10-desde').value = `${anio}-01-01`;
   document.getElementById('top10-hasta').value = `${anio}-12-31`;
   document.getElementById('top10-emp').value = '';
@@ -430,226 +678,45 @@ async function openTop10() {
 }
 
 async function calcTop10() {
-  const desde  = document.getElementById('top10-desde').value;
-  const hasta  = document.getElementById('top10-hasta').value;
-  const emp    = document.getElementById('top10-emp').value;
-  const body   = document.getElementById('top10-body');
-
+  const desde = document.getElementById('top10-desde').value;
+  const hasta = document.getElementById('top10-hasta').value;
+  const emp   = document.getElementById('top10-emp').value;
+  const body  = document.getElementById('top10-body');
   body.innerHTML = '<div style="text-align:center;color:var(--t3);padding:20px">⏳ Calculando...</div>';
-
   try {
-    // Traer facturas del período
-    let facParams = `select=fac_nro&fac_fec=gte.${desde}&fac_fec=lte.${hasta}&limit=10000`;
-    const facsResp = await sbGetAll('facturas', 'fac_nro', `fac_fec=gte.${desde}&fac_fec=lte.${hasta}`);
-    let facNros = new Set(facsResp.map(f => f.fac_nro));
-
-    // Filtrar por empresa si corresponde
-    if (emp) {
-      facNros = new Set([...facNros].filter(n => (n||'').startsWith(emp)));
-    }
-
-    if (!facNros.size) {
-      body.innerHTML = '<div style="text-align:center;color:var(--t3);padding:20px">Sin facturas en el período</div>';
-      return;
-    }
-
-    // Traer items de esas facturas — en lotes usando sintaxis IN de Supabase
+    const facsResp = await sbGetAll('facturas','fac_nro',`fac_fec=gte.${desde}&fac_fec=lte.${hasta}`);
+    let facNros = new Set(facsResp.map(f=>f.fac_nro));
+    if (emp) facNros = new Set([...facNros].filter(n=>(n||'').startsWith(emp)));
+    if (!facNros.size) { body.innerHTML='<div style="text-align:center;color:var(--t3);padding:20px">Sin facturas en el período</div>'; return; }
     const nrosArr = [...facNros];
     const allItems = [];
-    for (let i = 0; i < nrosArr.length; i += 200) {
-      const lote = nrosArr.slice(i, i+200);
-      const inList = lote.map(n => n.trim()).join(',');
-      const items = await sbGet('fac_items', `ite_nro=in.(${encodeURIComponent(inList)})&select=ite_art,ite_can,ite_imp&limit=10000`);
+    for (let i=0;i<nrosArr.length;i+=200) {
+      const inList = nrosArr.slice(i,i+200).map(n=>n.trim()).join(',');
+      const items = await sbGet('fac_items',`ite_nro=in.(${encodeURIComponent(inList)})&select=ite_art,ite_desp,ite_can,ite_imp&limit=10000`);
       allItems.push(...items);
     }
-
-    // Agrupar por artículo
-    const agg = {};
-    allItems.forEach(it => {
-      const cod = (it.ite_art||'').trim();
-      if (!cod) return;
-      if (!agg[cod]) agg[cod] = { cant: 0, imp: 0 };
-      agg[cod].cant += (it.ite_can||0);
-      agg[cod].imp  += (it.ite_imp||0);
+    const agg={};
+    allItems.forEach(it=>{
+      const cod=(it.ite_art||it.ite_desp||'').trim();
+      if(!cod) return;
+      if(!agg[cod]) agg[cod]={cant:0,imp:0,des:it.ite_desp||it.ite_art||''};
+      agg[cod].cant+=(it.ite_can||0);
+      agg[cod].imp+=(it.ite_imp||0);
     });
-
-    // Top 10 por cantidad
-    const top10 = Object.entries(agg)
-      .sort((a,b) => b[1].cant - a[1].cant)
-      .slice(0, 10);
-
-    if (!top10.length) {
-      body.innerHTML = '<div style="text-align:center;color:var(--t3);padding:20px">Sin datos</div>';
-      return;
-    }
-
-    body.innerHTML = `
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead>
-          <tr style="background:var(--s3)">
-            <th style="padding:8px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1)">#</th>
-            <th style="padding:8px;text-align:left;font-family:var(--mono);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1)">Código</th>
-            <th style="padding:8px;text-align:left;font-family:var(--mono);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1)">Descripción</th>
-            <th style="padding:8px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1)">Cantidad</th>
-            <th style="padding:8px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1)">Importe</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${top10.map(([cod, d], i) => {
-            const art = ARTS.find(a=>a.ART_COD===cod);
-            const des = art ? art.ART_DES : '—';
-            return `<tr style="border-bottom:1px solid var(--b1)">
-              <td style="padding:9px 8px;text-align:center;font-family:var(--mono);color:var(--t3)">${i+1}</td>
-              <td style="padding:9px 8px;font-family:var(--mono);color:var(--acc)">${esc(cod)}</td>
-              <td style="padding:9px 8px;color:var(--txt)">${esc(des)}</td>
-              <td style="padding:9px 8px;text-align:right;font-family:var(--mono);color:var(--grn)">${d.cant.toLocaleString('es-AR')}</td>
-              <td style="padding:9px 8px;text-align:right;font-family:var(--mono);color:var(--txt)">$${fmt(d.imp)}</td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>`;
-  } catch(e) {
-    console.error('calcTop10:', e);
-    body.innerHTML = '<div style="text-align:center;color:var(--red);padding:20px">Error al calcular</div>';
-  }
-}
-
-
-// ── CONSULTA EN LENGUAJE NATURAL ─────────────────────────
-let consultaHistory = [];
-
-function openConsulta() {
-  const ov = document.getElementById('ov-consulta');
-  if (!ov) return;
-  ov.classList.add('open');
-  document.getElementById('consulta-input').focus();
-}
-
-async function enviarConsulta() {
-  const input = document.getElementById('consulta-input');
-  const q = input.value.trim();
-  if (!q) return;
-  input.value = '';
-
-  const msgDiv = document.getElementById('consulta-msgs');
-
-  // Agregar mensaje del usuario
-  msgDiv.innerHTML += `<div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-    <div style="background:var(--acc);color:#fff;border-radius:12px 12px 2px 12px;padding:8px 14px;max-width:80%;font-size:13px">${esc(q)}</div>
-  </div>`;
-  msgDiv.scrollTop = msgDiv.scrollHeight;
-
-  // Agregar indicador de carga
-  const loadId = 'load-'+Date.now();
-  msgDiv.innerHTML += `<div id="${loadId}" style="display:flex;margin-bottom:10px">
-    <div style="background:var(--s3);border-radius:12px 12px 12px 2px;padding:8px 14px;font-size:13px;color:var(--t2)">⏳ Consultando...</div>
-  </div>`;
-  msgDiv.scrollTop = msgDiv.scrollHeight;
-
-  // Contexto del sistema para Claude
-  const systemPrompt = `Sos un asistente de consultas para un sistema de facturación llamado SGV.
-Tenés acceso a las siguientes tablas en Supabase (PostgreSQL):
-
-- facturas: fac_nro (PK), fac_fec (date), fac_cli (código cliente), fac_tiva, fac_sub, fac_percib, fac_total, fac_saldo, fac_moneda, fac_transp, fac_remito
-- fac_items: id, ite_nro (FK→fac_nro), ite_art (código artículo), ite_can, ite_uni, ite_imp, ite_desp, ite_impu, ite_costo
-- clientes: cli_codigo (PK), cli_razon, cli_domic, cli_local, cli_provin, cli_cuit, cli_iva, cli_conpag, cli_saldo
-- articulos: art_cod (PK), art_des, art_rub, art_marca, art_pre, art_stk, art_stkt
-
-Reglas importantes:
-- Las facturas que empiezan con H son de Hatsu Electronics SA
-- Las facturas que empiezan con T son de Tressa Argentina SA
-- fac_saldo > 0 significa factura impaga
-- Las fechas están en formato YYYY-MM-DD
-
-Tu tarea es:
-1. Interpretar la pregunta del usuario
-2. Generar una URL de consulta REST de Supabase (NO SQL, usar la API REST de PostgREST)
-3. Ejecutar la consulta
-4. Responder en español de forma clara y concisa
-
-Formato de respuesta: JSON con esta estructura:
-{
-  "query": "tabla?parametros",
-  "respuesta": "texto de respuesta al usuario (después de ver los datos)",
-  "necesita_datos": true
-}
-
-Si no necesitás consultar datos, devolvé necesita_datos: false y la respuesta directamente.
-La URL base es: https://blwxnrzrsgxscmsquwlz.supabase.co/rest/v1/`;
-
-  consultaHistory.push({ role: 'user', content: q });
-
-  try {
-    // Paso 1: Claude genera la query
-    const resp1 = await fetch('/api/consulta', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: systemPrompt,
-        messages: consultaHistory
-      })
-    });
-    const data1 = await resp1.json();
-    const text1 = data1.content?.[0]?.text || '';
-
-    let parsed;
-    try {
-      const clean = text1.replace(/```json|```/g, '').trim();
-      parsed = JSON.parse(clean);
-    } catch(e) {
-      parsed = { necesita_datos: false, respuesta: text1 };
-    }
-
-    let respuestaFinal = parsed.respuesta || '';
-
-    if (parsed.necesita_datos && parsed.query) {
-      // Paso 2: ejecutar la query en Supabase
-      const sbResp = await fetch(`${SB_URL}/rest/v1/${parsed.query}`, {
-        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
-      });
-      const sbData = await sbResp.json();
-
-      // Paso 3: Claude interpreta los resultados
-      const resp2 = await fetch('/api/consulta', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          system: systemPrompt,
-          messages: [
-            ...consultaHistory,
-            { role: 'assistant', content: text1 },
-            { role: 'user', content: `Resultados de la consulta: ${JSON.stringify(sbData).substring(0, 3000)}. Ahora respondé la pregunta del usuario de forma clara y concisa en español.` }
-          ]
-        })
-      });
-      const data2 = await resp2.json();
-      respuestaFinal = data2.content?.[0]?.text || 'No pude interpretar los resultados.';
-    }
-
-    consultaHistory.push({ role: 'assistant', content: respuestaFinal });
-
-    // Reemplazar indicador de carga con respuesta
-    document.getElementById(loadId).outerHTML = `<div style="display:flex;margin-bottom:10px">
-      <div style="background:var(--s3);border-radius:12px 12px 12px 2px;padding:8px 14px;max-width:85%;font-size:13px;color:var(--txt);line-height:1.5">${esc(respuestaFinal).replace(/\n/g,'<br>')}</div>
-    </div>`;
-    msgDiv.scrollTop = msgDiv.scrollHeight;
-
-  } catch(e) {
-    console.error('consulta:', e);
-    document.getElementById(loadId).outerHTML = `<div style="display:flex;margin-bottom:10px">
-      <div style="background:var(--s3);border-radius:12px 12px 12px 2px;padding:8px 14px;font-size:13px;color:var(--red)">Error al procesar la consulta.</div>
-    </div>`;
-  }
-}
-
-function limpiarConsulta() {
-  consultaHistory = [];
-  document.getElementById('consulta-msgs').innerHTML = `<div style="text-align:center;color:var(--t3);font-size:12px;padding:20px">
-    Hacé tus preguntas sobre facturación en lenguaje natural.<br>
-    <span style="font-size:11px">Ej: "¿Cuánto vendió el cliente 5800 este mes?" · "¿Cuáles son las facturas impagas?"</span>
-  </div>`;
+    const top10=Object.entries(agg).sort((a,b)=>b[1].cant-a[1].cant).slice(0,10);
+    if(!top10.length){body.innerHTML='<div style="text-align:center;color:var(--t3);padding:20px">Sin datos</div>';return;}
+    body.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="background:var(--s3)">
+        <th style="padding:8px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1)">#</th>
+        <th style="padding:8px;text-align:left;font-family:var(--mono);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1)">Descripción</th>
+        <th style="padding:8px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1)">Cantidad</th>
+        <th style="padding:8px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1)">Importe</th>
+      </tr></thead>
+      <tbody>${top10.map(([,d],i)=>`<tr style="border-bottom:1px solid var(--b1)">
+        <td style="padding:9px 8px;text-align:center;font-family:var(--mono);color:var(--t3)">${i+1}</td>
+        <td style="padding:9px 8px">${esc(d.des)}</td>
+        <td style="padding:9px 8px;text-align:right;font-family:var(--mono);color:var(--grn)">${d.cant.toLocaleString('es-AR')}</td>
+        <td style="padding:9px 8px;text-align:right;font-family:var(--mono)">$${fmt(d.imp)}</td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch(e) { console.error(e); body.innerHTML='<div style="text-align:center;color:var(--red);padding:20px">Error al calcular</div>'; }
 }
