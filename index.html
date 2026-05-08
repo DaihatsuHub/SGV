@@ -447,7 +447,7 @@
 
 <!-- MODAL NUEVA FACTURA -->
 <div class="ov" id="ov-nf">
-  <div class="modal" style="width:860px;max-width:98vw">
+  <div class="modal" style="width:940px;max-width:98vw">
     <div class="mhd">
       <div class="mtit">
         <span id="nf-mtit">Nueva Factura</span>
@@ -483,10 +483,7 @@
         </div>
         <div class="fgrp">
           <label class="flbl2">Moneda</label>
-          <select class="finp" id="nf-moneda" onchange="nfCalcTotales()">
-            <option value="P">$ Pesos</option>
-            <option value="U">u$s Dólares</option>
-          </select>
+          <select class="finp" id="nf-moneda" onchange="nfCalcTotales()"></select>
         </div>
       </div>
 
@@ -495,8 +492,15 @@
       <div class="fg">
         <div class="fgrp">
           <label class="flbl2">Código *</label>
-          <input class="finp" id="nf-cli" maxlength="6" style="text-transform:uppercase"
-            placeholder="Código" oninput="nfOnCliChange()">
+          <input class="finp" id="nf-cli-cod" maxlength="6" style="text-transform:uppercase"
+            placeholder="Código" oninput="nfOnCliCodChange()">
+        </div>
+        <div class="fgrp full" style="position:relative">
+          <label class="flbl2">Buscar por Razón Social</label>
+          <input class="finp" id="nf-cli-busq" placeholder="Escribí para buscar..."
+            oninput="nfOnCliBusqInput()"
+            onblur="setTimeout(()=>{document.getElementById('nf-cli-sug').style.display='none'},200)">
+          <div id="nf-cli-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--s1);border:1px solid var(--acc);border-radius:0 0 6px 6px;z-index:200;max-height:200px;overflow-y:auto"></div>
         </div>
         <div class="fgrp full">
           <label class="flbl2">Razón Social</label>
@@ -508,7 +512,7 @@
         </div>
         <div class="fgrp">
           <label class="flbl2">Cond. de Pago</label>
-          <input class="finp" id="nf-conpag" readonly style="color:var(--t2);background:var(--s3)" placeholder="—">
+          <select class="finp" id="nf-conpag"></select>
         </div>
         <div class="fgrp">
           <label class="flbl2">Descuento %</label>
@@ -517,12 +521,12 @@
         </div>
       </div>
 
-      <!-- DATOS DE ENTREGA -->
+      <!-- ENTREGA -->
       <div class="fsec">Entrega</div>
       <div class="fg">
         <div class="fgrp">
           <label class="flbl2">Transporte</label>
-          <input class="finp" id="nf-transp" maxlength="20" style="text-transform:uppercase">
+          <select class="finp" id="nf-transp"></select>
         </div>
         <div class="fgrp">
           <label class="flbl2">Remito</label>
@@ -546,7 +550,7 @@
           <span style="color:var(--t3)">Subtotal neto</span>
           <span id="nf-tot-neto">$ 0,00</span>
         </div>
-        <div class="nf-tot-row" id="nf-fila-iva" style="display:none">
+        <div class="nf-tot-row" id="nf-fila-iva2" style="display:none">
           <span style="color:var(--t3)">IVA</span>
           <span id="nf-tot-iva">$ 0,00</span>
         </div>
@@ -564,14 +568,13 @@
         </div>
       </div>
 
-    </div><!-- /mbdy -->
+    </div>
     <div class="mft">
       <button class="btn" onclick="closeOv('ov-nf')">Cancelar</button>
       <button class="btn pri" onclick="nfGuardar()">💾 Guardar borrador</button>
     </div>
   </div>
 </div>
-
 <!-- MODAL TIPOS DE COMPROBANTE -->
 <div class="ov" id="ov-ctip">
   <div class="modal" style="width:480px">

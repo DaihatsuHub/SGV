@@ -31,20 +31,20 @@ async function sbLoadItemsFac(nro) {
   } catch(e) { console.error('sbLoadItemsFac:', e); return []; }
 }
 
-// ── Detectar prefijo de fac_nro (soporta ambos formatos) ──
-// Formato viejo: "HA4 47450F" o "HXX201720F"
-// Formato nuevo: "HA4-000001"
+// ── Helpers formato nro comprobante ──────────────────────
 function facGetPrefijo(fac_nro) {
   const nro = (fac_nro||'').trim();
-  // Formato nuevo con guión
   if (nro.includes('-')) return nro.split('-')[0];
-  // Formato viejo: primeros 3 caracteres
   return nro.substring(0, 3);
 }
-
 function facGetTipo(fac_nro) {
-  const nro = (fac_nro||'').trim();
-  return nro.slice(-1); // último caracter = tipo (F, C, D)
+  return (fac_nro||'').trim().slice(-1);
+}
+function nfEsNC() {
+  const val = document.getElementById('nf-ctip')?.value||'';
+  if (!val) return false;
+  const [,tipo] = val.split('|');
+  return tipo === 'C';
 }
 
 // ── TIPOS DE COMPROBANTE ──────────────────────────────────
@@ -202,7 +202,6 @@ function posicionarUltimaFecha() {
 function buscarFac() {
   const q = (document.getElementById('fac-q')?.value||'').toLowerCase().trim();
   if (!q) { facSelIdx = null; posicionarUltimaFecha(); return; }
-
   const esFecha = /^\d{2}[\/-]\d{2}[\/-]\d{4}$/.test(q) || /^\d{4}-\d{2}-\d{2}$/.test(q);
   if (esFecha) {
     let fechaISO = q;
@@ -222,7 +221,6 @@ function buscarFac() {
     if (el) el.scrollIntoView({ block: 'center' });
     return;
   }
-
   const esFactura = /^[ht]/i.test(q);
   if (esFactura) {
     facSort = { col: 'fac_nro', asc: true };
@@ -237,8 +235,6 @@ function buscarFac() {
     }
     return;
   }
-
-  // Buscar por cliente
   facSort = { col: 'fac_cli', asc: true };
   const listCli = FACS.filter(f => {
     const emp = document.getElementById('fac-empresa')?.value||'';
@@ -248,7 +244,6 @@ function buscarFac() {
     return { ...f, _razon: (cli?.CLI_RAZON||f.fac_cli||'').toLowerCase() };
   }).filter(f => f._razon.includes(q))
     .sort((a,b) => a._razon.localeCompare(b._razon));
-
   if (listCli.length > 0) {
     const target = listCli[0];
     const list = filtFacs();
@@ -267,13 +262,11 @@ function renderFac() {
   const list = filtFacs();
   const body = document.getElementById('fac-body');
   if(!list.length){body.innerHTML='<div class="empty">🔍 Sin resultados</div>';return;}
-
   if (facSelIdx === null || facSelIdx >= list.length) {
     const ultimaFecha = list.map(f=>f.fac_fec||'').filter(Boolean).reduce((a,b)=>a>b?a:b,'');
     facSelIdx = list.findIndex(f=>f.fac_fec===ultimaFecha);
     if (facSelIdx < 0) facSelIdx = 0;
   }
-
   const thFac = document.querySelector('.th-fac');
   if (thFac) {
     const arr = col => facSort.col===col ? (facSort.asc?' ▲':' ▼') : ' ↕';
@@ -282,7 +275,6 @@ function renderFac() {
       <span style="cursor:pointer" onclick="toggleFacSort('fac_nro')">Comprobante${arr('fac_nro')}</span>
       <span style="cursor:pointer" onclick="toggleFacSort('fac_cli')">Cliente${arr('fac_cli')}</span>`;
   }
-
   body.innerHTML = list.map((f,i) => {
     const sel = facSelIdx===i ? 'sel' : '';
     const fec = f.fac_fec ? f.fac_fec.substring(0,10).split('-').reverse().join('/') : '—';
@@ -291,7 +283,6 @@ function renderFac() {
     const prefijo = facGetPrefijo(f.fac_nro);
     const ctip = CTIPS.find(c=>c.prefijo === prefijo);
     const contColor = ctip ? (ctip.contable ? 'var(--acc)' : 'var(--red)') : 'var(--t2)';
-    // Badge solo en facturas nuevas con afip_st = pendiente
     const esBorrador = f.fac_afip_st === 'pendiente' && !f.fac_cae;
     const caeBadge = f.fac_cae
       ? `<span style="font-size:10px;background:#1a3a1a;color:#4ade80;padding:1px 6px;border-radius:4px;margin-left:4px">CAE</span>`
@@ -304,13 +295,10 @@ function renderFac() {
       <span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nomCli)}</span>
     </div>`;
   }).join('');
-
   const selEl = body.querySelector('.tr-fac.sel');
   if (selEl) selEl.scrollIntoView({ block: 'nearest' });
-
   const f = list[facSelIdx];
   if (f) renderFacDetalle(f);
-
   document.onkeydown = function(e) {
     const page = document.getElementById('page-fac');
     if (!page || !page.classList.contains('active')) return;
@@ -347,30 +335,21 @@ async function renderFacDetalle(f) {
   const ctip2 = CTIPS.find(c=>c.prefijo === prefijo2);
   const contColor2 = ctip2 ? (ctip2.contable ? 'var(--acc)' : 'var(--red)') : 'var(--acc)';
   const esBorrador = f.fac_afip_st === 'pendiente' && !f.fac_cae;
-
   const caeInfo = f.fac_cae
-    ? `<div style="margin-top:6px;background:#1a3a1a;border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:11px;color:#4ade80">
-        ✅ CAE: ${f.fac_cae} &nbsp;·&nbsp; Vto: ${f.fac_cae_vto||'—'}
-       </div>`
+    ? `<div style="margin-top:6px;background:#1a3a1a;border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:11px;color:#4ade80">✅ CAE: ${f.fac_cae} &nbsp;·&nbsp; Vto: ${f.fac_cae_vto||'—'}</div>`
     : esBorrador
-      ? `<div style="margin-top:6px;background:#2a2a1a;border-radius:6px;padding:6px 10px;font-size:11px;color:#facc15">
-          ⚠️ Borrador — pendiente de autorización AFIP
-         </div>`
+      ? `<div style="margin-top:6px;background:#2a2a1a;border-radius:6px;padding:6px 10px;font-size:11px;color:#facc15">⚠️ Borrador — pendiente de autorización AFIP</div>`
       : '';
-
   det.innerHTML = `
     <div class="fac-det-hdr" style="position:sticky;top:0;background:var(--s1);z-index:1;padding-bottom:8px">
       <div class="fac-det-nro" style="color:${contColor2}">${esc(f.fac_nro||'')} &nbsp;<span style="font-size:13px;color:var(--t2)">${TIPO_LABEL[tipoChar]||''}</span></div>
       <div class="fac-det-cli">${cli ? cli.CLI_RAZON : f.fac_cli||'—'}</div>
       <div class="fac-det-sub">${cli ? (cli.CLI_DOMIC||'')+(cli.CLI_LOCAL?' — '+cli.CLI_LOCAL:'') : ''}</div>
       <div class="fac-det-sub" style="margin-top:4px">
-        ${cli ? 'Cond.Pago: '+(cli.CLI_CONPAG||'—') : ''}
-        &nbsp;·&nbsp; IVA: (${f.fac_tiva||'—'})
-        &nbsp;·&nbsp; Fecha: ${fec}
+        ${cli ? 'Cond.Pago: '+(cli.CLI_CONPAG||'—') : ''} &nbsp;·&nbsp; IVA: (${f.fac_tiva||'—'}) &nbsp;·&nbsp; Fecha: ${fec}
       </div>
       ${caeInfo}
     </div>
-
     <div style="margin-bottom:12px">
       <div style="font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:6px;letter-spacing:1px">ITEMS (${items.length})</div>
       <div style="background:var(--s2);border-radius:6px;overflow:hidden;max-height:200px;overflow-y:auto">
@@ -378,9 +357,7 @@ async function renderFacDetalle(f) {
           <span>Artículo</span><span>Despacho</span><span style="text-align:right">Cant</span><span style="text-align:right">P.Unit</span><span style="text-align:right">Importe</span><span style="text-align:right">Dto%</span>
         </div>
         ${items.length ? items.map(it => {
-          const dto = it.ite_costo && it.ite_costo > 0
-            ? ((1 - it.ite_uni / it.ite_costo) * 100).toFixed(1)
-            : '—';
+          const dto = it.ite_costo && it.ite_costo > 0 ? ((1 - it.ite_uni / it.ite_costo) * 100).toFixed(1) : '—';
           const dtoColor = parseFloat(dto) > 0 ? 'color:var(--grn)' : 'color:var(--t3)';
           return `<div style="display:grid;grid-template-columns:110px 1fr 60px 90px 90px 65px;gap:6px;padding:7px 10px;border-bottom:1px solid var(--b1);font-size:12px">
             <span class="col-cod">${esc(it.ite_art||'')}</span>
@@ -393,7 +370,6 @@ async function renderFacDetalle(f) {
         }).join('') : '<div style="padding:12px;text-align:center;color:var(--t3);font-size:12px">Sin ítems</div>'}
       </div>
     </div>
-
     <div class="fac-det-totales">
       ${(f.fac_iva||0)>0 ? `
         <div class="fac-det-row"><span>Subtotal neto</span><span>${mon} ${fmt((f.fac_sub||0)-(f.fac_iva||0))}</span></div>
@@ -413,26 +389,74 @@ function facAlta() {
   FAC_ITEMS_NUEVA = [];
   FAC_MODO = 'A';
   const hoy = new Date().toISOString().substring(0,10);
+
+  // Empresa
   document.getElementById('nf-empresa').value = 'H';
-  document.getElementById('nf-fecha').value   = hoy;
-  document.getElementById('nf-moneda').value  = 'P';
-  document.getElementById('nf-dto').value     = '0';
-  ['nf-ctip','nf-cli','nf-razon','nf-conpag','nf-tiva','nf-transp','nf-remito'].forEach(id => {
+
+  // Fecha
+  document.getElementById('nf-fecha').value = hoy;
+
+  // Monedas desde tabla
+  nfCargarMonedas('P');
+
+  // Limpiar campos
+  ['nf-ctip','nf-cli-cod','nf-cli-busq','nf-razon','nf-tiva','nf-transp','nf-remito'].forEach(id => {
     const el = document.getElementById(id); if(el) el.value='';
   });
+  document.getElementById('nf-dto').value = '0';
+
+  // Condición de pago desde tabla
+  nfCargarCpag('');
+
+  // Transporte desde tabla
+  nfCargarTransp('');
+
+  // Tipos comprobante
   nfFiltrarCtips('H');
+
   nfRenderItems();
   nfCalcTotales();
+
   document.getElementById('nf-mtit').textContent = 'Nueva Factura';
   setMtag('nf-mtag','ALTA','tag-a');
   document.getElementById('ov-nf').classList.add('open');
-  setTimeout(()=>document.getElementById('nf-cli')?.focus(), 100);
+  setTimeout(()=>document.getElementById('nf-cli-cod')?.focus(), 100);
 }
 
 function facModif()    { if(facSelIdx===null){toast('Seleccioná una factura','err');return;} toast('Próximamente: Modificar factura','scs'); }
 function facBaja()     { if(facSelIdx===null){toast('Seleccioná una factura','err');return;} toast('Próximamente: Anular factura','scs'); }
 function facImprimir() { if(facSelIdx===null){toast('Seleccioná una factura','err');return;} toast('Próximamente: Imprimir factura','scs'); }
 
+// ── Cargar monedas desde tabla ────────────────────────────
+function nfCargarMonedas(selVal) {
+  const sel = document.getElementById('nf-moneda');
+  if (!sel) return;
+  const mones = TABLAS['MONE'] || [];
+  sel.innerHTML = mones.map(m =>
+    `<option value="${m.CODIGO}" ${m.CODIGO===selVal?'selected':''}>${m.STRING1} ${m.DETALLE}</option>`
+  ).join('');
+  if (!mones.length) sel.innerHTML = '<option value="P">$ Pesos</option>';
+}
+
+// ── Cargar condición de pago desde tabla ──────────────────
+function nfCargarCpag(selVal) {
+  const sel = document.getElementById('nf-conpag');
+  if (!sel) return;
+  const lista = TABLAS['CPAG'] || [];
+  sel.innerHTML = '<option value="">— Sin especificar —</option>' +
+    lista.map(c => `<option value="${c.CODIGO}" ${c.CODIGO===selVal?'selected':''}>${c.CODIGO} — ${c.DETALLE}</option>`).join('');
+}
+
+// ── Cargar transporte desde tabla EXPR ───────────────────
+function nfCargarTransp(selVal) {
+  const sel = document.getElementById('nf-transp');
+  if (!sel) return;
+  const lista = TABLAS['EXPR'] || [];
+  sel.innerHTML = '<option value="">— Sin especificar —</option>' +
+    lista.map(e => `<option value="${e.CODIGO}" ${e.CODIGO===selVal?'selected':''}>${e.CODIGO} — ${e.DETALLE}</option>`).join('');
+}
+
+// ── Filtrar CTIPs por empresa ─────────────────────────────
 function nfFiltrarCtips(empresa) {
   const sel = document.getElementById('nf-ctip');
   if (!sel) return;
@@ -444,6 +468,7 @@ function nfFiltrarCtips(empresa) {
 
 function nfOnEmpresaChange() {
   nfFiltrarCtips(document.getElementById('nf-empresa').value);
+  nfRenderItems(); // refrescar disponible según empresa
 }
 
 function nfOnCtipChange() {
@@ -458,22 +483,68 @@ function nfOnCtipChange() {
   nfCalcTotales();
 }
 
-function nfOnCliChange() {
-  const cod = (document.getElementById('nf-cli')?.value||'').trim().toUpperCase();
+// ── Búsqueda de cliente ───────────────────────────────────
+function nfOnCliCodChange() {
+  const cod = (document.getElementById('nf-cli-cod')?.value||'').trim().toUpperCase();
+  // Limpiar sugerencias si están vacías
+  document.getElementById('nf-cli-sug').innerHTML = '';
+  document.getElementById('nf-cli-sug').style.display = 'none';
+  if (!cod) { nfLimpiarCliente(); return; }
   const cli = CLIS.find(c=>c.CLI_CODIGO===cod);
   if (cli) {
-    document.getElementById('nf-razon').value  = cli.CLI_RAZON||'';
-    document.getElementById('nf-conpag').value = cli.CLI_CONPAG||'';
-    document.getElementById('nf-tiva').value   = cli.CLI_IVA||'';
-    document.getElementById('nf-dto').value    = cli.CLI_DTO||0;
-    nfCalcTotales();
+    nfSetCliente(cli);
   } else {
-    document.getElementById('nf-razon').value = '';
-    document.getElementById('nf-tiva').value  = '';
+    nfLimpiarCliente();
   }
+}
+
+function nfOnCliBusqInput() {
+  const q = (document.getElementById('nf-cli-busq')?.value||'').toLowerCase().trim();
+  const sug = document.getElementById('nf-cli-sug');
+  if (!q || q.length < 2) { sug.innerHTML=''; sug.style.display='none'; return; }
+  const matches = CLIS.filter(c =>
+    (c.CLI_RAZON||'').toLowerCase().includes(q) ||
+    (c.CLI_CODIGO||'').toLowerCase().includes(q)
+  ).slice(0, 8);
+  if (!matches.length) { sug.innerHTML=''; sug.style.display='none'; return; }
+  sug.style.display = 'block';
+  sug.innerHTML = matches.map(c =>
+    `<div class="nf-cli-sug-item" onclick="nfSelCliSug('${c.CLI_CODIGO}')"
+      style="padding:7px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--b1);display:flex;gap:10px;align-items:center">
+      <span style="font-family:var(--mono);color:var(--acc);flex-shrink:0">${esc(c.CLI_CODIGO)}</span>
+      <span style="color:var(--txt)">${esc(c.CLI_RAZON||'')}</span>
+    </div>`
+  ).join('');
+}
+
+function nfSelCliSug(cod) {
+  const cli = CLIS.find(c=>c.CLI_CODIGO===cod);
+  if (!cli) return;
+  document.getElementById('nf-cli-cod').value  = cli.CLI_CODIGO;
+  document.getElementById('nf-cli-busq').value = cli.CLI_RAZON||'';
+  document.getElementById('nf-cli-sug').innerHTML = '';
+  document.getElementById('nf-cli-sug').style.display = 'none';
+  nfSetCliente(cli);
+}
+
+function nfSetCliente(cli) {
+  document.getElementById('nf-razon').value  = cli.CLI_RAZON||'';
+  document.getElementById('nf-tiva').value   = cli.CLI_IVA||'';
+  document.getElementById('nf-dto').value    = cli.CLI_DTO||0;
+  // Condición de pago: preseleccionar la del cliente
+  nfCargarCpag(cli.CLI_CONPAG||'');
+  nfCalcTotales();
   nfRenderItems();
 }
 
+function nfLimpiarCliente() {
+  document.getElementById('nf-razon').value = '';
+  document.getElementById('nf-tiva').value  = '';
+  document.getElementById('nf-dto').value   = '0';
+  nfCargarCpag('');
+}
+
+// ── ¿Es Factura A? ────────────────────────────────────────
 function nfEsFacturaA() {
   const val  = document.getElementById('nf-ctip')?.value||'';
   const tiva = document.getElementById('nf-tiva')?.value||'';
@@ -482,13 +553,19 @@ function nfEsFacturaA() {
   return tipo==='F' && tiva==='I';
 }
 
+// ── Items ─────────────────────────────────────────────────
 function nfAgregarItem() {
-  FAC_ITEMS_NUEVA.push({ ite_desp:'', ite_can:1, ite_uni:0, ite_iva_porc:21, ite_imp:0, ite_iva_imp:0 });
+  FAC_ITEMS_NUEVA.push({
+    ite_art:'', ite_desp:'', ite_disp:0,
+    ite_desp_nro:'', ite_desp_fec:'',
+    ite_can:1, ite_uni:0,
+    ite_iva_porc:21, ite_imp:0, ite_iva_imp:0
+  });
   nfRenderItems();
   nfCalcTotales();
   setTimeout(()=>{
-    const des = document.querySelectorAll('.nf-item-des');
-    if(des.length) des[des.length-1].focus();
+    const inputs = document.querySelectorAll('.nf-item-cod');
+    if(inputs.length) inputs[inputs.length-1].focus();
   },50);
 }
 
@@ -498,29 +575,144 @@ function nfEliminarItem(idx) {
   nfCalcTotales();
 }
 
+// Cuando cambia el código del artículo en un ítem
+async function nfItemArtChange(idx, cod) {
+  FAC_ITEMS_NUEVA[idx].ite_art = cod.toUpperCase();
+  FAC_ITEMS_NUEVA[idx].ite_desp = '';
+  FAC_ITEMS_NUEVA[idx].ite_disp = 0;
+  FAC_ITEMS_NUEVA[idx].ite_desp_nro = '';
+  FAC_ITEMS_NUEVA[idx].ite_desp_fec = '';
+  FAC_ITEMS_NUEVA[idx]._desps = null;
+
+  if (!cod.trim()) { nfRenderItems(); return; }
+
+  const art = ARTS.find(a => a.ART_COD === cod.trim().toUpperCase());
+  if (!art) { nfRenderItems(); return; }
+
+  const empresa = document.getElementById('nf-empresa').value;
+  const stk = empresa === 'T' ? (art.ART_STKT||0) : (art.ART_STK||0);
+
+  FAC_ITEMS_NUEVA[idx].ite_desp_art = art.ART_DES;
+  FAC_ITEMS_NUEVA[idx].ite_disp = stk;
+  FAC_ITEMS_NUEVA[idx].ite_uni  = art.ART_PRE || 0;
+
+  // Cargar despachos con stock de este artículo
+  const esNC = nfEsNC();
+  try {
+    let despsQuery = `dep_art=eq.${encodeURIComponent(cod.trim().toUpperCase())}&order=dep_fec.desc`;
+    const desps = await sbGet('despachos', despsQuery);
+
+    let despsFiltrados;
+    if (esNC) {
+      // NC: todos los despachos ordenados por fecha desc
+      despsFiltrados = desps;
+    } else {
+      // Factura: solo despachos con stock > 0
+      despsFiltrados = desps.filter(d => (d.dep_ent||0) - (d.dep_sal||0) > 0);
+    }
+
+    FAC_ITEMS_NUEVA[idx]._desps = despsFiltrados;
+
+    if (despsFiltrados.length === 1) {
+      // Auto-seleccionar el único despacho
+      const d = despsFiltrados[0];
+      const dispDesp = (d.dep_ent||0) - (d.dep_sal||0);
+      FAC_ITEMS_NUEVA[idx].ite_desp_nro = d.dep_desp + (d.dep_sub||'');
+      FAC_ITEMS_NUEVA[idx].ite_desp_fec = d.dep_fec||'';
+      FAC_ITEMS_NUEVA[idx].ite_disp = esNC ? null : dispDesp;
+      FAC_ITEMS_NUEVA[idx]._desp_id = d.dep_id;
+    } else if (despsFiltrados.length === 0) {
+      FAC_ITEMS_NUEVA[idx].ite_disp = 0;
+    }
+    // Si hay más de 1, se mostrará el selector
+  } catch(e) {
+    console.error('nfItemArtChange:', e);
+  }
+
+  nfRenderItems();
+  nfCalcTotales();
+}
+
+// Cuando selecciona un despacho del selector
+function nfItemDespChange(idx, depId) {
+  const desps = FAC_ITEMS_NUEVA[idx]._desps || [];
+  const d = desps.find(x => x.dep_id === depId);
+  if (!d) return;
+  const esNC = nfEsNC();
+  const dispDesp = (d.dep_ent||0) - (d.dep_sal||0);
+  FAC_ITEMS_NUEVA[idx].ite_desp_nro = d.dep_desp + (d.dep_sub||'');
+  FAC_ITEMS_NUEVA[idx].ite_desp_fec = d.dep_fec||'';
+  FAC_ITEMS_NUEVA[idx].ite_disp = esNC ? null : dispDesp;
+  FAC_ITEMS_NUEVA[idx]._desp_id = depId;
+  nfRenderItems();
+  nfCalcTotales();
+}
+
 function nfItemChange(idx, campo, valor) {
   FAC_ITEMS_NUEVA[idx][campo] = valor;
   const it = FAC_ITEMS_NUEVA[idx];
+
+  // Validar cantidad vs disponible (solo en facturas, no NC)
+  if (campo === 'ite_can' && !nfEsNC() && it.ite_disp !== null) {
+    if (valor > it.ite_disp) {
+      FAC_ITEMS_NUEVA[idx].ite_can = it.ite_disp;
+      toast(`Cantidad máxima disponible: ${it.ite_disp}`, 'err');
+    }
+  }
+
   const esA = nfEsFacturaA();
   const div = 1 + (it.ite_iva_porc||0)/100;
   const neto = esA ? it.ite_uni/div : it.ite_uni;
-  it.ite_imp     = neto * (it.ite_can||1);
-  it.ite_iva_imp = esA ? (it.ite_uni - neto) * (it.ite_can||1) : 0;
+  it.ite_imp     = neto * (FAC_ITEMS_NUEVA[idx].ite_can||1);
+  it.ite_iva_imp = esA ? (it.ite_uni - neto) * (FAC_ITEMS_NUEVA[idx].ite_can||1) : 0;
   nfRenderItems();
   nfCalcTotales();
+}
+
+// Búsqueda incremental de artículo en item
+function nfItemBusqArt(idx, q) {
+  const sug = document.getElementById(`nf-art-sug-${idx}`);
+  if (!sug) return;
+  if (!q || q.length < 2) { sug.innerHTML=''; sug.style.display='none'; return; }
+  const matches = ARTS.filter(a =>
+    a.ART_COD.toLowerCase().includes(q.toLowerCase()) ||
+    (a.ART_DES||'').toLowerCase().includes(q.toLowerCase())
+  ).slice(0, 8);
+  if (!matches.length) { sug.innerHTML=''; sug.style.display='none'; return; }
+  sug.style.display = 'block';
+  sug.innerHTML = matches.map(a =>
+    `<div onclick="nfSelArtSug(${idx},'${a.ART_COD}')"
+      style="padding:6px 10px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--b1);display:flex;gap:8px">
+      <span style="font-family:var(--mono);color:var(--acc);flex-shrink:0">${esc(a.ART_COD)}</span>
+      <span style="color:var(--t2)">${esc(a.ART_DES||'')}</span>
+    </div>`
+  ).join('');
+}
+
+function nfSelArtSug(idx, cod) {
+  const sug = document.getElementById(`nf-art-sug-${idx}`);
+  if (sug) { sug.innerHTML=''; sug.style.display='none'; }
+  const input = document.getElementById(`nf-item-cod-${idx}`);
+  if (input) input.value = cod;
+  nfItemArtChange(idx, cod);
 }
 
 function nfRenderItems() {
   const body = document.getElementById('nf-items-body');
   if (!body) return;
-  const esA = nfEsFacturaA();
+  const esA  = nfEsFacturaA();
+  const esNC = nfEsNC();
 
+  // Cabecera
   document.getElementById('nf-items-hdr').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 70px 110px ${esA?'90px 100px 90px':''} 110px 36px;gap:6px;padding:7px 10px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase;border-radius:6px 6px 0 0">
+    <div style="display:grid;grid-template-columns:130px 1fr 80px 130px 80px 110px ${esA?'90px 90px':''} 110px 36px;gap:6px;padding:7px 10px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase;border-radius:6px 6px 0 0">
+      <span>Código</span>
       <span>Descripción</span>
+      <span style="text-align:right">Disp.</span>
+      <span>Despacho</span>
       <span style="text-align:right">Cant</span>
       <span style="text-align:right">Precio c/IVA</span>
-      ${esA ? '<span style="text-align:center">% IVA</span><span style="text-align:right">Neto</span><span style="text-align:right">IVA</span>' : ''}
+      ${esA ? '<span style="text-align:center">% IVA</span><span style="text-align:right">IVA</span>' : ''}
       <span style="text-align:right">Importe</span>
       <span></span>
     </div>`;
@@ -535,24 +727,54 @@ function nfRenderItems() {
   body.innerHTML = FAC_ITEMS_NUEVA.map((it,i) => {
     const div  = 1 + (it.ite_iva_porc||0)/100;
     const neto = esA ? it.ite_uni/div : it.ite_uni;
-    const ivaU = esA ? it.ite_uni - neto : 0;
+    const ivaT = esA ? (it.ite_uni - neto) * (it.ite_can||1) : 0;
     const imp  = neto * (it.ite_can||1);
-    const ivaT = ivaU * (it.ite_can||1);
-    return `<div style="display:grid;grid-template-columns:1fr 70px 110px ${esA?'90px 100px 90px':''} 110px 36px;gap:6px;padding:8px 10px;border-bottom:1px solid var(--b1);align-items:center;background:var(--s2)">
-      <input class="nf-item-des finp" value="${esc(it.ite_desp||'')}" placeholder="Descripción..."
-        style="font-size:13px" oninput="nfItemChange(${i},'ite_desp',this.value)">
-      <input class="finp" type="number" min="0.01" step="1" value="${it.ite_can||1}"
-        style="text-align:right;font-size:13px" oninput="nfItemChange(${i},'ite_can',parseFloat(this.value)||1)">
+
+    // Disponible
+    const dispTxt = it.ite_disp === null ? '—' : (it.ite_disp||0);
+    const dispColor = (!esNC && (it.ite_disp||0) === 0) ? 'color:var(--red)' : 'color:var(--grn)';
+
+    // Despacho: selector si hay varios, texto si ya está elegido
+    let despHtml = '';
+    const desps = it._desps || [];
+    if (desps.length > 1 && !it._desp_id) {
+      // Mostrar selector
+      despHtml = `<select class="finp" style="font-size:11px;width:100%" onchange="nfItemDespChange(${i},this.value)">
+        <option value="">— Elegir despacho —</option>
+        ${desps.map(d => {
+          const disp = (d.dep_ent||0)-(d.dep_sal||0);
+          const fec = d.dep_fec ? d.dep_fec.substring(0,10).split('-').reverse().join('/') : '';
+          return `<option value="${d.dep_id}">${d.dep_desp}${d.dep_sub||''} · ${fec} · disp:${disp}</option>`;
+        }).join('')}
+      </select>`;
+    } else {
+      despHtml = `<span style="font-family:var(--mono);font-size:11px;color:var(--t2)">${esc(it.ite_desp_nro||'—')}</span>`;
+    }
+
+    return `<div style="display:grid;grid-template-columns:130px 1fr 80px 130px 80px 110px ${esA?'90px 90px':''} 110px 36px;gap:6px;padding:8px 10px;border-bottom:1px solid var(--b1);align-items:center;background:var(--s2);position:relative">
+      <div style="position:relative">
+        <input id="nf-item-cod-${i}" class="nf-item-cod finp" value="${esc(it.ite_art||'')}" placeholder="Código..."
+          style="font-size:12px;text-transform:uppercase;width:100%"
+          oninput="nfItemBusqArt(${i},this.value)"
+          onchange="nfItemArtChange(${i},this.value)"
+          onblur="setTimeout(()=>{const s=document.getElementById('nf-art-sug-${i}');if(s)s.style.display='none'},200)">
+        <div id="nf-art-sug-${i}" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--s1);border:1px solid var(--acc);border-radius:0 0 6px 6px;z-index:100;max-height:160px;overflow-y:auto"></div>
+      </div>
+      <span style="font-size:12px;color:var(--t2)">${esc(it.ite_desp_art||it.ite_desp||'')}</span>
+      <span style="text-align:right;font-family:var(--mono);font-size:12px;${dispColor}">${dispTxt}</span>
+      <div>${despHtml}</div>
+      <input class="finp" type="number" min="1" step="1" value="${it.ite_can||1}"
+        style="text-align:right;font-size:13px"
+        oninput="nfItemChange(${i},'ite_can',parseFloat(this.value)||1)">
       <input class="finp" type="number" min="0" step="0.01" value="${it.ite_uni||''}"
         placeholder="0.00" style="text-align:right;font-size:13px"
         oninput="nfItemChange(${i},'ite_uni',parseFloat(this.value)||0)">
       ${esA ? `
         <select class="finp" style="font-size:12px" onchange="nfItemChange(${i},'ite_iva_porc',parseFloat(this.value))">
-          <option value="21"  ${(it.ite_iva_porc||21)===21   ?'selected':''}>21%</option>
-          <option value="10.5"${(it.ite_iva_porc||21)===10.5 ?'selected':''}>10.5%</option>
-          <option value="0"   ${(it.ite_iva_porc||21)===0    ?'selected':''}>Exento</option>
+          <option value="21"   ${(it.ite_iva_porc||21)===21  ?'selected':''}>21%</option>
+          <option value="10.5" ${(it.ite_iva_porc||21)===10.5?'selected':''}>10.5%</option>
+          <option value="0"    ${(it.ite_iva_porc||21)===0   ?'selected':''}>Exento</option>
         </select>
-        <span style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--t2)">$${fmt(neto)}</span>
         <span style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--acc)">$${fmt(ivaT)}</span>` : ''}
       <span style="text-align:right;font-family:var(--mono);font-weight:600;color:var(--grn)">$${fmt(imp)}</span>
       <button class="btn dng" onclick="nfEliminarItem(${i})" style="padding:3px 8px;font-size:12px">✕</button>
@@ -574,7 +796,9 @@ function nfCalcTotales() {
   const subtotal = neto+iva;
   const dtoImp   = subtotal*dto/100;
   const total    = subtotal-dtoImp;
-  const mon      = document.getElementById('nf-moneda')?.value==='U' ? 'u$s' : '$';
+  const monSel   = document.getElementById('nf-moneda')?.value||'P';
+  const monObj   = (TABLAS['MONE']||[]).find(m=>m.CODIGO===monSel);
+  const mon      = monObj ? monObj.STRING1 : '$';
 
   const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
   set('nf-tot-neto',  `${mon} ${fmt(neto)}`);
@@ -594,9 +818,9 @@ function nfCalcTotales() {
 async function nfGuardar() {
   const empresa = document.getElementById('nf-empresa').value;
   const ctipVal = document.getElementById('nf-ctip').value;
-  const cliCod  = (document.getElementById('nf-cli')?.value||'').trim().toUpperCase();
+  const cliCod  = (document.getElementById('nf-cli-cod')?.value||'').trim().toUpperCase();
   const fecha   = document.getElementById('nf-fecha').value;
-  const moneda  = document.getElementById('nf-moneda').value;
+  const moneda  = document.getElementById('nf-moneda')?.value||'P';
   const tiva    = document.getElementById('nf-tiva').value;
 
   if (!empresa)                { toast('Seleccioná una empresa','err'); return; }
@@ -608,10 +832,14 @@ async function nfGuardar() {
   const cli = CLIS.find(c=>c.CLI_CODIGO===cliCod);
   if (!cli) { toast(`Cliente ${cliCod} no encontrado`,'err'); return; }
 
+  // Validar ítems
   for (let i=0; i<FAC_ITEMS_NUEVA.length; i++) {
     const it = FAC_ITEMS_NUEVA[i];
-    if (!it.ite_desp?.trim()) { toast(`Ítem ${i+1}: falta descripción`,'err'); return; }
-    if (!(it.ite_uni>0))      { toast(`Ítem ${i+1}: precio debe ser mayor a 0`,'err'); return; }
+    if (!it.ite_art?.trim()) { toast(`Ítem ${i+1}: falta el código de artículo`,'err'); return; }
+    if (!(it.ite_uni>0))     { toast(`Ítem ${i+1}: precio debe ser mayor a 0`,'err'); return; }
+    if (!nfEsNC() && !it._desp_id && (it._desps||[]).length > 1) {
+      toast(`Ítem ${i+1}: seleccioná un despacho`,'err'); return;
+    }
   }
 
   const [prefijo, tipo] = ctipVal.split('|');
@@ -620,12 +848,14 @@ async function nfGuardar() {
 
   const nroSig = (ct.ultimo_nro||0)+1;
   const facNro = `${prefijo}-${String(nroSig).padStart(6,'0')}`;
-
   if (FACS.find(f=>f.fac_nro===facNro)) { toast(`El número ${facNro} ya existe`,'err'); return; }
 
-  const esA = nfEsFacturaA();
-  const tot = window._nfTotales||{};
-  const dto = parseFloat(document.getElementById('nf-dto')?.value||0)||0;
+  const esA  = nfEsFacturaA();
+  const tot  = window._nfTotales||{};
+  const dto  = parseFloat(document.getElementById('nf-dto')?.value||0)||0;
+  const conpag = document.getElementById('nf-conpag')?.value||'';
+  const transp = document.getElementById('nf-transp')?.value||'';
+  const remito = document.getElementById('nf-remito')?.value||'';
 
   const facData = {
     fac_nro:     facNro,
@@ -640,8 +870,9 @@ async function nfGuardar() {
     fac_total:   tot.total||0,
     fac_saldo:   tot.total||0,
     fac_percib:  0,
-    fac_transp:  document.getElementById('nf-transp')?.value||'',
-    fac_remito:  document.getElementById('nf-remito')?.value||'',
+    fac_transp:  transp,
+    fac_remito:  remito,
+    fac_vcomi:   conpag,
     fac_monpor:  dto,
     fac_afip_st: 'pendiente',
     fac_cae:     null,
@@ -656,18 +887,19 @@ async function nfGuardar() {
       const neto = esA ? it.ite_uni/div : it.ite_uni;
       await sbUpsert('fac_items', {
         ite_nro:      facNro,
-        ite_art:      '',
-        ite_desp:     it.ite_desp,
+        ite_art:      it.ite_art||'',
+        ite_desp:     it.ite_desp_nro||'',
         ite_can:      it.ite_can,
         ite_uni:      it.ite_uni,
         ite_imp:      neto*(it.ite_can||1),
         ite_iva_porc: esA ? (it.ite_iva_porc||21) : 0,
         ite_iva_imp:  esA ? (it.ite_uni-neto)*(it.ite_can||1) : 0,
         ite_impu:     0,
-        ite_costo:    0
+        ite_costo:    it.ite_uni  // guardamos precio lista como referencia
       });
     }
 
+    // Incrementar último número
     await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${ct.id}`, {
       method:'PATCH', headers:{...SB_HDR}, body:JSON.stringify({ultimo_nro:nroSig})
     });
