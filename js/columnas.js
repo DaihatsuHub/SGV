@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-// COLUMNAS CONFIGURABLES — solo RGRDELTA
+// COLUMNAS CONFIGURABLES
 // ═══════════════════════════════════════════════════════════
 
 let artSelIdx=null, artFilt='todos', artOfe=false;
@@ -7,20 +7,22 @@ let cliSelIdx=null, cliFilt='todos';
 
 const COL_DEFS = {
   art: [
-    {field:'ART_COD',   label:'Código',      width:'110px', active:true},
-    {field:'ART_DES',   label:'Descripción', width:'1fr',   active:true},
-    {field:'ART_RUB',   label:'Rubro',       width:'70px',  active:true},
-    {field:'ART_SRUB',  label:'Sub-Rubro',   width:'70px',  active:false},
-    {field:'ART_PRE',   label:'Precio',      width:'95px',  align:'right', active:true},
-    {field:'ART_STK',   label:'Stk Hat',     width:'68px',  align:'right', active:true},
-    {field:'ART_STKT',  label:'Stk Tre',     width:'68px',  align:'right', active:true},
-    {field:'ART_ESTU',  label:'Est',         width:'52px',  align:'center',active:true},
-    {field:'ART_ACT',   label:'Act',         width:'52px',  align:'center',active:true},
-    {field:'ART_GRUP',  label:'Grupo',       width:'75px',  active:true},
-    {field:'ART_SEX',   label:'Sexo',        width:'50px',  active:false},
-    {field:'ART_MARCA', label:'Marca',       width:'70px',  active:false},
-    {field:'ART_PROV',  label:'Prov',        width:'60px',  active:false},
-    {field:'CODCASIO',  label:'Cód.Casio',   width:'90px',  active:false},
+    {field:'ART_COD',   label:'Código',        width:'110px', active:true},
+    {field:'ART_DES',   label:'Descripción',   width:'1fr',   active:true},
+    {field:'ART_RUB',   label:'Rubro',         width:'70px',  active:true},
+    {field:'ART_SRUB',  label:'Sub-Rubro',     width:'70px',  active:false},
+    {field:'ART_PRE',   label:'Precio',        width:'95px',  align:'right', active:true},
+    {field:'ART_STK',   label:'Stk Hat',       width:'68px',  align:'right', active:true},
+    {field:'ART_STKT',  label:'Stk Tre',       width:'68px',  align:'right', active:true},
+    {field:'ART_DEPH',  label:'Dep Hat',       width:'68px',  align:'right', active:false},
+    {field:'ART_DEPT',  label:'Dep Tre',       width:'68px',  align:'right', active:false},
+    {field:'ART_ESTU',  label:'Est',           width:'52px',  align:'center',active:true},
+    {field:'ART_ACT',   label:'Act',           width:'52px',  align:'center',active:true},
+    {field:'ART_GRUP',  label:'Grupo',         width:'75px',  active:true},
+    {field:'ART_SEX',   label:'Sexo',          width:'50px',  active:false},
+    {field:'ART_MARCA', label:'Marca',         width:'70px',  active:false},
+    {field:'ART_PROV',  label:'Prov',          width:'60px',  active:false},
+    {field:'CODCASIO',  label:'Cód.Casio',     width:'90px',  active:false},
   ],
   desp: [
     {field:'DEP_DESP',  label:'Despacho',    width:'130px', active:true},
@@ -79,8 +81,11 @@ function getActiveCols(grid) {
 function toggleSort(grid, field) {
   if (SORT_STATE[grid].col===field) SORT_STATE[grid].asc = !SORT_STATE[grid].asc;
   else { SORT_STATE[grid].col = field; SORT_STATE[grid].asc = true; }
-  if (grid==='art') renderArts(); else if (grid==='cli') renderClis(); else if (grid==='desp') renderDesp();
+  if (grid==='art') renderArts();
+  else if (grid==='cli') renderClis();
+  else if (grid==='desp') renderDesp();
 }
+
 function sortArrow(grid, field) {
   const s = SORT_STATE[grid];
   return s.col !== field ? '' : (s.asc ? ' ▲' : ' ▼');
@@ -121,18 +126,37 @@ function openColCfg(grid) {
 function initColDrag(container) {
   let dragEl = null;
   container.querySelectorAll('.col-cfg-row').forEach(row => {
-    row.addEventListener('dragstart', e => { dragEl = row; setTimeout(()=>row.style.opacity='0.4',0); e.dataTransfer.effectAllowed='move'; });
-    row.addEventListener('dragend', () => { row.style.opacity=''; container.querySelectorAll('.col-cfg-row').forEach(r=>r.style.background=''); dragEl=null; });
+    row.addEventListener('dragstart', e => {
+      dragEl = row;
+      setTimeout(()=>row.style.opacity='0.4', 0);
+      e.dataTransfer.effectAllowed = 'move';
+      e.stopPropagation();
+    });
+    row.addEventListener('dragend', () => {
+      row.style.opacity = '';
+      container.querySelectorAll('.col-cfg-row').forEach(r=>r.style.background='');
+      dragEl = null;
+    });
     row.addEventListener('dragover', e => {
       e.preventDefault();
+      e.stopPropagation(); // ← FIX: evita scroll de fondo
       if (!dragEl || dragEl===row) return;
       const rect = row.getBoundingClientRect();
       container.querySelectorAll('.col-cfg-row').forEach(r=>r.style.background='');
-      row.style.background='var(--s3)';
+      row.style.background = 'var(--s3)';
       if (e.clientY > rect.top + rect.height/2) container.insertBefore(dragEl, row.nextSibling);
       else container.insertBefore(dragEl, row);
     });
-    row.addEventListener('drop', e => e.preventDefault());
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      e.stopPropagation(); // ← FIX
+    });
+  });
+
+  // Evitar scroll de fondo en el modal durante drag
+  container.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.stopPropagation();
   });
 }
 
@@ -150,8 +174,10 @@ async function saveColCfg() {
   try {
     await saveConfigUI(grid, orden, activas, labels);
     document.getElementById('ov-col-cfg').classList.remove('open');
-    if (grid==='art') renderArts(); else if (grid==='cli') renderClis(); else if (grid==='desp') renderDesp(); else if (grid==='desp') renderDesp();
-    toast('Configuración guardada para todos los usuarios', 'scs');
+    if (grid==='art') renderArts();
+    else if (grid==='cli') renderClis();
+    else if (grid==='desp') renderDesp();
+    toast('Configuración guardada', 'scs');
   } catch(e) {
     console.error('saveColCfg:', e);
     toast('Error al guardar la configuración', 'err');
@@ -159,7 +185,9 @@ async function saveColCfg() {
 }
 
 function showDevTools() {
-  ['btn-cfg-art','btn-cfg-cli','btn-cfg-desp'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display=''; });
+  ['btn-cfg-art','btn-cfg-cli','btn-cfg-desp'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.style.display='';
+  });
 }
 
 const _stEl = document.createElement('style');
