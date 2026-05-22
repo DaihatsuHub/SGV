@@ -74,7 +74,7 @@ function renderClis(){
   }).join('');
 
   updCliFilts();
-  document.getElementById('b-cli').textContent=CLIS.length+' clientes';
+  const bCli = document.getElementById('b-cli'); if(bCli) bCli.textContent = CLIS.length + ' clientes';
 }
 
 function updCliFilts(){
