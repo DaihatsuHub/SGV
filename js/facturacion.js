@@ -48,7 +48,6 @@ function facEmpresaLabel(emp) {
   if (emp==='T') return 'TRESSA ARGENTINA S.A.';
   return '';
 }
-// Buscar cliente flexible (trim en ambos lados)
 function facFindCli(fac_cli) {
   const cod = (fac_cli||'').trim();
   return CLIS.find(c => (c.CLI_CODIGO||'').trim() === cod);
@@ -283,13 +282,11 @@ async function renderFacDetalle(f) {
   const contColor2=ctip2?(ctip2.contable?'var(--acc)':'var(--red)'):'var(--acc)';
   const esBorrador=f.fac_afip_st==='pendiente'&&!f.fac_cae;
   const empLabel=facEmpresaLabel(f.fac_empresa||(f.fac_nro||'').substring(0,1));
-
   const caeInfo=f.fac_cae
     ?`<div style="background:#1a3a1a;border-radius:6px;padding:6px 12px;font-family:var(--mono);font-size:11px;color:#4ade80;margin-bottom:8px">✅ CAE: ${f.fac_cae} &nbsp;·&nbsp; Vto: ${f.fac_cae_vto||'—'}</div>`
     :esBorrador
       ?`<div style="background:#2a2a1a;border-radius:6px;padding:6px 12px;font-size:11px;color:#facc15;margin-bottom:8px">⚠️ Borrador — pendiente de autorización AFIP</div>`
       :'';
-
   det.innerHTML=`
     <div style="padding:16px;height:100%;overflow-y:auto;box-sizing:border-box">
       <div style="display:grid;grid-template-columns:1fr auto;gap:16px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--b1)">
@@ -323,7 +320,6 @@ async function renderFacDetalle(f) {
         </div>
         <div style="max-height:220px;overflow-y:auto">
         ${items.length?items.map(it=>{
-          // FIX: descripción desde maestro de artículos
           const art=ARTS.find(a=>(a.ART_COD||'').trim()===(it.ite_art||'').trim());
           const desArt=art?art.ART_DES:(it.ite_desp||'');
           const dto=it.ite_costo&&it.ite_costo>0?((1-it.ite_uni/it.ite_costo)*100).toFixed(1):'';
@@ -353,8 +349,7 @@ async function renderFacDetalle(f) {
 function facAlta() {
   FAC_ITEMS_NUEVA=[];
   FAC_MODO='A';
-  const hoy=new Date().toISOString().substring(0,10);
-  renderFacForm(hoy,'H','');
+  renderFacForm(new Date().toISOString().substring(0,10),'H','');
 }
 function facModif() {
   if(facSelIdx===null){toast('Seleccioná una factura','err');return;}
@@ -369,8 +364,7 @@ function facImprimir() {
   toast('Próximamente: Imprimir factura','scs');
 }
 function facCancelar() {
-  FAC_MODO=null;
-  FAC_ITEMS_NUEVA=[];
+  FAC_MODO=null; FAC_ITEMS_NUEVA=[];
   const f=filtFacs()[facSelIdx];
   if(f) renderFacDetalle(f);
   else document.getElementById('fac-detalle').innerHTML='<div class="fac-det-placeholder">← Seleccioná una factura</div>';
@@ -383,13 +377,21 @@ function renderFacForm(fecha, empresa, cliCod) {
     .map(c=>`<option value="${c.prefijo}|${c.tipo}">${c.prefijo} — ${TIPO_LABEL[c.tipo]||c.tipo}</option>`).join('');
   const cpagOpts='<option value="">— Sin especificar —</option>'+(TABLAS['CPAG']||[]).map(c=>`<option value="${c.CODIGO}">${c.CODIGO} — ${c.DETALLE}</option>`).join('');
   const exprOpts='<option value="">— Sin especificar —</option>'+(TABLAS['EXPR']||[]).map(e=>`<option value="${e.CODIGO}">${e.CODIGO} — ${e.DETALLE}</option>`).join('');
+  // Opciones de marcas, rubros, subrubros para carga por grupo
+  const marcOpts='<option value="">— Todas —</option>'+(TABLAS['MARC']||[]).map(m=>`<option value="${m.CODIGO}">${m.CODIGO} — ${m.DETALLE}</option>`).join('');
+  const rubrOpts='<option value="">— Todos —</option>'+(TABLAS['RUBR']||[]).map(r=>`<option value="${r.CODIGO}">${r.CODIGO} — ${r.DETALLE}</option>`).join('');
+  const srubOpts='<option value="">— Todos —</option>'+(TABLAS['SRUB']||[]).map(s=>`<option value="${s.CODIGO}">${s.CODIGO} — ${s.DETALLE}</option>`).join('');
 
   det.innerHTML=`
     <div style="padding:14px;height:100%;overflow-y:auto;box-sizing:border-box;display:flex;flex-direction:column;gap:10px">
+
+      <!-- Header -->
       <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:2px solid var(--acc)">
         <div style="font-size:15px;font-weight:700;color:var(--acc)">📄 Nueva Factura</div>
         <button class="btn" onclick="facCancelar()" style="padding:3px 10px;font-size:12px">✕ Cancelar</button>
       </div>
+
+      <!-- Identificación -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
         <div>
           <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Empresa *</label>
@@ -422,6 +424,8 @@ function renderFacForm(fecha, empresa, cliCod) {
           <input class="finp" id="nf-dto" type="number" min="0" max="100" step="0.1" value="0" oninput="nfCalcTotales()" style="width:100%">
         </div>
       </div>
+
+      <!-- Cliente -->
       <div style="background:var(--s2);border-radius:6px;padding:10px 12px">
         <div style="font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Cliente</div>
         <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;margin-bottom:8px">
@@ -431,9 +435,12 @@ function renderFacForm(fecha, empresa, cliCod) {
           </div>
           <div style="position:relative">
             <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Buscar por Razón Social</label>
-            <input class="finp" id="nf-cli-busq" placeholder="Escribí para buscar..." style="width:100%"
-              oninput="nfOnCliBusqInput()"
-              onblur="setTimeout(()=>{const s=document.getElementById('nf-cli-sug');if(s)s.style.display='none'},200)">
+            <div style="position:relative;display:flex;align-items:center">
+              <input class="finp" id="nf-cli-busq" placeholder="Escribí para buscar..." style="width:100%;padding-right:28px"
+                oninput="nfOnCliBusqInput()"
+                onblur="setTimeout(()=>{const s=document.getElementById('nf-cli-sug');if(s)s.style.display='none'},200)">
+              <button onclick="nfLimpiarBusqCli()" style="position:absolute;right:6px;background:none;border:none;color:var(--t3);cursor:pointer;font-size:14px;padding:0;line-height:1" title="Limpiar">✕</button>
+            </div>
             <div id="nf-cli-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--s1);border:1px solid var(--acc);border-radius:0 0 6px 6px;z-index:200;max-height:180px;overflow-y:auto"></div>
           </div>
         </div>
@@ -456,16 +463,24 @@ function renderFacForm(fecha, empresa, cliCod) {
           </div>
         </div>
       </div>
+
+      <!-- Ítems -->
       <div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:6px;flex-wrap:wrap">
           <span style="font-size:11px;color:var(--t3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px">Ítems</span>
-          <button class="btn pri" onclick="nfAgregarItem()" style="padding:3px 10px;font-size:12px">＋ Agregar</button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn" onclick="nfAbrirCargaGrupo()" style="padding:3px 10px;font-size:12px">📦 Cargar grupo</button>
+            <button class="btn" onclick="nfEliminarSinStock()" style="padding:3px 10px;font-size:12px;color:var(--red)">🗑 Sin stock</button>
+            <button class="btn pri" onclick="nfAbrirBusqArt()" style="padding:3px 10px;font-size:12px">＋ Agregar</button>
+          </div>
         </div>
         <div style="background:var(--s2);border-radius:6px;overflow:hidden">
           <div id="nf-items-hdr"></div>
           <div id="nf-items-body"></div>
         </div>
       </div>
+
+      <!-- Totales -->
       <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end">
         <div style="background:var(--s2);border-radius:6px;padding:10px 14px">
           <div id="nf-fila-neto" style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Subtotal neto</span><span id="nf-tot-neto">$ 0,00</span></div>
@@ -479,10 +494,248 @@ function renderFacForm(fecha, empresa, cliCod) {
           <button class="btn" onclick="facCancelar()" style="padding:8px 18px;font-size:13px">Cancelar</button>
         </div>
       </div>
-    </div>`;
+
+    </div>
+
+    <!-- POPUP búsqueda artículo -->
+    <div id="nf-art-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:600px;max-width:95vw;background:var(--s1);border:1px solid var(--acc);border-radius:8px;z-index:1000;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--b1)">
+        <span style="font-weight:600;color:var(--acc)">🔍 Buscar Artículo</span>
+        <button onclick="nfCerrarBusqArt()" style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:18px">✕</button>
+      </div>
+      <div style="padding:10px 16px;border-bottom:1px solid var(--b1)">
+        <input class="finp" id="nf-art-q" placeholder="Código o descripción..." style="width:100%"
+          oninput="nfFiltrarPopupArt(this.value)" autofocus>
+      </div>
+      <div id="nf-art-lista" style="max-height:340px;overflow-y:auto">
+        <div style="text-align:center;color:var(--t3);padding:20px;font-size:12px">Escribí para buscar artículos</div>
+      </div>
+    </div>
+    <div id="nf-art-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999" onclick="nfCerrarBusqArt()"></div>
+
+    <!-- POPUP carga por grupo -->
+    <div id="nf-grupo-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:520px;max-width:95vw;background:var(--s1);border:1px solid var(--acc);border-radius:8px;z-index:1000;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--b1)">
+        <span style="font-weight:600;color:var(--acc)">📦 Cargar por Grupo</span>
+        <button onclick="nfCerrarCargaGrupo()" style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:18px">✕</button>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Marca</label>
+            <select class="finp" id="ng-marc" style="width:100%">${marcOpts}</select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Rubro</label>
+            <select class="finp" id="ng-rubr" style="width:100%">${rubrOpts}</select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Sub-Rubro</label>
+            <select class="finp" id="ng-srub" style="width:100%">${srubOpts}</select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Solo con stock</label>
+            <select class="finp" id="ng-stock" style="width:100%">
+              <option value="1">Sí (solo con stock)</option>
+              <option value="0">No (todos)</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Descuentos encadenados (ej: 20+10+5+7)</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
+            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 1 %</label><input class="finp" id="ng-dto1" type="number" min="0" max="100" value="0" style="width:100%"></div>
+            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 2 %</label><input class="finp" id="ng-dto2" type="number" min="0" max="100" value="0" style="width:100%"></div>
+            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 3 %</label><input class="finp" id="ng-dto3" type="number" min="0" max="100" value="0" style="width:100%"></div>
+            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 4 %</label><input class="finp" id="ng-dto4" type="number" min="0" max="100" value="0" style="width:100%"></div>
+          </div>
+        </div>
+        <div id="ng-preview" style="font-size:11px;color:var(--t3);min-height:16px"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn" onclick="nfCerrarCargaGrupo()">Cancelar</button>
+          <button class="btn pri" onclick="nfCargarGrupo()">📦 Cargar artículos</button>
+        </div>
+      </div>
+    </div>
+    <div id="nf-grupo-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999" onclick="nfCerrarCargaGrupo()"></div>
+  `;
 
   nfRenderItems();
   nfCalcTotales();
+}
+
+// ── X para limpiar búsqueda de cliente ───────────────────
+function nfLimpiarBusqCli() {
+  const busqEl=document.getElementById('nf-cli-busq');
+  const codEl=document.getElementById('nf-cli-cod');
+  const sug=document.getElementById('nf-cli-sug');
+  if(busqEl) busqEl.value='';
+  if(codEl)  codEl.value='';
+  if(sug){sug.innerHTML='';sug.style.display='none';}
+  nfLimpiarCliente();
+}
+
+// ── Popup búsqueda artículo ───────────────────────────────
+let _nfArtPopupIdx = null; // índice del item que disparó el popup (null = nuevo)
+
+function nfAbrirBusqArt(idx) {
+  _nfArtPopupIdx = (idx !== undefined) ? idx : null;
+  document.getElementById('nf-art-popup').style.display='block';
+  document.getElementById('nf-art-overlay').style.display='block';
+  const q=document.getElementById('nf-art-q');
+  if(q){q.value='';q.focus();}
+  nfFiltrarPopupArt('');
+}
+
+function nfCerrarBusqArt() {
+  document.getElementById('nf-art-popup').style.display='none';
+  document.getElementById('nf-art-overlay').style.display='none';
+}
+
+function nfFiltrarPopupArt(q) {
+  const lista=document.getElementById('nf-art-lista');
+  const empresa=document.getElementById('nf-empresa')?.value||'H';
+  const esNC=nfEsNC();
+  let arts=ARTS;
+  if(q && q.length>=1) {
+    arts=ARTS.filter(a=>
+      (a.ART_COD||'').toLowerCase().includes(q.toLowerCase())||
+      (a.ART_DES||'').toLowerCase().includes(q.toLowerCase())
+    );
+  }
+  // Limitar a 50
+  arts=arts.slice(0,50);
+  if(!arts.length){
+    lista.innerHTML='<div style="text-align:center;color:var(--t3);padding:20px;font-size:12px">Sin resultados</div>';
+    return;
+  }
+  lista.innerHTML=`
+    <div style="display:grid;grid-template-columns:100px 1fr 70px;gap:4px;padding:6px 12px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase;position:sticky;top:0">
+      <span>Código</span><span>Descripción</span><span style="text-align:right">Disp.</span>
+    </div>
+    ${arts.map(a=>{
+      const disp=empresa==='T'?(a.ART_STKT||0):(a.ART_STK||0);
+      const dispColor=disp>0?'color:var(--grn)':'color:var(--red)';
+      const sinStock=!esNC&&disp===0;
+      return `<div onclick="nfSelArtPopup('${a.ART_COD}')"
+        style="display:grid;grid-template-columns:100px 1fr 70px;gap:4px;padding:8px 12px;border-bottom:1px solid var(--b1);cursor:pointer;font-size:12px;${sinStock?'opacity:0.5':''}"
+        onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''">
+        <span style="font-family:var(--mono);color:var(--acc)">${esc(a.ART_COD)}</span>
+        <span style="color:var(--t2)">${esc(a.ART_DES||'')}</span>
+        <span style="text-align:right;font-family:var(--mono);${dispColor}">${disp}</span>
+      </div>`;
+    }).join('')}`;
+}
+
+function nfSelArtPopup(cod) {
+  nfCerrarBusqArt();
+  if(_nfArtPopupIdx !== null) {
+    // Modificar item existente
+    const input=document.getElementById(`nf-item-cod-${_nfArtPopupIdx}`);
+    if(input) input.value=cod;
+    nfItemArtChange(_nfArtPopupIdx, cod);
+  } else {
+    // Agregar nuevo item
+    FAC_ITEMS_NUEVA.push({ite_art:'',ite_desp_art:'',ite_disp:0,ite_desp_nro:'',ite_desp_fec:'',ite_can:1,ite_uni:0,ite_iva_porc:21,ite_imp:0,ite_iva_imp:0,_desps:null,_desp_id:null});
+    const idx=FAC_ITEMS_NUEVA.length-1;
+    nfRenderItems();
+    nfItemArtChange(idx, cod);
+  }
+}
+
+// ── Popup carga por grupo ─────────────────────────────────
+function nfAbrirCargaGrupo() {
+  document.getElementById('nf-grupo-popup').style.display='block';
+  document.getElementById('nf-grupo-overlay').style.display='block';
+  // Auto-seleccionar "solo con stock" si es factura
+  const esNC=nfEsNC();
+  const stockSel=document.getElementById('ng-stock');
+  if(stockSel) stockSel.value=esNC?'0':'1';
+}
+
+function nfCerrarCargaGrupo() {
+  document.getElementById('nf-grupo-popup').style.display='none';
+  document.getElementById('nf-grupo-overlay').style.display='none';
+}
+
+// Calcular precio con descuentos encadenados
+function nfAplicarDtos(precio, d1, d2, d3, d4) {
+  let p=precio;
+  if(d1>0) p=p*(1-d1/100);
+  if(d2>0) p=p*(1-d2/100);
+  if(d3>0) p=p*(1-d3/100);
+  if(d4>0) p=p*(1-d4/100);
+  return Math.round(p*100)/100;
+}
+
+async function nfCargarGrupo() {
+  const marc  = document.getElementById('ng-marc')?.value||'';
+  const rubr  = document.getElementById('ng-rubr')?.value||'';
+  const srub  = document.getElementById('ng-srub')?.value||'';
+  const stock = document.getElementById('ng-stock')?.value==='1';
+  const d1    = parseFloat(document.getElementById('ng-dto1')?.value||0)||0;
+  const d2    = parseFloat(document.getElementById('ng-dto2')?.value||0)||0;
+  const d3    = parseFloat(document.getElementById('ng-dto3')?.value||0)||0;
+  const d4    = parseFloat(document.getElementById('ng-dto4')?.value||0)||0;
+  const empresa = document.getElementById('nf-empresa')?.value||'H';
+
+  // Filtrar artículos
+  let arts=ARTS.filter(a=>{
+    if(marc && (a.ART_MARCA||'')!==marc) return false;
+    if(rubr && (a.ART_RUB||'')!==rubr)   return false;
+    if(srub && (a.ART_SRUB||'')!==srub)  return false;
+    if(stock){
+      const disp=empresa==='T'?(a.ART_STKT||0):(a.ART_STK||0);
+      if(disp<=0) return false;
+    }
+    return true;
+  });
+
+  if(!arts.length){toast('No hay artículos con ese filtro','err');return;}
+
+  // Agregar items — evitar duplicados
+  for(const a of arts){
+    const yaExiste=FAC_ITEMS_NUEVA.find(it=>it.ite_art===a.ART_COD);
+    if(yaExiste) continue;
+    const disp=empresa==='T'?(a.ART_STKT||0):(a.ART_STK||0);
+    const precio=nfAplicarDtos(a.ART_PRE||0, d1, d2, d3, d4);
+    FAC_ITEMS_NUEVA.push({
+      ite_art:a.ART_COD,
+      ite_desp_art:a.ART_DES||'',
+      ite_disp:disp,
+      ite_desp_nro:'',
+      ite_desp_fec:'',
+      ite_can:1,
+      ite_uni:precio,
+      ite_iva_porc:21,
+      ite_imp:precio,
+      ite_iva_imp:0,
+      _desps:null,
+      _desp_id:null
+    });
+  }
+
+  nfCerrarCargaGrupo();
+  nfRenderItems();
+  nfCalcTotales();
+  toast(`${arts.length} artículos cargados`,'scs');
+}
+
+// ── Eliminar ítems sin stock ──────────────────────────────
+function nfEliminarSinStock() {
+  const empresa=document.getElementById('nf-empresa')?.value||'H';
+  const antes=FAC_ITEMS_NUEVA.length;
+  FAC_ITEMS_NUEVA=FAC_ITEMS_NUEVA.filter(it=>{
+    if(!it.ite_art) return false; // sin código → eliminar
+    const art=ARTS.find(a=>(a.ART_COD||'').trim()===it.ite_art);
+    if(!art) return false; // no existe → eliminar
+    const disp=empresa==='T'?(art.ART_STKT||0):(art.ART_STK||0);
+    return disp>0;
+  });
+  const eliminados=antes-FAC_ITEMS_NUEVA.length;
+  nfRenderItems();
+  nfCalcTotales();
+  toast(`${eliminados} ítems sin stock eliminados`,'scs');
 }
 
 function nfOnEmpresaChange() {
@@ -562,10 +815,7 @@ function nfLimpiarCliente() {
 }
 
 function nfAgregarItem() {
-  FAC_ITEMS_NUEVA.push({ite_art:'',ite_desp_art:'',ite_disp:0,ite_desp_nro:'',ite_desp_fec:'',ite_can:1,ite_uni:0,ite_iva_porc:21,ite_imp:0,ite_iva_imp:0,_desps:null,_desp_id:null});
-  nfRenderItems();
-  nfCalcTotales();
-  setTimeout(()=>{const inputs=document.querySelectorAll('.nf-item-cod');if(inputs.length)inputs[inputs.length-1].focus();},50);
+  nfAbrirBusqArt();
 }
 function nfEliminarItem(idx) {
   FAC_ITEMS_NUEVA.splice(idx,1);
@@ -638,36 +888,6 @@ function nfItemChange(idx,campo,valor) {
   nfCalcTotales();
 }
 
-function nfItemBusqArt(idx,q) {
-  const sug=document.getElementById(`nf-art-sug-${idx}`);
-  if(!sug) return;
-  if(!q||q.length<2){sug.innerHTML='';sug.style.display='none';return;}
-  const empresa=document.getElementById('nf-empresa')?.value||'H';
-  const matches=ARTS.filter(a=>
-    (a.ART_COD||'').toLowerCase().includes(q.toLowerCase())||
-    (a.ART_DES||'').toLowerCase().includes(q.toLowerCase())
-  ).slice(0,8);
-  if(!matches.length){sug.innerHTML='';sug.style.display='none';return;}
-  sug.style.display='block';
-  sug.innerHTML=matches.map(a=>{
-    const disp=empresa==='T'?(a.ART_STKT||0):(a.ART_STK||0);
-    const dispColor=disp>0?'color:var(--grn)':'color:var(--red)';
-    return `<div onclick="nfSelArtSug(${idx},'${a.ART_COD}')"
-      style="padding:6px 10px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--b1);display:grid;grid-template-columns:100px 1fr 60px;gap:6px;align-items:center">
-      <span style="font-family:var(--mono);color:var(--acc)">${esc(a.ART_COD)}</span>
-      <span style="color:var(--t2)">${esc(a.ART_DES||'')}</span>
-      <span style="text-align:right;font-family:var(--mono);${dispColor}">${disp}</span>
-    </div>`;
-  }).join('');
-}
-function nfSelArtSug(idx,cod) {
-  const sug=document.getElementById(`nf-art-sug-${idx}`);
-  if(sug){sug.innerHTML='';sug.style.display='none';}
-  const input=document.getElementById(`nf-item-cod-${idx}`);
-  if(input) input.value=cod;
-  nfItemArtChange(idx,cod);
-}
-
 function nfRenderItems() {
   const body=document.getElementById('nf-items-body');
   const hdr=document.getElementById('nf-items-hdr');
@@ -707,14 +927,7 @@ function nfRenderItems() {
       despHtml=`<span style="font-family:var(--mono);font-size:10px;color:var(--t2)">${esc(it.ite_desp_nro||'—')}</span>`;
     }
     return `<div style="display:grid;grid-template-columns:${cols};gap:4px;padding:6px 8px;border-bottom:1px solid var(--b1);align-items:center;background:${esInexistente?'#2a1a1a':'var(--s2)'};position:relative">
-      <div style="position:relative">
-        <input id="nf-item-cod-${i}" class="nf-item-cod finp" value="${esc(it.ite_art||'')}" placeholder="Código"
-          style="font-size:11px;text-transform:uppercase;width:100%;${esInexistente?'border-color:var(--red);':''}"
-          oninput="nfItemBusqArt(${i},this.value)"
-          onchange="nfItemArtChange(${i},this.value)"
-          onblur="setTimeout(()=>{const s=document.getElementById('nf-art-sug-${i}');if(s)s.style.display='none'},200)">
-        <div id="nf-art-sug-${i}" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--s1);border:1px solid var(--acc);border-radius:0 0 4px 4px;z-index:100;max-height:150px;overflow-y:auto"></div>
-      </div>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--acc);cursor:pointer" onclick="nfAbrirBusqArt(${i})" title="Cambiar artículo">${esc(it.ite_art||'—')}</span>
       <span style="font-size:11px;color:${esInexistente?'var(--red)':'var(--t2)'}">${esc(it.ite_desp_art||'')}</span>
       <span style="text-align:right;font-family:var(--mono);font-size:11px;${dispColor}">${dispTxt}</span>
       <div>${despHtml}</div>
@@ -825,8 +1038,7 @@ async function nfGuardar() {
     await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${ct.id}`,{method:'PATCH',headers:{...SB_HDR},body:JSON.stringify({ultimo_nro:nroSig})});
     ct.ultimo_nro=nroSig;
     await sbLoadFacs();
-    FAC_MODO=null;
-    FAC_ITEMS_NUEVA=[];
+    FAC_MODO=null; FAC_ITEMS_NUEVA=[];
     renderFac();
     toast(`✓ Factura ${facNro} guardada como borrador`,'scs');
     const idx=filtFacs().findIndex(f=>f.fac_nro===facNro);
