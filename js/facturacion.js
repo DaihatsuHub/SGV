@@ -282,11 +282,20 @@ async function renderFacDetalle(f) {
   const contColor2=ctip2?(ctip2.contable?'var(--acc)':'var(--red)'):'var(--acc)';
   const esBorrador=f.fac_afip_st==='pendiente'&&!f.fac_cae;
   const empLabel=facEmpresaLabel(f.fac_empresa||(f.fac_nro||'').substring(0,1));
+
+  // ── Sección CAE / Autorizar ───────────────────────────
   const caeInfo=f.fac_cae
-    ?`<div style="background:#1a3a1a;border-radius:6px;padding:6px 12px;font-family:var(--mono);font-size:11px;color:#4ade80;margin-bottom:8px">✅ CAE: ${f.fac_cae} &nbsp;·&nbsp; Vto: ${f.fac_cae_vto||'—'}</div>`
+    ?`<div style="background:#1a3a1a;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:#4ade80;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+        <span>✅ CAE: ${f.fac_cae} &nbsp;·&nbsp; Vto: ${f.fac_cae_vto||'—'}</span>
+        <button onclick="facImprimir()" class="btn scs" style="padding:3px 10px;font-size:11px">🖨 Imprimir</button>
+      </div>`
     :esBorrador
-      ?`<div style="background:#2a2a1a;border-radius:6px;padding:6px 12px;font-size:11px;color:#facc15;margin-bottom:8px">⚠️ Borrador — pendiente de autorización AFIP</div>`
+      ?`<div style="background:#2a2a1a;border-radius:6px;padding:8px 12px;font-size:11px;color:#facc15;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+          <span>⚠️ Borrador — pendiente de autorización AFIP</span>
+          <button onclick="facAutorizarAfip('${f.fac_nro}')" class="btn pri" style="padding:3px 10px;font-size:11px;background:#b45309;border-color:#b45309">⚡ Autorizar AFIP</button>
+        </div>`
       :'';
+
   det.innerHTML=`
     <div style="padding:16px;height:100%;overflow-y:auto;box-sizing:border-box">
       <div style="display:grid;grid-template-columns:1fr auto;gap:16px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--b1)">
@@ -322,7 +331,6 @@ async function renderFacDetalle(f) {
         ${items.length?items.map(it=>{
           const art=ARTS.find(a=>(a.ART_COD||'').trim()===(it.ite_art||'').trim());
           const desArt=art?art.ART_DES:(it.ite_desp||'');
-          const dto=it.ite_costo&&it.ite_costo>0?((1-it.ite_uni/it.ite_costo)*100).toFixed(1):'';
           return `<div style="display:grid;grid-template-columns:100px 1fr 110px 60px 85px 85px;gap:4px;padding:6px 10px;border-bottom:1px solid var(--b1);font-size:12px;align-items:center">
             <span style="font-family:var(--mono);color:var(--acc)">${esc(it.ite_art||'')}</span>
             <span style="color:var(--t2)">${esc(desArt)}</span>
@@ -344,6 +352,125 @@ async function renderFacDetalle(f) {
         <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span style="color:var(--t3)">Saldo</span><span style="color:${(f.fac_saldo||0)>0?'var(--red)':'var(--grn)'}">${mon} ${fmt(f.fac_saldo)}</span></div>
       </div>
     </div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// AUTORIZAR AFIP
+// ══════════════════════════════════════════════════════════
+async function facAutorizarAfip(facNro) {
+  const f = FACS.find(x=>x.fac_nro===facNro);
+  if (!f) { toast('Factura no encontrada','err'); return; }
+  if (f.fac_cae) { toast('Esta factura ya tiene CAE','err'); return; }
+
+  // Mostrar spinner en el botón
+  const btn = document.querySelector('button[onclick*="facAutorizarAfip"]');
+  if (btn) { btn.disabled=true; btn.textContent='⏳ Autorizando...'; }
+
+  try {
+    const cli = facFindCli(f.fac_cli);
+    const empresa = f.fac_empresa || (f.fac_nro||'').substring(0,1);
+    const prefijo = facGetPrefijo(f.fac_nro);
+    const ctip = CTIPS.find(c=>c.prefijo===prefijo&&c.empresa===empresa);
+    if (!ctip) throw new Error('Tipo de comprobante no encontrado');
+
+    // Determinar tipo AFIP según tipo comprobante
+    // F=Factura, C=NC, D=ND
+    // Para empresa responsable inscripto: A=1, B=6, C=11
+    // NC A=3, NC B=8, NC C=13
+    const tipoChar = facGetTipo(f.fac_nro);
+    const tiva = f.fac_tiva || '';
+
+    let cbteTipo;
+    if (ctip.tipo === 'F') {
+      cbteTipo = tiva==='I' ? 1 : tiva==='C'||tiva==='M'||tiva==='N' ? 6 : 11;
+    } else if (ctip.tipo === 'C') {
+      cbteTipo = tiva==='I' ? 3 : tiva==='C'||tiva==='M'||tiva==='N' ? 8 : 13;
+    } else if (ctip.tipo === 'D') {
+      cbteTipo = tiva==='I' ? 2 : tiva==='C'||tiva==='M'||tiva==='N' ? 7 : 12;
+    } else {
+      throw new Error('Tipo de comprobante no soportado para AFIP');
+    }
+
+    // Punto de venta: del prefijo (ej: HA4 → ptoVta según config)
+    // Usamos el último dígito del prefijo como punto de venta
+    const ptoVtaStr = prefijo.replace(/[^0-9]/g,'');
+    const ptoVta = parseInt(ptoVtaStr) || 1;
+
+    // Datos del receptor
+    const docTipo = cli?.CLI_CUIT ? 80 : 99;
+    const docNro  = cli?.CLI_CUIT ? parseInt((cli.CLI_CUIT||'').replace(/\D/g,'')) : 0;
+
+    // Condición IVA receptor para AFIP
+    const condIvaMap = { I:1, M:4, C:5, E:6, N:5, L:5 };
+    const condIvaReceptor = condIvaMap[tiva] || 5;
+
+    // Importes
+    const impTotal = f.fac_total || 0;
+    const impIva   = f.fac_iva   || 0;
+    const impNeto  = impTotal - impIva;
+
+    // IVA detalle
+    const ivas = impIva > 0 ? [{ id:5, baseImp: impNeto, importe: impIva }] : [];
+
+    const payload = {
+      empresa,
+      factura: {
+        ptoVta,
+        cbteTipo,
+        docTipo,
+        docNro,
+        condIvaReceptor,
+        impTotal,
+        impNeto: cbteTipo===11||cbteTipo===13||cbteTipo===12 ? impTotal : impNeto,
+        impIva:  cbteTipo===11||cbteTipo===13||cbteTipo===12 ? 0 : impIva,
+        concepto: 1,
+        moneda: f.fac_moneda==='U' ? 'DOL' : 'PES',
+        monCotiz: 1,
+        ivas: cbteTipo===11||cbteTipo===13||cbteTipo===12 ? [] : ivas
+      }
+    };
+
+    const resp = await fetch(`${SB_URL}/functions/v1/afip-facturar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok || !data.cae) {
+      throw new Error(data.errores || data.error || 'Error desconocido de AFIP');
+    }
+
+    // Guardar CAE en Supabase
+    await fetch(`${SB_URL}/rest/v1/facturas?fac_nro=eq.${encodeURIComponent(facNro)}`, {
+      method: 'PATCH',
+      headers: { ...SB_HDR },
+      body: JSON.stringify({
+        fac_cae:     data.cae,
+        fac_cae_vto: data.caeVto,
+        fac_afip_st: 'autorizado'
+      })
+    });
+
+    // Actualizar en memoria
+    const idx = FACS.findIndex(x=>x.fac_nro===facNro);
+    if (idx>=0) {
+      FACS[idx].fac_cae     = data.cae;
+      FACS[idx].fac_cae_vto = data.caeVto;
+      FACS[idx].fac_afip_st = 'autorizado';
+    }
+
+    toast(`✅ CAE obtenido: ${data.cae}`, 'scs');
+    renderFac();
+    const fidx = filtFacs().findIndex(x=>x.fac_nro===facNro);
+    if(fidx>=0) selFac(fidx);
+
+  } catch(e) {
+    console.error('facAutorizarAfip:', e);
+    toast(`Error AFIP: ${e.message}`, 'err');
+    if (btn) { btn.disabled=false; btn.textContent='⚡ Autorizar AFIP'; }
+  }
 }
 
 function facAlta() {
@@ -377,21 +504,16 @@ function renderFacForm(fecha, empresa, cliCod) {
     .map(c=>`<option value="${c.prefijo}|${c.tipo}">${c.prefijo} — ${TIPO_LABEL[c.tipo]||c.tipo}</option>`).join('');
   const cpagOpts='<option value="">— Sin especificar —</option>'+(TABLAS['CPAG']||[]).map(c=>`<option value="${c.CODIGO}">${c.CODIGO} — ${c.DETALLE}</option>`).join('');
   const exprOpts='<option value="">— Sin especificar —</option>'+(TABLAS['EXPR']||[]).map(e=>`<option value="${e.CODIGO}">${e.CODIGO} — ${e.DETALLE}</option>`).join('');
-  // Opciones de marcas, rubros, subrubros para carga por grupo
   const marcOpts='<option value="">— Todas —</option>'+(TABLAS['MARC']||[]).map(m=>`<option value="${m.CODIGO}">${m.CODIGO} — ${m.DETALLE}</option>`).join('');
   const rubrOpts='<option value="">— Todos —</option>'+(TABLAS['RUBR']||[]).map(r=>`<option value="${r.CODIGO}">${r.CODIGO} — ${r.DETALLE}</option>`).join('');
   const srubOpts='<option value="">— Todos —</option>'+(TABLAS['SRUB']||[]).map(s=>`<option value="${s.CODIGO}">${s.CODIGO} — ${s.DETALLE}</option>`).join('');
 
   det.innerHTML=`
     <div style="padding:14px;height:100%;overflow-y:auto;box-sizing:border-box;display:flex;flex-direction:column;gap:10px">
-
-      <!-- Header -->
       <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:2px solid var(--acc)">
         <div style="font-size:15px;font-weight:700;color:var(--acc)">📄 Nueva Factura</div>
         <button class="btn" onclick="facCancelar()" style="padding:3px 10px;font-size:12px">✕ Cancelar</button>
       </div>
-
-      <!-- Identificación -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
         <div>
           <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Empresa *</label>
@@ -424,8 +546,6 @@ function renderFacForm(fecha, empresa, cliCod) {
           <input class="finp" id="nf-dto" type="number" min="0" max="100" step="0.1" value="0" oninput="nfCalcTotales()" style="width:100%">
         </div>
       </div>
-
-      <!-- Cliente -->
       <div style="background:var(--s2);border-radius:6px;padding:10px 12px">
         <div style="font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Cliente</div>
         <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;margin-bottom:8px">
@@ -463,8 +583,6 @@ function renderFacForm(fecha, empresa, cliCod) {
           </div>
         </div>
       </div>
-
-      <!-- Ítems -->
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:6px;flex-wrap:wrap">
           <span style="font-size:11px;color:var(--t3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px">Ítems</span>
@@ -479,8 +597,6 @@ function renderFacForm(fecha, empresa, cliCod) {
           <div id="nf-items-body"></div>
         </div>
       </div>
-
-      <!-- Totales -->
       <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end">
         <div style="background:var(--s2);border-radius:6px;padding:10px 14px">
           <div id="nf-fila-neto" style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Subtotal neto</span><span id="nf-tot-neto">$ 0,00</span></div>
@@ -494,10 +610,7 @@ function renderFacForm(fecha, empresa, cliCod) {
           <button class="btn" onclick="facCancelar()" style="padding:8px 18px;font-size:13px">Cancelar</button>
         </div>
       </div>
-
     </div>
-
-    <!-- POPUP búsqueda artículo -->
     <div id="nf-art-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:600px;max-width:95vw;background:var(--s1);border:1px solid var(--acc);border-radius:8px;z-index:1000;box-shadow:0 8px 32px rgba(0,0,0,.5)">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--b1)">
         <span style="font-weight:600;color:var(--acc)">🔍 Buscar Artículo</span>
@@ -512,8 +625,6 @@ function renderFacForm(fecha, empresa, cliCod) {
       </div>
     </div>
     <div id="nf-art-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999" onclick="nfCerrarBusqArt()"></div>
-
-    <!-- POPUP carga por grupo -->
     <div id="nf-grupo-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:520px;max-width:95vw;background:var(--s1);border:1px solid var(--acc);border-radius:8px;z-index:1000;box-shadow:0 8px 32px rgba(0,0,0,.5)">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--b1)">
         <span style="font-weight:600;color:var(--acc)">📦 Cargar por Grupo</span>
@@ -521,20 +632,10 @@ function renderFacForm(fecha, empresa, cliCod) {
       </div>
       <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div>
-            <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Marca</label>
-            <select class="finp" id="ng-marc" style="width:100%">${marcOpts}</select>
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Rubro</label>
-            <select class="finp" id="ng-rubr" style="width:100%">${rubrOpts}</select>
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Sub-Rubro</label>
-            <select class="finp" id="ng-srub" style="width:100%">${srubOpts}</select>
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Solo con stock</label>
+          <div><label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Marca</label><select class="finp" id="ng-marc" style="width:100%">${marcOpts}</select></div>
+          <div><label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Rubro</label><select class="finp" id="ng-rubr" style="width:100%">${rubrOpts}</select></div>
+          <div><label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Sub-Rubro</label><select class="finp" id="ng-srub" style="width:100%">${srubOpts}</select></div>
+          <div><label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Solo con stock</label>
             <select class="finp" id="ng-stock" style="width:100%">
               <option value="1">Sí (solo con stock)</option>
               <option value="0">No (todos)</option>
@@ -542,7 +643,7 @@ function renderFacForm(fecha, empresa, cliCod) {
           </div>
         </div>
         <div>
-          <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Descuentos encadenados (ej: 20+10+5+7)</label>
+          <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Descuentos encadenados</label>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
             <div><label style="font-size:10px;color:var(--t3);display:block">Dto 1 %</label><input class="finp" id="ng-dto1" type="number" min="0" max="100" value="0" style="width:100%"></div>
             <div><label style="font-size:10px;color:var(--t3);display:block">Dto 2 %</label><input class="finp" id="ng-dto2" type="number" min="0" max="100" value="0" style="width:100%"></div>
@@ -559,12 +660,10 @@ function renderFacForm(fecha, empresa, cliCod) {
     </div>
     <div id="nf-grupo-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999" onclick="nfCerrarCargaGrupo()"></div>
   `;
-
   nfRenderItems();
   nfCalcTotales();
 }
 
-// ── X para limpiar búsqueda de cliente ───────────────────
 function nfLimpiarBusqCli() {
   const busqEl=document.getElementById('nf-cli-busq');
   const codEl=document.getElementById('nf-cli-cod');
@@ -575,8 +674,7 @@ function nfLimpiarBusqCli() {
   nfLimpiarCliente();
 }
 
-// ── Popup búsqueda artículo ───────────────────────────────
-let _nfArtPopupIdx = null; // índice del item que disparó el popup (null = nuevo)
+let _nfArtPopupIdx = null;
 
 function nfAbrirBusqArt(idx) {
   _nfArtPopupIdx = (idx !== undefined) ? idx : null;
@@ -586,12 +684,10 @@ function nfAbrirBusqArt(idx) {
   if(q){q.value='';q.focus();}
   nfFiltrarPopupArt('');
 }
-
 function nfCerrarBusqArt() {
   document.getElementById('nf-art-popup').style.display='none';
   document.getElementById('nf-art-overlay').style.display='none';
 }
-
 function nfFiltrarPopupArt(q) {
   const lista=document.getElementById('nf-art-lista');
   const empresa=document.getElementById('nf-empresa')?.value||'H';
@@ -603,7 +699,6 @@ function nfFiltrarPopupArt(q) {
       (a.ART_DES||'').toLowerCase().includes(q.toLowerCase())
     );
   }
-  // Limitar a 50
   arts=arts.slice(0,50);
   if(!arts.length){
     lista.innerHTML='<div style="text-align:center;color:var(--t3);padding:20px;font-size:12px">Sin resultados</div>';
@@ -626,16 +721,13 @@ function nfFiltrarPopupArt(q) {
       </div>`;
     }).join('')}`;
 }
-
 function nfSelArtPopup(cod) {
   nfCerrarBusqArt();
   if(_nfArtPopupIdx !== null) {
-    // Modificar item existente
     const input=document.getElementById(`nf-item-cod-${_nfArtPopupIdx}`);
     if(input) input.value=cod;
     nfItemArtChange(_nfArtPopupIdx, cod);
   } else {
-    // Agregar nuevo item
     FAC_ITEMS_NUEVA.push({ite_art:'',ite_desp_art:'',ite_disp:0,ite_desp_nro:'',ite_desp_fec:'',ite_can:1,ite_uni:0,ite_iva_porc:21,ite_imp:0,ite_iva_imp:0,_desps:null,_desp_id:null});
     const idx=FAC_ITEMS_NUEVA.length-1;
     nfRenderItems();
@@ -643,22 +735,17 @@ function nfSelArtPopup(cod) {
   }
 }
 
-// ── Popup carga por grupo ─────────────────────────────────
 function nfAbrirCargaGrupo() {
   document.getElementById('nf-grupo-popup').style.display='block';
   document.getElementById('nf-grupo-overlay').style.display='block';
-  // Auto-seleccionar "solo con stock" si es factura
   const esNC=nfEsNC();
   const stockSel=document.getElementById('ng-stock');
   if(stockSel) stockSel.value=esNC?'0':'1';
 }
-
 function nfCerrarCargaGrupo() {
   document.getElementById('nf-grupo-popup').style.display='none';
   document.getElementById('nf-grupo-overlay').style.display='none';
 }
-
-// Calcular precio con descuentos encadenados
 function nfAplicarDtos(precio, d1, d2, d3, d4) {
   let p=precio;
   if(d1>0) p=p*(1-d1/100);
@@ -667,7 +754,6 @@ function nfAplicarDtos(precio, d1, d2, d3, d4) {
   if(d4>0) p=p*(1-d4/100);
   return Math.round(p*100)/100;
 }
-
 async function nfCargarGrupo() {
   const marc  = document.getElementById('ng-marc')?.value||'';
   const rubr  = document.getElementById('ng-rubr')?.value||'';
@@ -678,8 +764,6 @@ async function nfCargarGrupo() {
   const d3    = parseFloat(document.getElementById('ng-dto3')?.value||0)||0;
   const d4    = parseFloat(document.getElementById('ng-dto4')?.value||0)||0;
   const empresa = document.getElementById('nf-empresa')?.value||'H';
-
-  // Filtrar artículos
   let arts=ARTS.filter(a=>{
     if(marc && (a.ART_MARCA||'')!==marc) return false;
     if(rubr && (a.ART_RUB||'')!==rubr)   return false;
@@ -690,45 +774,32 @@ async function nfCargarGrupo() {
     }
     return true;
   });
-
   if(!arts.length){toast('No hay artículos con ese filtro','err');return;}
-
-  // Agregar items — evitar duplicados
   for(const a of arts){
     const yaExiste=FAC_ITEMS_NUEVA.find(it=>it.ite_art===a.ART_COD);
     if(yaExiste) continue;
     const disp=empresa==='T'?(a.ART_STKT||0):(a.ART_STK||0);
     const precio=nfAplicarDtos(a.ART_PRE||0, d1, d2, d3, d4);
     FAC_ITEMS_NUEVA.push({
-      ite_art:a.ART_COD,
-      ite_desp_art:a.ART_DES||'',
-      ite_disp:disp,
-      ite_desp_nro:'',
-      ite_desp_fec:'',
-      ite_can:1,
-      ite_uni:precio,
-      ite_iva_porc:21,
-      ite_imp:precio,
-      ite_iva_imp:0,
-      _desps:null,
-      _desp_id:null
+      ite_art:a.ART_COD, ite_desp_art:a.ART_DES||'', ite_disp:disp,
+      ite_desp_nro:'', ite_desp_fec:'', ite_can:0,
+      ite_uni:precio, ite_iva_porc:21, ite_imp:0, ite_iva_imp:0,
+      _desps:null, _desp_id:null
     });
   }
-
   nfCerrarCargaGrupo();
   nfRenderItems();
   nfCalcTotales();
   toast(`${arts.length} artículos cargados`,'scs');
 }
 
-// ── Eliminar ítems sin stock ──────────────────────────────
 function nfEliminarSinStock() {
   const empresa=document.getElementById('nf-empresa')?.value||'H';
   const antes=FAC_ITEMS_NUEVA.length;
   FAC_ITEMS_NUEVA=FAC_ITEMS_NUEVA.filter(it=>{
-    if(!it.ite_art) return false; // sin código → eliminar
+    if(!it.ite_art) return false;
     const art=ARTS.find(a=>(a.ART_COD||'').trim()===it.ite_art);
-    if(!art) return false; // no existe → eliminar
+    if(!art) return false;
     const disp=empresa==='T'?(art.ART_STKT||0):(art.ART_STK||0);
     return disp>0;
   });
@@ -759,7 +830,6 @@ function nfOnCtipChange() {
   nfRenderItems();
   nfCalcTotales();
 }
-
 function nfOnCliCodChange() {
   const cod=(document.getElementById('nf-cli-cod')?.value||'').trim().toUpperCase();
   const sug=document.getElementById('nf-cli-sug');
@@ -814,9 +884,7 @@ function nfLimpiarCliente() {
   const dto=document.getElementById('nf-dto');if(dto)dto.value='0';
 }
 
-function nfAgregarItem() {
-  nfAbrirBusqArt();
-}
+function nfAgregarItem() { nfAbrirBusqArt(); }
 function nfEliminarItem(idx) {
   FAC_ITEMS_NUEVA.splice(idx,1);
   nfRenderItems();
@@ -931,9 +999,9 @@ function nfRenderItems() {
       <span style="font-size:11px;color:${esInexistente?'var(--red)':'var(--t2)'}">${esc(it.ite_desp_art||'')}</span>
       <span style="text-align:right;font-family:var(--mono);font-size:11px;${dispColor}">${dispTxt}</span>
       <div>${despHtml}</div>
-      <input class="finp" type="number" min="1" step="1" value="${it.ite_can||1}"
+      <input class="finp" type="number" min="0" step="1" value="${it.ite_can||0}"
         style="text-align:right;font-size:12px;width:100%"
-        oninput="nfItemChange(${i},'ite_can',parseFloat(this.value)||1)">
+        oninput="nfItemChange(${i},'ite_can',parseFloat(this.value)||0)">
       <input class="finp" type="number" min="0" step="0.01" value="${it.ite_uni||''}" placeholder="0.00"
         style="text-align:right;font-size:12px;width:100%"
         oninput="nfItemChange(${i},'ite_uni',parseFloat(this.value)||0)">
