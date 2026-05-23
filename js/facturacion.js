@@ -55,6 +55,52 @@ function facFindCli(fac_cli) {
 
 const TIPO_LABEL = { F:'Factura', C:'Nota de Crédito', D:'Nota de Débito', R:'Cheque Rechazado' };
 
+// Helpers descripcion
+const IVA_DESC = {
+  I:'Responsable Inscripto', M:'Monotributista', C:'Consumidor Final',
+  E:'Exento', N:'No Responsable', L:'Pequeño Contribuyente'
+};
+function facIvaDesc(cod) {
+  if(!cod) return '—';
+  return IVA_DESC[cod] ? `${cod} — ${IVA_DESC[cod]}` : cod;
+}
+function facTranspDesc(cod) {
+  if(!cod) return '—';
+  const t=(TABLAS['EXPR']||[]).find(e=>e.CODIGO===cod);
+  return t ? `${t.CODIGO} — ${t.DETALLE}` : cod;
+}
+function facVendDesc(cod) {
+  if(!cod) return '—';
+  const v=(TABLAS['VEND']||[]).find(e=>e.CODIGO===cod);
+  return v ? `${v.CODIGO} — ${v.DETALLE}` : cod;
+}
+
+// Datos fiscales de empresas
+const EMP_DATA = {
+  H: {
+    razon:  'HATSU ELECTRONICS S.A.',
+    domic:  'Sarmiento 1206 - 7° "A"',
+    ciudad: '(1041) Capital Federal',
+    tel:    'Tel.: 4382-4779 - Fax: 4814-1092',
+    email:  'daihatsu@hatsu.com.ar',
+    cuit:   '30-69161036-1',
+    iibb:   '901-195790-3',
+    inicio: '01-08-1997',
+    iva:    'I.V.A. RESPONSABLE INSCRIPTO'
+  },
+  T: {
+    razon:  'TRESSA ARGENTINA S.A.',
+    domic:  'Sarmiento 1206 - 7° "A"',
+    ciudad: '(1041) Capital Federal',
+    tel:    'Tel.: 4382-4779 - Fax: 4814-1092',
+    email:  'ventas@tressa.com.ar',
+    cuit:   '30-70912824-4',
+    iibb:   '901-209397-0',
+    inicio: '01-04-2005',
+    iva:    'I.V.A. RESPONSABLE INSCRIPTO'
+  }
+};
+
 function filtCtip() {
   const q = (document.getElementById('ctip-q')?.value||'').toLowerCase();
   return CTIPS.filter(c => !q || c.prefijo.toLowerCase().includes(q) ||
@@ -283,7 +329,6 @@ async function renderFacDetalle(f) {
   const esBorrador=f.fac_afip_st==='pendiente'&&!f.fac_cae;
   const empLabel=facEmpresaLabel(f.fac_empresa||(f.fac_nro||'').substring(0,1));
 
-  // ── Sección CAE / Autorizar ───────────────────────────
   const caeInfo=f.fac_cae
     ?`<div style="background:#1a3a1a;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:#4ade80;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
         <span>✅ CAE: ${f.fac_cae} &nbsp;·&nbsp; Vto: ${f.fac_cae_vto||'—'}</span>
@@ -315,11 +360,12 @@ async function renderFacDetalle(f) {
           <div><span style="color:var(--t3)">Cliente: </span><strong>${esc(cli?cli.CLI_RAZON:(f.fac_cli||'—').trim())}</strong></div>
           <div><span style="color:var(--t3)">Cód: </span>${esc((f.fac_cli||'').trim())}</div>
           <div><span style="color:var(--t3)">CUIT: </span>${esc(cli?.CLI_CUIT||'—')}</div>
-          <div><span style="color:var(--t3)">IVA: </span>${esc(f.fac_tiva||cli?.CLI_IVA||'—')}</div>
+          <div><span style="color:var(--t3)">IVA: </span>${esc(facIvaDesc(f.fac_tiva||cli?.CLI_IVA||''))}</div>
           <div><span style="color:var(--t3)">Dirección: </span>${esc(cli?.CLI_DOMIC||'—')}</div>
           <div><span style="color:var(--t3)">Ciudad: </span>${esc(cli?.CLI_LOCAL||'—')}</div>
           <div><span style="color:var(--t3)">Cond.Pago: </span>${esc(cli?.CLI_CONPAG||f.fac_vcomi||'—')}</div>
-          <div><span style="color:var(--t3)">Transporte: </span>${esc(f.fac_transp||'—')}</div>
+          <div><span style="color:var(--t3)">Transporte: </span>${esc(facTranspDesc(f.fac_transp||''))}</div>
+          <div><span style="color:var(--t3)">Vendedor: </span>${esc(facVendDesc(f.fac_vend||''))}</div>
         </div>
       </div>
       <div style="font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:4px;letter-spacing:1px">ÍTEMS (${items.length})</div>
@@ -354,32 +400,20 @@ async function renderFacDetalle(f) {
     </div>`;
 }
 
-// ══════════════════════════════════════════════════════════
 // AUTORIZAR AFIP
-// ══════════════════════════════════════════════════════════
 async function facAutorizarAfip(facNro) {
   const f = FACS.find(x=>x.fac_nro===facNro);
   if (!f) { toast('Factura no encontrada','err'); return; }
   if (f.fac_cae) { toast('Esta factura ya tiene CAE','err'); return; }
-
-  // Mostrar spinner en el botón
   const btn = document.querySelector('button[onclick*="facAutorizarAfip"]');
   if (btn) { btn.disabled=true; btn.textContent='⏳ Autorizando...'; }
-
   try {
     const cli = facFindCli(f.fac_cli);
     const empresa = f.fac_empresa || (f.fac_nro||'').substring(0,1);
     const prefijo = facGetPrefijo(f.fac_nro);
     const ctip = CTIPS.find(c=>c.prefijo===prefijo&&c.empresa===empresa);
     if (!ctip) throw new Error('Tipo de comprobante no encontrado');
-
-    // Determinar tipo AFIP según tipo comprobante
-    // F=Factura, C=NC, D=ND
-    // Para empresa responsable inscripto: A=1, B=6, C=11
-    // NC A=3, NC B=8, NC C=13
-    const tipoChar = facGetTipo(f.fac_nro);
     const tiva = f.fac_tiva || '';
-
     let cbteTipo;
     if (ctip.tipo === 'F') {
       cbteTipo = tiva==='I' ? 1 : tiva==='C'||tiva==='M'||tiva==='N' ? 6 : 11;
@@ -390,87 +424,273 @@ async function facAutorizarAfip(facNro) {
     } else {
       throw new Error('Tipo de comprobante no soportado para AFIP');
     }
-
-    // Punto de venta: del prefijo (ej: HA4 → ptoVta según config)
-    // Usamos el último dígito del prefijo como punto de venta
     const ptoVtaStr = prefijo.replace(/[^0-9]/g,'');
     const ptoVta = parseInt(ptoVtaStr) || 1;
-
-    // Datos del receptor
     const docTipo = cli?.CLI_CUIT ? 80 : 99;
     const docNro  = cli?.CLI_CUIT ? parseInt((cli.CLI_CUIT||'').replace(/\D/g,'')) : 0;
-
-    // Condición IVA receptor para AFIP
     const condIvaMap = { I:1, M:4, C:5, E:6, N:5, L:5 };
     const condIvaReceptor = condIvaMap[tiva] || 5;
-
-    // Importes
     const impTotal = f.fac_total || 0;
     const impIva   = f.fac_iva   || 0;
     const impNeto  = impTotal - impIva;
-
-    // IVA detalle
     const ivas = impIva > 0 ? [{ id:5, baseImp: impNeto, importe: impIva }] : [];
-
+    const esC = cbteTipo===11||cbteTipo===13||cbteTipo===12;
     const payload = {
       empresa,
       factura: {
-        ptoVta,
-        cbteTipo,
-        docTipo,
-        docNro,
-        condIvaReceptor,
+        ptoVta, cbteTipo, docTipo, docNro, condIvaReceptor,
         impTotal,
-        impNeto: cbteTipo===11||cbteTipo===13||cbteTipo===12 ? impTotal : impNeto,
-        impIva:  cbteTipo===11||cbteTipo===13||cbteTipo===12 ? 0 : impIva,
+        impNeto: esC ? impTotal : impNeto,
+        impIva:  esC ? 0 : impIva,
         concepto: 1,
         moneda: f.fac_moneda==='U' ? 'DOL' : 'PES',
         monCotiz: 1,
-        ivas: cbteTipo===11||cbteTipo===13||cbteTipo===12 ? [] : ivas
+        ivas: esC ? [] : ivas
       }
     };
-
     const resp = await fetch(`${SB_URL}/functions/v1/afip-facturar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY },
       body: JSON.stringify(payload)
     });
-
     const data = await resp.json();
-
-    if (!resp.ok || !data.cae) {
-      throw new Error(data.errores || data.error || 'Error desconocido de AFIP');
-    }
-
-    // Guardar CAE en Supabase
+    if (!resp.ok || !data.cae) throw new Error(data.errores || data.error || 'Error desconocido de AFIP');
     await fetch(`${SB_URL}/rest/v1/facturas?fac_nro=eq.${encodeURIComponent(facNro)}`, {
       method: 'PATCH',
       headers: { ...SB_HDR },
-      body: JSON.stringify({
-        fac_cae:     data.cae,
-        fac_cae_vto: data.caeVto,
-        fac_afip_st: 'autorizado'
-      })
+      body: JSON.stringify({ fac_cae: data.cae, fac_cae_vto: data.caeVto, fac_afip_st: 'autorizado' })
     });
-
-    // Actualizar en memoria
     const idx = FACS.findIndex(x=>x.fac_nro===facNro);
     if (idx>=0) {
       FACS[idx].fac_cae     = data.cae;
       FACS[idx].fac_cae_vto = data.caeVto;
       FACS[idx].fac_afip_st = 'autorizado';
     }
-
     toast(`✅ CAE obtenido: ${data.cae}`, 'scs');
     renderFac();
     const fidx = filtFacs().findIndex(x=>x.fac_nro===facNro);
     if(fidx>=0) selFac(fidx);
-
   } catch(e) {
     console.error('facAutorizarAfip:', e);
     toast(`Error AFIP: ${e.message}`, 'err');
     if (btn) { btn.disabled=false; btn.textContent='⚡ Autorizar AFIP'; }
   }
+}
+
+// IMPRESIÓN DE FACTURA CON QR AFIP
+async function facImprimir() {
+  if(facSelIdx===null){toast('Seleccioná una factura','err');return;}
+  const f = filtFacs()[facSelIdx];
+  if(!f){toast('Factura no encontrada','err');return;}
+  const cli = facFindCli(f.fac_cli);
+  const emp = f.fac_empresa || (f.fac_nro||'').substring(0,1);
+  const ed  = EMP_DATA[emp] || EMP_DATA['H'];
+  const mon = f.fac_moneda==='P'?'$':'u$s';
+  const fec = f.fac_fec?f.fac_fec.substring(0,10).split('-').reverse().join('/'):'—';
+  const tipoChar = facGetTipo(f.fac_nro);
+  const tipoLabel = TIPO_LABEL[tipoChar] || 'Factura';
+  const items = await sbLoadItemsFac(f.fac_nro);
+  const tiva = f.fac_tiva || cli?.CLI_IVA || '';
+  const prefijo = facGetPrefijo(f.fac_nro);
+  const ctip = CTIPS.find(c=>c.prefijo===prefijo&&c.empresa===emp);
+  let letra = 'C';
+  if(ctip?.tipo==='F') {
+    if(tiva==='I') letra='A';
+    else if(tiva==='C'||tiva==='M'||tiva==='N') letra='B';
+    else letra='C';
+  } else if(ctip?.tipo==='C') {
+    if(tiva==='I') letra='A'; else letra='B';
+  }
+  let qrUrl = '';
+  if(f.fac_cae) {
+    const ptoVta = parseInt(prefijo.replace(/[^0-9]/g,''))||1;
+    const cuitEmp = parseInt((ed.cuit||'').replace(/\D/g,''));
+    const cuitDoc = cli?.CLI_CUIT ? parseInt((cli.CLI_CUIT||'').replace(/\D/g,'')) : 0;
+    const cbteTipo = tipoChar==='F' ? (letra==='A'?1:letra==='B'?6:11) :
+                     tipoChar==='C' ? (letra==='A'?3:letra==='B'?8:13) : 11;
+    const qrData = {
+      ver:1, fecha:f.fac_fec?f.fac_fec.substring(0,10):'',
+      cuit: cuitEmp, ptoVta, tipoCmp: cbteTipo,
+      nroCmp: parseInt((f.fac_nro||'').split('-')[1]||'0'),
+      importe: f.fac_total||0, moneda:'PES', ctz:1,
+      tipoDocRec: cuitDoc>0?80:99, nroDocRec: cuitDoc||0,
+      tipoCodAut:'E', codAut: parseInt(f.fac_cae||'0')
+    };
+    const qrB64 = btoa(JSON.stringify(qrData));
+    qrUrl = `https://www.afip.gob.ar/fe/qr/?p=${qrB64}`;
+  }
+  const subtotalNeto = (f.fac_sub||0)-(f.fac_iva||0);
+  const tieneIva = (f.fac_iva||0)>0;
+  const codComp = letra==='A'?'01':letra==='B'?'06':'11';
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>${tipoLabel} ${f.fac_nro||''}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;font-size:11px;color:#000;background:#fff}
+  .page{width:210mm;min-height:297mm;margin:0 auto;padding:10mm 12mm}
+  .header{display:grid;grid-template-columns:1fr 40mm 1fr;gap:0;margin-bottom:4mm;border:1px solid #000}
+  .h-left,.h-right{padding:3mm}
+  .h-center{border-left:1px solid #000;border-right:1px solid #000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2mm}
+  .letra-box{font-size:28px;font-weight:700;border:2px solid #000;width:20mm;height:20mm;display:flex;align-items:center;justify-content:center;margin-bottom:2mm}
+  .emp-nombre{font-size:14px;font-weight:700;text-transform:uppercase;margin-bottom:2mm}
+  .emp-dato{font-size:9px;line-height:1.4;color:#333}
+  .comp-titulo{font-size:13px;font-weight:700;margin-bottom:2mm;text-align:right}
+  .comp-nro{font-size:12px;font-weight:700;margin-bottom:2mm;text-align:right}
+  .comp-dato{font-size:9px;line-height:1.6;text-align:right}
+  .cli-box{border:1px solid #000;padding:3mm;margin-bottom:3mm;display:grid;grid-template-columns:1fr 1fr;gap:1mm 4mm;font-size:10px}
+  .cli-row{display:flex;gap:2mm}
+  .cli-lbl{color:#555;white-space:nowrap}
+  .cli-val{font-weight:600}
+  .cli-full{grid-column:1/-1}
+  .items-table{width:100%;border-collapse:collapse;margin-bottom:3mm;font-size:9.5px}
+  .items-table th{background:#000;color:#fff;padding:2mm 1.5mm;text-align:left;font-weight:600;font-size:9px;text-transform:uppercase}
+  .items-table th.r{text-align:right}
+  .items-table td{padding:1.5mm 1.5mm;border-bottom:1px solid #ddd;vertical-align:top}
+  .items-table td.r{text-align:right;font-family:monospace}
+  .items-table tr:nth-child(even){background:#f9f9f9}
+  .footer-grid{display:grid;grid-template-columns:1fr auto;gap:4mm;margin-top:3mm}
+  .totales{border:1px solid #000;padding:3mm;min-width:60mm}
+  .tot-row{display:flex;justify-content:space-between;padding:1mm 0;font-size:10px;border-bottom:1px solid #eee}
+  .tot-row:last-child{border-bottom:none;font-size:13px;font-weight:700;padding-top:2mm}
+  .tot-lbl{color:#555}
+  .tot-val{font-family:monospace;font-weight:600}
+  .cae-box{border:1px solid #000;padding:3mm;font-size:9px;margin-top:3mm;display:flex;gap:4mm;align-items:center}
+  .cae-datos{flex:1}
+  .cae-dato{margin-bottom:1mm}
+  .qr-img{width:22mm;height:22mm}
+  .extras-box{font-size:9px;border:1px solid #ddd;padding:2mm 3mm;margin-bottom:2mm}
+  @media print{body{margin:0}.page{padding:8mm 10mm}.no-print{display:none}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="no-print" style="text-align:right;margin-bottom:4mm">
+    <button onclick="window.print()" style="padding:5px 14px;background:#1a56db;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;margin-right:6px">🖨 Imprimir</button>
+    <button onclick="window.close()" style="padding:5px 14px;background:#666;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px">✕ Cerrar</button>
+  </div>
+  <div class="header">
+    <div class="h-left">
+      <div class="emp-nombre">${esc(ed.razon)}</div>
+      <div class="emp-dato">${esc(ed.domic)}</div>
+      <div class="emp-dato">${esc(ed.ciudad)}</div>
+      <div class="emp-dato">${esc(ed.tel)}</div>
+      <div class="emp-dato" style="margin-top:1mm">${esc(ed.email)}</div>
+      <div class="emp-dato" style="margin-top:2mm;font-weight:600">${esc(ed.iva)}</div>
+    </div>
+    <div class="h-center">
+      <div class="letra-box">${letra}</div>
+      <div style="font-size:8px;text-align:center">COD. ${codComp}</div>
+    </div>
+    <div class="h-right">
+      <div class="comp-titulo">${esc(tipoLabel)}</div>
+      <div class="comp-nro">${esc(f.fac_nro||'')}</div>
+      <div class="comp-dato" style="margin-top:2mm">Buenos Aires, ${fec}</div>
+      <div class="comp-dato" style="margin-top:3mm">CUIT: ${esc(ed.cuit)}</div>
+      <div class="comp-dato">ING.BRUTOS C.M.: ${esc(ed.iibb)}</div>
+      <div class="comp-dato">IMP. INTERNOS INSCRIPTO</div>
+      <div class="comp-dato">INICIO ACTIVIDADES: ${esc(ed.inicio)}</div>
+    </div>
+  </div>
+  <div class="cli-box">
+    <div class="cli-row cli-full">
+      <span class="cli-lbl">Razón Social:</span>
+      <span class="cli-val">${esc(cli?.CLI_RAZON||'CONSUMIDOR FINAL')}</span>
+    </div>
+    <div class="cli-row">
+      <span class="cli-lbl">CUIT/DNI:</span>
+      <span class="cli-val">${esc(cli?.CLI_CUIT||'—')}</span>
+    </div>
+    <div class="cli-row">
+      <span class="cli-lbl">IVA:</span>
+      <span class="cli-val">${esc(IVA_DESC[tiva]||tiva||'Consumidor Final')}</span>
+    </div>
+    <div class="cli-row">
+      <span class="cli-lbl">Dirección:</span>
+      <span class="cli-val">${esc(cli?.CLI_DOMIC||'—')}</span>
+    </div>
+    <div class="cli-row">
+      <span class="cli-lbl">Ciudad/Prov:</span>
+      <span class="cli-val">${esc(cli?.CLI_LOCAL||'—')}</span>
+    </div>
+    <div class="cli-row">
+      <span class="cli-lbl">Cond. Pago:</span>
+      <span class="cli-val">${esc(cli?.CLI_CONPAG||f.fac_vcomi||'—')}</span>
+    </div>
+    <div class="cli-row">
+      <span class="cli-lbl">Transporte:</span>
+      <span class="cli-val">${esc(facTranspDesc(f.fac_transp||''))}</span>
+    </div>
+    ${f.fac_vend?`<div class="cli-row"><span class="cli-lbl">Vendedor:</span><span class="cli-val">${esc(facVendDesc(f.fac_vend))}</span></div>`:''}
+  </div>
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th style="width:14mm">Código</th>
+        <th>Descripción</th>
+        <th style="width:22mm">Despacho</th>
+        <th class="r" style="width:10mm">Cant</th>
+        <th class="r" style="width:22mm">Precio c/IVA</th>
+        <th class="r" style="width:22mm">Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${items.map(it=>{
+        const art=ARTS.find(a=>(a.ART_COD||'').trim()===(it.ite_art||'').trim());
+        const desArt=art?art.ART_DES:(it.ite_desp||'');
+        return `<tr>
+          <td style="font-family:monospace;font-size:9px">${esc(it.ite_art||'')}</td>
+          <td>${esc(desArt)}</td>
+          <td style="font-family:monospace;font-size:9px">${esc(it.ite_desp||'')}</td>
+          <td class="r">${it.ite_can||0}</td>
+          <td class="r">${mon} ${fmt(it.ite_uni)}</td>
+          <td class="r">${mon} ${fmt(it.ite_imp)}</td>
+        </tr>`;
+      }).join('')}
+      ${items.length<8?Array(8-items.length).fill('<tr><td colspan="6" style="height:6mm">&nbsp;</td></tr>').join(''):''}
+    </tbody>
+  </table>
+  <div class="footer-grid">
+    <div></div>
+    <div class="totales">
+      ${tieneIva?`
+        <div class="tot-row"><span class="tot-lbl">Subtotal neto</span><span class="tot-val">${mon} ${fmt(subtotalNeto)}</span></div>
+        <div class="tot-row"><span class="tot-lbl">IVA 21%</span><span class="tot-val">${mon} ${fmt(f.fac_iva)}</span></div>
+      `:''}
+      <div class="tot-row"><span class="tot-lbl">Subtotal</span><span class="tot-val">${mon} ${fmt(f.fac_sub)}</span></div>
+      ${(f.fac_percib||0)>0?`<div class="tot-row"><span class="tot-lbl">Perc. IIBB</span><span class="tot-val">${mon} ${fmt(f.fac_percib)}</span></div>`:''}
+      <div class="tot-row"><span class="tot-lbl">TOTAL</span><span class="tot-val">${mon} ${fmt(f.fac_total)}</span></div>
+    </div>
+  </div>
+  ${f.fac_cae?`
+  <div class="cae-box">
+    <div class="cae-datos">
+      <div class="cae-dato"><strong>CAE N°:</strong> ${esc(f.fac_cae)}</div>
+      <div class="cae-dato"><strong>Fecha Vto. CAE:</strong> ${esc(f.fac_cae_vto||'—')}</div>
+      <div class="cae-dato" style="margin-top:2mm;font-size:8px;color:#555">
+        Comprobante autorizado por A.F.I.P. — Este comprobante es válido como factura.
+      </div>
+    </div>
+    <div style="text-align:center">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(qrUrl)}" class="qr-img" alt="QR AFIP">
+      <div style="font-size:7px;margin-top:1mm">Verificar en AFIP</div>
+    </div>
+  </div>
+  `:`
+  <div class="cae-box" style="background:#fffbeb">
+    <div style="color:#b45309;font-weight:600">⚠️ BORRADOR — Comprobante no autorizado por AFIP</div>
+  </div>
+  `}
+</div>
+</body>
+</html>`;
+
+  const win = window.open('','_blank','width=900,height=700');
+  if(win){ win.document.write(html); win.document.close(); }
+  else { toast('Activá ventanas emergentes en el navegador','err'); }
 }
 
 function facAlta() {
@@ -486,10 +706,6 @@ function facBaja() {
   if(facSelIdx===null){toast('Seleccioná una factura','err');return;}
   toast('Próximamente: Anular factura','scs');
 }
-function facImprimir() {
-  if(facSelIdx===null){toast('Seleccioná una factura','err');return;}
-  toast('Próximamente: Imprimir factura','scs');
-}
 function facCancelar() {
   FAC_MODO=null; FAC_ITEMS_NUEVA=[];
   const f=filtFacs()[facSelIdx];
@@ -504,6 +720,7 @@ function renderFacForm(fecha, empresa, cliCod) {
     .map(c=>`<option value="${c.prefijo}|${c.tipo}">${c.prefijo} — ${TIPO_LABEL[c.tipo]||c.tipo}</option>`).join('');
   const cpagOpts='<option value="">— Sin especificar —</option>'+(TABLAS['CPAG']||[]).map(c=>`<option value="${c.CODIGO}">${c.CODIGO} — ${c.DETALLE}</option>`).join('');
   const exprOpts='<option value="">— Sin especificar —</option>'+(TABLAS['EXPR']||[]).map(e=>`<option value="${e.CODIGO}">${e.CODIGO} — ${e.DETALLE}</option>`).join('');
+  const vendOpts='<option value="">— Sin especificar —</option>'+(TABLAS['VEND']||[]).map(v=>`<option value="${v.CODIGO}">${v.CODIGO} — ${v.DETALLE}</option>`).join('');
   const marcOpts='<option value="">— Todas —</option>'+(TABLAS['MARC']||[]).map(m=>`<option value="${m.CODIGO}">${m.CODIGO} — ${m.DETALLE}</option>`).join('');
   const rubrOpts='<option value="">— Todos —</option>'+(TABLAS['RUBR']||[]).map(r=>`<option value="${r.CODIGO}">${r.CODIGO} — ${r.DETALLE}</option>`).join('');
   const srubOpts='<option value="">— Todos —</option>'+(TABLAS['SRUB']||[]).map(s=>`<option value="${s.CODIGO}">${s.CODIGO} — ${s.DETALLE}</option>`).join('');
@@ -564,7 +781,7 @@ function renderFacForm(fecha, empresa, cliCod) {
             <div id="nf-cli-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--s1);border:1px solid var(--acc);border-radius:0 0 6px 6px;z-index:200;max-height:180px;overflow-y:auto"></div>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 80px 140px 140px;gap:8px">
+        <div style="display:grid;grid-template-columns:1fr 80px 130px 130px 130px;gap:8px">
           <div>
             <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Razón Social</label>
             <input class="finp" id="nf-razon" readonly style="color:var(--t2);background:var(--s3);width:100%" placeholder="—">
@@ -580,6 +797,10 @@ function renderFacForm(fecha, empresa, cliCod) {
           <div>
             <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Transporte</label>
             <select class="finp" id="nf-transp" style="width:100%">${exprOpts}</select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Vendedor</label>
+            <select class="finp" id="nf-vend" style="width:100%">${vendOpts}</select>
           </div>
         </div>
       </div>
@@ -1079,6 +1300,7 @@ async function nfGuardar() {
   const dto=parseFloat(document.getElementById('nf-dto')?.value||0)||0;
   const conpag=document.getElementById('nf-conpag')?.value||'';
   const transp=document.getElementById('nf-transp')?.value||'';
+  const vend=document.getElementById('nf-vend')?.value||'';
   const remito=document.getElementById('nf-remito')?.value||'';
   const facData={
     fac_nro:facNro,fac_fec:fecha,fac_cli:cliCod,
@@ -1086,6 +1308,7 @@ async function nfGuardar() {
     fac_sub:tot.subtotal||0,fac_iva:esA?(tot.iva||0):0,
     fac_total:tot.total||0,fac_saldo:tot.total||0,fac_percib:0,
     fac_transp:transp,fac_remito:remito,fac_vcomi:conpag,fac_monpor:dto,
+    fac_vend:vend,
     fac_afip_st:'pendiente',fac_cae:null,fac_cae_vto:null
   };
   try {
