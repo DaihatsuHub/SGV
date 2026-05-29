@@ -621,11 +621,11 @@ async function facImprimir() {
         <div style="font-size:9px;color:#333">${esc((typeof PCIA!=='undefined'?PCIA[cli?.CLI_PROVIN||'']||cli?.CLI_PROVIN:cli?.CLI_PROVIN)||'—')}</div>
       </div>
       <!-- DERECHA -->
-      <div style="font-size:9px;padding-left:20mm">
+      <div style="font-size:9px;padding-left:8mm">
         <div style="height:5mm"></div>
         <div><span style="color:#555">CUIT: </span><strong>${esc(cli?.CLI_CUIT||'—')}</strong></div>
         <div><span style="color:#555">IVA: </span>${esc(IVA_DESC[tiva]||tiva||'Consumidor Final')}</div>
-        <div style="white-space:normal"><span style="color:#555">Cond. Pago: </span>${(()=>{
+        <div><span style="color:#555">Cond. Pago: </span>${(()=>{
           const cpVal=cli?.CLI_CONPAG||f.fac_vcomi||'';
           const cpObj=(TABLAS['CPAG']||[]).find(x=>x.CODIGO===cpVal);
           return esc(cpObj?cpObj.DETALLE:cpVal||'—');
