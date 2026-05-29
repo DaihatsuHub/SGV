@@ -553,11 +553,13 @@ async function facImprimir() {
   .cli-lbl{color:#555;white-space:nowrap}
   .cli-val{font-weight:600}
   .cli-full{grid-column:1/-1}
-  .items-table{width:100%;border-collapse:collapse;margin-bottom:3mm;font-size:9.5px}
-  .items-table th{background:#000;color:#fff;padding:2mm 1.5mm;text-align:left;font-weight:600;font-size:9px;text-transform:uppercase}
+  .items-table{width:100%;border-collapse:collapse;margin-bottom:3mm;font-size:9px;table-layout:fixed}
+  .items-table th{background:#000;color:#fff;padding:1.5mm 1mm;text-align:left;font-weight:600;font-size:8px;text-transform:uppercase;white-space:nowrap;overflow:hidden}
   .items-table th.r{text-align:right}
-  .items-table td{padding:1.5mm 1.5mm;border-bottom:1px solid #ddd;vertical-align:top}
-  .items-table td.r{text-align:right;font-family:monospace}
+  .items-table td{padding:1mm 1mm;border-bottom:1px solid #ddd;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .items-table td.r{text-align:right;font-family:monospace;font-size:8.5px}
+  .items-table td.des{font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .items-table td.cod{font-family:monospace;font-size:8px;white-space:nowrap}
   .items-table tr:nth-child(even){background:#f9f9f9}
   .footer-grid{display:grid;grid-template-columns:1fr auto;gap:4mm;margin-top:3mm}
   .totales{border:1px solid #000;padding:3mm;min-width:60mm}
@@ -642,12 +644,12 @@ async function facImprimir() {
   <table class="items-table">
     <thead>
       <tr>
-        <th style="width:14mm">Código</th>
+        <th style="width:18mm">Código</th>
         <th>Descripción</th>
-        <th style="width:22mm">Despacho</th>
+        <th style="width:20mm">Despacho</th>
         <th class="r" style="width:10mm">Cant</th>
-        <th class="r" style="width:22mm">Precio s/IVA</th>
-        <th class="r" style="width:22mm">Subtotal</th>
+        <th class="r" style="width:20mm">Precio s/IVA</th>
+        <th class="r" style="width:20mm">Subtotal</th>
       </tr>
     </thead>
     <tbody>
@@ -655,9 +657,9 @@ async function facImprimir() {
         const art=ARTS.find(a=>(a.ART_COD||'').trim()===(it.ite_art||'').trim());
         const desArt=art?art.ART_DES:(it.ite_desp||'');
         return `<tr>
-          <td style="font-family:monospace;font-size:9px">${esc(it.ite_art||'')}</td>
-          <td>${esc(desArt)}</td>
-          <td style="font-family:monospace;font-size:9px">${esc(it.ite_desp||'')}</td>
+          <td class="cod">${esc(it.ite_art||'')}</td>
+          <td class="des" title="${esc(desArt)}">${esc(desArt)}</td>
+          <td class="cod">${esc(it.ite_desp||'')}</td>
           <td class="r">${it.ite_can||0}</td>
           <td class="r">${(()=>{const d=1+(it.ite_iva_porc||21)/100;const n=it.ite_uni/d;return mon+' '+fmtN(n,2);})()}</td>
           <td class="r">${mon} ${fmtN(it.ite_imp||0,2)}</td>
@@ -732,6 +734,7 @@ function facBaja() {
   toast('Próximamente: Anular factura','scs');
 }
 function facCancelar() {
+  nfDesbloquearCtip();
   FAC_MODO=null; FAC_ITEMS_NUEVA=[];
   const ov=document.getElementById('ov-nf');
   if(ov) ov.classList.remove('open');
@@ -806,7 +809,7 @@ function renderFacModal(fecha, empresa, cliCod) {
             <div style="display:grid;grid-template-columns:80px 1fr;gap:6px;margin-bottom:6px">
               <div>
                 <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Código *</label>
-                <input class="finp" id="nf-cli-cod" maxlength="6" style="text-transform:uppercase;width:100%" placeholder="Cód." oninput="nfOnCliCodChange()">
+                <input class="finp" id="nf-cli-cod" maxlength="6" style="text-transform:uppercase;width:100%" placeholder="Cód." oninput="nfOnCliCodChange()" onblur="nfOnCliCodChange()">
               </div>
               <div style="position:relative">
                 <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Razón Social</label>
@@ -982,7 +985,7 @@ function renderFacForm(fecha, empresa, cliCod) {
         <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;margin-bottom:8px">
           <div>
             <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Código *</label>
-            <input class="finp" id="nf-cli-cod" maxlength="6" style="text-transform:uppercase;width:100%" placeholder="Código" oninput="nfOnCliCodChange()">
+            <input class="finp" id="nf-cli-cod" maxlength="6" style="text-transform:uppercase;width:100%" placeholder="Código" oninput="nfOnCliCodChange()" onblur="nfOnCliCodChange()">
           </div>
           <div style="position:relative">
             <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Buscar por Razón Social</label>
@@ -1278,14 +1281,50 @@ function nfOnEmpresaChange() {
   nfOnCtipChange();
   nfRenderItems();
 }
-function nfOnCtipChange() {
+let _nfCtipBloqueadoId = null;
+
+async function nfDesbloquearCtip() {
+  if(_nfCtipBloqueadoId) {
+    try {
+      await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${_nfCtipBloqueadoId}`,{
+        method:'PATCH', headers:{...SB_HDR},
+        body:JSON.stringify({bloqueado:false, bloqueado_por:null})
+      });
+      // actualizar local
+      const ct=CTIPS.find(x=>x.id===_nfCtipBloqueadoId);
+      if(ct){ct.bloqueado=false;ct.bloqueado_por=null;}
+    } catch(e){console.error('nfDesbloquearCtip:',e);}
+    _nfCtipBloqueadoId=null;
+  }
+}
+
+async function nfOnCtipChange() {
   const val=document.getElementById('nf-ctip')?.value||'';
   const el=document.getElementById('nf-preview-nro');
+  // Desbloquear el anterior si había uno
+  await nfDesbloquearCtip();
   if(!val){if(el)el.textContent='—';return;}
   const [prefijo,tipo]=val.split('|');
   const emp=document.getElementById('nf-empresa').value;
   const ct=CTIPS.find(c=>c.empresa===emp&&c.prefijo===prefijo&&c.tipo===tipo);
-  if(ct&&el) el.textContent=`${prefijo}-${String((ct.ultimo_nro||0)+1).padStart(6,'0')}`;
+  if(!ct){if(el)el.textContent='—';return;}
+  // Verificar si está bloqueado por otro usuario
+  if(ct.bloqueado && ct.bloqueado_por && ct.bloqueado_por!==(usuarioActual?.codigo||'')) {
+    toast(`⚠️ ${ct.bloqueado_por} está facturando con este tipo. Esperá un momento.`,'err');
+    document.getElementById('nf-ctip').value='';
+    if(el) el.textContent='—';
+    return;
+  }
+  // Bloquear
+  try {
+    await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${ct.id}`,{
+      method:'PATCH', headers:{...SB_HDR},
+      body:JSON.stringify({bloqueado:true, bloqueado_por:usuarioActual?.codigo||'?'})
+    });
+    ct.bloqueado=true; ct.bloqueado_por=usuarioActual?.codigo||'?';
+    _nfCtipBloqueadoId=ct.id;
+  } catch(e){console.error('nfOnCtipChange lock:',e);}
+  if(el) el.textContent=`${prefijo}-${String((ct.ultimo_nro||0)+1).padStart(6,'0')}`;
   nfRenderItems();
   nfCalcTotales();
 }
@@ -1295,8 +1334,14 @@ function nfOnCliCodChange() {
   if(sug){sug.innerHTML='';sug.style.display='none';}
   if(!cod){nfLimpiarCliente();return;}
   const cli=facFindCli(cod);
-  if(cli) setTimeout(()=>nfSetCliente(cli), 80);
-  else nfLimpiarCliente();
+  if(cli) {
+    // Actualizar el campo a mayúsculas
+    const el=document.getElementById('nf-cli-cod');
+    if(el) el.value=cod;
+    setTimeout(()=>nfSetCliente(cli), 80);
+  } else {
+    nfLimpiarCliente();
+  }
 }
 function nfOnCliBusqInput() {
   const q=(document.getElementById('nf-cli-busq')?.value||'').toLowerCase().trim();
@@ -1514,12 +1559,13 @@ function nfRenderItems() {
       <span style="text-align:right;font-family:var(--mono);font-size:11px;${dispColor}">${dispTxt}</span>
       <div>${despHtml}</div>
       ${(!nfEsNC()&&it.ite_art&&(it.ite_disp||0)===0&&!it._desp_id)?
-        `<span style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--red);width:100%;display:block;text-align:right">0</span>`:
+        `<span style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--red);width:100%;display:block">0</span>`:
         `<input class="finp" type="number" min="0" step="1" value="${cant}"
-          style="text-align:right;font-size:12px;width:100%"
+          max="${it.ite_disp!==null&&it.ite_disp!==undefined?(it.ite_disp||0):99999}"
+          style="text-align:right;font-size:12px;width:100%;${cant===0?'color:var(--t3)':''}"
           onclick="this.select()"
-          onchange="nfItemChange(${i},'ite_can',parseFloat(this.value)||0)"
-          oninput="nfItemChange(${i},'ite_can',parseFloat(this.value)||0)">`
+          onchange="nfItemChange(${i},'ite_can',Math.min(parseFloat(this.value)||0,${it.ite_disp!==null&&it.ite_disp!==undefined?(it.ite_disp||0):99999}))"
+          oninput="nfItemChange(${i},'ite_can',Math.min(parseFloat(this.value)||0,${it.ite_disp!==null&&it.ite_disp!==undefined?(it.ite_disp||0):99999}))">`
       }
       <span style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--t2)">${fmtN(precioConIva,2)}</span>
       <span style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--t3)">${ivaPct}%</span>
@@ -1628,8 +1674,9 @@ async function nfGuardar() {
         ite_impu:0,ite_costo:it.ite_uni
       });
     }
-    await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${ct.id}`,{method:'PATCH',headers:{...SB_HDR},body:JSON.stringify({ultimo_nro:nroSig})});
-    ct.ultimo_nro=nroSig;
+    await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${ct.id}`,{method:'PATCH',headers:{...SB_HDR},body:JSON.stringify({ultimo_nro:nroSig, bloqueado:false, bloqueado_por:null})});
+    ct.ultimo_nro=nroSig; ct.bloqueado=false; ct.bloqueado_por=null;
+    _nfCtipBloqueadoId=null;
     await sbLoadFacs();
     FAC_MODO=null; FAC_ITEMS_NUEVA=[];
     renderFac();
