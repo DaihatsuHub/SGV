@@ -1471,7 +1471,7 @@ function nfRenderItems() {
         <option value="">— Elegir —</option>
         ${desps.map(d=>{
           const disp=(d.dep_ent||0)-(d.dep_sal||0);
-          const fec=d.dep_fec?d.dep_fec.substring(0,10).split('-').reverse().join('/':'';
+          const fec=d.dep_fec?d.dep_fec.substring(0,10).split('-').reverse().join('/'):'';
           return `<option value="${d.dep_id}">${d.dep_desp}${d.dep_sub||''} ${fec} (${disp})</option>`;
         }).join('')}
       </select>`;
