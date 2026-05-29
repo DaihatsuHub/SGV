@@ -53,6 +53,12 @@ function facFindCli(fac_cli) {
   return CLIS.find(c => (c.CLI_CODIGO||'').trim() === cod);
 }
 
+// Formato numérico con decimales y separador de miles
+function fmtN(v, dec=2) {
+  if(v===null||v===undefined||isNaN(v)) return '0,' + '0'.repeat(dec);
+  return Number(v).toLocaleString('es-AR', {minimumFractionDigits:dec, maximumFractionDigits:dec});
+}
+
 const TIPO_LABEL = { F:'Factura', C:'Nota de Crédito', D:'Nota de Débito', R:'Cheque Rechazado' };
 
 // Helpers descripcion
@@ -693,6 +699,18 @@ async function facImprimir() {
   else { toast('Activá ventanas emergentes en el navegador','err'); }
 }
 
+// Permitir navegación al menú sin perder la factura en curso
+function facNavegar(fn) {
+  // Ocultar temporalmente el panel de factura sin perderlo
+  const ov=document.getElementById('ov-nf');
+  if(ov&&ov.classList.contains('open')) {
+    ov.style.display='none';
+    // Restaurar al volver a Facturación
+    window._facNavPendiente=true;
+  }
+  fn();
+}
+
 function facAlta() {
   FAC_ITEMS_NUEVA=[];
   FAC_MODO='A';
@@ -735,9 +753,9 @@ function renderFacModal(fecha, empresa, cliCod) {
     <div style="display:flex;height:100%;overflow:hidden">
 
       <!-- IZQUIERDA: encabezado + totales -->
-      <div style="width:380px;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;border-right:1px solid var(--b1);background:#0f1923">
+      <div style="width:380px;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;border-right:1px solid var(--b1);background:#0a2a3a">
         <!-- título -->
-        <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:rgba(0,0,0,0.3)">
+        <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:rgba(0,0,0,0.2)">
           <span style="font-size:14px;font-weight:700;color:var(--acc)">📄 Nueva Factura</span>
           <button class="btn" onclick="facCancelar()" style="padding:3px 10px;font-size:12px">✕ Cancelar</button>
         </div>
@@ -776,7 +794,7 @@ function renderFacModal(fecha, empresa, cliCod) {
             </div>
           </div>
           <!-- Cliente -->
-          <div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:8px 10px;border:1px solid rgba(255,255,255,0.08)">
+          <div style="background:rgba(255,255,255,0.07);border-radius:6px;padding:8px 10px;border:1px solid rgba(255,255,255,0.12)">
             <div style="font-size:10px;color:rgba(255,255,255,0.5);font-family:var(--mono);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Cliente</div>
             <div style="display:grid;grid-template-columns:80px 1fr;gap:6px;margin-bottom:6px">
               <div>
@@ -814,12 +832,13 @@ function renderFacModal(fecha, empresa, cliCod) {
             </div>
           </div>
           <!-- Totales -->
-          <div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:10px 12px;margin-top:auto;border:1px solid rgba(255,255,255,0.08)">
-            <div id="nf-fila-neto" style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Subtotal neto</span><span id="nf-tot-neto">$ 0,00</span></div>
-            <div id="nf-fila-iva"  style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>IVA</span><span id="nf-tot-iva">$ 0,00</span></div>
-            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Subtotal</span><span id="nf-tot-sub">$ 0,00</span></div>
-            <div id="nf-fila-dto" style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Descuento</span><span id="nf-tot-dto">—</span></div>
-            <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:var(--txt);padding:6px 0 2px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL</span><span id="nf-tot-total">$ 0,00</span></div>
+          <div style="background:rgba(255,255,255,0.07);border-radius:6px;padding:10px 12px;margin-top:auto;border:1px solid rgba(255,255,255,0.12)">
+            <div id="nf-fila-neto" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>Subtotal neto</span><span id="nf-tot-neto">$ 0,00</span></div>
+            <div id="nf-fila-iva21" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>IVA 21%</span><span id="nf-tot-iva21">$ 0,00</span></div>
+            <div id="nf-fila-iva105" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>IVA 10.5%</span><span id="nf-tot-iva105">$ 0,00</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>Subtotal</span><span id="nf-tot-sub">$ 0,00</span></div>
+            <div id="nf-fila-dto" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>Descuento</span><span id="nf-tot-dto">—</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:#fff;padding:6px 0 2px;border-top:1px solid rgba(255,255,255,0.15);margin-top:4px"><span>TOTAL</span><span id="nf-tot-total">$ 0,00</span></div>
           </div>
           <!-- Botones -->
           <div style="display:flex;flex-direction:column;gap:6px">
@@ -1293,20 +1312,33 @@ function nfSetCliente(cli) {
   if(razonEl) razonEl.value=cli.CLI_RAZON||'';
   if(tivaEl)  tivaEl.value=cli.CLI_IVA||'';
   if(dtoEl)   dtoEl.value=cli.CLI_DTO||0;
+  // Cond de pago
   if(conpagEl){
     const cpVal=(cli.CLI_CONPAG||'').trim();
-    const opt=[...conpagEl.options].find(o=>o.value.trim()===cpVal);
-    if(opt) conpagEl.value=opt.value; else if(cpVal) conpagEl.value='';
+    if(cpVal){
+      // Buscar opción exacta o que empiece igual
+      let opt=[...conpagEl.options].find(o=>o.value.trim()===cpVal);
+      if(!opt) opt=[...conpagEl.options].find(o=>o.value.trim().startsWith(cpVal)||cpVal.startsWith(o.value.trim()));
+      if(opt) conpagEl.value=opt.value;
+    }
   }
+  // Vendedor
   if(vendEl){
     const vVal=(cli.CLI_VEND||'').trim();
-    const opt=[...vendEl.options].find(o=>o.value.trim()===vVal);
-    if(opt) vendEl.value=opt.value;
+    if(vVal){
+      let opt=[...vendEl.options].find(o=>o.value.trim()===vVal);
+      if(!opt) opt=[...vendEl.options].find(o=>o.value.trim().startsWith(vVal)||vVal.startsWith(o.value.trim()));
+      if(opt) vendEl.value=opt.value;
+    }
   }
+  // Transporte
   if(transpEl){
-    const tVal=(cli.CLI_EXPRE||cli.CLI_EXPR||'').trim();
-    const opt=[...transpEl.options].find(o=>o.value.trim()===tVal);
-    if(opt) transpEl.value=opt.value;
+    const tVal=(cli.CLI_EXPRE||'').trim();
+    if(tVal){
+      let opt=[...transpEl.options].find(o=>o.value.trim()===tVal);
+      if(!opt) opt=[...transpEl.options].find(o=>o.value.trim().startsWith(tVal)||tVal.startsWith(o.value.trim()));
+      if(opt) transpEl.value=opt.value;
+    }
   }
   nfCalcTotales();
   nfRenderItems();
@@ -1397,8 +1429,9 @@ function nfItemChange(idx,campo,valor) {
   const esA=nfEsFacturaA();
   const div=1+(it.ite_iva_porc||0)/100;
   const neto=esA?it.ite_uni/div:it.ite_uni;
-  it.ite_imp=neto*(FAC_ITEMS_NUEVA[idx].ite_can||0);
-  it.ite_iva_imp=esA?(it.ite_uni-neto)*(FAC_ITEMS_NUEVA[idx].ite_can||0):0;
+  const cantAct=FAC_ITEMS_NUEVA[idx].ite_can||0;
+  it.ite_imp=neto*cantAct;
+  it.ite_iva_imp=esA?(it.ite_uni-neto)*cantAct:0;
   nfRenderItems();
   nfCalcTotales();
 }
@@ -1408,11 +1441,12 @@ function nfRenderItems() {
   const hdr=document.getElementById('nf-items-hdr');
   if(!body||!hdr) return;
   const esA=nfEsFacturaA();
-  const cols=`90px 1fr 55px 110px 65px 100px ${esA?'65px ':''} 90px 30px`;
+  const cols=`90px 1fr 50px 100px 55px 90px 45px 90px 90px 28px`;
   hdr.innerHTML=`<div style="display:grid;grid-template-columns:${cols};gap:4px;padding:6px 8px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase">
     <span>Código</span><span>Descripción</span><span style="text-align:right">Disp</span><span>Despacho</span>
-    <span style="text-align:right">Cant</span><span style="text-align:right">Precio s/IVA</span>
-    ${esA?'<span style="text-align:center">%IVA</span>':''}
+    <span style="text-align:right">Cant</span><span style="text-align:right">Precio c/IVA</span>
+    <span style="text-align:center">%IVA</span>
+    <span style="text-align:right">Precio s/IVA</span>
     <span style="text-align:right">Importe</span><span></span>
   </div>`;
   if(!FAC_ITEMS_NUEVA.length){
@@ -1420,13 +1454,16 @@ function nfRenderItems() {
     return;
   }
   body.innerHTML=FAC_ITEMS_NUEVA.map((it,i)=>{
-    const div=1+(it.ite_iva_porc||0)/100;
-    const neto=esA?it.ite_uni/div:it.ite_uni;
-    const ivaT=esA?(it.ite_uni-neto)*(it.ite_can||1):0;
-    const imp=neto*(it.ite_can||1);
+    const ivaPct=it.ite_iva_porc||21;
+    const divIva=1+ivaPct/100;
+    const precioConIva=it.ite_uni||0;
+    const neto=esA?precioConIva/divIva:precioConIva;
+    const cant=it.ite_can||0;
+    const imp=neto*cant;
     const dispTxt=it.ite_disp===null?'—':(it.ite_disp||0);
     const dispColor=(!nfEsNC()&&(it.ite_disp||0)===0&&it.ite_art)?'color:var(--red)':'color:var(--grn)';
     const esInexistente=it.ite_art&&!ARTS.find(a=>(a.ART_COD||'').trim()===it.ite_art);
+    const des30=(it.ite_desp_art||'').substring(0,30);
     const desps=it._desps||[];
     let despHtml='';
     if(desps.length>1&&!it._desp_id){
@@ -1434,32 +1471,25 @@ function nfRenderItems() {
         <option value="">— Elegir —</option>
         ${desps.map(d=>{
           const disp=(d.dep_ent||0)-(d.dep_sal||0);
-          const fec=d.dep_fec?d.dep_fec.substring(0,10).split('-').reverse().join('/'):'';
+          const fec=d.dep_fec?d.dep_fec.substring(0,10).split('-').reverse().join('/':'';
           return `<option value="${d.dep_id}">${d.dep_desp}${d.dep_sub||''} ${fec} (${disp})</option>`;
         }).join('')}
       </select>`;
     } else {
       despHtml=`<span style="font-family:var(--mono);font-size:10px;color:var(--t2)">${esc(it.ite_desp_nro||'—')}</span>`;
     }
-    return `<div style="display:grid;grid-template-columns:${cols};gap:4px;padding:6px 8px;border-bottom:1px solid var(--b1);align-items:center;background:${esInexistente?'#2a1a1a':'var(--s2)'};position:relative">
+    return `<div style="display:grid;grid-template-columns:${cols};gap:4px;padding:5px 8px;border-bottom:1px solid var(--b1);align-items:center;background:${esInexistente?'#2a1a1a':'var(--s2)'}">
       <span style="font-family:var(--mono);font-size:11px;color:var(--acc);cursor:pointer" onclick="nfAbrirBusqArt(${i})" title="Cambiar artículo">${esc(it.ite_art||'—')}</span>
-      <span style="font-size:11px;color:${esInexistente?'var(--red)':'var(--t2)'}">${esc(it.ite_desp_art||'')}</span>
+      <span style="font-size:11px;color:${esInexistente?'var(--red)':'var(--t2)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(it.ite_desp_art||'')}">${esc(des30)}</span>
       <span style="text-align:right;font-family:var(--mono);font-size:11px;${dispColor}">${dispTxt}</span>
       <div>${despHtml}</div>
-      <input class="finp" type="number" min="0" step="1" value="${it.ite_can||0}"
+      <input class="finp" type="number" min="0" step="1" value="${cant}"
         style="text-align:right;font-size:12px;width:100%"
         oninput="nfItemChange(${i},'ite_can',parseFloat(this.value)||0)">
-      <input class="finp" type="number" min="0" step="0.01" value="${it.ite_uni||''}" placeholder="0.00"
-        style="text-align:right;font-size:12px;width:100%"
-        oninput="nfItemChange(${i},'ite_uni',parseFloat(this.value)||0)">
-      ${esA?`
-        <select class="finp" style="font-size:11px" onchange="nfItemChange(${i},'ite_iva_porc',parseFloat(this.value))">
-          <option value="21"   ${(it.ite_iva_porc||21)===21  ?'selected':''}>21%</option>
-          <option value="10.5" ${(it.ite_iva_porc||21)===10.5?'selected':''}>10.5%</option>
-          <option value="0"    ${(it.ite_iva_porc||21)===0   ?'selected':''}>Exento</option>
-        </select>
-        <span style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--acc)">$${fmt(ivaT)}</span>`:''}
-      <span style="text-align:right;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--grn)">$${fmt(imp)}</span>
+      <span style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--t2)">${fmtN(precioConIva,2)}</span>
+      <span style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--t3)">${ivaPct}%</span>
+      <span style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--grn)">${fmtN(neto,2)}</span>
+      <span style="text-align:right;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--txt)">${fmtN(imp,2)}</span>
       <button class="btn dng" onclick="nfEliminarItem(${i})" style="padding:2px 6px;font-size:11px">✕</button>
     </div>`;
   }).join('');
@@ -1468,13 +1498,21 @@ function nfRenderItems() {
 function nfCalcTotales() {
   const esA=nfEsFacturaA();
   const dto=parseFloat(document.getElementById('nf-dto')?.value||0)||0;
-  let neto=0,iva=0;
+  let neto=0, iva21=0, iva105=0, ivaOtro=0;
   FAC_ITEMS_NUEVA.forEach(it=>{
-    const div=1+(it.ite_iva_porc||0)/100;
+    const pct=it.ite_iva_porc||21;
+    const div=1+pct/100;
     const n=esA?it.ite_uni/div:it.ite_uni;
-    neto+=n*(it.ite_can||1);
-    if(esA) iva+=(it.ite_uni-n)*(it.ite_can||1);
+    const cant=it.ite_can||0;
+    neto+=n*cant;
+    if(esA){
+      const ivaItem=(it.ite_uni-n)*cant;
+      if(pct===21)      iva21+=ivaItem;
+      else if(pct===10.5) iva105+=ivaItem;
+      else              ivaOtro+=ivaItem;
+    }
   });
+  const iva=iva21+iva105+ivaOtro;
   const subtotal=neto+iva;
   const dtoImp=subtotal*dto/100;
   const total=subtotal-dtoImp;
@@ -1483,15 +1521,17 @@ function nfCalcTotales() {
   const mon=monObj?monObj.STRING1:'$';
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   const setFlex=(id,show)=>{const el=document.getElementById(id);if(el)el.style.display=show?'flex':'none';};
-  set('nf-tot-neto',`${mon} ${fmt(neto)}`);
-  set('nf-tot-iva', `${mon} ${fmt(iva)}`);
-  set('nf-tot-sub', `${mon} ${fmt(subtotal)}`);
-  set('nf-tot-dto', dto>0?`- ${mon} ${fmt(dtoImp)}`:'—');
-  set('nf-tot-total',`${mon} ${fmt(total)}`);
-  setFlex('nf-fila-neto',esA);
-  setFlex('nf-fila-iva', esA);
+  set('nf-tot-neto', `${mon} ${fmtN(neto,2)}`);
+  set('nf-tot-iva21',`${mon} ${fmtN(iva21,2)}`);
+  set('nf-tot-iva105',`${mon} ${fmtN(iva105,2)}`);
+  set('nf-tot-sub',  `${mon} ${fmtN(subtotal,2)}`);
+  set('nf-tot-dto',  dto>0?`- ${mon} ${fmtN(dtoImp,2)}`:'—');
+  set('nf-tot-total',`${mon} ${fmtN(total,2)}`);
+  setFlex('nf-fila-neto', esA);
+  setFlex('nf-fila-iva21', esA&&iva21>0);
+  setFlex('nf-fila-iva105',esA&&iva105>0);
   setFlex('nf-fila-dto', dto>0);
-  window._nfTotales={neto,iva,subtotal,dtoImp,total};
+  window._nfTotales={neto,iva21,iva105,iva,subtotal,dtoImp,total};
 }
 
 async function nfGuardar() {

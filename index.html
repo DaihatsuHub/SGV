@@ -17,18 +17,12 @@
 
 /* Modal fullscreen nueva factura */
 #ov-nf {
-  position: fixed !important;
-  top: 48px !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  background: transparent !important;
-  z-index: 50 !important;
-  display: none;
   padding: 0 !important;
-}
-#ov-nf.open {
-  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  top: 48px !important;      /* debajo del topbar */
+  height: calc(100% - 48px) !important;
+  background: var(--s1) !important;
 }
 #ov-nf > div {
   width: 100% !important;
@@ -36,7 +30,6 @@
   height: 100% !important;
   border-radius: 0 !important;
   background: var(--s1);
-  border-top: 2px solid var(--acc);
 }
 </style>
 </head>
@@ -689,7 +682,7 @@
 </div>
 
 <!-- MODAL FULLSCREEN NUEVA FACTURA -->
-<div id="ov-nf">
+<div class="ov" id="ov-nf" style="padding:0;align-items:stretch;justify-content:stretch">
   <div style="width:100%;height:100%;background:var(--s1);display:flex;flex-direction:column;position:relative"></div>
 </div>
 
@@ -787,6 +780,18 @@
 <script src="js/facturacion.js"></script>
 
 <script>
+// Restaurar panel de factura al volver al módulo
+document.addEventListener('click', function(e) {
+  const ov = document.getElementById('ov-nf');
+  if(!ov || !window._facNavPendiente) return;
+  // Si volvemos a Facturación, restaurar el panel
+  const btn = e.target.closest('[onclick*="fac"]');
+  if(btn && btn.getAttribute('onclick')?.includes("showSubPage('ven','fac')")) {
+    setTimeout(()=>{ ov.style.display=''; }, 50);
+    window._facNavPendiente=false;
+  }
+});
+
 sbLoad().then(async ok => {
   if (ok) {
     await Promise.all([
