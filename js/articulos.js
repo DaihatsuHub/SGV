@@ -4,6 +4,11 @@
 
 let artSoloStock = false;
 
+// Colores para diferenciar Stock vs Depósito en grilla
+const STK_BG  = 'background:rgba(30,58,110,0.12)';   // azul — Stock
+const DEP_BG  = 'background:rgba(26,58,42,0.12)';    // verde — Depósito
+const SEP_STY = 'width:4px;background:rgba(74,127,193,0.4);padding:0;flex-shrink:0'; // separador
+
 function filtArts(){
   const q = document.getElementById('art-q').value.toLowerCase();
   let list = ARTS.filter(a => {
@@ -33,9 +38,12 @@ function renderArts(){
   const thArt = document.querySelector('.th-art');
   if (thArt) {
     thArt.style.gridTemplateColumns = gridTpl;
-    thArt.innerHTML = cols.map(c =>
-      `<span class="th-sortable" onclick="toggleSort('art','${c.field}')" style="${c.align?'text-align:'+c.align:''}">${c.label}${sortArrow('art',c.field)}</span>`
-    ).join('');
+    thArt.innerHTML = cols.map(c => {
+      let bg = '';
+      if (c.field==='ART_STK'||c.field==='ART_STKT')  bg = 'background:#1e3a6e;color:#93b4d8;';
+      if (c.field==='ART_DEPH'||c.field==='ART_DEPT')  bg = 'background:#1a3a2a;color:#6ab98a;';
+      return `<span class="th-sortable" onclick="toggleSort('art','${c.field}')" style="${bg}${c.align?'text-align:'+c.align:''}">${c.label}${sortArrow('art',c.field)}</span>`;
+    }).join('');
   }
 
   if (!list.length) {
@@ -47,7 +55,7 @@ function renderArts(){
   body.innerHTML = list.map(a => {
     const idx = ARTS.indexOf(a);
     const sel = artSelIdx===idx ? 'sel' : '';
-    const sH  = a.ART_STK||0, sT = a.ART_STKT||0;
+    const sH  = a.ART_STK||0,  sT  = a.ART_STKT||0;
     const sDH = a.ART_DEPH||0, sDT = a.ART_DEPT||0;
     return `<div class="tr-art ${sel}" style="grid-template-columns:${gridTpl}" onclick="selArt(${idx})" ondblclick="artDetail(${idx})">` +
       cols.map(c => {
@@ -56,10 +64,10 @@ function renderArts(){
         if(c.field==='ART_RUB')   return `<span style="font-family:var(--mono);font-size:12px;color:var(--t2)">${esc(a.ART_RUB||'')}</span>`;
         if(c.field==='ART_SRUB')  return `<span style="font-family:var(--mono);font-size:12px;color:var(--t3)">${esc(a.ART_SRUB||'')}</span>`;
         if(c.field==='ART_PRE')   { const mone=(TABLAS['MONE']||[]).find(m=>m.CODIGO===a.ART_MONEDA); const signo=mone?mone.STRING1:'$'; return `<span class="col-num" style="color:var(--grn)">${signo} ${fmt(a.ART_PRE)}</span>`; }
-        if(c.field==='ART_STK')   return `<span class="col-num" style="${sH===0?'color:var(--red)':''}">${sH}</span>`;
-        if(c.field==='ART_STKT')  return `<span class="col-num" style="${sT===0?'color:var(--red)':''}">${sT}</span>`;
-        if(c.field==='ART_DEPH')  return `<span class="col-num" style="${sDH===0?'color:var(--red)':''}">${sDH}</span>`;
-        if(c.field==='ART_DEPT')  return `<span class="col-num" style="${sDT===0?'color:var(--red)':''}">${sDT}</span>`;
+        if(c.field==='ART_STK')   return `<span class="col-num" style="${STK_BG}">${sH===0?'—':sH}</span>`;
+        if(c.field==='ART_STKT')  return `<span class="col-num" style="${STK_BG}">${sT===0?'—':sT}</span>`;
+        if(c.field==='ART_DEPH')  return `<span class="col-num" style="${DEP_BG};border-left:3px solid rgba(74,127,193,0.5)">${sDH===0?'—':sDH}</span>`;
+        if(c.field==='ART_DEPT')  return `<span class="col-num" style="${DEP_BG}">${sDT===0?'—':sDT}</span>`;
         if(c.field==='ART_ESTU')  return `<span class="col-ctr"><span class="pill ${a.ART_ESTU==='S'?'pi':'pn'}">${a.ART_ESTU||'—'}</span></span>`;
         if(c.field==='ART_ACT')   return `<span class="col-ctr"><span class="pill ${a.ART_ACT==='S'?'ps':'pn'}">${a.ART_ACT||'N'}</span></span>`;
         if(c.field==='ART_GRUP')  return `<span style="font-family:var(--mono);font-size:12px;color:var(--t3)">${esc((a.ART_GRUP||'')+(a.ART_SEX?'-'+a.ART_SEX:''))}</span>`;
@@ -87,12 +95,15 @@ function selArt(i){ artSelIdx=i; renderArts(); }
 function artDetail(idx){
   const a = ARTS[idx];
   document.getElementById('art-dp-tit').textContent = a.ART_COD + ' — ' + a.ART_DES;
+  const sH=a.ART_STK||0, sT=a.ART_STKT||0, sDH=a.ART_DEPH||0, sDT=a.ART_DEPT||0;
   document.getElementById('art-dp-body').innerHTML = [
     ['Código',a.ART_COD],['Rubro',a.ART_RUB||'—'],['Sub-Rubro',a.ART_SRUB||'—'],
     ['Marca',a.ART_MARCA||'—'],['Proveedor',a.ART_PROV||'—'],
     ['Precio','$'+fmt(a.ART_PRE)],
-    ['Stock Hatsu',a.ART_STK||0],['Stock Tressa',a.ART_STKT||0],
-    ['Depósito Hatsu',a.ART_DEPH||0],['Depósito Tressa',a.ART_DEPT||0],
+    ['Stock Hatsu',  sH===0?'—':sH],
+    ['Stock Tressa', sT===0?'—':sT],
+    ['Depósito Hatsu', sDH===0?'—':sDH],
+    ['Depósito Tressa',sDT===0?'—':sDT],
     ['Grupo',a.ART_GRUP||'—'],['Sexo',a.ART_SEX||'—'],['Estuche',a.ART_ESTU||'—'],
     ['Activo',a.ART_ACT==='S'?'Sí':'No'],['Cód.Casio',a.CODCASIO||'—'],
   ].map(([l,v])=>`<div class="dpi"><span class="dpi-lbl">${l}</span><span class="dpi-val">${esc(String(v))}</span></div>`).join('');
