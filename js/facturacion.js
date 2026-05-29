@@ -1487,8 +1487,15 @@ function nfItemChange(idx,campo,valor) {
   const cantAct=FAC_ITEMS_NUEVA[idx].ite_can||0;
   it.ite_imp=Math.round(neto*cantAct*100)/100;
   it.ite_iva_imp=esA?Math.round((it.ite_uni-neto)*cantAct*100)/100:0;
-  nfRenderItems();
-  nfCalcTotales();
+  if(campo==='ite_can') {
+    // Solo actualizar el importe en el DOM sin re-renderizar (para no perder el foco)
+    const impEl=document.querySelector(`#nf-items-body [data-idx="${idx}"] .nf-imp`);
+    if(impEl) impEl.textContent=fmtN(it.ite_imp,2);
+    nfCalcTotales();
+  } else {
+    nfRenderItems();
+    nfCalcTotales();
+  }
 }
 
 function nfRenderItems() {
@@ -1533,7 +1540,7 @@ function nfRenderItems() {
     } else {
       despHtml=`<span style="font-family:var(--mono);font-size:10px;color:var(--t2)">${esc(it.ite_desp_nro||'—')}</span>`;
     }
-    return `<div style="display:grid;grid-template-columns:${cols};gap:4px;padding:5px 8px;border-bottom:1px solid var(--b1);align-items:center;background:${esInexistente?'#2a1a1a':'var(--s2)'}">
+    return `<div class="nf-item-row" data-idx="${i}" style="display:grid;grid-template-columns:${cols};gap:4px;padding:5px 8px;border-bottom:1px solid var(--b1);align-items:center;background:${esInexistente?'#2a1a1a':'var(--s2)'}">
       <span style="font-family:var(--mono);font-size:11px;color:var(--acc);cursor:pointer" onclick="nfAbrirBusqArt(${i})" title="Cambiar artículo">${esc(it.ite_art||'—')}</span>
       <span style="font-size:11px;color:${esInexistente?'var(--red)':'var(--t2)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(it.ite_desp_art||'')}">${esc(des30)}</span>
       <span style="text-align:right;font-family:var(--mono);font-size:11px;${dispColor}">${dispTxt}</span>
@@ -1550,7 +1557,7 @@ function nfRenderItems() {
       <span style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--t2)">${fmtN(precioConIva,2)}</span>
       <span style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--t3)">${ivaPct}%</span>
       <span style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--grn)">${fmtN(neto,2)}</span>
-      <span style="text-align:right;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--txt)">${fmtN(imp,2)}</span>
+      <span class="nf-imp" style="text-align:right;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--txt)">${fmtN(imp,2)}</span>
       <button class="btn dng" onclick="nfEliminarItem(${i})" style="padding:2px 6px;font-size:11px">✕</button>
     </div>`;
   }).join('');
