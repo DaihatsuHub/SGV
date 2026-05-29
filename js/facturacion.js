@@ -611,35 +611,27 @@ async function facImprimir() {
     </div>
   </div>
   <div class="cli-box">
-    <div class="cli-row cli-full">
-      <span class="cli-lbl">Razón Social:</span>
-      <span class="cli-val">${esc(cli?.CLI_RAZON||'CONSUMIDOR FINAL')}</span>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1mm 6mm">
+      <!-- IZQUIERDA -->
+      <div>
+        <div style="font-weight:700;font-size:11px">${esc(cli?.CLI_RAZON||'CONSUMIDOR FINAL')} <span style="font-weight:400;font-size:9px;color:#555">(${esc((cli?.CLI_CODIGO||f.fac_cli||'').trim())})</span></div>
+        <div style="height:2mm"></div>
+        <div style="font-size:9px;color:#333">${esc(cli?.CLI_DOMIC||'—')}</div>
+        <div style="font-size:9px;color:#333">${esc(cli?.CLI_LOCAL||'—')}</div>
+        <div style="font-size:9px;color:#333">${esc(cli?.CLI_PROVIN||'—')}</div>
+      </div>
+      <!-- DERECHA -->
+      <div style="font-size:9px">
+        <div style="height:5mm"></div>
+        <div><span style="color:#555">CUIT: </span><strong>${esc(cli?.CLI_CUIT||'—')}</strong></div>
+        <div><span style="color:#555">IVA: </span>${esc(IVA_DESC[tiva]||tiva||'Consumidor Final')}</div>
+        <div><span style="color:#555">Cond. Pago: </span>${(()=>{
+          const cpVal=cli?.CLI_CONPAG||f.fac_vcomi||'';
+          const cpObj=(TABLAS['CPAG']||[]).find(x=>x.CODIGO===cpVal);
+          return esc(cpObj?cpObj.CODIGO+' — '+cpObj.DETALLE:cpVal||'—');
+        })()}</div>
+      </div>
     </div>
-    <div class="cli-row">
-      <span class="cli-lbl">CUIT/DNI:</span>
-      <span class="cli-val">${esc(cli?.CLI_CUIT||'—')}</span>
-    </div>
-    <div class="cli-row">
-      <span class="cli-lbl">IVA:</span>
-      <span class="cli-val">${esc(IVA_DESC[tiva]||tiva||'Consumidor Final')}</span>
-    </div>
-    <div class="cli-row">
-      <span class="cli-lbl">Dirección:</span>
-      <span class="cli-val">${esc(cli?.CLI_DOMIC||'—')}</span>
-    </div>
-    <div class="cli-row">
-      <span class="cli-lbl">Ciudad/Prov:</span>
-      <span class="cli-val">${esc(cli?.CLI_LOCAL||'—')}</span>
-    </div>
-    <div class="cli-row">
-      <span class="cli-lbl">Cond. Pago:</span>
-      <span class="cli-val">${esc(cli?.CLI_CONPAG||f.fac_vcomi||'—')}</span>
-    </div>
-    <div class="cli-row">
-      <span class="cli-lbl">Transporte:</span>
-      <span class="cli-val">${esc(facTranspDesc(f.fac_transp||''))}</span>
-    </div>
-    ${f.fac_vend?`<div class="cli-row"><span class="cli-lbl">Vendedor:</span><span class="cli-val">${esc(facVendDesc(f.fac_vend))}</span></div>`:''}
   </div>
   <table class="items-table">
     <thead>
@@ -1308,8 +1300,19 @@ async function nfOnCtipChange() {
   const emp=document.getElementById('nf-empresa').value;
   const ct=CTIPS.find(c=>c.empresa===emp&&c.prefijo===prefijo&&c.tipo===tipo);
   if(!ct){if(el)el.textContent='—';return;}
+  // Fetch fresco de Supabase para ver estado actual de bloqueo
+  try {
+    const resp=await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${ct.id}&select=id,bloqueado,bloqueado_por,ultimo_nro`,{headers:{...SB_HDR}});
+    const data=await resp.json();
+    if(data&&data[0]) {
+      ct.bloqueado=data[0].bloqueado;
+      ct.bloqueado_por=data[0].bloqueado_por;
+      ct.ultimo_nro=data[0].ultimo_nro;
+    }
+  } catch(e){console.error('nfOnCtipChange fetch:',e);}
   // Verificar si está bloqueado por otro usuario
-  if(ct.bloqueado && ct.bloqueado_por && ct.bloqueado_por!==(usuarioActual?.codigo||'')) {
+  const miUsuario=usuarioActual?.codigo||'?';
+  if(ct.bloqueado && ct.bloqueado_por && ct.bloqueado_por!==miUsuario) {
     toast(`⚠️ ${ct.bloqueado_por} está facturando con este tipo. Esperá un momento.`,'err');
     document.getElementById('nf-ctip').value='';
     if(el) el.textContent='—';
@@ -1319,9 +1322,9 @@ async function nfOnCtipChange() {
   try {
     await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${ct.id}`,{
       method:'PATCH', headers:{...SB_HDR},
-      body:JSON.stringify({bloqueado:true, bloqueado_por:usuarioActual?.codigo||'?'})
+      body:JSON.stringify({bloqueado:true, bloqueado_por:miUsuario})
     });
-    ct.bloqueado=true; ct.bloqueado_por=usuarioActual?.codigo||'?';
+    ct.bloqueado=true; ct.bloqueado_por=miUsuario;
     _nfCtipBloqueadoId=ct.id;
   } catch(e){console.error('nfOnCtipChange lock:',e);}
   if(el) el.textContent=`${prefijo}-${String((ct.ultimo_nro||0)+1).padStart(6,'0')}`;
@@ -1679,6 +1682,9 @@ async function nfGuardar() {
     _nfCtipBloqueadoId=null;
     await sbLoadFacs();
     FAC_MODO=null; FAC_ITEMS_NUEVA=[];
+    // Cerrar modal y volver a la grilla
+    const ovNf=document.getElementById('ov-nf');
+    if(ovNf) ovNf.classList.remove('open');
     renderFac();
     toast(`✓ Factura ${facNro} guardada como borrador`,'scs');
     const idx=filtFacs().findIndex(f=>f.fac_nro===facNro);
