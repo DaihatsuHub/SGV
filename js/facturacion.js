@@ -1220,16 +1220,30 @@ async function nfCargarGrupo() {
     let precioBase=a.ART_PRE||0;
     const monArtGrupo=a.ART_MONEDA||'P';
     if(monFacGrupo==='P' && monArtGrupo!=='P') {
-      const monObjG=(TABLAS['MONE']||[]).find(m=>m.CODIGO===monArtGrupo);
-      const cotizG=monObjG?(monObjG.NUM||monObjG.NUMERO||monObjG.COT||1):1;
+      const cotizG=nfGetCotiz(monArtGrupo);
       precioBase=precioBase*cotizG;
     }
     const precio=nfAplicarDtos(precioBase, d1, d2, d3, d4);
+    const ivaPct=a.ART_IVA!==null&&a.ART_IVA!==undefined?Number(a.ART_IVA):21;
+    // Buscar despacho automático
+    let despNro='', despFec='', despDisp=disp, despId=null, despsArr=null;
+    try {
+      const desps=await sbGet('despachos',`dep_art=eq.${encodeURIComponent(a.ART_COD)}&order=dep_fec.desc`);
+      const despsFilt=desps.filter(d=>(d.dep_ent||0)-(d.dep_sal||0)>0);
+      despsArr=despsFilt;
+      if(despsFilt.length===1){
+        const d=despsFilt[0];
+        despNro=d.dep_desp+(d.dep_sub||'');
+        despFec=d.dep_fec||'';
+        despDisp=(d.dep_ent||0)-(d.dep_sal||0);
+        despId=d.dep_id;
+      }
+    } catch(e){ console.error('nfCargarGrupo desps:',e); }
     FAC_ITEMS_NUEVA.push({
-      ite_art:a.ART_COD, ite_desp_art:a.ART_DES||'', ite_disp:disp,
-      ite_desp_nro:'', ite_desp_fec:'', ite_can:0,
-      ite_uni:precio, ite_iva_porc:21, ite_imp:0, ite_iva_imp:0,
-      _desps:null, _desp_id:null
+      ite_art:a.ART_COD, ite_desp_art:a.ART_DES||'', ite_disp:despDisp,
+      ite_desp_nro:despNro, ite_desp_fec:despFec, ite_can:0,
+      ite_uni:precio, ite_iva_porc:ivaPct, ite_imp:0, ite_iva_imp:0,
+      _desps:despsArr, _desp_id:despId
     });
   }
   nfCerrarCargaGrupo();
@@ -1303,25 +1317,43 @@ function nfSelCliSug(cod) {
   nfSetCliente(cli);
 }
 function nfSetCliente(cli) {
-  const set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val; };
-  const setSelect = (id, val) => {
-    const el=document.getElementById(id);
-    if(!el||!val) return;
-    const v=(val||'').trim();
-    // intentar seteo directo primero
-    el.value=v;
-    // si no funcionó (valor no existe en opciones), buscar por coincidencia parcial
-    if(el.value!==v){
-      const opt=[...el.options].find(o=>o.value.trim()===v||o.value.trim().startsWith(v)||v.startsWith(o.value.trim()));
-      if(opt) el.value=opt.value;
+  const razonEl=document.getElementById('nf-razon');
+  const tivaEl=document.getElementById('nf-tiva');
+  const dtoEl=document.getElementById('nf-dto');
+  const conpagEl=document.getElementById('nf-conpag');
+  const vendEl=document.getElementById('nf-vend');
+  const transpEl=document.getElementById('nf-transp');
+  if(razonEl) razonEl.value=cli.CLI_RAZON||'';
+  if(tivaEl)  tivaEl.value=cli.CLI_IVA||'';
+  if(dtoEl)   dtoEl.value=cli.CLI_DTO||0;
+  // Cond de pago
+  if(conpagEl){
+    const cpVal=(cli.CLI_CONPAG||'').trim();
+    if(cpVal){
+      // Buscar opción exacta o que empiece igual
+      let opt=[...conpagEl.options].find(o=>o.value.trim()===cpVal);
+      if(!opt) opt=[...conpagEl.options].find(o=>o.value.trim().startsWith(cpVal)||cpVal.startsWith(o.value.trim()));
+      if(opt) conpagEl.value=opt.value;
     }
-  };
-  set('nf-razon', cli.CLI_RAZON||'');
-  set('nf-tiva',  cli.CLI_IVA||'');
-  set('nf-dto',   cli.CLI_DTO||0);
-  setSelect('nf-conpag', cli.CLI_CONPAG||'');
-  setSelect('nf-vend',   cli.CLI_VEND||'');
-  setSelect('nf-transp', cli.CLI_EXPRE||'');
+  }
+  // Vendedor
+  if(vendEl){
+    const vVal=(cli.CLI_VEND||'').trim();
+    if(vVal){
+      let opt=[...vendEl.options].find(o=>o.value.trim()===vVal);
+      if(!opt) opt=[...vendEl.options].find(o=>o.value.trim().startsWith(vVal)||vVal.startsWith(o.value.trim()));
+      if(opt) vendEl.value=opt.value;
+    }
+  }
+  // Transporte
+  if(transpEl){
+    const tVal=(cli.CLI_EXPRE||'').trim();
+    if(tVal){
+      let opt=[...transpEl.options].find(o=>o.value.trim()===tVal);
+      if(!opt) opt=[...transpEl.options].find(o=>o.value.trim().startsWith(tVal)||tVal.startsWith(o.value.trim()));
+      if(opt) transpEl.value=opt.value;
+    }
+  }
   nfCalcTotales();
   nfRenderItems();
 }
@@ -1337,6 +1369,14 @@ function nfEliminarItem(idx) {
   nfCalcTotales();
 }
 
+
+// Helper para obtener cotización de una moneda
+function nfGetCotiz(monCod) {
+  if(!monCod||monCod==='P') return 1;
+  const m=(TABLAS['MONE']||[]).find(x=>x.CODIGO===monCod);
+  if(!m) return 1;
+  return parseFloat(m.NUM||m.NUMERO||m.COT||m.STRING2||1)||1;
+}
 async function nfItemArtChange(idx,cod) {
   const codUp=cod.trim().toUpperCase();
   FAC_ITEMS_NUEVA[idx].ite_art=codUp;
@@ -1362,15 +1402,15 @@ async function nfItemArtChange(idx,cod) {
   if(monFac!==monArt) {
     if(monFac==='P' && monArt!=='P') {
       // Factura en pesos, art en otra moneda → multiplico por cotización
-      const monObj=(TABLAS['MONE']||[]).find(m=>m.CODIGO===monArt);
-      const cotiz=monObj?(monObj.NUM||monObj.NUMERO||monObj.COT||1):1;
+      const cotiz=nfGetCotiz(monArt);
       precio=precio*cotiz;
-      toast(`Precio convertido a pesos (x${cotiz})`, 'scs');
+      toast(`Precio convertido a pesos (cotiz x${cotiz})`, 'scs');
     } else {
       toast(`⚠️ Artículo en moneda ${monArt}, factura en ${monFac}`, 'err');
     }
   }
   FAC_ITEMS_NUEVA[idx].ite_uni=precio;
+  FAC_ITEMS_NUEVA[idx].ite_iva_porc=art.ART_IVA!==null&&art.ART_IVA!==undefined?Number(art.ART_IVA):21;
   try {
     const esNC=nfEsNC();
     const desps=await sbGet('despachos',`dep_art=eq.${encodeURIComponent(codUp)}&order=dep_fec.desc`);
