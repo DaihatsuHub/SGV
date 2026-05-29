@@ -620,8 +620,7 @@ async function facImprimir() {
       <div style="color:#333">${esc((typeof PCIA!=='undefined'?PCIA[cli?.CLI_PROVIN||'']||cli?.CLI_PROVIN:cli?.CLI_PROVIN)||'—')}</div>
     </div>
     <!-- DERECHA: posición absoluta fija a 110mm del borde izquierdo -->
-    <div style="position:absolute;top:0;left:110mm;font-size:9px;width:80mm">
-      <div style="height:4mm"></div>
+    <div style="position:absolute;top:8mm;left:110mm;font-size:9px;width:80mm">
       <div><span style="color:#555">CUIT: </span><strong>${esc(cli?.CLI_CUIT||'—')}</strong></div>
       <div><span style="color:#555">IVA: </span>${esc(IVA_DESC[tiva]||tiva||'Consumidor Final')}</div>
       <div><span style="color:#555">Cond. Pago: </span>${(()=>{
