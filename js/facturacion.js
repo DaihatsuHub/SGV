@@ -1338,9 +1338,11 @@ function nfOnCliCodChange() {
   if(!cod){nfLimpiarCliente();return;}
   const cli=facFindCli(cod);
   if(cli) {
-    // Actualizar el campo a mayúsculas
-    const el=document.getElementById('nf-cli-cod');
-    if(el) el.value=cod;
+    // Actualizar código y razón social en el campo de búsqueda
+    const codEl=document.getElementById('nf-cli-cod');
+    const busqEl=document.getElementById('nf-cli-busq');
+    if(codEl) codEl.value=(cli.CLI_CODIGO||'').trim();
+    if(busqEl) busqEl.value=cli.CLI_RAZON||'';
     setTimeout(()=>nfSetCliente(cli), 150);
   } else {
     nfLimpiarCliente();
@@ -1366,10 +1368,10 @@ function nfSelCliSug(cod) {
   const codEl=document.getElementById('nf-cli-cod');
   const busqEl=document.getElementById('nf-cli-busq');
   const sug=document.getElementById('nf-cli-sug');
+  // Actualizar ambos campos — código y razón social
   if(codEl) codEl.value=(cli.CLI_CODIGO||'').trim();
   if(busqEl) busqEl.value=cli.CLI_RAZON||'';
   if(sug){sug.innerHTML='';sug.style.display='none';}
-  // Esperar que el DOM esté listo antes de setear selects
   setTimeout(()=>nfSetCliente(cli), 150);
 }
 function nfSetCliente(cli) {
