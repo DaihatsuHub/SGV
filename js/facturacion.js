@@ -1350,6 +1350,10 @@ function nfOnCliBusqInput() {
   const q=(document.getElementById('nf-cli-busq')?.value||'').toLowerCase().trim();
   const sug=document.getElementById('nf-cli-sug');
   if(!sug) return;
+  // Limpiar código y datos si el usuario está escribiendo de nuevo
+  const codEl=document.getElementById('nf-cli-cod');
+  if(codEl) codEl.value='';
+  nfLimpiarCliente();
   if(!q||q.length<2){sug.innerHTML='';sug.style.display='none';return;}
   const matches=CLIS.filter(c=>(c.CLI_RAZON||'').toLowerCase().includes(q)||(c.CLI_CODIGO||'').trim().toLowerCase().includes(q)).slice(0,8);
   if(!matches.length){sug.innerHTML='';sug.style.display='none';return;}
@@ -1374,13 +1378,10 @@ function nfSelCliSug(cod) {
 }
 function nfSetCliente(cli) {
   const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
-  // Actualizar campos de display del cliente
-  s('nf-cli-cod',  (cli.CLI_CODIGO||'').trim());
-  s('nf-cli-busq', cli.CLI_RAZON||'');
-  s('nf-razon',    cli.CLI_RAZON||'');  // por si existe en renderFacForm
-  s('nf-tiva',     cli.CLI_IVA||'');
-  s('nf-dto',      cli.CLI_DTO||0);
-  // Seteo directo de selects
+  s('nf-razon', cli.CLI_RAZON||'');
+  s('nf-tiva',  cli.CLI_IVA||'');
+  s('nf-dto',   cli.CLI_DTO||0);
+  // Seteo directo de selects — el value tiene que coincidir exactamente
   s('nf-conpag', (cli.CLI_CONPAG||'').trim());
   s('nf-vend',   (cli.CLI_VEND||'').trim());
   s('nf-transp', (cli.CLI_EXPRE||'').trim());
