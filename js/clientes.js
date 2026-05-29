@@ -110,18 +110,48 @@ function cliDetail(idx){
   document.getElementById('cli-dp').classList.add('open');
 }
 
+
+function fillCliSelects() {
+  const vendEl = document.getElementById('cf-vend');
+  const exprEl = document.getElementById('cf-expre');
+  const cpagEl = document.getElementById('cf-conpag');
+  if(vendEl) {
+    const cur = vendEl.value;
+    vendEl.innerHTML = '<option value="">— Sin —</option>' +
+      (TABLAS['VEND']||[]).map(v=>`<option value="${v.CODIGO}">${v.CODIGO} — ${v.DETALLE}</option>`).join('');
+    if(cur) vendEl.value = cur;
+  }
+  if(exprEl) {
+    const cur = exprEl.value;
+    exprEl.innerHTML = '<option value="">— Sin —</option>' +
+      (TABLAS['EXPR']||[]).map(e=>`<option value="${e.CODIGO}">${e.CODIGO} — ${e.DETALLE}</option>`).join('');
+    if(cur) exprEl.value = cur;
+  }
+  if(cpagEl) {
+    const cur = cpagEl.value;
+    cpagEl.innerHTML = '<option value="">— Sin —</option>' +
+      (TABLAS['CPAG']||[]).map(p=>`<option value="${p.CODIGO}">${p.CODIGO} — ${p.DETALLE}</option>`).join('');
+    if(cur) cpagEl.value = cur;
+  }
+}
+
 function cAlta(){
   clrCliForm();document.getElementById('cf-cod').disabled=false;
   document.getElementById('cli-mtit').textContent='Nuevo Cliente';
   setMtag('cli-mtag','ALTA','tag-a');
-  document.getElementById('ov-cli').classList.add('open');window._ce='A';
+  document.getElementById('ov-cli').classList.add('open');
+  fillCliSelects();
+  window._ce='A';
 }
 function cModif(){
   if(cliSelIdx===null){toast('Seleccioná un cliente','err');return;}
-  fillCliForm(CLIS[cliSelIdx]);document.getElementById('cf-cod').disabled=true;
+  document.getElementById('cf-cod').disabled=true;
   document.getElementById('cli-mtit').textContent='Modificar: '+CLIS[cliSelIdx].CLI_CODIGO;
   setMtag('cli-mtag','MODIFICACIÓN','tag-m');
-  document.getElementById('ov-cli').classList.add('open');window._ce='M';
+  document.getElementById('ov-cli').classList.add('open');
+  fillCliSelects();
+  fillCliForm(CLIS[cliSelIdx]);
+  window._ce='M';
 }
 function cBaja(){
   if(cliSelIdx===null){toast('Seleccioná un cliente','err');return;}
@@ -149,11 +179,14 @@ function fillCliForm(c){
   document.getElementById('cf-prov').value=c.CLI_PROVIN||'';
   document.getElementById('cf-tel').value=c.CLI_TELEF||'';
   document.getElementById('cf-email').value=c.CLI_EMAIL||'';
-  document.getElementById('cf-vend').value=c.CLI_VEND||'';
-  document.getElementById('cf-expre').value=c.CLI_EXPRE||'';
+  const vendSel=document.getElementById('cf-vend');
+  if(vendSel) vendSel.value=c.CLI_VEND||'';
+  const exprSel=document.getElementById('cf-expre');
+  if(exprSel) exprSel.value=c.CLI_EXPRE||'';
   document.getElementById('cf-cuit').value=c.CLI_CUIT||'';
   document.getElementById('cf-iva').value=c.CLI_IVA||'I';
-  document.getElementById('cf-conpag').value=c.CLI_CONPAG||'';
+  const cpagSel=document.getElementById('cf-conpag');
+  if(cpagSel) cpagSel.value=c.CLI_CONPAG||'';
   document.getElementById('cf-dto').value=c.CLI_DTO||0;
   document.getElementById('cf-nroib').value=c.CLI_NROIB||'';
   document.getElementById('cf-tipoib').value=c.CLI_TIPOIB||'0';
@@ -178,11 +211,11 @@ function saveCli(){
     CLI_PROVIN:document.getElementById('cf-prov').value,
     CLI_TELEF:document.getElementById('cf-tel').value.trim(),
     CLI_EMAIL:document.getElementById('cf-email').value.trim(),
-    CLI_VEND:document.getElementById('cf-vend').value.trim().toUpperCase(),
-    CLI_EXPRE:document.getElementById('cf-expre').value.trim().toUpperCase(),
+    CLI_VEND:document.getElementById('cf-vend').value,
+    CLI_EXPRE:document.getElementById('cf-expre').value,
     CLI_CUIT:document.getElementById('cf-cuit').value.trim(),
     CLI_IVA:document.getElementById('cf-iva').value,
-    CLI_CONPAG:document.getElementById('cf-conpag').value.trim().toUpperCase(),
+    CLI_CONPAG:document.getElementById('cf-conpag').value,
     CLI_DTO:parseFloat(document.getElementById('cf-dto').value)||0,
     CLI_NROIB:document.getElementById('cf-nroib').value.trim(),
     CLI_TIPOIB:document.getElementById('cf-tipoib').value,
