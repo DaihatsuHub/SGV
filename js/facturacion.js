@@ -618,17 +618,17 @@ async function facImprimir() {
         <div style="height:2mm"></div>
         <div style="font-size:9px;color:#333">${esc(cli?.CLI_DOMIC||'—')}</div>
         <div style="font-size:9px;color:#333">${esc(cli?.CLI_LOCAL||'—')}</div>
-        <div style="font-size:9px;color:#333">${esc(cli?.CLI_PROVIN||'—')}</div>
+        <div style="font-size:9px;color:#333">${esc((typeof PCIA!=='undefined'?PCIA[cli?.CLI_PROVIN||'']||cli?.CLI_PROVIN:cli?.CLI_PROVIN)||'—')}</div>
       </div>
       <!-- DERECHA -->
-      <div style="font-size:9px">
+      <div style="font-size:9px;padding-left:20mm">
         <div style="height:5mm"></div>
         <div><span style="color:#555">CUIT: </span><strong>${esc(cli?.CLI_CUIT||'—')}</strong></div>
         <div><span style="color:#555">IVA: </span>${esc(IVA_DESC[tiva]||tiva||'Consumidor Final')}</div>
-        <div><span style="color:#555">Cond. Pago: </span>${(()=>{
+        <div style="white-space:normal"><span style="color:#555">Cond. Pago: </span>${(()=>{
           const cpVal=cli?.CLI_CONPAG||f.fac_vcomi||'';
           const cpObj=(TABLAS['CPAG']||[]).find(x=>x.CODIGO===cpVal);
-          return esc(cpObj?cpObj.CODIGO+' — '+cpObj.DETALLE:cpVal||'—');
+          return esc(cpObj?cpObj.DETALLE:cpVal||'—');
         })()}</div>
       </div>
     </div>
@@ -667,7 +667,6 @@ async function facImprimir() {
         <div class="tot-row"><span class="tot-lbl">Subtotal neto</span><span class="tot-val">${mon} ${fmt(subtotalNeto)}</span></div>
         <div class="tot-row"><span class="tot-lbl">IVA 21%</span><span class="tot-val">${mon} ${fmt(f.fac_iva)}</span></div>
       `:''}
-      <div class="tot-row"><span class="tot-lbl">Subtotal</span><span class="tot-val">${mon} ${fmt(f.fac_sub)}</span></div>
       ${(f.fac_percib||0)>0?`<div class="tot-row"><span class="tot-lbl">Perc. IIBB</span><span class="tot-val">${mon} ${fmt(f.fac_percib)}</span></div>`:''}
       <div class="tot-row"><span class="tot-lbl">TOTAL</span><span class="tot-val">${mon} ${fmt(f.fac_total)}</span></div>
     </div>
@@ -856,9 +855,9 @@ function renderFacModal(fecha, empresa, cliCod) {
         <div style="padding:8px 12px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:6px;flex-shrink:0;background:var(--s2)">
           <span style="font-size:12px;font-weight:600;color:var(--acc);font-family:var(--mono)">ÍTEMS</span>
           <div style="flex:1"></div>
-          <button class="btn" onclick="nfAbrirCargaGrupo()" style="padding:3px 10px;font-size:11px">📦 Grupo</button>
-          <button class="btn" onclick="nfResumirItems()" style="padding:3px 10px;font-size:11px;color:var(--t2)">✂ Resumir</button>
-          <button class="btn pri" onclick="nfAbrirBusqArt()" style="padding:3px 10px;font-size:11px">＋ Agregar</button>
+          <button id="nf-btn-grupo" class="btn" onclick="nfAbrirCargaGrupo()" style="padding:3px 10px;font-size:11px">📦 Grupo</button>
+          <button id="nf-btn-resumir" class="btn" onclick="nfResumirItems()" style="padding:3px 10px;font-size:11px;color:var(--t2)">✂ Resumir</button>
+          <button id="nf-btn-agregar" class="btn pri" onclick="nfAbrirBusqArt()" style="padding:3px 10px;font-size:11px">＋ Agregar</button>
         </div>
         <!-- header fijo + body con scroll -->
         <div id="nf-items-hdr" style="flex-shrink:0"></div>
@@ -1017,9 +1016,9 @@ function renderFacForm(fecha, empresa, cliCod) {
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:6px;flex-wrap:wrap">
           <span style="font-size:11px;color:var(--t3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px">Ítems</span>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn" onclick="nfAbrirCargaGrupo()" style="padding:3px 10px;font-size:12px">📦 Cargar grupo</button>
-            <button class="btn" onclick="nfResumirItems()" style="padding:3px 10px;font-size:12px;color:var(--t2)">✂ Resumir</button>
-            <button class="btn pri" onclick="nfAbrirBusqArt()" style="padding:3px 10px;font-size:12px">＋ Agregar</button>
+            <button id="nf-btn-grupo" class="btn" onclick="nfAbrirCargaGrupo()" style="padding:3px 10px;font-size:12px">📦 Cargar grupo</button>
+            <button id="nf-btn-resumir" class="btn" onclick="nfResumirItems()" style="padding:3px 10px;font-size:12px;color:var(--t2)">✂ Resumir</button>
+            <button id="nf-btn-agregar" class="btn pri" onclick="nfAbrirBusqArt()" style="padding:3px 10px;font-size:12px">＋ Agregar</button>
           </div>
         </div>
         <div style="background:var(--s2);border-radius:6px;overflow:hidden">
@@ -1107,6 +1106,7 @@ function nfLimpiarBusqCli() {
 let _nfArtPopupIdx = null;
 
 function nfAbrirBusqArt(idx) {
+  if(!nfItemsHabilitados()){toast('Completá empresa, tipo y cliente primero','err');return;}
   _nfArtPopupIdx = (idx !== undefined) ? idx : null;
   document.getElementById('nf-art-popup').style.display='block';
   document.getElementById('nf-art-overlay').style.display='block';
@@ -1173,6 +1173,7 @@ function nfSelArtPopup(cod) {
 }
 
 function nfAbrirCargaGrupo() {
+  if(!nfItemsHabilitados()){toast('Completá empresa, tipo y cliente primero','err');return;}
   document.getElementById('nf-grupo-popup').style.display='block';
   document.getElementById('nf-grupo-overlay').style.display='block';
   const esNC=nfEsNC();
@@ -1498,12 +1499,55 @@ function nfItemChange(idx,campo,valor) {
   }
 }
 
+function nfItemsHabilitados() {
+  const emp=document.getElementById('nf-empresa')?.value||'';
+  const ctip=document.getElementById('nf-ctip')?.value||'';
+  const cli=document.getElementById('nf-cli-cod')?.value||'';
+  return emp && ctip && cli;
+}
+
+function nfItemsHabilitados() {
+  const emp=document.getElementById('nf-empresa')?.value||'';
+  const ctip=document.getElementById('nf-ctip')?.value||'';
+  const cli=document.getElementById('nf-cli-cod')?.value||'';
+  return emp && ctip && cli;
+}
+
 function nfRenderItems() {
   const body=document.getElementById('nf-items-body');
   const hdr=document.getElementById('nf-items-hdr');
   if(!body||!hdr) return;
+  if(!nfItemsHabilitados()) {
+    hdr.innerHTML='';
+    body.innerHTML=`<div style="text-align:center;color:var(--t3);font-size:12px;padding:24px 16px;line-height:1.8">
+      🔒 Completá <strong>Empresa</strong>, <strong>Tipo de Comprobante</strong> y <strong>Cliente</strong><br>para habilitar la carga de ítems.
+    </div>`;
+    ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar'].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.style.display='none';
+    });
+    return;
+  }
+  ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='';
+  });
+  // Bloquear items hasta tener empresa, tipo y cliente
+  if(!nfItemsHabilitados()) {
+    hdr.innerHTML='';
+    body.innerHTML=`<div style="text-align:center;color:var(--t3);font-size:12px;padding:24px 16px;line-height:1.8">
+      🔒 Completá <strong>Empresa</strong>, <strong>Tipo de Comprobante</strong> y <strong>Cliente</strong><br>para habilitar la carga de ítems.
+    </div>`;
+    // Ocultar botones de items
+    ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar'].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.style.display='none';
+    });
+    return;
+  }
+  // Mostrar botones
+  ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='';
+  });
   const esA=nfEsFacturaA();
-  const cols=`90px 1fr 50px 100px 55px 90px 45px 90px 90px 28px`;
+  const cols=`90px 1fr 50px 100px 65px 90px 45px 90px 90px 28px`;
   hdr.innerHTML=`<div style="display:grid;grid-template-columns:${cols};gap:4px;padding:6px 8px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase">
     <span>Código</span><span>Descripción</span><span style="text-align:right">Disp</span><span>Despacho</span>
     <span style="text-align:right">Cant</span><span style="text-align:right">Precio c/IVA</span>
