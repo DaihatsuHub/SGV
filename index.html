@@ -17,12 +17,18 @@
 
 /* Modal fullscreen nueva factura */
 #ov-nf {
+  position: fixed !important;
+  top: 48px !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: transparent !important;
+  z-index: 50 !important;
+  display: none;
   padding: 0 !important;
-  align-items: flex-start !important;
-  justify-content: flex-start !important;
-  top: 48px !important;      /* debajo del topbar */
-  height: calc(100% - 48px) !important;
-  background: var(--s1) !important;
+}
+#ov-nf.open {
+  display: flex !important;
 }
 #ov-nf > div {
   width: 100% !important;
@@ -30,6 +36,7 @@
   height: 100% !important;
   border-radius: 0 !important;
   background: var(--s1);
+  border-top: 2px solid var(--acc);
 }
 </style>
 </head>
@@ -682,7 +689,7 @@
 </div>
 
 <!-- MODAL FULLSCREEN NUEVA FACTURA -->
-<div class="ov" id="ov-nf" style="padding:0;align-items:stretch;justify-content:stretch">
+<div id="ov-nf">
   <div style="width:100%;height:100%;background:var(--s1);display:flex;flex-direction:column;position:relative"></div>
 </div>
 

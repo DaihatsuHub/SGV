@@ -735,9 +735,9 @@ function renderFacModal(fecha, empresa, cliCod) {
     <div style="display:flex;height:100%;overflow:hidden">
 
       <!-- IZQUIERDA: encabezado + totales -->
-      <div style="width:380px;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;border-right:1px solid var(--b1)">
+      <div style="width:380px;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;border-right:1px solid var(--b1);background:#0f1923">
         <!-- título -->
-        <div style="padding:10px 14px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--s2)">
+        <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:rgba(0,0,0,0.3)">
           <span style="font-size:14px;font-weight:700;color:var(--acc)">📄 Nueva Factura</span>
           <button class="btn" onclick="facCancelar()" style="padding:3px 10px;font-size:12px">✕ Cancelar</button>
         </div>
@@ -745,7 +745,7 @@ function renderFacModal(fecha, empresa, cliCod) {
           <!-- Empresa / Tipo / Número -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
             <div>
-              <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Empresa *</label>
+              <label style="font-size:10px;color:rgba(255,255,255,0.5);display:block;margin-bottom:2px">Empresa *</label>
               <select class="finp" id="nf-empresa" onchange="nfOnEmpresaChange()" style="width:100%">
                 <option value="H" ${empresa==='H'?'selected':''}>H — Hatsu</option>
                 <option value="T" ${empresa==='T'?'selected':''}>T — Tressa</option>
@@ -776,8 +776,8 @@ function renderFacModal(fecha, empresa, cliCod) {
             </div>
           </div>
           <!-- Cliente -->
-          <div style="background:var(--s2);border-radius:6px;padding:8px 10px">
-            <div style="font-size:10px;color:var(--t3);font-family:var(--mono);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Cliente</div>
+          <div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:8px 10px;border:1px solid rgba(255,255,255,0.08)">
+            <div style="font-size:10px;color:rgba(255,255,255,0.5);font-family:var(--mono);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Cliente</div>
             <div style="display:grid;grid-template-columns:80px 1fr;gap:6px;margin-bottom:6px">
               <div>
                 <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Código *</label>
@@ -814,7 +814,7 @@ function renderFacModal(fecha, empresa, cliCod) {
             </div>
           </div>
           <!-- Totales -->
-          <div style="background:var(--s2);border-radius:6px;padding:10px 12px;margin-top:auto">
+          <div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:10px 12px;margin-top:auto;border:1px solid rgba(255,255,255,0.08)">
             <div id="nf-fila-neto" style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Subtotal neto</span><span id="nf-tot-neto">$ 0,00</span></div>
             <div id="nf-fila-iva"  style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>IVA</span><span id="nf-tot-iva">$ 0,00</span></div>
             <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Subtotal</span><span id="nf-tot-sub">$ 0,00</span></div>
@@ -1102,8 +1102,15 @@ function nfFiltrarPopupArt(q) {
   const empresa=document.getElementById('nf-empresa')?.value||'H';
   const esNC=nfEsNC();
   let arts=ARTS;
+  // Factura: solo con stock. NC: todos
+  if(!esNC) {
+    arts=arts.filter(a=>{
+      const disp=empresa==='T'?(a.ART_STKT||0):(a.ART_STK||0);
+      return disp>0;
+    });
+  }
   if(q && q.length>=1) {
-    arts=ARTS.filter(a=>
+    arts=arts.filter(a=>
       (a.ART_COD||'').toLowerCase().includes(q.toLowerCase())||
       (a.ART_DES||'').toLowerCase().includes(q.toLowerCase())
     );
@@ -1287,15 +1294,18 @@ function nfSetCliente(cli) {
   if(tivaEl)  tivaEl.value=cli.CLI_IVA||'';
   if(dtoEl)   dtoEl.value=cli.CLI_DTO||0;
   if(conpagEl){
-    const opt=[...conpagEl.options].find(o=>o.value===(cli.CLI_CONPAG||'').trim());
-    if(opt) conpagEl.value=opt.value;
+    const cpVal=(cli.CLI_CONPAG||'').trim();
+    const opt=[...conpagEl.options].find(o=>o.value.trim()===cpVal);
+    if(opt) conpagEl.value=opt.value; else if(cpVal) conpagEl.value='';
   }
   if(vendEl){
-    const opt=[...vendEl.options].find(o=>o.value===(cli.CLI_VEND||'').trim());
+    const vVal=(cli.CLI_VEND||'').trim();
+    const opt=[...vendEl.options].find(o=>o.value.trim()===vVal);
     if(opt) vendEl.value=opt.value;
   }
   if(transpEl){
-    const opt=[...transpEl.options].find(o=>o.value===(cli.CLI_EXPRE||cli.CLI_EXPR||'').trim());
+    const tVal=(cli.CLI_EXPRE||cli.CLI_EXPR||'').trim();
+    const opt=[...transpEl.options].find(o=>o.value.trim()===tVal);
     if(opt) transpEl.value=opt.value;
   }
   nfCalcTotales();
@@ -1387,8 +1397,8 @@ function nfItemChange(idx,campo,valor) {
   const esA=nfEsFacturaA();
   const div=1+(it.ite_iva_porc||0)/100;
   const neto=esA?it.ite_uni/div:it.ite_uni;
-  it.ite_imp=neto*(FAC_ITEMS_NUEVA[idx].ite_can||1);
-  it.ite_iva_imp=esA?(it.ite_uni-neto)*(FAC_ITEMS_NUEVA[idx].ite_can||1):0;
+  it.ite_imp=neto*(FAC_ITEMS_NUEVA[idx].ite_can||0);
+  it.ite_iva_imp=esA?(it.ite_uni-neto)*(FAC_ITEMS_NUEVA[idx].ite_can||0):0;
   nfRenderItems();
   nfCalcTotales();
 }
@@ -1398,11 +1408,11 @@ function nfRenderItems() {
   const hdr=document.getElementById('nf-items-hdr');
   if(!body||!hdr) return;
   const esA=nfEsFacturaA();
-  const cols=`90px 1fr 55px 110px 65px 100px ${esA?'75px 75px ':''} 95px 30px`;
+  const cols=`90px 1fr 55px 110px 65px 100px ${esA?'65px ':''} 90px 30px`;
   hdr.innerHTML=`<div style="display:grid;grid-template-columns:${cols};gap:4px;padding:6px 8px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase">
     <span>Código</span><span>Descripción</span><span style="text-align:right">Disp</span><span>Despacho</span>
-    <span style="text-align:right">Cant</span><span style="text-align:right">Precio c/IVA</span>
-    ${esA?'<span style="text-align:center">%IVA</span><span style="text-align:right">IVA</span>':''}
+    <span style="text-align:right">Cant</span><span style="text-align:right">Precio s/IVA</span>
+    ${esA?'<span style="text-align:center">%IVA</span>':''}
     <span style="text-align:right">Importe</span><span></span>
   </div>`;
   if(!FAC_ITEMS_NUEVA.length){
