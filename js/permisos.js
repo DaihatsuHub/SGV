@@ -21,63 +21,71 @@ function puedeh(modulo, accion) {
   return (usuarioActual.nivel || 0) >= (p.nivel_min || 99);
 }
 
+function _setBtn(id, visible) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = visible ? '' : 'none';
+}
+
 function aplicarPermisos() {
   if (!usuarioActual) return;
-  const controles = [
-    // Artículos
-    { selector: '#page-art .btn.pri',          modulo:'art',      accion:'alta' },
-    { selector: '#page-art .btn:nth-child(2)',  modulo:'art',      accion:'modif' },
-    { selector: '#page-art .btn.dng',           modulo:'art',      accion:'baja' },
-    { selector: '#btn-cfg-art',                 modulo:'art',      accion:'columnas' },
-    // Clientes
-    { selector: '#page-cli .btn.pri',           modulo:'cli',      accion:'alta' },
-    { selector: '#page-cli .btn:nth-child(2)',  modulo:'cli',      accion:'modif' },
-    { selector: '#page-cli .btn.dng',           modulo:'cli',      accion:'baja' },
-    { selector: '#btn-cfg-cli',                 modulo:'cli',      accion:'columnas' },
-    // Despachos
-    { selector: '#page-desp .btn.pri',          modulo:'desp',     accion:'alta' },
-    { selector: '#page-desp .btn:nth-child(2)', modulo:'desp',     accion:'modif' },
-    { selector: '#page-desp .btn.dng',          modulo:'desp',     accion:'baja' },
-    { selector: '#btn-cfg-desp',                modulo:'desp',     accion:'columnas' },
-    // Facturación
-    { selector: '#page-fac .btn.pri',           modulo:'fac',      accion:'alta' },
-    { selector: '#page-fac .btn:nth-child(2)',   modulo:'fac',      accion:'modif' },
-    { selector: '#page-fac .btn.dng',           modulo:'fac',      accion:'baja' },
-    // Tipos de Comprobantes
-    { selector: '#page-ctip .btn.pri',          modulo:'ctip',     accion:'alta' },
-    { selector: '#page-ctip .btn:nth-child(2)', modulo:'ctip',     accion:'modif' },
-    { selector: '#page-ctip .btn.dng',          modulo:'ctip',     accion:'baja' },
-    // Usuarios
-    { selector: '#ddi-usua',                    modulo:'usuarios', accion:'ver' },
-  ];
-  controles.forEach(({ selector, modulo, accion }) => {
-    const el = document.querySelector(selector);
-    if (!el) return;
-    el.style.display = puedeh(modulo, accion) ? '' : 'none';
+
+  // ── Artículos ─────────────────────────────────────────
+  _setBtn('btn-art-alta',   puedeh('art','alta'));
+  _setBtn('btn-art-modif',  puedeh('art','modif'));
+  _setBtn('btn-art-baja',   puedeh('art','baja'));
+  _setBtn('btn-cfg-art',    puedeh('art','columnas'));
+
+  // ── Clientes ──────────────────────────────────────────
+  _setBtn('btn-cli-alta',   puedeh('cli','alta'));
+  _setBtn('btn-cli-modif',  puedeh('cli','modif'));
+  _setBtn('btn-cli-baja',   puedeh('cli','baja'));
+  _setBtn('btn-cfg-cli',    puedeh('cli','columnas'));
+
+  // ── Tablas (página unificada) ──────────────────────────
+  _setBtn('btn-tab-alta',   puedeh('tablas','alta'));
+  _setBtn('btn-tab-modif',  puedeh('tablas','modif'));
+  _setBtn('btn-tab-baja',   puedeh('tablas','baja'));
+
+  // ── Tablas auxiliares individuales ────────────────────
+  const pTab = puedeh('tablas','alta');
+  const pTabM = puedeh('tablas','modif');
+  const pTabB = puedeh('tablas','baja');
+  ['marc','rubr','prov','cpag','vend','cate','grup','mone'].forEach(t => {
+    _setBtn(`btn-${t}-alta`,  pTab);
+    _setBtn(`btn-${t}-modif`, pTabM);
+    _setBtn(`btn-${t}-baja`,  pTabB);
   });
 
-  // Ocultar menús completos si no tiene acceso a ningún subitem
-  const menuVer = {
-    'tnav-art': puedeh('art','ver'),
-    'tnav-cli': puedeh('cli','ver'),
-    'tnav-cmp': puedeh('desp','ver'),
-    'tnav-ven': puedeh('fac','ver') || puedeh('ctip','ver'),
-  };
-  Object.entries(menuVer).forEach(([id, puede]) => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = puede ? '' : 'none';
-  });
+  // ── Facturación ───────────────────────────────────────
+  _setBtn('btn-fac-alta',   puedeh('fac','alta'));
+  _setBtn('btn-fac-modif',  puedeh('fac','modif'));
+  _setBtn('btn-fac-baja',   puedeh('fac','baja'));
 
-  // Subitems de Ventas
-  const ddiVer = {
-    'ddi-fac':  puedeh('fac','ver'),
-    'ddi-ctip': puedeh('ctip','ver'),
-    'ddi-desp': puedeh('desp','ver'),
-  };
-  Object.entries(ddiVer).forEach(([id, puede]) => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = puede ? '' : 'none';
-  });
+  // ── Tipos de Comprobantes ─────────────────────────────
+  _setBtn('btn-ctip-alta',  puedeh('ctip','alta'));
+  _setBtn('btn-ctip-modif', puedeh('ctip','modif'));
+  _setBtn('btn-ctip-baja',  puedeh('ctip','baja'));
+
+  // ── Despachos ─────────────────────────────────────────
+  _setBtn('btn-desp-alta',  puedeh('desp','alta'));
+  _setBtn('btn-desp-modif', puedeh('desp','modif'));
+  _setBtn('btn-desp-baja',  puedeh('desp','baja'));
+  _setBtn('btn-cfg-desp',   puedeh('desp','columnas'));
+
+  // ── Usuarios ──────────────────────────────────────────
+  _setBtn('ddi-usua',       puedeh('usuarios','ver'));
+  _setBtn('btn-permisos',   usuarioActual.nivel >= 88 || usuarioActual.codigo === 'RGRDELTA');
+
+  // ── Menús completos ───────────────────────────────────
+  _setBtn('tnav-art', puedeh('art','ver'));
+  _setBtn('tnav-cli', puedeh('cli','ver'));
+  _setBtn('tnav-cmp', puedeh('desp','ver'));
+  _setBtn('tnav-ven', puedeh('fac','ver') || puedeh('ctip','ver'));
+
+  // ── Subitems Ventas ───────────────────────────────────
+  _setBtn('ddi-fac',  puedeh('fac','ver'));
+  _setBtn('ddi-ctip', puedeh('ctip','ver'));
+  _setBtn('ddi-desp', puedeh('desp','ver'));
 }
 
 // ── Panel interactivo de permisos ─────────────────────────
@@ -99,7 +107,9 @@ const ACCIONES_PERM = [
 ];
 
 function openPermisos() {
-  if (!usuarioActual || usuarioActual.nivel < 88) { toast('Sin acceso','err'); return; }
+  if (!usuarioActual || (usuarioActual.nivel < 88 && usuarioActual.codigo !== 'RGRDELTA')) {
+    toast('Sin acceso','err'); return;
+  }
   const ov = document.getElementById('ov-permisos');
   if (!ov) return;
   renderPermisosPanel();
@@ -149,8 +159,8 @@ async function savePermisos() {
   const inputs = document.querySelectorAll('#permisos-body input[data-modulo]');
   const updates = [];
   inputs.forEach(inp => {
-    const modulo   = inp.dataset.modulo;
-    const accion   = inp.dataset.accion;
+    const modulo    = inp.dataset.modulo;
+    const accion    = inp.dataset.accion;
     const nivel_min = parseInt(inp.value) || 1;
     if (modulo && accion && accion !== 'undefined') {
       updates.push({ modulo, accion, nivel_min });

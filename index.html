@@ -94,9 +94,9 @@
 <!-- ══════════════════ ARTÍCULOS ══════════════════ -->
 <div class="page" id="page-art">
   <div class="toolbar">
-    <button class="btn pri" onclick="aAlta()">＋ Alta</button>
-    <button class="btn" onclick="aModif()">✏️ Modificar</button>
-    <button class="btn dng" onclick="aBaja()">✕ Baja</button>
+    <button class="btn pri" id="btn-art-alta" onclick="aAlta()">＋ Alta</button>
+    <button class="btn" id="btn-art-modif" onclick="aModif()">✏️ Modificar</button>
+    <button class="btn dng" id="btn-art-baja" onclick="aBaja()">✕ Baja</button>
     <button class="btn scs" onclick="printArt()">🖨 Imprimir</button>
     <button class="btn" id="btn-cfg-art" style="display:none" onclick="openColCfg('art')" title="Configurar columnas">⚙️ Columnas</button>
     <button class="chip" id="af-stock" onclick="togArtStock()" style="margin-left:4px">📦 Con Stock</button>
@@ -123,9 +123,9 @@
 <!-- ══════════════════ CLIENTES ══════════════════ -->
 <div class="page" id="page-cli">
   <div class="toolbar">
-    <button class="btn pri" onclick="cAlta()">＋ Alta</button>
-    <button class="btn" onclick="cModif()">✏️ Modificar</button>
-    <button class="btn dng" onclick="cBaja()">✕ Baja</button>
+    <button class="btn pri" id="btn-cli-alta" onclick="cAlta()">＋ Alta</button>
+    <button class="btn" id="btn-cli-modif" onclick="cModif()">✏️ Modificar</button>
+    <button class="btn dng" id="btn-cli-baja" onclick="cBaja()">✕ Baja</button>
     <button class="btn scs" onclick="printCli()">🖨 Imprimir</button>
     <button class="btn" id="btn-cfg-cli" style="display:none" onclick="openColCfg('cli')" title="Configurar columnas">⚙️ Columnas</button>
     <div class="spacer"></div>
@@ -171,9 +171,9 @@
     <button class="tab-btn" id="tb-cate" onclick="setTabActiva('CATE',this)">🏷️ Categorías</button>
   </div>
   <div class="toolbar" style="margin-top:14px">
-    <button class="btn pri" onclick="tAlta()">＋ Alta</button>
-    <button class="btn" onclick="tModif()">✏️ Modificar</button>
-    <button class="btn dng" onclick="tBaja()">✕ Baja</button>
+    <button class="btn pri" id="btn-tab-alta" onclick="tAlta()">＋ Alta</button>
+    <button class="btn" id="btn-tab-modif" onclick="tModif()">✏️ Modificar</button>
+    <button class="btn dng" id="btn-tab-baja" onclick="tBaja()">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
@@ -190,9 +190,9 @@
 <!-- ══════ MARCAS ══════ -->
 <div class="page" id="page-marc">
   <div class="toolbar">
-    <button class="btn pri" onclick="tabAlta('MARC')">＋ Alta</button>
-    <button class="btn" onclick="tabModif('MARC')">✏️ Modificar</button>
-    <button class="btn dng" onclick="tabBaja('MARC')">✕ Baja</button>
+    <button class="btn pri" id="btn-marc-alta" onclick="tabAlta('MARC')">＋ Alta</button>
+    <button class="btn" id="btn-marc-modif" onclick="tabModif('MARC')">✏️ Modificar</button>
+    <button class="btn dng" id="btn-marc-baja" onclick="tabBaja('MARC')">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="marc-q" placeholder="Buscar..." oninput="renderTabGral('MARC')">
@@ -208,9 +208,9 @@
 <!-- ══════ RUBROS ══════ -->
 <div class="page" id="page-rubr">
   <div class="toolbar">
-    <button class="btn pri" onclick="tabAlta('RUBR')">＋ Alta</button>
-    <button class="btn" onclick="tabModif('RUBR')">✏️ Modificar</button>
-    <button class="btn dng" onclick="tabBaja('RUBR')">✕ Baja</button>
+    <button class="btn pri" id="btn-rubr-alta" onclick="tabAlta('RUBR')">＋ Alta</button>
+    <button class="btn" id="btn-rubr-modif" onclick="tabModif('RUBR')">✏️ Modificar</button>
+    <button class="btn dng" id="btn-rubr-baja" onclick="tabBaja('RUBR')">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="rubr-q" placeholder="Buscar..." oninput="renderTabGral('RUBR')">
@@ -226,9 +226,9 @@
 <!-- ══════ PROVEEDORES ══════ -->
 <div class="page" id="page-prov">
   <div class="toolbar">
-    <button class="btn pri" onclick="tabAlta('PROV')">＋ Alta</button>
-    <button class="btn" onclick="tabModif('PROV')">✏️ Modificar</button>
-    <button class="btn dng" onclick="tabBaja('PROV')">✕ Baja</button>
+    <button class="btn pri" id="btn-prov-alta" onclick="tabAlta('PROV')">＋ Alta</button>
+    <button class="btn" id="btn-prov-modif" onclick="tabModif('PROV')">✏️ Modificar</button>
+    <button class="btn dng" id="btn-prov-baja" onclick="tabBaja('PROV')">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="prov-q" placeholder="Buscar..." oninput="renderTabGral('PROV')">
@@ -244,9 +244,9 @@
 <!-- ══════ CONDICIONES DE PAGO ══════ -->
 <div class="page" id="page-cpag">
   <div class="toolbar">
-    <button class="btn pri" onclick="tabAlta('CPAG')">＋ Alta</button>
-    <button class="btn" onclick="tabModif('CPAG')">✏️ Modificar</button>
-    <button class="btn dng" onclick="tabBaja('CPAG')">✕ Baja</button>
+    <button class="btn pri" id="btn-cpag-alta" onclick="tabAlta('CPAG')">＋ Alta</button>
+    <button class="btn" id="btn-cpag-modif" onclick="tabModif('CPAG')">✏️ Modificar</button>
+    <button class="btn dng" id="btn-cpag-baja" onclick="tabBaja('CPAG')">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="cpag-q" placeholder="Buscar..." oninput="renderTabGral('CPAG')">
@@ -262,9 +262,9 @@
 <!-- ══════ VENDEDORES ══════ -->
 <div class="page" id="page-vend">
   <div class="toolbar">
-    <button class="btn pri" onclick="tabAlta('VEND')">＋ Alta</button>
-    <button class="btn" onclick="tabModif('VEND')">✏️ Modificar</button>
-    <button class="btn dng" onclick="tabBaja('VEND')">✕ Baja</button>
+    <button class="btn pri" id="btn-vend-alta" onclick="tabAlta('VEND')">＋ Alta</button>
+    <button class="btn" id="btn-vend-modif" onclick="tabModif('VEND')">✏️ Modificar</button>
+    <button class="btn dng" id="btn-vend-baja" onclick="tabBaja('VEND')">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="vend-q" placeholder="Buscar..." oninput="renderTabGral('VEND')">
@@ -280,9 +280,9 @@
 <!-- ══════ CATEGORÍAS ══════ -->
 <div class="page" id="page-cate">
   <div class="toolbar">
-    <button class="btn pri" onclick="tabAlta('CATE')">＋ Alta</button>
-    <button class="btn" onclick="tabModif('CATE')">✏️ Modificar</button>
-    <button class="btn dng" onclick="tabBaja('CATE')">✕ Baja</button>
+    <button class="btn pri" id="btn-cate-alta" onclick="tabAlta('CATE')">＋ Alta</button>
+    <button class="btn" id="btn-cate-modif" onclick="tabModif('CATE')">✏️ Modificar</button>
+    <button class="btn dng" id="btn-cate-baja" onclick="tabBaja('CATE')">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="cate-q" placeholder="Buscar..." oninput="renderTabGral('CATE')">
@@ -298,9 +298,9 @@
 <!-- ══════ GRUPOS ══════ -->
 <div class="page" id="page-grup">
   <div class="toolbar">
-    <button class="btn pri" onclick="tabAlta('GRUP')">＋ Alta</button>
-    <button class="btn" onclick="tabModif('GRUP')">✏️ Modificar</button>
-    <button class="btn dng" onclick="tabBaja('GRUP')">✕ Baja</button>
+    <button class="btn pri" id="btn-grup-alta" onclick="tabAlta('GRUP')">＋ Alta</button>
+    <button class="btn" id="btn-grup-modif" onclick="tabModif('GRUP')">✏️ Modificar</button>
+    <button class="btn dng" id="btn-grup-baja" onclick="tabBaja('GRUP')">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="grup-q" placeholder="Buscar..." oninput="renderTabGral('GRUP')">
@@ -316,9 +316,9 @@
 <!-- ══════ FACTURACIÓN ══════ -->
 <div class="page" id="page-fac">
   <div class="toolbar">
-    <button class="btn pri" onclick="facAlta()">＋ Nueva</button>
-    <button class="btn" onclick="facModif()">✏️ Modificar</button>
-    <button class="btn dng" onclick="facBaja()">✕ Anular</button>
+    <button class="btn pri" id="btn-fac-alta" onclick="facAlta()">＋ Nueva</button>
+    <button class="btn" id="btn-fac-modif" onclick="facModif()">✏️ Modificar</button>
+    <button class="btn dng" id="btn-fac-baja" onclick="facBaja()">✕ Anular</button>
     <button class="btn scs" onclick="facImprimir()">🖨 Imprimir</button>
     <button class="btn" onclick="openTop10()" title="Top 10 productos más vendidos">🏆 Top 10</button>
     <div class="spacer"></div>
@@ -352,9 +352,9 @@
 <!-- ══════ TIPOS DE COMPROBANTES ══════ -->
 <div class="page" id="page-ctip">
   <div class="toolbar">
-    <button class="btn pri" onclick="ctipAlta()">＋ Alta</button>
-    <button class="btn" onclick="ctipModif()">✏️ Modificar</button>
-    <button class="btn dng" onclick="ctipBaja()">✕ Baja</button>
+    <button class="btn pri" id="btn-ctip-alta" onclick="ctipAlta()">＋ Alta</button>
+    <button class="btn" id="btn-ctip-modif" onclick="ctipModif()">✏️ Modificar</button>
+    <button class="btn dng" id="btn-ctip-baja" onclick="ctipBaja()">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
@@ -373,9 +373,9 @@
 <!-- ══════ MONEDAS ══════ -->
 <div class="page" id="page-mone">
   <div class="toolbar">
-    <button class="btn pri" onclick="tabAlta('MONE')">＋ Alta</button>
-    <button class="btn" onclick="tabModif('MONE')">✏️ Modificar</button>
-    <button class="btn dng" onclick="tabBaja('MONE')">✕ Baja</button>
+    <button class="btn pri" id="btn-mone-alta" onclick="tabAlta('MONE')">＋ Alta</button>
+    <button class="btn" id="btn-mone-modif" onclick="tabModif('MONE')">✏️ Modificar</button>
+    <button class="btn dng" id="btn-mone-baja" onclick="tabBaja('MONE')">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="mone-q" placeholder="Buscar..." oninput="renderTabGral('MONE')">
@@ -393,9 +393,9 @@
 <!-- ══════ DESPACHOS ══════ -->
 <div class="page" id="page-desp">
   <div class="toolbar">
-    <button class="btn pri" onclick="despAlta()">＋ Alta</button>
-    <button class="btn" onclick="despModif()">✏️ Modificar</button>
-    <button class="btn dng" onclick="despBaja()">✕ Baja</button>
+    <button class="btn pri" id="btn-desp-alta" onclick="despAlta()">＋ Alta</button>
+    <button class="btn" id="btn-desp-modif" onclick="despModif()">✏️ Modificar</button>
+    <button class="btn dng" id="btn-desp-baja" onclick="despBaja()">✕ Baja</button>
     <button class="btn" id="btn-cfg-desp" style="display:none" onclick="openColCfg('desp')" title="Configurar columnas">⚙️ Columnas</button>
     <div class="spacer"></div>
     <select class="fsel" id="desp-nro" onchange="renderDesp()"><option value="">Todos los despachos</option></select>
