@@ -16,8 +16,21 @@
 .nf-preview-nro { font-family:var(--mono); font-size:13px; color:var(--acc); background:var(--s3); padding:4px 10px; border-radius:4px; margin-top:4px; display:inline-block; }
 
 /* Modal fullscreen nueva factura */
-#ov-nf { padding: 0 !important; }
-#ov-nf > div { width: 100% !important; max-width: 100% !important; height: 100% !important; border-radius: 0 !important; }
+#ov-nf {
+  padding: 0 !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  top: 48px !important;      /* debajo del topbar */
+  height: calc(100% - 48px) !important;
+  background: var(--s1) !important;
+}
+#ov-nf > div {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  background: var(--s1);
+}
 </style>
 </head>
 <body>

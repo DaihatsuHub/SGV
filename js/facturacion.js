@@ -734,23 +734,8 @@ function renderFacModal(fecha, empresa, cliCod) {
   ov.innerHTML = `
     <div style="display:flex;height:100%;overflow:hidden">
 
-      <!-- IZQUIERDA: ítems -->
-      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--b1)">
-        <!-- toolbar ítems -->
-        <div style="padding:8px 12px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:6px;flex-shrink:0;background:var(--s2)">
-          <span style="font-size:12px;font-weight:600;color:var(--acc);font-family:var(--mono)">ÍTEMS</span>
-          <div style="flex:1"></div>
-          <button class="btn" onclick="nfAbrirCargaGrupo()" style="padding:3px 10px;font-size:11px">📦 Grupo</button>
-          <button class="btn" onclick="nfResumirItems()" style="padding:3px 10px;font-size:11px;color:var(--t2)">✂ Resumir</button>
-          <button class="btn pri" onclick="nfAbrirBusqArt()" style="padding:3px 10px;font-size:11px">＋ Agregar</button>
-        </div>
-        <!-- header + body ítems con scroll solo en body -->
-        <div id="nf-items-hdr" style="flex-shrink:0"></div>
-        <div id="nf-items-body" style="flex:1;overflow-y:auto"></div>
-      </div>
-
-      <!-- DERECHA: encabezado + totales -->
-      <div style="width:380px;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto">
+      <!-- IZQUIERDA: encabezado + totales -->
+      <div style="width:380px;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;border-right:1px solid var(--b1)">
         <!-- título -->
         <div style="padding:10px 14px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--s2)">
           <span style="font-size:14px;font-weight:700;color:var(--acc)">📄 Nueva Factura</span>
@@ -843,10 +828,23 @@ function renderFacModal(fecha, empresa, cliCod) {
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Popup buscar artículo -->
-    <div id="nf-art-popup" style="display:none;position:absolute;top:50%;left:40%;transform:translate(-50%,-50%);width:580px;max-width:90vw;background:var(--s1);border:1px solid var(--acc);border-radius:8px;z-index:1000;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+      <!-- DERECHA: ítems -->
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative">
+        <!-- toolbar ítems -->
+        <div style="padding:8px 12px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:6px;flex-shrink:0;background:var(--s2)">
+          <span style="font-size:12px;font-weight:600;color:var(--acc);font-family:var(--mono)">ÍTEMS</span>
+          <div style="flex:1"></div>
+          <button class="btn" onclick="nfAbrirCargaGrupo()" style="padding:3px 10px;font-size:11px">📦 Grupo</button>
+          <button class="btn" onclick="nfResumirItems()" style="padding:3px 10px;font-size:11px;color:var(--t2)">✂ Resumir</button>
+          <button class="btn pri" onclick="nfAbrirBusqArt()" style="padding:3px 10px;font-size:11px">＋ Agregar</button>
+        </div>
+        <!-- header fijo + body con scroll -->
+        <div id="nf-items-hdr" style="flex-shrink:0"></div>
+        <div id="nf-items-body" style="flex:1;overflow-y:auto"></div>
+
+        <!-- Popup buscar artículo — centrado en panel derecho -->
+        <div id="nf-art-popup" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:560px;max-width:90%;background:var(--s1);border:1px solid var(--acc);border-radius:8px;z-index:1000;box-shadow:0 8px 32px rgba(0,0,0,.5)">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--b1)">
         <span style="font-weight:600;color:var(--acc)">🔍 Buscar Artículo</span>
         <button onclick="nfCerrarBusqArt()" style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:18px">✕</button>
@@ -858,10 +856,10 @@ function renderFacModal(fecha, empresa, cliCod) {
         <div style="text-align:center;color:var(--t3);padding:20px;font-size:12px">Escribí para buscar artículos</div>
       </div>
     </div>
-    <div id="nf-art-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:999" onclick="nfCerrarBusqArt()"></div>
+        <div id="nf-art-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:999" onclick="nfCerrarBusqArt()"></div>
 
-    <!-- Popup cargar grupo -->
-    <div id="nf-grupo-popup" style="display:none;position:absolute;top:50%;left:40%;transform:translate(-50%,-50%);width:500px;max-width:90vw;background:var(--s1);border:1px solid var(--acc);border-radius:8px;z-index:1000;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+        <!-- Popup cargar grupo — centrado en panel derecho -->
+        <div id="nf-grupo-popup" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:500px;max-width:90%;background:var(--s1);border:1px solid var(--acc);border-radius:8px;z-index:1000;box-shadow:0 8px 32px rgba(0,0,0,.5)">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--b1)">
         <span style="font-weight:600;color:var(--acc)">📦 Cargar por Grupo</span>
         <button onclick="nfCerrarCargaGrupo()" style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:18px">✕</button>
@@ -894,7 +892,9 @@ function renderFacModal(fecha, empresa, cliCod) {
         </div>
       </div>
     </div>
-    <div id="nf-grupo-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:999" onclick="nfCerrarCargaGrupo()"></div>
+        <div id="nf-grupo-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:999" onclick="nfCerrarCargaGrupo()"></div>
+      </div><!-- /panel items -->
+    </div><!-- /flex container -->
   `;
   ov.classList.add('open');
   nfRenderItems();
@@ -1067,7 +1067,7 @@ function renderFacForm(fecha, empresa, cliCod) {
         </div>
       </div>
     </div>
-    <div id="nf-grupo-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999" onclick="nfCerrarCargaGrupo()"></div>
+
   `;
   nfRenderItems();
   nfCalcTotales();
