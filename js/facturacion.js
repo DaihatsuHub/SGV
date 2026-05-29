@@ -801,7 +801,7 @@ function renderFacModal(fecha, empresa, cliCod) {
             <div style="display:grid;grid-template-columns:80px 1fr;gap:6px;margin-bottom:6px">
               <div>
                 <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Código *</label>
-                <input class="finp" id="nf-cli-cod" maxlength="6" style="text-transform:uppercase;width:100%" placeholder="Cód." onblur="nfOnCliCodChange()" onkeydown="if(event.key==='Enter'){this.blur();}">
+                <input class="finp" id="nf-cli-cod" maxlength="6" style="text-transform:uppercase;width:100%" placeholder="Cód." oninput="nfOnCliCodInput()" onblur="nfOnCliCodChange()" onkeydown="if(event.key==='Enter'){this.blur();}">
               </div>
               <div style="position:relative">
                 <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Razón Social</label>
@@ -977,7 +977,7 @@ function renderFacForm(fecha, empresa, cliCod) {
         <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;margin-bottom:8px">
           <div>
             <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Código *</label>
-            <input class="finp" id="nf-cli-cod" maxlength="6" style="text-transform:uppercase;width:100%" placeholder="Código" onblur="nfOnCliCodChange()" onkeydown="if(event.key==='Enter'){this.blur();}">
+            <input class="finp" id="nf-cli-cod" maxlength="6" style="text-transform:uppercase;width:100%" placeholder="Código" oninput="nfOnCliCodInput()" onblur="nfOnCliCodChange()" onkeydown="if(event.key==='Enter'){this.blur();}">
           </div>
           <div style="position:relative">
             <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Buscar por Razón Social</label>
@@ -1330,6 +1330,12 @@ async function nfOnCtipChange() {
   if(el) el.textContent=`${prefijo}-${String((ct.ultimo_nro||0)+1).padStart(6,'0')}`;
   nfRenderItems();
   nfCalcTotales();
+}
+function nfOnCliCodInput() {
+  // Limpia razón social y datos mientras escribe el código
+  const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
+  s('nf-cli-busq',''); s('nf-razon',''); s('nf-tiva','');
+  s('nf-conpag',''); s('nf-vend',''); s('nf-transp','');
 }
 function nfOnCliCodChange() {
   // Se llama en onblur — busca el cliente por código completo
