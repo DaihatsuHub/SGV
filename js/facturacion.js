@@ -696,7 +696,7 @@ async function facImprimir() {
 function facAlta() {
   FAC_ITEMS_NUEVA=[];
   FAC_MODO='A';
-  renderFacForm(new Date().toISOString().substring(0,10),'H','');
+  renderFacModal(new Date().toISOString().substring(0,10),'H','');
 }
 function facModif() {
   if(facSelIdx===null){toast('Seleccioná una factura','err');return;}
@@ -708,9 +708,197 @@ function facBaja() {
 }
 function facCancelar() {
   FAC_MODO=null; FAC_ITEMS_NUEVA=[];
+  const ov=document.getElementById('ov-nf');
+  if(ov) ov.classList.remove('open');
   const f=filtFacs()[facSelIdx];
   if(f) renderFacDetalle(f);
   else document.getElementById('fac-detalle').innerHTML='<div class="fac-det-placeholder">← Seleccioná una factura</div>';
+}
+
+
+// ══════════════════════════════════════════════════════════
+// MODAL FULLSCREEN NUEVA FACTURA
+// ══════════════════════════════════════════════════════════
+function renderFacModal(fecha, empresa, cliCod) {
+  const monesOpts=(TABLAS['MONE']||[]).map(m=>`<option value="${m.CODIGO}">${m.STRING1} ${m.DETALLE}</option>`).join('')||'<option value="P">$ Pesos</option>';
+  const ctipOpts=CTIPS.filter(c=>c.empresa===empresa&&['F','C','D'].includes(c.tipo))
+    .map(c=>`<option value="${c.prefijo}|${c.tipo}">${c.prefijo} — ${TIPO_LABEL[c.tipo]||c.tipo}</option>`).join('');
+  const cpagOpts='<option value="">— Sin especificar —</option>'+(TABLAS['CPAG']||[]).map(c=>`<option value="${c.CODIGO}">${c.CODIGO} — ${c.DETALLE}</option>`).join('');
+  const exprOpts='<option value="">— Sin especificar —</option>'+(TABLAS['EXPR']||[]).map(e=>`<option value="${e.CODIGO}">${e.CODIGO} — ${e.DETALLE}</option>`).join('');
+  const vendOpts='<option value="">— Sin especificar —</option>'+(TABLAS['VEND']||[]).map(v=>`<option value="${v.CODIGO}">${v.CODIGO} — ${v.DETALLE}</option>`).join('');
+  const marcOpts='<option value="">— Todas —</option>'+(TABLAS['MARC']||[]).map(m=>`<option value="${m.CODIGO}">${m.CODIGO} — ${m.DETALLE}</option>`).join('');
+  const rubrOpts='<option value="">— Todos —</option>'+(TABLAS['RUBR']||[]).map(r=>`<option value="${r.CODIGO}">${r.CODIGO} — ${r.DETALLE}</option>`).join('');
+  const srubOpts='<option value="">— Todos —</option>'+(TABLAS['SRUB']||[]).map(s=>`<option value="${s.CODIGO}">${s.CODIGO} — ${s.DETALLE}</option>`).join('');
+
+  const ov = document.getElementById('ov-nf');
+  ov.innerHTML = `
+    <div style="display:flex;height:100%;overflow:hidden">
+
+      <!-- IZQUIERDA: ítems -->
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--b1)">
+        <!-- toolbar ítems -->
+        <div style="padding:8px 12px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:6px;flex-shrink:0;background:var(--s2)">
+          <span style="font-size:12px;font-weight:600;color:var(--acc);font-family:var(--mono)">ÍTEMS</span>
+          <div style="flex:1"></div>
+          <button class="btn" onclick="nfAbrirCargaGrupo()" style="padding:3px 10px;font-size:11px">📦 Grupo</button>
+          <button class="btn" onclick="nfResumirItems()" style="padding:3px 10px;font-size:11px;color:var(--t2)">✂ Resumir</button>
+          <button class="btn pri" onclick="nfAbrirBusqArt()" style="padding:3px 10px;font-size:11px">＋ Agregar</button>
+        </div>
+        <!-- header + body ítems con scroll solo en body -->
+        <div id="nf-items-hdr" style="flex-shrink:0"></div>
+        <div id="nf-items-body" style="flex:1;overflow-y:auto"></div>
+      </div>
+
+      <!-- DERECHA: encabezado + totales -->
+      <div style="width:380px;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto">
+        <!-- título -->
+        <div style="padding:10px 14px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--s2)">
+          <span style="font-size:14px;font-weight:700;color:var(--acc)">📄 Nueva Factura</span>
+          <button class="btn" onclick="facCancelar()" style="padding:3px 10px;font-size:12px">✕ Cancelar</button>
+        </div>
+        <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;flex:1">
+          <!-- Empresa / Tipo / Número -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div>
+              <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Empresa *</label>
+              <select class="finp" id="nf-empresa" onchange="nfOnEmpresaChange()" style="width:100%">
+                <option value="H" ${empresa==='H'?'selected':''}>H — Hatsu</option>
+                <option value="T" ${empresa==='T'?'selected':''}>T — Tressa</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Tipo *</label>
+              <select class="finp" id="nf-ctip" onchange="nfOnCtipChange()" style="width:100%">
+                <option value="">— Seleccionar —</option>
+                ${ctipOpts}
+              </select>
+            </div>
+            <div>
+              <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Número</label>
+              <span id="nf-preview-nro" style="font-family:var(--mono);font-size:12px;color:var(--acc);background:var(--s3);padding:4px 8px;border-radius:4px;display:block">—</span>
+            </div>
+            <div>
+              <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Fecha *</label>
+              <input class="finp" id="nf-fecha" type="date" value="${fecha}" style="width:100%">
+            </div>
+            <div>
+              <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Moneda</label>
+              <select class="finp" id="nf-moneda" onchange="nfCalcTotales()" style="width:100%">${monesOpts}</select>
+            </div>
+            <div>
+              <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Descuento %</label>
+              <input class="finp" id="nf-dto" type="number" min="0" max="100" step="0.1" value="0" oninput="nfCalcTotales()" style="width:100%">
+            </div>
+          </div>
+          <!-- Cliente -->
+          <div style="background:var(--s2);border-radius:6px;padding:8px 10px">
+            <div style="font-size:10px;color:var(--t3);font-family:var(--mono);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Cliente</div>
+            <div style="display:grid;grid-template-columns:80px 1fr;gap:6px;margin-bottom:6px">
+              <div>
+                <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Código *</label>
+                <input class="finp" id="nf-cli-cod" maxlength="6" style="text-transform:uppercase;width:100%" placeholder="Cód." oninput="nfOnCliCodChange()">
+              </div>
+              <div style="position:relative">
+                <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Razón Social</label>
+                <div style="position:relative;display:flex;align-items:center">
+                  <input class="finp" id="nf-cli-busq" placeholder="Buscar..." style="width:100%;padding-right:22px"
+                    oninput="nfOnCliBusqInput()"
+                    onblur="setTimeout(()=>{const s=document.getElementById('nf-cli-sug');if(s)s.style.display='none'},200)">
+                  <button onclick="nfLimpiarBusqCli()" style="position:absolute;right:4px;background:none;border:none;color:var(--t3);cursor:pointer;font-size:12px;padding:0">✕</button>
+                </div>
+                <div id="nf-cli-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--s1);border:1px solid var(--acc);border-radius:0 0 6px 6px;z-index:200;max-height:160px;overflow-y:auto"></div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <div>
+                <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">IVA</label>
+                <input class="finp" id="nf-tiva" readonly style="color:var(--t2);background:var(--s3);width:100%" placeholder="—">
+              </div>
+              <div>
+                <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Cond. Pago</label>
+                <select class="finp" id="nf-conpag" style="width:100%">${cpagOpts}</select>
+              </div>
+              <div>
+                <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Transporte</label>
+                <select class="finp" id="nf-transp" style="width:100%">${exprOpts}</select>
+              </div>
+              <div>
+                <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Vendedor</label>
+                <select class="finp" id="nf-vend" style="width:100%">${vendOpts}</select>
+              </div>
+            </div>
+          </div>
+          <!-- Totales -->
+          <div style="background:var(--s2);border-radius:6px;padding:10px 12px;margin-top:auto">
+            <div id="nf-fila-neto" style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Subtotal neto</span><span id="nf-tot-neto">$ 0,00</span></div>
+            <div id="nf-fila-iva"  style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>IVA</span><span id="nf-tot-iva">$ 0,00</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Subtotal</span><span id="nf-tot-sub">$ 0,00</span></div>
+            <div id="nf-fila-dto" style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Descuento</span><span id="nf-tot-dto">—</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:var(--txt);padding:6px 0 2px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL</span><span id="nf-tot-total">$ 0,00</span></div>
+          </div>
+          <!-- Botones -->
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <button class="btn pri" onclick="nfGuardar()" style="padding:10px;font-size:13px;width:100%">💾 Guardar borrador</button>
+            <button class="btn" onclick="facCancelar()" style="padding:8px;font-size:12px;width:100%">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Popup buscar artículo -->
+    <div id="nf-art-popup" style="display:none;position:absolute;top:50%;left:40%;transform:translate(-50%,-50%);width:580px;max-width:90vw;background:var(--s1);border:1px solid var(--acc);border-radius:8px;z-index:1000;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--b1)">
+        <span style="font-weight:600;color:var(--acc)">🔍 Buscar Artículo</span>
+        <button onclick="nfCerrarBusqArt()" style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:18px">✕</button>
+      </div>
+      <div style="padding:10px 16px;border-bottom:1px solid var(--b1)">
+        <input class="finp" id="nf-art-q" placeholder="Código o descripción..." style="width:100%" oninput="nfFiltrarPopupArt(this.value)" autofocus>
+      </div>
+      <div id="nf-art-lista" style="max-height:320px;overflow-y:auto">
+        <div style="text-align:center;color:var(--t3);padding:20px;font-size:12px">Escribí para buscar artículos</div>
+      </div>
+    </div>
+    <div id="nf-art-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:999" onclick="nfCerrarBusqArt()"></div>
+
+    <!-- Popup cargar grupo -->
+    <div id="nf-grupo-popup" style="display:none;position:absolute;top:50%;left:40%;transform:translate(-50%,-50%);width:500px;max-width:90vw;background:var(--s1);border:1px solid var(--acc);border-radius:8px;z-index:1000;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--b1)">
+        <span style="font-weight:600;color:var(--acc)">📦 Cargar por Grupo</span>
+        <button onclick="nfCerrarCargaGrupo()" style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:18px">✕</button>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Marca</label><select class="finp" id="ng-marc" style="width:100%">${marcOpts}</select></div>
+          <div><label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Rubro</label><select class="finp" id="ng-rubr" style="width:100%">${rubrOpts}</select></div>
+          <div><label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Sub-Rubro</label><select class="finp" id="ng-srub" style="width:100%">${srubOpts}</select></div>
+          <div><label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Solo con stock</label>
+            <select class="finp" id="ng-stock" style="width:100%">
+              <option value="1">Sí (solo con stock)</option>
+              <option value="0">No (todos)</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Descuentos encadenados</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
+            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 1 %</label><input class="finp" id="ng-dto1" type="number" min="0" max="100" value="0" style="width:100%"></div>
+            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 2 %</label><input class="finp" id="ng-dto2" type="number" min="0" max="100" value="0" style="width:100%"></div>
+            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 3 %</label><input class="finp" id="ng-dto3" type="number" min="0" max="100" value="0" style="width:100%"></div>
+            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 4 %</label><input class="finp" id="ng-dto4" type="number" min="0" max="100" value="0" style="width:100%"></div>
+          </div>
+        </div>
+        <div id="ng-preview" style="font-size:11px;color:var(--t3);min-height:16px"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn" onclick="nfCerrarCargaGrupo()">Cancelar</button>
+          <button class="btn pri" onclick="nfCargarGrupo()">📦 Cargar artículos</button>
+        </div>
+      </div>
+    </div>
+    <div id="nf-grupo-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.4);z-index:999" onclick="nfCerrarCargaGrupo()"></div>
+  `;
+  ov.classList.add('open');
+  nfRenderItems();
+  nfCalcTotales();
 }
 
 function renderFacForm(fecha, empresa, cliCod) {
@@ -809,7 +997,7 @@ function renderFacForm(fecha, empresa, cliCod) {
           <span style="font-size:11px;color:var(--t3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px">Ítems</span>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn" onclick="nfAbrirCargaGrupo()" style="padding:3px 10px;font-size:12px">📦 Cargar grupo</button>
-            <button class="btn" onclick="nfEliminarSinStock()" style="padding:3px 10px;font-size:12px;color:var(--red)">🗑 Sin stock</button>
+            <button class="btn" onclick="nfResumirItems()" style="padding:3px 10px;font-size:12px;color:var(--t2)">✂ Resumir</button>
             <button class="btn pri" onclick="nfAbrirBusqArt()" style="padding:3px 10px;font-size:12px">＋ Agregar</button>
           </div>
         </div>
@@ -985,6 +1173,7 @@ async function nfCargarGrupo() {
   const d3    = parseFloat(document.getElementById('ng-dto3')?.value||0)||0;
   const d4    = parseFloat(document.getElementById('ng-dto4')?.value||0)||0;
   const empresa = document.getElementById('nf-empresa')?.value||'H';
+  const monFacGrupo=document.getElementById('nf-moneda')?.value||'P';
   let arts=ARTS.filter(a=>{
     if(marc && (a.ART_MARCA||'')!==marc) return false;
     if(rubr && (a.ART_RUB||'')!==rubr)   return false;
@@ -993,6 +1182,8 @@ async function nfCargarGrupo() {
       const disp=empresa==='T'?(a.ART_STKT||0):(a.ART_STK||0);
       if(disp<=0) return false;
     }
+    // Si factura no es pesos, solo artículos de la misma moneda
+    if(monFacGrupo!=='P' && (a.ART_MONEDA||'P')!==monFacGrupo) return false;
     return true;
   });
   if(!arts.length){toast('No hay artículos con ese filtro','err');return;}
@@ -1000,7 +1191,14 @@ async function nfCargarGrupo() {
     const yaExiste=FAC_ITEMS_NUEVA.find(it=>it.ite_art===a.ART_COD);
     if(yaExiste) continue;
     const disp=empresa==='T'?(a.ART_STKT||0):(a.ART_STK||0);
-    const precio=nfAplicarDtos(a.ART_PRE||0, d1, d2, d3, d4);
+    let precioBase=a.ART_PRE||0;
+    const monArtGrupo=a.ART_MONEDA||'P';
+    if(monFacGrupo==='P' && monArtGrupo!=='P') {
+      const monObjG=(TABLAS['MONE']||[]).find(m=>m.CODIGO===monArtGrupo);
+      const cotizG=monObjG?(monObjG.NUM||monObjG.NUMERO||monObjG.COT||1):1;
+      precioBase=precioBase*cotizG;
+    }
+    const precio=nfAplicarDtos(precioBase, d1, d2, d3, d4);
     FAC_ITEMS_NUEVA.push({
       ite_art:a.ART_COD, ite_desp_art:a.ART_DES||'', ite_disp:disp,
       ite_desp_nro:'', ite_desp_fec:'', ite_can:0,
@@ -1014,20 +1212,13 @@ async function nfCargarGrupo() {
   toast(`${arts.length} artículos cargados`,'scs');
 }
 
-function nfEliminarSinStock() {
-  const empresa=document.getElementById('nf-empresa')?.value||'H';
+function nfResumirItems() {
   const antes=FAC_ITEMS_NUEVA.length;
-  FAC_ITEMS_NUEVA=FAC_ITEMS_NUEVA.filter(it=>{
-    if(!it.ite_art) return false;
-    const art=ARTS.find(a=>(a.ART_COD||'').trim()===it.ite_art);
-    if(!art) return false;
-    const disp=empresa==='T'?(art.ART_STKT||0):(art.ART_STK||0);
-    return disp>0;
-  });
+  FAC_ITEMS_NUEVA=FAC_ITEMS_NUEVA.filter(it=>(it.ite_can||0)>0 && (it.ite_imp||0)>0);
   const eliminados=antes-FAC_ITEMS_NUEVA.length;
   nfRenderItems();
   nfCalcTotales();
-  toast(`${eliminados} ítems sin stock eliminados`,'scs');
+  toast(`${eliminados} ítems con importe/cantidad 0 eliminados`,'scs');
 }
 
 function nfOnEmpresaChange() {
@@ -1090,12 +1281,22 @@ function nfSetCliente(cli) {
   const tivaEl=document.getElementById('nf-tiva');
   const dtoEl=document.getElementById('nf-dto');
   const conpagEl=document.getElementById('nf-conpag');
+  const vendEl=document.getElementById('nf-vend');
+  const transpEl=document.getElementById('nf-transp');
   if(razonEl) razonEl.value=cli.CLI_RAZON||'';
   if(tivaEl)  tivaEl.value=cli.CLI_IVA||'';
   if(dtoEl)   dtoEl.value=cli.CLI_DTO||0;
   if(conpagEl){
     const opt=[...conpagEl.options].find(o=>o.value===(cli.CLI_CONPAG||'').trim());
     if(opt) conpagEl.value=opt.value;
+  }
+  if(vendEl){
+    const opt=[...vendEl.options].find(o=>o.value===(cli.CLI_VEND||'').trim());
+    if(opt) vendEl.value=opt.value;
+  }
+  if(transpEl){
+    const opt=[...transpEl.options].find(o=>o.value===(cli.CLI_EXPRE||cli.CLI_EXPR||'').trim());
+    if(opt) transpEl.value=opt.value;
   }
   nfCalcTotales();
   nfRenderItems();
@@ -1128,9 +1329,24 @@ async function nfItemArtChange(idx,cod) {
     return;
   }
   const empresa=document.getElementById('nf-empresa')?.value||'H';
+  const monFac=document.getElementById('nf-moneda')?.value||'P';
+  const monArt=art.ART_MONEDA||'P';
   FAC_ITEMS_NUEVA[idx].ite_desp_art=art.ART_DES||'';
   FAC_ITEMS_NUEVA[idx].ite_disp=empresa==='T'?(art.ART_STKT||0):(art.ART_STK||0);
-  FAC_ITEMS_NUEVA[idx].ite_uni=art.ART_PRE||0;
+  // Convertir precio según moneda
+  let precio=art.ART_PRE||0;
+  if(monFac!==monArt) {
+    if(monFac==='P' && monArt!=='P') {
+      // Factura en pesos, art en otra moneda → multiplico por cotización
+      const monObj=(TABLAS['MONE']||[]).find(m=>m.CODIGO===monArt);
+      const cotiz=monObj?(monObj.NUM||monObj.NUMERO||monObj.COT||1):1;
+      precio=precio*cotiz;
+      toast(`Precio convertido a pesos (x${cotiz})`, 'scs');
+    } else {
+      toast(`⚠️ Artículo en moneda ${monArt}, factura en ${monFac}`, 'err');
+    }
+  }
+  FAC_ITEMS_NUEVA[idx].ite_uni=precio;
   try {
     const esNC=nfEsNC();
     const desps=await sbGet('despachos',`dep_art=eq.${encodeURIComponent(codUp)}&order=dep_fec.desc`);
@@ -1313,7 +1529,8 @@ async function nfGuardar() {
   };
   try {
     await sbUpsert('facturas',facData);
-    for(const it of FAC_ITEMS_NUEVA){
+    const itemsAGrabar=FAC_ITEMS_NUEVA.filter(it=>(it.ite_can||0)>0&&(it.ite_imp||0)>0);
+    for(const it of itemsAGrabar){
       const div=1+(it.ite_iva_porc||0)/100;
       const neto=esA?it.ite_uni/div:it.ite_uni;
       await sbUpsert('fac_items',{

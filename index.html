@@ -14,6 +14,10 @@
 .nf-tot-row    { display:flex; justify-content:space-between; align-items:center; padding:4px 0; font-size:13px; color:var(--t2); }
 .nf-tot-row.total { border-top:1px solid var(--b1); margin-top:4px; padding-top:8px; font-size:15px; font-weight:700; color:var(--txt); }
 .nf-preview-nro { font-family:var(--mono); font-size:13px; color:var(--acc); background:var(--s3); padding:4px 10px; border-radius:4px; margin-top:4px; display:inline-block; }
+
+/* Modal fullscreen nueva factura */
+#ov-nf { padding: 0 !important; }
+#ov-nf > div { width: 100% !important; max-width: 100% !important; height: 100% !important; border-radius: 0 !important; }
 </style>
 </head>
 <body>
@@ -662,6 +666,11 @@
       <button class="btn pri" onclick="saveUsua()">💾 Guardar</button>
     </div>
   </div>
+</div>
+
+<!-- MODAL FULLSCREEN NUEVA FACTURA -->
+<div class="ov" id="ov-nf" style="padding:0;align-items:stretch;justify-content:stretch">
+  <div style="width:100%;height:100%;background:var(--s1);display:flex;flex-direction:column;position:relative"></div>
 </div>
 
 <!-- CONFIRM -->
