@@ -610,27 +610,25 @@ async function facImprimir() {
       <div class="comp-dato">INICIO ACTIVIDADES: ${esc(ed.inicio)}</div>
     </div>
   </div>
-  <div class="cli-box">
-    <div style="display:flex;gap:0">
-      <!-- IZQUIERDA: 55% -->
-      <div style="flex:0 0 55%">
-        <div style="font-weight:700;font-size:11px">${esc(cli?.CLI_RAZON||'CONSUMIDOR FINAL')} <span style="font-weight:400;font-size:9px;color:#555">(${esc((cli?.CLI_CODIGO||f.fac_cli||'').trim())})</span></div>
-        <div style="height:2mm"></div>
-        <div style="font-size:9px;color:#333">${esc(cli?.CLI_DOMIC||'—')}</div>
-        <div style="font-size:9px;color:#333">${esc(cli?.CLI_LOCAL||'—')}</div>
-        <div style="font-size:9px;color:#333">${esc((typeof PCIA!=='undefined'?PCIA[cli?.CLI_PROVIN||'']||cli?.CLI_PROVIN:cli?.CLI_PROVIN)||'—')}</div>
-      </div>
-      <!-- DERECHA: 45%, arrancando 5cm desde el centro -->
-      <div style="flex:0 0 45%;padding-left:15mm;font-size:9px;box-sizing:border-box">
-        <div style="height:4mm"></div>
-        <div><span style="color:#555">CUIT: </span><strong>${esc(cli?.CLI_CUIT||'—')}</strong></div>
-        <div><span style="color:#555">IVA: </span>${esc(IVA_DESC[tiva]||tiva||'Consumidor Final')}</div>
-        <div><span style="color:#555">Cond. Pago: </span>${(()=>{
-          const cpVal=cli?.CLI_CONPAG||f.fac_vcomi||'';
-          const cpObj=(TABLAS['CPAG']||[]).find(x=>x.CODIGO===cpVal);
-          return esc(cpObj?cpObj.DETALLE:cpVal||'—');
-        })()}</div>
-      </div>
+  <div class="cli-box" style="position:relative;min-height:22mm">
+    <!-- IZQUIERDA: fluye normal, max 55% del ancho -->
+    <div style="max-width:55%;font-size:9px">
+      <div style="font-weight:700;font-size:11px">${esc(cli?.CLI_RAZON||'CONSUMIDOR FINAL')} <span style="font-weight:400;font-size:9px;color:#555">(${esc((cli?.CLI_CODIGO||f.fac_cli||'').trim())})</span></div>
+      <div style="height:2mm"></div>
+      <div style="color:#333">${esc(cli?.CLI_DOMIC||'—')}</div>
+      <div style="color:#333">${esc(cli?.CLI_LOCAL||'—')}</div>
+      <div style="color:#333">${esc((typeof PCIA!=='undefined'?PCIA[cli?.CLI_PROVIN||'']||cli?.CLI_PROVIN:cli?.CLI_PROVIN)||'—')}</div>
+    </div>
+    <!-- DERECHA: posición absoluta fija a 110mm del borde izquierdo -->
+    <div style="position:absolute;top:0;left:110mm;font-size:9px;width:80mm">
+      <div style="height:4mm"></div>
+      <div><span style="color:#555">CUIT: </span><strong>${esc(cli?.CLI_CUIT||'—')}</strong></div>
+      <div><span style="color:#555">IVA: </span>${esc(IVA_DESC[tiva]||tiva||'Consumidor Final')}</div>
+      <div><span style="color:#555">Cond. Pago: </span>${(()=>{
+        const cpVal=cli?.CLI_CONPAG||f.fac_vcomi||'';
+        const cpObj=(TABLAS['CPAG']||[]).find(x=>x.CODIGO===cpVal);
+        return esc(cpObj?cpObj.DETALLE:cpVal||'—');
+      })()}</div>
     </div>
   </div>
   <table class="items-table">
