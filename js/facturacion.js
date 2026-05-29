@@ -611,18 +611,18 @@ async function facImprimir() {
     </div>
   </div>
   <div class="cli-box">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1mm 6mm">
-      <!-- IZQUIERDA -->
-      <div>
+    <div style="display:flex;gap:0">
+      <!-- IZQUIERDA: 55% -->
+      <div style="flex:0 0 55%">
         <div style="font-weight:700;font-size:11px">${esc(cli?.CLI_RAZON||'CONSUMIDOR FINAL')} <span style="font-weight:400;font-size:9px;color:#555">(${esc((cli?.CLI_CODIGO||f.fac_cli||'').trim())})</span></div>
         <div style="height:2mm"></div>
         <div style="font-size:9px;color:#333">${esc(cli?.CLI_DOMIC||'—')}</div>
         <div style="font-size:9px;color:#333">${esc(cli?.CLI_LOCAL||'—')}</div>
         <div style="font-size:9px;color:#333">${esc((typeof PCIA!=='undefined'?PCIA[cli?.CLI_PROVIN||'']||cli?.CLI_PROVIN:cli?.CLI_PROVIN)||'—')}</div>
       </div>
-      <!-- DERECHA -->
-      <div style="font-size:9px;padding-left:8mm">
-        <div style="height:5mm"></div>
+      <!-- DERECHA: 45%, arrancando 5cm desde el centro -->
+      <div style="flex:0 0 45%;padding-left:15mm;font-size:9px;box-sizing:border-box">
+        <div style="height:4mm"></div>
         <div><span style="color:#555">CUIT: </span><strong>${esc(cli?.CLI_CUIT||'—')}</strong></div>
         <div><span style="color:#555">IVA: </span>${esc(IVA_DESC[tiva]||tiva||'Consumidor Final')}</div>
         <div><span style="color:#555">Cond. Pago: </span>${(()=>{
