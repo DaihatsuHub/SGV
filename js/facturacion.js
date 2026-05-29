@@ -801,7 +801,7 @@ function renderFacModal(fecha, empresa, cliCod) {
             <div style="display:grid;grid-template-columns:80px 1fr;gap:6px;margin-bottom:6px">
               <div>
                 <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Código *</label>
-                <input class="finp" id="nf-cli-cod" maxlength="6" style="text-transform:uppercase;width:100%" placeholder="Cód." oninput="nfOnCliCodChange()" onblur="nfOnCliCodChange()">
+                <input class="finp" id="nf-cli-cod" maxlength="6" style="text-transform:uppercase;width:100%" placeholder="Cód." onblur="nfOnCliCodChange()" onkeydown="if(event.key==='Enter'){this.blur();}">
               </div>
               <div style="position:relative">
                 <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Razón Social</label>
@@ -977,7 +977,7 @@ function renderFacForm(fecha, empresa, cliCod) {
         <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;margin-bottom:8px">
           <div>
             <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Código *</label>
-            <input class="finp" id="nf-cli-cod" maxlength="6" style="text-transform:uppercase;width:100%" placeholder="Código" oninput="nfOnCliCodChange()" onblur="nfOnCliCodChange()">
+            <input class="finp" id="nf-cli-cod" maxlength="6" style="text-transform:uppercase;width:100%" placeholder="Código" onblur="nfOnCliCodChange()" onkeydown="if(event.key==='Enter'){this.blur();}">
           </div>
           <div style="position:relative">
             <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Buscar por Razón Social</label>
@@ -1332,27 +1332,24 @@ async function nfOnCtipChange() {
   nfCalcTotales();
 }
 function nfOnCliCodChange() {
+  // Se llama en onblur — busca el cliente por código completo
   const cod=(document.getElementById('nf-cli-cod')?.value||'').trim().toUpperCase();
   const sug=document.getElementById('nf-cli-sug');
   if(sug){sug.innerHTML='';sug.style.display='none';}
   if(!cod){nfLimpiarCliente();return;}
   const cli=facFindCli(cod);
   if(cli) {
-    // Actualizar el campo a mayúsculas
-    const el=document.getElementById('nf-cli-cod');
-    if(el) el.value=cod;
-    setTimeout(()=>nfSetCliente(cli), 150);
+    nfSetCliente(cli);
   } else {
+    toast(`Cliente ${cod} no encontrado`,'err');
     nfLimpiarCliente();
   }
 }
 function nfOnCliBusqInput() {
+  // Solo muestra sugerencias, no toca datos del cliente
   const q=(document.getElementById('nf-cli-busq')?.value||'').toLowerCase().trim();
   const sug=document.getElementById('nf-cli-sug');
   if(!sug) return;
-  // Solo limpiar el código mientras escribe — los datos se actualizan al seleccionar
-  const codEl=document.getElementById('nf-cli-cod');
-  if(codEl) codEl.value='';
   if(!q||q.length<2){sug.innerHTML='';sug.style.display='none';return;}
   const matches=CLIS.filter(c=>(c.CLI_RAZON||'').toLowerCase().includes(q)||(c.CLI_CODIGO||'').trim().toLowerCase().includes(q)).slice(0,8);
   if(!matches.length){sug.innerHTML='';sug.style.display='none';return;}
@@ -1364,32 +1361,32 @@ function nfOnCliBusqInput() {
   </div>`).join('');
 }
 function nfSelCliSug(cod) {
+  // Se llama al hacer click en una sugerencia
   const cli=facFindCli(cod);
   if(!cli) return;
-  const codEl=document.getElementById('nf-cli-cod');
-  const busqEl=document.getElementById('nf-cli-busq');
   const sug=document.getElementById('nf-cli-sug');
-  if(codEl) codEl.value=(cli.CLI_CODIGO||'').trim();
-  if(busqEl) busqEl.value=cli.CLI_RAZON||'';
   if(sug){sug.innerHTML='';sug.style.display='none';}
-  // Esperar que el DOM esté listo antes de setear selects
-  setTimeout(()=>nfSetCliente(cli), 150);
+  nfSetCliente(cli);
 }
 function nfSetCliente(cli) {
+  // Setea todos los campos del cliente de una vez
   const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
-  s('nf-razon', cli.CLI_RAZON||'');
-  s('nf-tiva',  cli.CLI_IVA||'');
-  s('nf-dto',   cli.CLI_DTO||0);
-  // Seteo directo de selects — el value tiene que coincidir exactamente
-  s('nf-conpag', (cli.CLI_CONPAG||'').trim());
-  s('nf-vend',   (cli.CLI_VEND||'').trim());
-  s('nf-transp', (cli.CLI_EXPRE||'').trim());
+  s('nf-cli-cod',  (cli.CLI_CODIGO||'').trim());
+  s('nf-cli-busq', cli.CLI_RAZON||'');
+  s('nf-razon',    cli.CLI_RAZON||'');
+  s('nf-tiva',     cli.CLI_IVA||'');
+  s('nf-dto',      cli.CLI_DTO||0);
+  s('nf-conpag',   (cli.CLI_CONPAG||'').trim());
+  s('nf-vend',     (cli.CLI_VEND||'').trim());
+  s('nf-transp',   (cli.CLI_EXPRE||'').trim());
   nfCalcTotales();
   nfRenderItems();
 }
 function nfLimpiarCliente() {
-  ['nf-razon','nf-tiva'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  const dto=document.getElementById('nf-dto');if(dto)dto.value='0';
+  const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
+  s('nf-cli-cod',''); s('nf-cli-busq',''); s('nf-razon','');
+  s('nf-tiva',''); s('nf-dto',0);
+  s('nf-conpag',''); s('nf-vend',''); s('nf-transp','');
 }
 
 function nfAgregarItem() { nfAbrirBusqArt(); }
