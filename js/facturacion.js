@@ -1303,43 +1303,25 @@ function nfSelCliSug(cod) {
   nfSetCliente(cli);
 }
 function nfSetCliente(cli) {
-  const razonEl=document.getElementById('nf-razon');
-  const tivaEl=document.getElementById('nf-tiva');
-  const dtoEl=document.getElementById('nf-dto');
-  const conpagEl=document.getElementById('nf-conpag');
-  const vendEl=document.getElementById('nf-vend');
-  const transpEl=document.getElementById('nf-transp');
-  if(razonEl) razonEl.value=cli.CLI_RAZON||'';
-  if(tivaEl)  tivaEl.value=cli.CLI_IVA||'';
-  if(dtoEl)   dtoEl.value=cli.CLI_DTO||0;
-  // Cond de pago
-  if(conpagEl){
-    const cpVal=(cli.CLI_CONPAG||'').trim();
-    if(cpVal){
-      // Buscar opción exacta o que empiece igual
-      let opt=[...conpagEl.options].find(o=>o.value.trim()===cpVal);
-      if(!opt) opt=[...conpagEl.options].find(o=>o.value.trim().startsWith(cpVal)||cpVal.startsWith(o.value.trim()));
-      if(opt) conpagEl.value=opt.value;
+  const set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val; };
+  const setSelect = (id, val) => {
+    const el=document.getElementById(id);
+    if(!el||!val) return;
+    const v=(val||'').trim();
+    // intentar seteo directo primero
+    el.value=v;
+    // si no funcionó (valor no existe en opciones), buscar por coincidencia parcial
+    if(el.value!==v){
+      const opt=[...el.options].find(o=>o.value.trim()===v||o.value.trim().startsWith(v)||v.startsWith(o.value.trim()));
+      if(opt) el.value=opt.value;
     }
-  }
-  // Vendedor
-  if(vendEl){
-    const vVal=(cli.CLI_VEND||'').trim();
-    if(vVal){
-      let opt=[...vendEl.options].find(o=>o.value.trim()===vVal);
-      if(!opt) opt=[...vendEl.options].find(o=>o.value.trim().startsWith(vVal)||vVal.startsWith(o.value.trim()));
-      if(opt) vendEl.value=opt.value;
-    }
-  }
-  // Transporte
-  if(transpEl){
-    const tVal=(cli.CLI_EXPRE||'').trim();
-    if(tVal){
-      let opt=[...transpEl.options].find(o=>o.value.trim()===tVal);
-      if(!opt) opt=[...transpEl.options].find(o=>o.value.trim().startsWith(tVal)||tVal.startsWith(o.value.trim()));
-      if(opt) transpEl.value=opt.value;
-    }
-  }
+  };
+  set('nf-razon', cli.CLI_RAZON||'');
+  set('nf-tiva',  cli.CLI_IVA||'');
+  set('nf-dto',   cli.CLI_DTO||0);
+  setSelect('nf-conpag', cli.CLI_CONPAG||'');
+  setSelect('nf-vend',   cli.CLI_VEND||'');
+  setSelect('nf-transp', cli.CLI_EXPRE||'');
   nfCalcTotales();
   nfRenderItems();
 }
