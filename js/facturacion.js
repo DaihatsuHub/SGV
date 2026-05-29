@@ -1303,7 +1303,7 @@ async function nfOnCtipChange() {
   if(!ct){if(el)el.textContent='—';return;}
   // Fetch fresco de Supabase para ver estado actual de bloqueo
   try {
-    const resp=await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${ct.id}&select=id,bloqueado,bloqueado_por,ultimo_nro`,{headers:{...SB_HDR}});
+    const resp=await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${ct.id}&select=id,bloqueado,bloqueado_por,ultimo_nro`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'}});
     const data=await resp.json();
     if(data&&data[0]) {
       ct.bloqueado=data[0].bloqueado;
