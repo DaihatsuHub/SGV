@@ -537,7 +537,8 @@ async function facImprimir() {
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:Arial,sans-serif;font-size:11px;color:#000;background:#fff}
-  .page{width:210mm;min-height:297mm;margin:0 auto;padding:10mm 12mm}
+  .page{width:210mm;min-height:297mm;margin:0 auto;padding:10mm 10mm}
+  @page{margin:10mm 10mm}
   .header{display:grid;grid-template-columns:1fr 40mm 1fr;gap:0;margin-bottom:4mm;border:1px solid #000}
   .h-left,.h-right{padding:3mm}
   .h-center{border-left:1px solid #000;border-right:1px solid #000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2mm}
@@ -569,7 +570,7 @@ async function facImprimir() {
   .cae-dato{margin-bottom:1mm}
   .qr-img{width:22mm;height:22mm}
   .extras-box{font-size:9px;border:1px solid #ddd;padding:2mm 3mm;margin-bottom:2mm}
-  @media print{body{margin:0}.page{padding:8mm 10mm}.no-print{display:none}}
+  @media print{body{margin:0}.page{width:100%;padding:0}.no-print{display:none}}
 </style>
 </head>
 <body>
@@ -593,7 +594,13 @@ async function facImprimir() {
     </div>
     <div class="h-right">
       <div class="comp-titulo">${esc(tipoLabel)}</div>
-      <div class="comp-nro">${esc(f.fac_nro||'')}</div>
+      <div class="comp-nro">${(()=>{
+        const nro=f.fac_nro||'';
+        const partes=nro.split('-');
+        if(partes.length<2) return esc(nro);
+        const ptoVtaNum=parseInt(partes[0].replace(/[^0-9]/g,''))||0;
+        return String(ptoVtaNum).padStart(4,'0')+'-'+partes.slice(1).join('-');
+      })()}</div>
       <div class="comp-dato" style="margin-top:2mm">Buenos Aires, ${fec}</div>
       <div class="comp-dato" style="margin-top:3mm">CUIT: ${esc(ed.cuit)}</div>
       <div class="comp-dato">ING.BRUTOS C.M.: ${esc(ed.iibb)}</div>
@@ -639,7 +646,7 @@ async function facImprimir() {
         <th>Descripción</th>
         <th style="width:22mm">Despacho</th>
         <th class="r" style="width:10mm">Cant</th>
-        <th class="r" style="width:22mm">Precio c/IVA</th>
+        <th class="r" style="width:22mm">Precio s/IVA</th>
         <th class="r" style="width:22mm">Subtotal</th>
       </tr>
     </thead>
@@ -652,8 +659,8 @@ async function facImprimir() {
           <td>${esc(desArt)}</td>
           <td style="font-family:monospace;font-size:9px">${esc(it.ite_desp||'')}</td>
           <td class="r">${it.ite_can||0}</td>
-          <td class="r">${mon} ${fmt(it.ite_uni)}</td>
-          <td class="r">${mon} ${fmt(it.ite_imp)}</td>
+          <td class="r">${(()=>{const d=1+(it.ite_iva_porc||21)/100;const n=it.ite_uni/d;return mon+' '+fmtN(n,2);})()}</td>
+          <td class="r">${mon} ${fmtN(it.ite_imp||0,2)}</td>
         </tr>`;
       }).join('')}
       ${items.length<8?Array(8-items.length).fill('<tr><td colspan="6" style="height:6mm">&nbsp;</td></tr>').join(''):''}
@@ -1288,7 +1295,7 @@ function nfOnCliCodChange() {
   if(sug){sug.innerHTML='';sug.style.display='none';}
   if(!cod){nfLimpiarCliente();return;}
   const cli=facFindCli(cod);
-  if(cli) nfSetCliente(cli);
+  if(cli) setTimeout(()=>nfSetCliente(cli), 80);
   else nfLimpiarCliente();
 }
 function nfOnCliBusqInput() {
@@ -1314,7 +1321,8 @@ function nfSelCliSug(cod) {
   if(codEl) codEl.value=(cli.CLI_CODIGO||'').trim();
   if(busqEl) busqEl.value=cli.CLI_RAZON||'';
   if(sug){sug.innerHTML='';sug.style.display='none';}
-  nfSetCliente(cli);
+  // Esperar que el DOM esté listo antes de setear selects
+  setTimeout(()=>nfSetCliente(cli), 80);
 }
 function nfSetCliente(cli) {
   const razonEl=document.getElementById('nf-razon');
@@ -1452,8 +1460,8 @@ function nfItemChange(idx,campo,valor) {
   const div=1+(it.ite_iva_porc||0)/100;
   const neto=esA?it.ite_uni/div:it.ite_uni;
   const cantAct=FAC_ITEMS_NUEVA[idx].ite_can||0;
-  it.ite_imp=neto*cantAct;
-  it.ite_iva_imp=esA?(it.ite_uni-neto)*cantAct:0;
+  it.ite_imp=Math.round(neto*cantAct*100)/100;
+  it.ite_iva_imp=esA?Math.round((it.ite_uni-neto)*cantAct*100)/100:0;
   nfRenderItems();
   nfCalcTotales();
 }
@@ -1505,9 +1513,14 @@ function nfRenderItems() {
       <span style="font-size:11px;color:${esInexistente?'var(--red)':'var(--t2)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(it.ite_desp_art||'')}">${esc(des30)}</span>
       <span style="text-align:right;font-family:var(--mono);font-size:11px;${dispColor}">${dispTxt}</span>
       <div>${despHtml}</div>
-      <input class="finp" type="number" min="0" step="1" value="${cant}"
-        style="text-align:right;font-size:12px;width:100%"
-        oninput="nfItemChange(${i},'ite_can',parseFloat(this.value)||0)">
+      ${(!nfEsNC()&&it.ite_art&&(it.ite_disp||0)===0&&!it._desp_id)?
+        `<span style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--red);width:100%;display:block;text-align:right">0</span>`:
+        `<input class="finp" type="number" min="0" step="1" value="${cant}"
+          style="text-align:right;font-size:12px;width:100%"
+          onclick="this.select()"
+          onchange="nfItemChange(${i},'ite_can',parseFloat(this.value)||0)"
+          oninput="nfItemChange(${i},'ite_can',parseFloat(this.value)||0)">`
+      }
       <span style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--t2)">${fmtN(precioConIva,2)}</span>
       <span style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--t3)">${ivaPct}%</span>
       <span style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--grn)">${fmtN(neto,2)}</span>
