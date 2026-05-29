@@ -1341,7 +1341,7 @@ function nfOnCliCodChange() {
     // Actualizar el campo a mayúsculas
     const el=document.getElementById('nf-cli-cod');
     if(el) el.value=cod;
-    setTimeout(()=>nfSetCliente(cli), 80);
+    setTimeout(()=>nfSetCliente(cli), 150);
   } else {
     nfLimpiarCliente();
   }
@@ -1370,46 +1370,17 @@ function nfSelCliSug(cod) {
   if(busqEl) busqEl.value=cli.CLI_RAZON||'';
   if(sug){sug.innerHTML='';sug.style.display='none';}
   // Esperar que el DOM esté listo antes de setear selects
-  setTimeout(()=>nfSetCliente(cli), 80);
+  setTimeout(()=>nfSetCliente(cli), 150);
 }
 function nfSetCliente(cli) {
-  const razonEl=document.getElementById('nf-razon');
-  const tivaEl=document.getElementById('nf-tiva');
-  const dtoEl=document.getElementById('nf-dto');
-  const conpagEl=document.getElementById('nf-conpag');
-  const vendEl=document.getElementById('nf-vend');
-  const transpEl=document.getElementById('nf-transp');
-  if(razonEl) razonEl.value=cli.CLI_RAZON||'';
-  if(tivaEl)  tivaEl.value=cli.CLI_IVA||'';
-  if(dtoEl)   dtoEl.value=cli.CLI_DTO||0;
-  // Cond de pago
-  if(conpagEl){
-    const cpVal=(cli.CLI_CONPAG||'').trim();
-    if(cpVal){
-      // Buscar opción exacta o que empiece igual
-      let opt=[...conpagEl.options].find(o=>o.value.trim()===cpVal);
-      if(!opt) opt=[...conpagEl.options].find(o=>o.value.trim().startsWith(cpVal)||cpVal.startsWith(o.value.trim()));
-      if(opt) conpagEl.value=opt.value;
-    }
-  }
-  // Vendedor
-  if(vendEl){
-    const vVal=(cli.CLI_VEND||'').trim();
-    if(vVal){
-      let opt=[...vendEl.options].find(o=>o.value.trim()===vVal);
-      if(!opt) opt=[...vendEl.options].find(o=>o.value.trim().startsWith(vVal)||vVal.startsWith(o.value.trim()));
-      if(opt) vendEl.value=opt.value;
-    }
-  }
-  // Transporte
-  if(transpEl){
-    const tVal=(cli.CLI_EXPRE||'').trim();
-    if(tVal){
-      let opt=[...transpEl.options].find(o=>o.value.trim()===tVal);
-      if(!opt) opt=[...transpEl.options].find(o=>o.value.trim().startsWith(tVal)||tVal.startsWith(o.value.trim()));
-      if(opt) transpEl.value=opt.value;
-    }
-  }
+  const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
+  s('nf-razon', cli.CLI_RAZON||'');
+  s('nf-tiva',  cli.CLI_IVA||'');
+  s('nf-dto',   cli.CLI_DTO||0);
+  // Seteo directo de selects — el value tiene que coincidir exactamente
+  s('nf-conpag', (cli.CLI_CONPAG||'').trim());
+  s('nf-vend',   (cli.CLI_VEND||'').trim());
+  s('nf-transp', (cli.CLI_EXPRE||'').trim());
   nfCalcTotales();
   nfRenderItems();
 }
