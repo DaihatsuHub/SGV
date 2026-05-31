@@ -113,6 +113,17 @@ async function renderSaldos() {
     // Encabezados de columnas de meses
     const thMeses = meses.map(m=>`<th style="text-align:right;padding:6px 8px;min-width:85px">${m.label}</th>`).join('');
 
+    const hoy = new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+    // Título en pantalla
+    const titDiv = document.createElement('div');
+    titDiv.style.cssText = 'padding:8px 12px;font-size:13px;font-weight:600;color:var(--txt);border-bottom:1px solid var(--b1);margin-bottom:0;display:flex;justify-content:space-between;align-items:center';
+    titDiv.innerHTML = `<span>Saldos por Mes — ${hoy}</span>`;
+    body.innerHTML = '';
+    body.appendChild(titDiv);
+    const tableWrap = document.createElement('div');
+    tableWrap.style.cssText = 'overflow:auto;flex:1';
+    body.appendChild(tableWrap);
+
     let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">
       <thead>
         <tr style="background:var(--s3);position:sticky;top:0;z-index:2">
@@ -135,11 +146,11 @@ async function renderSaldos() {
       // Separador + cabecera de vendedor
       if(r.vend !== lastVend) {
         if(lastVend !== null) {
-          html += `<tr><td colspan="${4+nMeses+2}" style="background:#000;height:3px;padding:0"></td></tr>`;
+          html += `<tr class="sep-vend"><td colspan="${4+nMeses+2}" style="background:#1a6be0;height:4px;padding:0"></td></tr>`;
         }
         const vObj = (TABLAS['VEND']||[]).find(v=>v.CODIGO===r.vend);
         const vLabel = vObj ? `${vObj.CODIGO} — ${vObj.DETALLE}` : (r.vend||'Sin vendedor asignado');
-        html += `<tr style="background:var(--s2)"><td colspan="${4+nMeses+2}" style="padding:5px 10px;font-size:11px;font-weight:700;color:var(--acc);font-family:var(--mono);letter-spacing:1px">${esc(vLabel)}</td></tr>`;
+        html += `<tr class="row-vend"><td colspan="${4+nMeses+2}" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--acc);font-family:var(--mono);letter-spacing:1px;background:var(--s3);border-top:3px solid #1a6be0">${esc(vLabel)}</td></tr>`;
         lastVend = r.vend;
         rowToggle = false;
         lastCod = null;
@@ -150,7 +161,7 @@ async function renderSaldos() {
         rowToggle = !rowToggle;
         lastCod = r.cod;
       }
-      const bg = rowToggle ? 'background:rgba(255,255,255,0.03)' : '';
+      const bg = rowToggle ? 'background:rgba(255,255,255,0.06)' : 'background:rgba(0,0,0,0.15)';
 
       const mesCols = r.mes.map(v=>`<td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px;color:${v<0?'var(--red)':''}">${saldoFmt(v)}</td>`).join('');
 
@@ -166,7 +177,7 @@ async function renderSaldos() {
     });
 
     html += '</tbody></table>';
-    body.innerHTML = html;
+    tableWrap.innerHTML = html;
 
   } catch(e) {
     console.error('renderSaldos:', e);
@@ -178,26 +189,36 @@ function printSaldos() {
   const body = document.getElementById('saldo-body');
   const table = body.querySelector('table');
   if(!table) { toast('Primero consultá los saldos','err'); return; }
+  const hoy = new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
   const win = window.open('','_blank','width=1100,height=700');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-<title>Saldos por Mes</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Arial,sans-serif;font-size:9px;color:#000}
-  h3{margin-bottom:4mm;font-size:12px}
-  table{width:100%;border-collapse:collapse}
-  th{background:#000;color:#fff;padding:3px 5px}
-  th:first-child,th:nth-child(2){text-align:left}
-  th{text-align:right}
-  td{padding:2px 5px;border-bottom:1px solid #eee}
-  .sep td{background:#000;height:2px;padding:0}
-  .vend td{background:#ddd;font-weight:700;font-size:10px;padding:3px 5px}
-  @media print{@page{margin:8mm}}
-</style>
-</head><body>
-<h3>Saldos por Mes</h3>
-${table.outerHTML}
-</body></html>`);
+  // Clonar tabla y aplicar clases de fondo para impresión
+  const t = table.cloneNode(true);
+  let tog=false, lastC='';
+  t.querySelectorAll('tbody tr').forEach(tr=>{
+    if(tr.querySelector('td[colspan]')) return;
+    const cod = tr.querySelector('td:first-child')?.textContent?.trim()||'';
+    if(cod && cod!==lastC){tog=!tog;lastC=cod;}
+    tr.setAttribute('data-bg', tog?'on':'off');
+  });
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Saldos por Mes</title><style>' +
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:Arial,sans-serif;font-size:9px;color:#000}' +
+    '.hdr{display:flex;justify-content:space-between;margin-bottom:3mm}' +
+    '.hdr h3{font-size:12px}' +
+    'table{width:100%;border-collapse:collapse}' +
+    'thead th{background:#000;color:#fff;padding:3px 5px;text-align:right;font-size:9px}' +
+    'thead th:nth-child(1),thead th:nth-child(2){text-align:left}' +
+    'td{padding:2px 5px;border-bottom:1px solid #eee;font-size:9px}' +
+    'tr[data-bg="on"] td{background:#eef2ff}' +
+    'tr[data-bg="off"] td{background:#fff}' +
+    'tr.sep-vend td{background:#000!important;height:4px;padding:0;border:none}' +
+    'tr.row-vend td{background:#ddd!important;font-weight:700;font-size:10px;padding:4px 5px;border-top:3px solid #000}' +
+    '@media print{@page{margin:8mm}body{margin:0}}' +
+    '</style></head><body>' +
+    '<div class="hdr"><h3>Saldos por Mes — ' + hoy + '</h3><span id="pnum" style="font-size:9px;color:#555"></span></div>' +
+    t.outerHTML +
+    '<script>var p=1;window.onbeforeprint=function(){document.getElementById("pnum").textContent="Hoja: "+p;};<\/script>' +
+    '</body></html>');
   win.document.close();
-  setTimeout(()=>win.print(),500);
+  setTimeout(()=>win.print(),600);
 }
