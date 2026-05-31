@@ -83,9 +83,13 @@ function aplicarPermisos() {
   _setBtn('tnav-ven', puedeh('fac','ver') || puedeh('ctip','ver'));
 
   // ── Subitems Ventas ───────────────────────────────────
-  _setBtn('ddi-fac',  puedeh('fac','ver'));
-  _setBtn('ddi-ctip', puedeh('ctip','ver'));
-  _setBtn('ddi-desp', puedeh('desp','ver'));
+  _setBtn('ddi-fac',   puedeh('fac','ver'));
+  _setBtn('ddi-saldo', puedeh('saldo','ver'));
+  _setBtn('ddi-ctip',  puedeh('ctip','ver'));
+  _setBtn('ddi-desp',  puedeh('desp','ver'));
+
+  // ── Menú Ventas: visible si tiene acceso a algún subitem ──
+  _setBtn('tnav-ven', puedeh('fac','ver') || puedeh('ctip','ver') || puedeh('saldo','ver'));
 }
 
 // ── Panel interactivo de permisos ─────────────────────────
@@ -95,6 +99,7 @@ const MODULOS_PERM = [
   { key:'desp',     label:'🚢 Despachos' },
   { key:'fac',      label:'🧾 Facturación' },
   { key:'ctip',     label:'📋 Tipos de Comprobantes' },
+  { key:'saldo',    label:'📊 Saldos por Mes' },
   { key:'tablas',   label:'📋 Tablas Auxiliares' },
   { key:'usuarios', label:'🔑 Usuarios' },
 ];

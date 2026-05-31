@@ -86,6 +86,7 @@
       <button class="tnav" id="tnav-ven" onclick="toggleDD('dd-ven',this)">🧾 Ventas <span class="dd-arrow" id="arr-ven">▼</span></button>
       <div class="dd-menu" id="dd-ven">
         <button class="dd-item" id="ddi-fac" onclick="showSubPage('ven','fac')">📄 Facturación</button>
+        <button class="dd-item" id="ddi-saldo" onclick="showSubPage('ven','saldo')">📊 Saldos por Mes</button>
         <button class="dd-item" id="ddi-ctip" onclick="showSubPage('ven','ctip')">📋 Tipos de Comprobantes</button>
       </div>
     </div>
@@ -367,6 +368,33 @@
 </div>
 
 <!-- ══════ TIPOS DE COMPROBANTES ══════ -->
+<div class="page" id="page-saldo">
+  <div class="page-hdr">
+    <div class="page-tit">📊 Saldos por Mes</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <label style="font-size:12px;color:var(--t2)">Meses a ver:</label>
+      <select class="finp" id="saldo-meses" style="width:80px">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3" selected>3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select>
+      <label style="font-size:12px;color:var(--t2)">Empresa:</label>
+      <select class="finp" id="saldo-empresa" style="width:120px">
+        <option value="">Todas</option>
+        <option value="H">Hatsu</option>
+        <option value="T">Tressa</option>
+      </select>
+      <button class="btn pri" onclick="renderSaldos()">🔍 Consultar</button>
+      <button class="btn" onclick="printSaldos()">🖨 Imprimir</button>
+    </div>
+  </div>
+  <div id="saldo-body" style="overflow:auto;flex:1;padding:0">
+    <div class="empty" style="margin-top:40px">Seleccioná los parámetros y presioná Consultar</div>
+  </div>
+</div>
+
 <div class="page" id="page-ctip">
   <div class="toolbar">
     <button class="btn pri" id="btn-ctip-alta" onclick="ctipAlta()">＋ Alta</button>
@@ -785,6 +813,7 @@
 <script src="js/usuarios.js"></script>
 <script src="js/permisos.js"></script>
 <script src="js/facturacion.js"></script>
+  <script src="js/saldos.js"></script>
 
 <script>
 // Restaurar panel de factura al volver al módulo
