@@ -125,15 +125,15 @@ async function renderSaldos() {
     const thMeses = meses.map(m=>`<th style="text-align:right;padding:6px 8px;min-width:85px">${m.label}</th>`).join('');
     const hoy = new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
 
-    // Título fijo fuera del área de scroll
-    const titEl = document.getElementById('saldo-tit');
-    if(titEl){ titEl.textContent = `Saldos por Mes — ${hoy}`; titEl.style.display='block'; }
+    // Mostrar fecha en el título de la página (fijo en page-hdr)
+    const pageTit = document.querySelector('#page-saldo .page-tit');
+    if(pageTit) pageTit.textContent = `📊 Saldos por Mes — ${hoy}`;
     body.innerHTML = '';
 
     const NCOLS = 4 + nMeses + 2;
     let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">
       <thead>
-        <tr style="background:var(--s3);position:sticky;top:0;z-index:2">
+        <tr style="background:var(--s3)">
           <th style="text-align:left;padding:6px 10px;width:75px">Código</th>
           <th style="text-align:left;padding:6px 10px">Razón Social</th>
           <th style="text-align:center;padding:6px 6px;width:35px">Mon</th>
