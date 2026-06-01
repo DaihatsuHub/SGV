@@ -22,8 +22,7 @@ function saldoGetMeses(n) {
 }
 
 function saldoClasificar(facNro) {
-  // Devuelve: 'fac'=factura/debito, 'nc'=nota credito, 'cheq'=cheque rechazado
-  const last = (facNro||'').slice(-1).toUpperCase();
+  const last = (facNro||'').trim().slice(-1).toUpperCase();
   if(last==='R') return 'cheq';
   if(last==='C') return 'nc';
   return 'fac';
@@ -32,16 +31,31 @@ function saldoClasificar(facNro) {
 async function renderSaldos() {
   const body    = document.getElementById('saldo-body');
   const nMeses  = parseInt(document.getElementById('saldo-meses')?.value||3);
-  const empFilt = document.getElementById('saldo-empresa')?.value||'';
+  const empFilt = (document.getElementById('saldo-empresa')?.value||'').toUpperCase();
   body.innerHTML = '<div class="empty" style="margin-top:40px">⏳ Cargando...</div>';
 
   try {
-    let url = `${SB_URL}/rest/v1/facturas?fac_saldo=gt.0&select=fac_nro,fac_fec,fac_cli,fac_saldo,fac_moneda,fac_empresa,fac_vend&limit=10000`;
-    if(empFilt) url += `&fac_empresa=eq.${empFilt}`;
-    const resp = await fetch(url, {headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
-    const facs = await resp.json();
+    // Paginación automática — Supabase limita a 1000 por request
+    const baseUrl = `${SB_URL}/rest/v1/facturas?fac_saldo=gt.0&select=fac_nro,fac_fec,fac_cli,fac_saldo,fac_moneda,fac_vend`;
+    const hdrs = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+    const facs = [];
+    let offset = 0;
+    while(true) {
+      body.innerHTML = `<div class="empty" style="margin-top:40px">⏳ Cargando... (${facs.length} registros)</div>`;
+      const r = await fetch(`${baseUrl}&limit=1000&offset=${offset}`, {headers:hdrs});
+      const page = await r.json();
+      if(!page||!page.length) break;
+      facs.push(...page);
+      if(page.length < 1000) break;
+      offset += 1000;
+    }
 
-    if(!facs||!facs.length) {
+    // Filtrar por empresa según primer carácter de fac_nro
+    const facsFilt = empFilt
+      ? facs.filter(f=>(f.fac_nro||'').trim().toUpperCase().charAt(0)===empFilt)
+      : facs;
+
+    if(!facsFilt.length) {
       body.innerHTML = '<div class="empty" style="margin-top:40px">Sin facturas con saldo</div>';
       return;
     }
@@ -52,7 +66,7 @@ async function renderSaldos() {
 
     // Agrupar por cliente + moneda
     const clientes = {};
-    facsFiltr.forEach(f => {
+    facsFilt.forEach(f => {
       const cod = (f.fac_cli||'').trim();
       const mon = f.fac_moneda||'P';
       const key = `${cod}|${mon}`;
@@ -61,8 +75,8 @@ async function renderSaldos() {
         clientes[key] = {
           cod, mon,
           razon: cli?.CLI_RAZON||cod,
-          vend:  cli?.CLI_VEND||f.fac_vend||'',
-          mes:   Array(nMeses).fill(0),  // meses[0]=actual, meses[1]=anterior...
+          vend:  (cli?.CLI_VEND||f.fac_vend||'').trim(),
+          mes:   Array(nMeses).fill(0),
           otros: 0,
           total: 0,
           cheq:  0
@@ -73,15 +87,14 @@ async function renderSaldos() {
       const fecMes  = fecDate ? fecDate.getMonth()+1  : 0;
       const tipo    = saldoClasificar(f.fac_nro);
       const saldo   = f.fac_saldo||0;
-      const signo   = tipo==='nc' ? -1 : 1;
-      const importe = saldo * signo;
 
       if(tipo==='cheq') {
         clientes[key].cheq += saldo;
         return;
       }
 
-      // Buscar en qué mes cae
+      const importe = tipo==='nc' ? -saldo : saldo;
+
       let encontrado = false;
       meses.forEach((m,i) => {
         if(fecAnio===m.anio && fecMes===m.mes) {
@@ -91,7 +104,6 @@ async function renderSaldos() {
         }
       });
       if(!encontrado) {
-        // Va a OTROS (más antiguo que los meses mostrados)
         clientes[key].otros += importe;
         clientes[key].total += importe;
       }
@@ -110,20 +122,22 @@ async function renderSaldos() {
       return;
     }
 
-    // Encabezados de columnas de meses
     const thMeses = meses.map(m=>`<th style="text-align:right;padding:6px 8px;min-width:85px">${m.label}</th>`).join('');
-
     const hoy = new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+
     // Título en pantalla
     const titDiv = document.createElement('div');
-    titDiv.style.cssText = 'padding:8px 12px;font-size:13px;font-weight:600;color:var(--txt);border-bottom:1px solid var(--b1);margin-bottom:0;display:flex;justify-content:space-between;align-items:center';
-    titDiv.innerHTML = `<span>Saldos por Mes — ${hoy}</span>`;
+    titDiv.style.cssText = 'padding:8px 12px;font-size:13px;font-weight:600;color:var(--txt);border-bottom:1px solid var(--b1);flex-shrink:0';
+    titDiv.textContent = `Saldos por Mes — ${hoy}`;
     body.innerHTML = '';
+    body.style.display = 'flex';
+    body.style.flexDirection = 'column';
     body.appendChild(titDiv);
     const tableWrap = document.createElement('div');
     tableWrap.style.cssText = 'overflow:auto;flex:1';
     body.appendChild(tableWrap);
 
+    const NCOLS = 4 + nMeses + 2;
     let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">
       <thead>
         <tr style="background:var(--s3);position:sticky;top:0;z-index:2">
@@ -142,26 +156,24 @@ async function renderSaldos() {
     let rowToggle = false;
     let lastCod = null;
 
-    lista.forEach((r,i) => {
-      // Separador + cabecera de vendedor
+    lista.forEach(r => {
       if(r.vend !== lastVend) {
         if(lastVend !== null) {
-          html += `<tr class="sep-vend"><td colspan="${4+nMeses+2}" style="background:#1a6be0;height:4px;padding:0"></td></tr>`;
+          html += `<tr><td colspan="${NCOLS}" style="background:#1a6be0;height:4px;padding:0"></td></tr>`;
         }
         const vObj = (TABLAS['VEND']||[]).find(v=>v.CODIGO===r.vend);
         const vLabel = vObj ? `${vObj.CODIGO} — ${vObj.DETALLE}` : (r.vend||'Sin vendedor asignado');
-        html += `<tr class="row-vend"><td colspan="${4+nMeses+2}" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--acc);font-family:var(--mono);letter-spacing:1px;background:var(--s3);border-top:3px solid #1a6be0">${esc(vLabel)}</td></tr>`;
+        html += `<tr><td colspan="${NCOLS}" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--acc);font-family:var(--mono);background:var(--s3);border-top:3px solid #1a6be0">${esc(vLabel)}</td></tr>`;
         lastVend = r.vend;
         rowToggle = false;
         lastCod = null;
       }
 
-      // Alternar fondo por cliente
       if(r.cod !== lastCod) {
         rowToggle = !rowToggle;
         lastCod = r.cod;
       }
-      const bg = rowToggle ? 'background:rgba(255,255,255,0.06)' : 'background:rgba(0,0,0,0.15)';
+      const bg = rowToggle ? 'background:rgba(255,255,255,0.06)' : 'background:rgba(0,0,0,0.12)';
 
       const mesCols = r.mes.map(v=>`<td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px;color:${v<0?'var(--red)':''}">${saldoFmt(v)}</td>`).join('');
 
@@ -191,7 +203,6 @@ function printSaldos() {
   if(!table) { toast('Primero consultá los saldos','err'); return; }
   const hoy = new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
   const win = window.open('','_blank','width=1100,height=700');
-  // Clonar tabla y aplicar clases de fondo para impresión
   const t = table.cloneNode(true);
   let tog=false, lastC='';
   t.querySelectorAll('tbody tr').forEach(tr=>{
@@ -212,12 +223,12 @@ function printSaldos() {
     'tr[data-bg="on"] td{background:#eef2ff}' +
     'tr[data-bg="off"] td{background:#fff}' +
     'tr.sep-vend td{background:#000!important;height:4px;padding:0;border:none}' +
-    'tr.row-vend td{background:#ddd!important;font-weight:700;font-size:10px;padding:4px 5px;border-top:3px solid #000}' +
+    'tr td[colspan]{background:#ddd!important;font-weight:700;font-size:10px;padding:4px 5px;border-top:3px solid #000}' +
     '@media print{@page{margin:8mm}body{margin:0}}' +
     '</style></head><body>' +
     '<div class="hdr"><h3>Saldos por Mes — ' + hoy + '</h3><span id="pnum" style="font-size:9px;color:#555"></span></div>' +
     t.outerHTML +
-    '<script>var p=1;window.onbeforeprint=function(){document.getElementById("pnum").textContent="Hoja: "+p;};<\/script>' +
+    '<script>window.onbeforeprint=function(){document.getElementById("pnum").textContent="Hoja: 1";};<\/script>' +
     '</body></html>');
   win.document.close();
   setTimeout(()=>win.print(),600);
