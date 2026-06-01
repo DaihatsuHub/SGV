@@ -36,24 +36,12 @@ async function renderSaldos() {
   body.innerHTML = '<div class="empty" style="margin-top:40px">⏳ Cargando...</div>';
 
   try {
-    // Paginación automática — Supabase limita a 1000 por request
-    const baseUrl = `${SB_URL}/rest/v1/facturas?fac_saldo=gt.0&select=fac_nro,fac_fec,fac_cli,fac_saldo,fac_moneda,fac_empresa,fac_vend`
-      + (empFilt ? `&fac_empresa=eq.${empFilt}` : '');
-    const hdrs = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'count=exact'};
-    const facs = [];
-    let offset = 0;
-    const PAGE = 1000;
-    while(true) {
-      body.innerHTML = `<div class="empty" style="margin-top:40px">⏳ Cargando... (${facs.length} registros)</div>`;
-      const r = await fetch(`${baseUrl}&limit=${PAGE}&offset=${offset}`, {headers:hdrs});
-      const page = await r.json();
-      if(!page||!page.length) break;
-      facs.push(...page);
-      if(page.length < PAGE) break;
-      offset += PAGE;
-    }
+    let url = `${SB_URL}/rest/v1/facturas?fac_saldo=gt.0&select=fac_nro,fac_fec,fac_cli,fac_saldo,fac_moneda,fac_empresa,fac_vend&limit=10000`;
+    if(empFilt) url += `&fac_empresa=eq.${empFilt}`;
+    const resp = await fetch(url, {headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    const facs = await resp.json();
 
-    if(!facs.length) {
+    if(!facs||!facs.length) {
       body.innerHTML = '<div class="empty" style="margin-top:40px">Sin facturas con saldo</div>';
       return;
     }
@@ -64,7 +52,7 @@ async function renderSaldos() {
 
     // Agrupar por cliente + moneda
     const clientes = {};
-    facs.forEach(f => {
+    facsFiltr.forEach(f => {
       const cod = (f.fac_cli||'').trim();
       const mon = f.fac_moneda||'P';
       const key = `${cod}|${mon}`;
