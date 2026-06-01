@@ -32,6 +32,7 @@ async function renderSaldos() {
   const body    = document.getElementById('saldo-body');
   const nMeses  = parseInt(document.getElementById('saldo-meses')?.value||3);
   const empFilt = (document.getElementById('saldo-empresa')?.value||'').toUpperCase();
+  document.getElementById('saldo-fixed-hdr')?.remove();
   body.innerHTML = '<div class="empty" style="margin-top:40px">⏳ Cargando...</div>';
 
   try {
@@ -131,6 +132,40 @@ async function renderSaldos() {
     body.innerHTML = '';
 
     const NCOLS = 4 + nMeses + 2;
+
+    // Encabezado fijo duplicado con position:fixed
+    const pageHdr = document.querySelector('#page-saldo .page-hdr');
+    const hdrTop = pageHdr ? (pageHdr.getBoundingClientRect().bottom) : 96;
+    const fixedHdr = document.createElement('div');
+    fixedHdr.id = 'saldo-fixed-hdr';
+    fixedHdr.style.cssText = `position:fixed;top:${hdrTop}px;left:0;right:0;z-index:100;overflow:hidden;pointer-events:none`;
+    fixedHdr.innerHTML = `<table id="saldo-fixed-table" style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed">
+      <thead>
+        <tr style="background:var(--s3)">
+          <th style="text-align:left;padding:6px 10px;width:75px">Código</th>
+          <th style="text-align:left;padding:6px 10px">Razón Social</th>
+          <th style="text-align:center;padding:6px 6px;width:35px">Mon</th>
+          ${thMeses}
+          <th style="text-align:right;padding:6px 8px;min-width:85px">Otros</th>
+          <th style="text-align:right;padding:6px 8px;min-width:90px;border-left:2px solid var(--acc)">Total</th>
+          <th style="text-align:right;padding:6px 8px;min-width:80px">Cheq.</th>
+        </tr>
+      </thead>
+    </table>`;
+    // Quitar anterior si existe
+    document.getElementById('saldo-fixed-hdr')?.remove();
+    document.body.appendChild(fixedHdr);
+    // Sincronizar anchos cuando la tabla principal esté en el DOM
+    setTimeout(()=>{
+      const mainTable = document.querySelector('#saldo-body table');
+      const fixedTable = document.getElementById('saldo-fixed-table');
+      if(mainTable && fixedTable) {
+        const mainW = mainTable.getBoundingClientRect().width;
+        fixedTable.style.width = mainW + 'px';
+        fixedTable.style.marginLeft = mainTable.getBoundingClientRect().left + 'px';
+      }
+    }, 100);
+
     let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">
       <thead>
         <tr style="background:var(--s3)">
