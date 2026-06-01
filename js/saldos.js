@@ -127,14 +127,13 @@ async function renderSaldos() {
 
     // Título en pantalla
     const titDiv = document.createElement('div');
-    titDiv.style.cssText = 'padding:8px 12px;font-size:13px;font-weight:600;color:var(--txt);border-bottom:1px solid var(--b1);flex-shrink:0';
+    titDiv.style.cssText = 'padding:8px 12px;font-size:13px;font-weight:600;color:var(--txt);border-bottom:1px solid var(--b1);flex-shrink:0;flex-grow:0';
     titDiv.textContent = `Saldos por Mes — ${hoy}`;
     body.innerHTML = '';
-    body.style.display = 'flex';
-    body.style.flexDirection = 'column';
+    body.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;padding:0;min-height:0';
     body.appendChild(titDiv);
     const tableWrap = document.createElement('div');
-    tableWrap.style.cssText = 'overflow:auto;flex:1';
+    tableWrap.style.cssText = 'overflow:auto;flex:1;min-height:0';
     body.appendChild(tableWrap);
 
     const NCOLS = 4 + nMeses + 2;
