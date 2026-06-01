@@ -125,16 +125,10 @@ async function renderSaldos() {
     const thMeses = meses.map(m=>`<th style="text-align:right;padding:6px 8px;min-width:85px">${m.label}</th>`).join('');
     const hoy = new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
 
-    // Título en pantalla
-    const titDiv = document.createElement('div');
-    titDiv.style.cssText = 'padding:8px 12px;font-size:13px;font-weight:600;color:var(--txt);border-bottom:1px solid var(--b1);flex-shrink:0;flex-grow:0';
-    titDiv.textContent = `Saldos por Mes — ${hoy}`;
+    // Título fijo fuera del área de scroll
+    const titEl = document.getElementById('saldo-tit');
+    if(titEl){ titEl.textContent = `Saldos por Mes — ${hoy}`; titEl.style.display='block'; }
     body.innerHTML = '';
-    body.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;padding:0;min-height:0';
-    body.appendChild(titDiv);
-    const tableWrap = document.createElement('div');
-    tableWrap.style.cssText = 'overflow:auto;flex:1;min-height:0';
-    body.appendChild(tableWrap);
 
     const NCOLS = 4 + nMeses + 2;
     let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -188,7 +182,7 @@ async function renderSaldos() {
     });
 
     html += '</tbody></table>';
-    tableWrap.innerHTML = html;
+    body.innerHTML = html;
 
   } catch(e) {
     console.error('renderSaldos:', e);
