@@ -81,11 +81,11 @@ function renderDesp() {
         if(c.field==='DEP_SAL')    return `<span class="col-num">${d.dep_sal||0}</span>`;
         if(c.field==='DEP_STK')    return `<span class="col-num" style="color:${stk<=0?'var(--red)':'var(--grn)'};font-weight:${stk>0?'600':'400'}">${stk}</span>`;
         if(c.field==='DEP_ADUA')   return `<span class="col-sm">${esc(d.dep_adua||'')}</span>`;
-        if(c.field==='DEP_FOB')    return `<span class="col-num">${d.dep_fob||0}</span>`;
+        if(c.field==='DEP_FOB')    {const f=(v=>v===0||v===null||v===undefined?'0,00':Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}))(d.dep_fob||0); return `<span class="col-num" style="font-weight:700">${f}</span>`;};
         if(c.field==='DEP_GAS')    return `<span class="col-num">${d.dep_gas||0}</span>`;
-        if(c.field==='DEP_GAS2')   return `<span class="col-num">${d.dep_gas2||0}</span>`;
+        if(c.field==='DEP_GAS2')   {const f=(v=>v===0||v===null||v===undefined?'0,00':Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}))(d.dep_gas2||0); return `<span class="col-num">${f}</span>`;};
         if(c.field==='DEP_MONEDA') return `<span class="col-sm">${esc(d.dep_moneda||'$')}</span>`;
-        if(c.field==='DEP_COSTO')  return `<span class="col-num">${d.dep_costo||0}</span>`;
+        if(c.field==='DEP_COSTO')  {const f=(v=>v===0||v===null||v===undefined?'0,00':Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}))(d.dep_costo||0); return `<span class="col-num">${f}</span>`;};
         return `<span>${esc(String(d[c.field.toLowerCase()]||''))}</span>`;
       }).join('') +
     `</div>`;
