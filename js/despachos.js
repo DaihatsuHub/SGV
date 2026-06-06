@@ -102,6 +102,8 @@ function despAlta() {
   document.getElementById('desp-mtit').textContent = 'Nuevo Despacho';
   setMtag('desp-mtag','ALTA','tag-a');
   fillDespArtSelect('');
+  const depGrp=document.getElementById('df-depent-grp');
+  if(depGrp) depGrp.style.display='none';
   document.getElementById('ov-desp').classList.add('open');
   window._de = 'A';
 }
@@ -115,6 +117,8 @@ function despModif() {
   document.getElementById('df-art').disabled  = true;
   document.getElementById('desp-mtit').textContent = `Modificar: ${d.dep_desp}${d.dep_sub?' '+d.dep_sub:''}`;
   setMtag('desp-mtag','MODIFICACIÓN','tag-m');
+  const depGrpM=document.getElementById('df-depent-grp');
+  if(depGrpM) depGrpM.style.display='';
   document.getElementById('ov-desp').classList.add('open');
   window._de = 'M';
   window._despOrig = { ...d }; // guardar original para revertir stock si es necesario
@@ -279,8 +283,8 @@ async function saveDesp() {
       // Actualizar en memoria
       const idx=DESPS.findIndex(d=>d.dep_desp===desp&&d.dep_art===art);
       if(idx>=0) Object.assign(DESPS[idx], patchData);
-      // Aplicar nuevo stock con objeto completo (orig + nuevos valores)
-      const updated = { ...orig, ...patchData };
+      // Aplicar nuevo stock
+      const updated = DESPS[idx>=0?idx:0];
       await despActualizarStock(updated);
       toast('Despacho modificado','scs');
     }
