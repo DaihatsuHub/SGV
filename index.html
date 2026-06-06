@@ -86,6 +86,7 @@
       <button class="tnav" id="tnav-ven" onclick="toggleDD('dd-ven',this)">🧾 Ventas <span class="dd-arrow" id="arr-ven">▼</span></button>
       <div class="dd-menu" id="dd-ven">
         <button class="dd-item" id="ddi-fac" onclick="showSubPage('ven','fac')">📄 Facturación</button>
+        <button class="dd-item" id="ddi-histart" onclick="showSubPage('ven','histart')">📈 Historia por Artículo</button>
         <button class="dd-item" id="ddi-saldo" onclick="showSubPage('ven','saldo')">📊 Saldos por Mes</button>
         <button class="dd-item" id="ddi-ctip" onclick="showSubPage('ven','ctip')">📋 Tipos de Comprobantes</button>
       </div>
@@ -368,6 +369,29 @@
 </div>
 
 <!-- ══════ TIPOS DE COMPROBANTES ══════ -->
+<div class="page" id="page-histart">
+  <div class="page-hdr">
+    <div class="page-tit" id="histart-tit">📈 Historia por Artículo</div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="position:relative">
+        <input class="finp" id="histart-q" placeholder="Código o descripción..." style="width:260px"
+          oninput="histArtBusq()" autocomplete="off">
+        <div id="histart-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--s2);border:1px solid var(--b1);border-radius:4px;z-index:50;max-height:200px;overflow-y:auto"></div>
+      </div>
+      <select class="finp" id="histart-empresa" style="width:120px">
+        <option value="">Todas</option>
+        <option value="H">Hatsu</option>
+        <option value="T">Tressa</option>
+      </select>
+      <button class="btn pri" onclick="renderHistArt()">🔍 Ver</button>
+      <button class="btn" onclick="printHistArt()">🖨 Imprimir</button>
+    </div>
+  </div>
+  <div id="histart-body" style="padding:0">
+    <div class="empty" style="margin-top:40px">Buscá un artículo para ver su historia</div>
+  </div>
+</div>
+
 <div class="page" id="page-saldo">
   <div class="page-hdr">
     <div class="page-tit">📊 Saldos por Mes</div>
@@ -868,6 +892,7 @@
 <script src="js/facturacion.js"></script>
 <script src="js/despachos.js"></script>
 <script src="js/saldos.js"></script>
+<script src="js/histart.js"></script>
 
 <script>
 // Restaurar panel de factura al volver al módulo
