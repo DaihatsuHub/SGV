@@ -490,6 +490,57 @@
 <!--  MODALES                                              -->
 <!-- ══════════════════════════════════════════════════════ -->
 
+<!-- MODAL TIPOS DE COMPROBANTE -->
+<div class="ov" id="ov-ctip">
+  <div class="modal">
+    <div class="mhd">
+      <div class="mtit"><span id="ctip-mtit">Tipo de Comprobante</span><span class="mtag tag-a" id="ctip-mtag">ALTA</span></div>
+      <button class="mcls" onclick="closeOv('ov-ctip')">✕</button>
+    </div>
+    <div class="mbdy">
+      <div class="fsec">Identificación</div>
+      <div class="fg">
+        <div class="fgrp">
+          <label class="flbl2">Empresa *</label>
+          <select class="finp" id="ctip-empresa">
+            <option value="H">H — Hatsu Electronics SA</option>
+            <option value="T">T — Tressa Argentina SA</option>
+          </select>
+        </div>
+        <div class="fgrp">
+          <label class="flbl2">Prefijo * (3 caracteres)</label>
+          <input class="finp" id="ctip-prefijo" maxlength="3" style="text-transform:uppercase" placeholder="ej: HA4">
+        </div>
+        <div class="fgrp">
+          <label class="flbl2">Tipo *</label>
+          <select class="finp" id="ctip-tipo">
+            <option value="F">F — Factura</option>
+            <option value="C">C — Nota de Crédito</option>
+            <option value="D">D — Nota de Débito</option>
+            <option value="R">R — Cheque Rechazado</option>
+          </select>
+        </div>
+        <div class="fgrp">
+          <label class="flbl2">Último Número</label>
+          <input class="finp" id="ctip-ultimo" type="number" value="0" min="0">
+        </div>
+      </div>
+      <div class="fsec">Opciones</div>
+      <div class="tog-row">
+        <div class="tog-wrap">
+          <button class="tog on" id="ctip-tog-cont" onclick="togBtn('ctip-tog-cont','ctip-contable')"></button>
+          <span class="tog-lbl">Contable</span>
+          <input type="hidden" id="ctip-contable" value="1">
+        </div>
+      </div>
+    </div>
+    <div class="mft">
+      <button class="btn" onclick="closeOv('ov-ctip')">Cancelar</button>
+      <button class="btn pri" onclick="saveCtip()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL ARTÍCULOS -->
 <div class="ov" id="ov-art">
   <div class="modal">
