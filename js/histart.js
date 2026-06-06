@@ -31,6 +31,23 @@ function histArtSeleccionar(cod) {
   if(el) el.value = cod + (art?' — '+art.ART_DES:'');
   const sug = document.getElementById('histart-sug');
   if(sug) { sug.style.display='none'; sug.innerHTML=''; }
+  // Mostrar botón X
+  const clr = document.getElementById('histart-clr');
+  if(clr) clr.style.display='inline';
+}
+
+function histArtLimpiar() {
+  _histArtCod = '';
+  const el = document.getElementById('histart-q');
+  if(el) { el.value=''; el.focus(); }
+  const clr = document.getElementById('histart-clr');
+  if(clr) clr.style.display='none';
+  const sug = document.getElementById('histart-sug');
+  if(sug) { sug.style.display='none'; sug.innerHTML=''; }
+  const body = document.getElementById('histart-body');
+  if(body) body.innerHTML='<div class="empty" style="margin-top:40px">Buscá un artículo para ver su historia</div>';
+  const tit = document.getElementById('histart-tit');
+  if(tit) tit.textContent='📈 Historia por Artículo';
 }
 
 // Cerrar sugerencias al hacer click afuera
@@ -64,12 +81,24 @@ async function renderHistArt() {
     const items = [];
     let offset = 0;
     while(true) {
-      const r = await fetch(`${SB_URL}/rest/v1/fac_items?ite_art=eq.${encodeURIComponent(cod)}&select=ite_art,ite_can,ite_uni,ite_imp,fac_nro,facturas(fac_nro,fac_fec,fac_cli)&limit=1000&offset=${offset}`, {headers:hdrs});
+      const r = await fetch(`${SB_URL}/rest/v1/fac_items?ite_art=eq.${encodeURIComponent(cod)}&select=ite_nro,ite_art,ite_can,ite_uni,ite_imp&limit=1000&offset=${offset}`, {headers:hdrs});
       const pg = await r.json();
       if(!pg||!pg.length) break;
       items.push(...pg);
       if(pg.length < 1000) break;
       offset += 1000;
+    }
+    // Traer facturas correspondientes
+    const nros = [...new Set(items.map(i=>i.ite_nro).filter(Boolean))];
+    const facsMap = {};
+    if(nros.length) {
+      // Fetch en lotes de 50
+      for(let i=0; i<nros.length; i+=50) {
+        const lote = nros.slice(i,i+50).map(n=>`"${n}"`).join(',');
+        const rf = await fetch(`${SB_URL}/rest/v1/facturas?fac_nro=in.(${lote})&select=fac_nro,fac_fec,fac_cli`, {headers:hdrs});
+        const pf = await rf.json();
+        if(pf&&pf.length) pf.forEach(f=>facsMap[f.fac_nro]=f);
+      }
     }
 
     // ── Construir filas unificadas ──
@@ -92,7 +121,7 @@ async function renderHistArt() {
 
     // Ventas
     items.forEach(it => {
-      const fac = it.facturas;
+      const fac = facsMap[it.ite_nro];
       if(!fac) return;
       const empFac = (fac.fac_nro||'').charAt(0).toUpperCase();
       if(emp && empFac !== emp) return;

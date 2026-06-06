@@ -374,8 +374,9 @@
     <div class="page-tit" id="histart-tit">📈 Historia por Artículo</div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <div style="position:relative">
-        <input class="finp" id="histart-q" placeholder="Código o descripción..." style="width:260px"
-          oninput="histArtBusq()" autocomplete="off">
+        <input class="finp" id="histart-q" placeholder="Código o descripción..." style="width:260px;padding-right:28px"
+          oninput="histArtBusq()" onclick="this.select()" autocomplete="off">
+        <button id="histart-clr" onclick="histArtLimpiar()" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--t3);font-size:14px;padding:0;line-height:1">✕</button>
         <div id="histart-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--s2);border:1px solid var(--b1);border-radius:4px;z-index:50;max-height:200px;overflow-y:auto"></div>
       </div>
       <select class="finp" id="histart-empresa" style="width:120px">
