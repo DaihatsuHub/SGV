@@ -257,7 +257,7 @@ async function saveDesp() {
     dep_desp:desp, dep_sub:sub||null, dep_fec:fec, dep_art:art,
     dep_proc:proc||null, dep_adua:adua||null,
     dep_ent:ent, dep_sal:0, dep_fob:fob, dep_gas:0, dep_gas2:gas2,
-    dep_moneda:mone||null, dep_costo:0,
+    dep_moneda:mone||null, dep_costo: Math.round(fob*(1+gas2/100)*100)/100,
     dep_depent:depent, dep_depsal:0
   };
 
@@ -275,6 +275,7 @@ async function saveDesp() {
       const patchData = {
         dep_sub:sub||null, dep_fec:fec, dep_proc:proc||null, dep_adua:adua||null,
         dep_fob:fob, dep_gas2:gas2, dep_moneda:mone||null,
+        dep_costo: Math.round(fob*(1+gas2/100)*100)/100,
         dep_ent:ent, dep_depent:depent
       };
       await fetch(`${SB_URL}/rest/v1/despachos?dep_desp=eq.${encodeURIComponent(desp)}&dep_art=eq.${encodeURIComponent(art)}`,{
@@ -292,4 +293,26 @@ async function saveDesp() {
     despSelIdx=null;
     renderDesp();
   } catch(e){ console.error(e); toast('Error al guardar','err'); }
+}
+
+// ── Recalcular costo de todos los despachos ───────────────
+async function despRecalcularCostos() {
+  confirm2('¿Recalcular costos?', 'Se actualizará dep_costo = FOB × (1 + Gastos%/100) en todos los despachos.', async () => {
+    let ok=0, err=0;
+    for(const d of DESPS) {
+      const fob  = d.dep_fob||0;
+      const gas2 = d.dep_gas2||0;
+      const costo = Math.round(fob*(1+gas2/100)*100)/100;
+      if(costo === (d.dep_costo||0)) continue;
+      try {
+        await fetch(`${SB_URL}/rest/v1/despachos?dep_desp=eq.${encodeURIComponent(d.dep_desp)}&dep_art=eq.${encodeURIComponent(d.dep_art)}`,{
+          method:'PATCH', headers:{...SB_HDR}, body:JSON.stringify({dep_costo:costo})
+        });
+        d.dep_costo = costo;
+        ok++;
+      } catch(e){ err++; }
+    }
+    renderDesp();
+    toast(`Costos actualizados: ${ok} registros${err>0?' ('+err+' errores)':''}`, ok>0?'scs':'err');
+  });
 }

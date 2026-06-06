@@ -441,6 +441,7 @@
     <button class="btn pri" id="btn-desp-alta" onclick="despAlta()">＋ Alta</button>
     <button class="btn" id="btn-desp-modif" onclick="despModif()">✏️ Modificar</button>
     <button class="btn dng" id="btn-desp-baja" onclick="despBaja()">✕ Baja</button>
+    <button class="btn" onclick="despRecalcularCostos()" title="Recalcular costos FOB">🔄 Costos</button>
     <button class="btn" id="btn-cfg-desp" style="display:none" onclick="openColCfg('desp')" title="Configurar columnas">⚙️ Columnas</button>
     <div class="spacer"></div>
     <select class="fsel" id="desp-nro" onchange="renderDesp()"><option value="">Todos los despachos</option></select>
@@ -723,7 +724,7 @@
           <select class="finp" id="df-art" style="min-width:300px"><option value="">— Seleccionar —</option></select>
         </div>
         <div class="fgrp"><label class="flbl2">Ingreso (unid.) *</label><input class="finp" id="df-ent" type="number" min="1" value="0" oninput="dfEntChange()"></div>
-        <div class="fgrp" id="df-depent-grp" style="display:none"><label class="flbl2">Ingreso Depósito</label><input class="finp" id="df-depent" type="number" min="0" value="0"></div>
+        <div class="fgrp"><label class="flbl2">Ingreso Depósito</label><input class="finp" id="df-depent" type="number" min="0" value="0"></div>
       </div>
       <div class="fsec">Costos</div>
       <div class="fg3">
