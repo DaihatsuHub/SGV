@@ -279,8 +279,8 @@ async function saveDesp() {
       // Actualizar en memoria
       const idx=DESPS.findIndex(d=>d.dep_desp===desp&&d.dep_art===art);
       if(idx>=0) Object.assign(DESPS[idx], patchData);
-      // Aplicar nuevo stock
-      const updated = DESPS[idx>=0?idx:0];
+      // Aplicar nuevo stock con objeto completo (orig + nuevos valores)
+      const updated = { ...orig, ...patchData };
       await despActualizarStock(updated);
       toast('Despacho modificado','scs');
     }
