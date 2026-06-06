@@ -705,7 +705,7 @@
     <div class="mbdy">
       <div class="fsec">Identificación</div>
       <div class="fg">
-        <div class="fgrp"><label class="flbl2">Nro. Despacho *</label><input class="finp" id="df-desp" maxlength="11" style="text-transform:uppercase" placeholder="Ej: HW39167L"></div>
+        <div class="fgrp"><label class="flbl2">Nro. Despacho *</label><input class="finp" id="df-desp" maxlength="15" style="text-transform:uppercase" placeholder="Ej: HW39167L"></div>
         <div class="fgrp"><label class="flbl2">Sub</label><input class="finp" id="df-sub" maxlength="1" style="text-transform:uppercase"></div>
         <div class="fgrp"><label class="flbl2">Fecha *</label><input class="finp" id="df-fec" type="date"></div>
         <div class="fgrp"><label class="flbl2">Aduana</label><input class="finp" id="df-adua" maxlength="1" style="text-transform:uppercase" placeholder="B/C/R..."></div>
@@ -722,7 +722,8 @@
         <div class="fgrp"><label class="flbl2">Artículo *</label>
           <select class="finp" id="df-art" style="min-width:300px"><option value="">— Seleccionar —</option></select>
         </div>
-        <div class="fgrp"><label class="flbl2">Ingreso (unid.) *</label><input class="finp" id="df-ent" type="number" min="1" value="0"></div>
+        <div class="fgrp"><label class="flbl2">Ingreso (unid.) *</label><input class="finp" id="df-ent" type="number" min="1" value="0" oninput="dfEntChange()"></div>
+        <div class="fgrp"><label class="flbl2">Ingreso Depósito</label><input class="finp" id="df-depent" type="number" min="0" value="0"></div>
       </div>
       <div class="fsec">Costos</div>
       <div class="fg3">
@@ -864,6 +865,7 @@
 <script src="js/usuarios.js"></script>
 <script src="js/permisos.js"></script>
 <script src="js/facturacion.js"></script>
+  <script src="js/despachos.js"></script>
   <script src="js/saldos.js"></script>
 
 <script>
