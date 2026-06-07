@@ -228,3 +228,36 @@ function printArt(){
     <th>STK HAT</th><th>STK TRE</th><th>DEP HAT</th><th>DEP TRE</th>
   </tr></thead><tbody>${rows}</tbody></table>`,list.length);
 }
+
+// ── Navegación por teclado ────────────────────────────────
+document.addEventListener('keydown', e => {
+  // Solo cuando no hay modal abierto ni input activo
+  if(document.querySelector('.ov.open')) return;
+  if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName)) return;
+
+  const page = document.getElementById('page-art');
+  if(!page?.classList.contains('active')) return;
+
+  const list = filtArts();
+  if(!list.length) return;
+  let idx = artSelIdx;
+  const cur = idx !== null ? ARTS.indexOf(list.find((a,i)=>ARTS.indexOf(a)===idx)) : -1;
+
+  let next = cur;
+  if(e.key==='ArrowDown')  { e.preventDefault(); next = Math.min(cur+1, list.length-1); }
+  if(e.key==='ArrowUp')    { e.preventDefault(); next = Math.max(cur-1, 0); }
+  if(e.key==='PageDown')   { e.preventDefault(); next = Math.min(cur+10, list.length-1); }
+  if(e.key==='PageUp')     { e.preventDefault(); next = Math.max(cur-10, 0); }
+  if(e.key==='Home')       { e.preventDefault(); next = 0; }
+  if(e.key==='End')        { e.preventDefault(); next = list.length-1; }
+  if(e.key==='Enter')      { e.preventDefault(); if(idx!==null) artDetail(idx); return; }
+  if(e.key==='F2')         { e.preventDefault(); aModif(); return; }
+
+  if(next !== cur && next >= 0) {
+    const newIdx = ARTS.indexOf(list[next]);
+    selArt(newIdx);
+    // Scroll al elemento seleccionado
+    const rows = document.querySelectorAll('#art-body .tr-art');
+    if(rows[next]) rows[next].scrollIntoView({block:'nearest'});
+  }
+});
