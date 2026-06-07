@@ -92,7 +92,13 @@ function renderDesp() {
   }).join('');
 }
 
-function selDesp(i) { despSelIdx=i; renderDesp(); }
+function selDesp(i) {
+  document.querySelector('#desp-body .tr-art.sel')?.classList.remove('sel');
+  despSelIdx = i;
+  const list = filtDesps();
+  const rows = document.querySelectorAll('#desp-body .tr-art');
+  if(rows[i]) rows[i].classList.add('sel');
+}
 
 // ── Alta ──────────────────────────────────────────────────
 function despAlta() {
@@ -316,3 +322,27 @@ async function despRecalcularCostos() {
     toast(`Costos actualizados: ${ok} registros${err>0?' ('+err+' errores)':''}`, ok>0?'scs':'err');
   });
 }
+
+// ── Navegación por teclado ────────────────────────────────
+document.addEventListener('keydown', e => {
+  if(document.querySelector('.ov.open')) return;
+  if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName)) return;
+  const page = document.getElementById('page-desp');
+  if(!page?.classList.contains('active')) return;
+  const list = filtDesps();
+  if(!list.length) return;
+  const cur = despSelIdx !== null ? despSelIdx : -1;
+  let next = cur;
+  if(e.key==='ArrowDown') { e.preventDefault(); next = Math.min(cur+1, list.length-1); }
+  if(e.key==='ArrowUp')   { e.preventDefault(); next = Math.max(cur-1, 0); }
+  if(e.key==='PageDown')  { e.preventDefault(); next = Math.min(cur+10, list.length-1); }
+  if(e.key==='PageUp')    { e.preventDefault(); next = Math.max(cur-10, 0); }
+  if(e.key==='Home')      { e.preventDefault(); next = 0; }
+  if(e.key==='End')       { e.preventDefault(); next = list.length-1; }
+  if(e.key==='F2')        { e.preventDefault(); despModif(); return; }
+  if(next !== cur && next >= 0) {
+    selDesp(next);
+    const rows = document.querySelectorAll('#desp-body .tr-art');
+    if(rows[next]) rows[next].scrollIntoView({block:'nearest'});
+  }
+});

@@ -88,7 +88,14 @@ function updCliFilts(){
   vd.innerHTML='<option value="">Todos los vendedores</option>'+vends.map(v=>`<option value="${v}"${v===curVd?' selected':''}>${v}</option>`).join('');
 }
 
-function selCli(i){cliSelIdx=i;renderClis();}
+function selCli(i) {
+  document.querySelector('#cli-body .tr-cli.sel')?.classList.remove('sel');
+  cliSelIdx = i;
+  const list = filtClis();
+  const pos = list.findIndex(c => CLIS.indexOf(c) === i);
+  const rows = document.querySelectorAll('#cli-body .tr-cli');
+  if(rows[pos]) rows[pos].classList.add('sel');
+}
 function setCliFilt(v){
   cliFilt=v;
   ['todos','ok','inc','nov'].forEach(k=>document.getElementById('cf-'+k)?.classList.remove('on'));
@@ -239,3 +246,28 @@ function printCli(){
   const rows=list.map(c=>`<tr><td style="font-family:monospace">${esc(c.CLI_CODIGO)}</td><td>${esc(c.CLI_RAZON||'')}</td><td>${esc(c.CLI_DOMIC||'')}</td><td>${esc(c.CLI_LOCAL||'')}</td><td style="font-family:monospace">${esc(c.CLI_CUIT||'')}</td><td>${IVA[c.CLI_IVA]||'—'}</td><td>${esc(c.CLI_CONPAG||'')}</td></tr>`).join('');
   openPrint('👥 Listado de Clientes',`<table><thead><tr><th>CÓDIGO</th><th>RAZÓN SOCIAL</th><th>DOMICILIO</th><th>LOCALIDAD</th><th>CUIT</th><th>IVA</th><th>COND.PAGO</th></tr></thead><tbody>${rows}</tbody></table>`,list.length);
 }
+
+// ── Navegación por teclado ────────────────────────────────
+document.addEventListener('keydown', e => {
+  if(document.querySelector('.ov.open')) return;
+  if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName)) return;
+  const page = document.getElementById('page-cli');
+  if(!page?.classList.contains('active')) return;
+  const list = filtClis();
+  if(!list.length) return;
+  const cur = cliSelIdx !== null ? list.findIndex(c => CLIS.indexOf(c) === cliSelIdx) : -1;
+  let next = cur;
+  if(e.key==='ArrowDown') { e.preventDefault(); next = Math.min(cur+1, list.length-1); }
+  if(e.key==='ArrowUp')   { e.preventDefault(); next = Math.max(cur-1, 0); }
+  if(e.key==='PageDown')  { e.preventDefault(); next = Math.min(cur+10, list.length-1); }
+  if(e.key==='PageUp')    { e.preventDefault(); next = Math.max(cur-10, 0); }
+  if(e.key==='Home')      { e.preventDefault(); next = 0; }
+  if(e.key==='End')       { e.preventDefault(); next = list.length-1; }
+  if(e.key==='Enter')     { e.preventDefault(); if(cliSelIdx!==null) cliDetail(cliSelIdx); return; }
+  if(e.key==='F2')        { e.preventDefault(); cModif(); return; }
+  if(next !== cur && next >= 0) {
+    selCli(CLIS.indexOf(list[next]));
+    const rows = document.querySelectorAll('#cli-body .tr-cli');
+    if(rows[next]) rows[next].scrollIntoView({block:'nearest'});
+  }
+});

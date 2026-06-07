@@ -90,7 +90,16 @@ function togArtStock() {
   renderArts();
 }
 
-function selArt(i){ artSelIdx=i; renderArts(); }
+function selArt(i) {
+  // Quitar sel anterior
+  document.querySelector('#art-body .tr-art.sel')?.classList.remove('sel');
+  artSelIdx = i;
+  // Marcar nuevo
+  const list = filtArts();
+  const pos = list.findIndex(a => ARTS.indexOf(a) === i);
+  const rows = document.querySelectorAll('#art-body .tr-art');
+  if(rows[pos]) rows[pos].classList.add('sel');
+}
 
 function artDetail(idx){
   const a = ARTS[idx];
