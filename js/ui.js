@@ -85,3 +85,37 @@ document.addEventListener('input', function(e) {
     if (clr) clr.style.display = e.target.value ? 'flex' : 'none';
   }
 });
+
+// ── EXPORTAR A EXCEL ─────────────────────────────────────
+// Uso: exportToXls(titulo, headers, rows)
+// headers: array de strings
+// rows: array de arrays de valores
+function exportToXls(titulo, headers, rows) {
+  // Construir CSV con separador de tabulación (abre bien en Excel)
+  const sep = '	';
+  const nl  = '
+';
+  let csv = headers.join(sep) + nl;
+  rows.forEach(row => {
+    csv += row.map(v => {
+      if(v === null || v === undefined) return '';
+      const s = String(v);
+      // Si tiene tab, coma o salto de línea, envolver en comillas
+      if(s.includes(sep) || s.includes('"') || s.includes(nl)) return '"' + s.replace(/"/g,'""') + '"';
+      return s;
+    }).join(sep) + nl;
+  });
+
+  // BOM para que Excel abra en UTF-8
+  const bom = '﻿';
+  const blob = new Blob([bom + csv], {type:'text/tab-separated-values;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = titulo.replace(/[^a-zA-Z0-9_\-\.]/g,'_') + '.xls';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast(`Exportado: ${rows.length} registros`, 'scs');
+}

@@ -92,13 +92,7 @@ function renderDesp() {
   }).join('');
 }
 
-function selDesp(i) {
-  document.querySelector('#desp-body .tr-art.sel')?.classList.remove('sel');
-  despSelIdx = i;
-  const list = filtDesps();
-  const rows = document.querySelectorAll('#desp-body .tr-art');
-  if(rows[i]) rows[i].classList.add('sel');
-}
+function selDesp(i) { despSelIdx=i; renderDesp(); }
 
 // ── Alta ──────────────────────────────────────────────────
 function despAlta() {
@@ -322,27 +316,19 @@ async function despRecalcularCostos() {
     toast(`Costos actualizados: ${ok} registros${err>0?' ('+err+' errores)':''}`, ok>0?'scs':'err');
   });
 }
-
-// ── Navegación por teclado ────────────────────────────────
-document.addEventListener('keydown', e => {
-  if(document.querySelector('.ov.open')) return;
-  if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName)) return;
-  const page = document.getElementById('page-desp');
-  if(!page?.classList.contains('active')) return;
+function exportDesp() {
   const list = filtDesps();
-  if(!list.length) return;
-  const cur = despSelIdx !== null ? despSelIdx : -1;
-  let next = cur;
-  if(e.key==='ArrowDown') { e.preventDefault(); next = Math.min(cur+1, list.length-1); }
-  if(e.key==='ArrowUp')   { e.preventDefault(); next = Math.max(cur-1, 0); }
-  if(e.key==='PageDown')  { e.preventDefault(); next = Math.min(cur+10, list.length-1); }
-  if(e.key==='PageUp')    { e.preventDefault(); next = Math.max(cur-10, 0); }
-  if(e.key==='Home')      { e.preventDefault(); next = 0; }
-  if(e.key==='End')       { e.preventDefault(); next = list.length-1; }
-  if(e.key==='F2')        { e.preventDefault(); despModif(); return; }
-  if(next !== cur && next >= 0) {
-    selDesp(next);
-    const rows = document.querySelectorAll('#desp-body .tr-art');
-    if(rows[next]) rows[next].scrollIntoView({block:'nearest'});
-  }
-});
+  const headers = ['Despacho','Sub','Fecha','Artículo','Descripción','Procedencia','Aduana','Ingreso','Egreso','Stock','FOB','Gastos%','Moneda','Costo','Dep.Ent','Dep.Sal'];
+  const rows = list.map(d => {
+    const art = ARTS.find(a=>(a.ART_COD||'').trim()===(d.dep_art||'').trim());
+    const fec = d.dep_fec?d.dep_fec.substring(0,10).split('-').reverse().join('/'):'';
+    return [
+      d.dep_desp||'', d.dep_sub||'', fec, d.dep_art||'',
+      art?art.ART_DES:'', d.dep_proc||'', d.dep_adua||'',
+      d.dep_ent||0, d.dep_sal||0, (d.dep_ent||0)-(d.dep_sal||0),
+      d.dep_fob||0, d.dep_gas2||0, d.dep_moneda||'',
+      d.dep_costo||0, d.dep_depent||0, d.dep_depsal||0
+    ];
+  });
+  exportToXls('Despachos', headers, rows);
+}

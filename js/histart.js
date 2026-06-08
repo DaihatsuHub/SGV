@@ -151,51 +151,41 @@ async function renderHistArt() {
     let stk = 0;
     filas.forEach(f => { stk += f.ing - f.egr; f.stk = stk; });
 
+    // Render tabla
     const fmtN2 = v => v===0||v===null||v===undefined?'':Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
     const fmtFec = s => s?s.substring(0,10).split('-').reverse().join('/'):'—';
-    const ROW = 'display:flex;align-items:center;border-bottom:1px solid var(--b1)';
-    const F90  = 'flex:0 0 90px';
-    const F160 = 'flex:0 0 160px';
-    const F1   = 'flex:1';
-    const F70  = 'flex:0 0 70px';
-    const F100 = 'flex:0 0 100px';
-    const MONO = 'font-family:var(--mono);font-size:11px';
-    const PAD  = 'padding:5px 8px';
 
-    // Encabezado de columnas
-    body.innerHTML = '';
-    const thDiv = document.createElement('div');
-    thDiv.style.cssText = 'display:flex;background:var(--s3);font-family:var(--mono);font-size:11px;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--b1)';
-    thDiv.innerHTML = `
-      <span style="${F90};padding:8px 10px">Fecha</span>
-      <span style="${F160};padding:8px 10px">Comprobante</span>
-      <span style="${F1};padding:8px 10px">Detalle</span>
-      <span style="${F70};padding:8px 8px;text-align:right">Ingreso</span>
-      <span style="${F70};padding:8px 8px;text-align:right">Egreso</span>
-      <span style="${F70};padding:8px 8px;text-align:right">Stock</span>
-      <span style="${F100};padding:8px 8px;text-align:right">Importe</span>`;
-    body.appendChild(thDiv);
+    let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="background:var(--s3)">
+          <th style="text-align:left;padding:6px 10px;width:90px">Fecha</th>
+          <th style="text-align:left;padding:6px 10px;width:160px">Comprobante</th>
+          <th style="text-align:left;padding:6px 10px">Detalle</th>
+          <th style="text-align:right;padding:6px 8px;width:70px">Ingreso</th>
+          <th style="text-align:right;padding:6px 8px;width:70px">Egreso</th>
+          <th style="text-align:right;padding:6px 8px;width:70px">Stock</th>
+          <th style="text-align:right;padding:6px 8px;width:100px">Importe</th>
+        </tr>
+      </thead>
+      <tbody>`;
 
-    const bodyDiv = document.createElement('div');
-    bodyDiv.className = 'tbl-body';
-    body.appendChild(bodyDiv);
-
-    let html = '';
     filas.forEach((f,i) => {
-      const bg = i%2===0?'':'background:rgba(255,255,255,0.04)';
+      const bg = i%2===0?'':'background:rgba(255,255,255,0.03)';
       const stkColor = f.stk<=0?'color:var(--red)':'color:var(--grn)';
       const compColor = f.tipo==='desp'?'color:var(--acc)':f.tipo==='nc'?'color:var(--red)':'color:var(--txt)';
-      html += `<div style="${ROW};${bg}">
-        <span style="${F90};${PAD};${MONO};color:var(--t2)">${fmtFec(f.fec)}</span>
-        <span style="${F160};${PAD};${MONO};${compColor}">${esc(f.comp)}</span>
-        <span style="${F1};${PAD};font-size:12px;color:var(--t2)">${esc(f.det)}</span>
-        <span style="${F70};${PAD};${MONO};text-align:right;color:var(--grn)">${f.ing||''}</span>
-        <span style="${F70};${PAD};${MONO};text-align:right;color:var(--red)">${f.egr||''}</span>
-        <span style="${F70};${PAD};${MONO};text-align:right;font-weight:600;${stkColor}">${f.stk}</span>
-        <span style="${F100};${PAD};${MONO};text-align:right">${f.imp!==null?fmtN2(f.imp):''}</span>
-      </div>`;
+      html += `<tr style="${bg}">
+        <td style="padding:4px 10px;font-family:var(--mono);font-size:11px;color:var(--t2)">${fmtFec(f.fec)}</td>
+        <td style="padding:4px 10px;font-family:var(--mono);font-size:11px;${compColor}">${esc(f.comp)}</td>
+        <td style="padding:4px 10px;font-size:11px;color:var(--t2)">${esc(f.det)}</td>
+        <td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px;color:var(--grn)">${f.ing||''}</td>
+        <td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px;color:var(--red)">${f.egr||''}</td>
+        <td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px;font-weight:600;${stkColor}">${f.stk}</td>
+        <td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px">${f.imp!==null?fmtN2(f.imp):''}</td>
+      </tr>`;
     });
-    bodyDiv.innerHTML = html;
+
+    html += '</tbody></table>';
+    body.innerHTML = html;
 
   } catch(e) {
     console.error('renderHistArt:', e);
@@ -204,34 +194,40 @@ async function renderHistArt() {
 }
 
 function printHistArt() {
-  const bodyEl = document.getElementById('histart-body');
-  const filasDivs = bodyEl.querySelectorAll('.tbl-body > div');
-  if(!filasDivs.length) { toast('Primero consultá la historia','err'); return; }
+  const body = document.getElementById('histart-body');
+  const table = body.querySelector('table');
+  if(!table) { toast('Primero consultá la historia','err'); return; }
   const tit = document.getElementById('histart-tit')?.textContent||'Historia por Artículo';
   const hoy = new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
-  // Construir tabla HTML para impresión
-  const cols = ['Fecha','Comprobante','Detalle','Ingreso','Egreso','Stock','Importe'];
-  const rights = [3,3,3,0,0,0,0]; // índices con alineación derecha (0-based)
-  let rows = '';
-  filasDivs.forEach((div,i) => {
-    const spans = div.querySelectorAll('span');
-    const vals = [...spans].map(s=>s.textContent.trim());
-    rows += `<tr${i%2===1?' style="background:#f9f9f9"':''}>${vals.map((v,j)=>`<td style="${j>=3?'text-align:right':''}">${v}</td>`).join('')}</tr>`;
-  });
   const win = window.open('','_blank','width=900,height=700');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${tit}</title><style>
-    *{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:9px}
-    .hdr{display:flex;justify-content:space-between;margin-bottom:4mm}.hdr h3{font-size:12px}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;font-size:9px;color:#000}
+    .hdr{display:flex;justify-content:space-between;margin-bottom:4mm}
+    .hdr h3{font-size:12px}
     table{width:100%;border-collapse:collapse}
-    th{background:#000;color:#fff;padding:3px 5px;font-size:9px}
-    th:nth-child(n+4){text-align:right}
+    thead th{background:#000;color:#fff;padding:3px 5px;text-align:right;font-size:9px}
+    thead th:nth-child(1),thead th:nth-child(2),thead th:nth-child(3){text-align:left}
     td{padding:2px 5px;border-bottom:1px solid #eee;font-size:9px}
+    tr:nth-child(even) td{background:#f9f9f9}
     @media print{@page{margin:8mm}body{margin:0}}
   </style></head><body>
   <div class="hdr"><h3>${tit}</h3><span>${hoy}</span></div>
-  <table><thead><tr>${cols.map((c,j)=>`<th${j>=3?' style="text-align:right"':''}>${c}</th>`).join('')}</tr></thead>
-  <tbody>${rows}</tbody></table>
+  ${table.outerHTML}
   </body></html>`);
   win.document.close();
   setTimeout(()=>win.print(),500);
+}
+function exportHistArt() {
+  const body = document.getElementById('histart-body');
+  const rowsDivs = body.querySelectorAll('.tbl-body > div');
+  if(!rowsDivs.length) { toast('Primero consultá la historia','err'); return; }
+  const thSpans = body.querySelectorAll('div[style*="background:var(--s3)"] span');
+  const headers = [...thSpans].map(s=>s.textContent.trim());
+  const rows = [...rowsDivs].map(div => {
+    const spans = div.querySelectorAll('span');
+    return [...spans].map(s=>s.textContent.trim());
+  });
+  const tit = document.getElementById('histart-tit')?.textContent||'Historia';
+  exportToXls(tit, headers, rows);
 }
