@@ -137,7 +137,7 @@ async function renderSaldos() {
     const thHdr = document.getElementById('saldo-hdr');
     if(thHdr) {
       const toolbarBottom = document.querySelector('#page-saldo .toolbar')?.getBoundingClientRect().bottom || 155;
-      thHdr.style.cssText = 'display:flex;background:var(--s3);font-family:var(--mono);font-size:11px;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--b1);position:sticky;top:'+Math.round(toolbarBottom)+'px;z-index:5';
+      thHdr.style.cssText = 'display:flex;background:var(--s3);font-family:var(--mono);font-size:11px;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--b1);background:var(--s2);position:sticky;top:'+Math.round(toolbarBottom)+'px;z-index:5';
       thHdr.innerHTML =
         '<span style="flex:0 0 75px;padding:8px 10px">Código</span>' +
         '<span style="flex:1;padding:8px 10px">Razón Social</span>' +

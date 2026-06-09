@@ -155,9 +155,9 @@ async function renderHistArt() {
     const fmtN2 = v => v===0||v===null||v===undefined?'':Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
     const fmtFec = s => s?s.substring(0,10).split('-').reverse().join('/'):'—';
 
-    const histToolbarBottom = document.querySelector('#page-histart .toolbar')?.getBoundingClientRect().bottom || 110;
+    const histTop = Math.round(document.querySelector('#page-histart .toolbar')?.getBoundingClientRect().bottom || 110);
     let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">
-      <thead style="position:sticky;top:${Math.round(histToolbarBottom)}px;z-index:5">
+      <thead style="position:sticky;top:${histTop}px;z-index:5;background:var(--s2)">
         <tr style="background:var(--s3)">
           <th style="text-align:left;padding:6px 10px;width:90px">Fecha</th>
           <th style="text-align:left;padding:6px 10px;width:160px">Comprobante</th>
