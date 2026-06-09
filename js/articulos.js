@@ -90,7 +90,17 @@ function togArtStock() {
   renderArts();
 }
 
-function selArt(i){ artSelIdx=i; renderArts(); }
+function selArt(i) {
+  document.querySelector('#art-body .tr-art.sel')?.classList.remove('sel');
+  artSelIdx = i;
+  const list = filtArts();
+  const pos = list.findIndex(a => ARTS.indexOf(a) === i);
+  const rows = document.querySelectorAll('#art-body .tr-art');
+  if(rows[pos]) {
+    rows[pos].classList.add('sel');
+    document.activeElement?.blur();
+  }
+}
 
 function artDetail(idx){
   const a = ARTS[idx];
@@ -263,12 +273,12 @@ document.addEventListener('keydown', e => {
 });
 function exportArt() {
   const list = filtArts();
-  const headers = ['Código','Descripción','Rubro','Sub-Rubro','Marca','Proveedor','Moneda','Precio','IVA%','Stk Hatsu','Stk Tressa','Dep Hatsu','Dep Tressa','Estuche','Activo','Grupo','Sexo','Cód.Casio'];
+  const headers = ['Código','Descripción','Rubro','Sub-Rubro','Marca','Proveedor','Moneda','Precio','IVA%','Stk Hatsu','Stk Tressa','Dep Hatsu','Dep Tressa','Estuche','Activo','Grupo','Cód.Casio'];
   const rows = list.map(a => [
     a.ART_COD, a.ART_DES, a.ART_RUB||'', a.ART_SRUB||'', a.ART_MARCA||'', a.ART_PROV||'',
     a.ART_MONEDA||'P', a.ART_PRE||0, a.ART_IVA||21,
     a.ART_STK||0, a.ART_STKT||0, a.ART_DEPH||0, a.ART_DEPT||0,
-    a.ART_ESTU||'', a.ART_ACT||'S', a.ART_GRUP||'', a.ART_SEX||'', a.CODCASIO||''
+    a.ART_ESTU||'', a.ART_ACT||'S', a.ART_GRUP||'', a.CODCASIO||''
   ]);
   exportToXls('Articulos', headers, rows);
 }

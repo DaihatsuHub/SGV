@@ -133,53 +133,21 @@ async function renderSaldos() {
 
     const NCOLS = 4 + nMeses + 2;
 
-    // Encabezado fijo duplicado con position:fixed
-    const pageHdr = document.querySelector('#page-saldo .page-hdr');
-    const hdrTop = pageHdr ? (pageHdr.getBoundingClientRect().bottom) : 96;
-    const fixedHdr = document.createElement('div');
-    fixedHdr.id = 'saldo-fixed-hdr';
-    fixedHdr.style.cssText = `position:fixed;top:${hdrTop}px;left:0;right:0;z-index:100;overflow:hidden;pointer-events:none`;
-    fixedHdr.innerHTML = `<table id="saldo-fixed-table" style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed">
-      <thead>
-        <tr style="background:var(--s3)">
-          <th style="text-align:left;padding:6px 10px;width:75px">Código</th>
-          <th style="text-align:left;padding:6px 10px">Razón Social</th>
-          <th style="text-align:center;padding:6px 6px;width:35px">Mon</th>
-          ${thMeses}
-          <th style="text-align:right;padding:6px 8px;min-width:85px">Otros</th>
-          <th style="text-align:right;padding:6px 8px;min-width:90px;border-left:2px solid var(--acc)">Total</th>
-          <th style="text-align:right;padding:6px 8px;min-width:80px">Cheq.</th>
-        </tr>
-      </thead>
-    </table>`;
-    // Quitar anterior si existe
-    document.getElementById('saldo-fixed-hdr')?.remove();
-    document.body.appendChild(fixedHdr);
-    // Sincronizar anchos cuando la tabla principal esté en el DOM
-    setTimeout(()=>{
-      const mainTable = document.querySelector('#saldo-body table');
-      const fixedTable = document.getElementById('saldo-fixed-table');
-      if(mainTable && fixedTable) {
-        const mainW = mainTable.getBoundingClientRect().width;
-        fixedTable.style.width = mainW + 'px';
-        fixedTable.style.marginLeft = mainTable.getBoundingClientRect().left + 'px';
-      }
-    }, 100);
+    // Encabezado en div fijo (como th-art en maestros)
+    const thHdr = document.getElementById('saldo-hdr');
+    if(thHdr) {
+      thHdr.style.cssText = 'display:flex;background:var(--s3);font-family:var(--mono);font-size:11px;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--b1)';
+      thHdr.innerHTML =
+        '<span style="flex:0 0 75px;padding:8px 10px">Código</span>' +
+        '<span style="flex:1;padding:8px 10px">Razón Social</span>' +
+        '<span style="flex:0 0 35px;padding:8px 6px;text-align:center">Mon</span>' +
+        meses.map(m=>'<span style="flex:0 0 85px;padding:8px 8px;text-align:right">'+m.label+'</span>').join('') +
+        '<span style="flex:0 0 85px;padding:8px 8px;text-align:right">Otros</span>' +
+        '<span style="flex:0 0 90px;padding:8px 8px;text-align:right;border-left:2px solid var(--acc)">Total</span>' +
+        '<span style="flex:0 0 80px;padding:8px 8px;text-align:right">Cheq.</span>';
+    }
 
-    let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">
-      <thead>
-        <tr style="background:var(--s3)">
-          <th style="text-align:left;padding:6px 10px;width:75px">Código</th>
-          <th style="text-align:left;padding:6px 10px">Razón Social</th>
-          <th style="text-align:center;padding:6px 6px;width:35px">Mon</th>
-          ${thMeses}
-          <th style="text-align:right;padding:6px 8px;min-width:85px">Otros</th>
-          <th style="text-align:right;padding:6px 8px;min-width:90px;border-left:2px solid var(--acc)">Total</th>
-          <th style="text-align:right;padding:6px 8px;min-width:80px">Cheq.</th>
-        </tr>
-      </thead>
-      <tbody>`;
-
+    let html = '';
     let lastVend = null;
     let rowToggle = false;
     let lastCod = null;
@@ -187,36 +155,29 @@ async function renderSaldos() {
     lista.forEach(r => {
       if(r.vend !== lastVend) {
         if(lastVend !== null) {
-          html += `<tr><td colspan="${NCOLS}" style="background:#1a6be0;height:4px;padding:0"></td></tr>`;
+          html += '<div style="height:3px;background:#1a6be0;margin:0"></div>';
         }
         const vObj = (TABLAS['VEND']||[]).find(v=>v.CODIGO===r.vend);
-        const vLabel = vObj ? `${vObj.CODIGO} — ${vObj.DETALLE}` : (r.vend||'Sin vendedor asignado');
-        html += `<tr><td colspan="${NCOLS}" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--acc);font-family:var(--mono);background:var(--s3);border-top:3px solid #1a6be0">${esc(vLabel)}</td></tr>`;
+        const vLabel = vObj ? vObj.CODIGO+' — '+vObj.DETALLE : (r.vend||'Sin vendedor asignado');
+        html += '<div style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--acc);font-family:var(--mono);background:var(--s3);border-top:3px solid #1a6be0">'+esc(vLabel)+'</div>';
         lastVend = r.vend;
         rowToggle = false;
         lastCod = null;
       }
-
-      if(r.cod !== lastCod) {
-        rowToggle = !rowToggle;
-        lastCod = r.cod;
-      }
-      const bg = rowToggle ? 'background:rgba(255,255,255,0.06)' : 'background:rgba(0,0,0,0.12)';
-
-      const mesCols = r.mes.map(v=>`<td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px;color:${v<0?'var(--red)':''}">${saldoFmt(v)}</td>`).join('');
-
-      html += `<tr style="${bg}">
-        <td style="padding:4px 10px;font-family:var(--mono);font-size:11px;color:var(--acc)">${esc(r.cod)}</td>
-        <td style="padding:4px 10px;font-size:12px">${esc(r.razon)}</td>
-        <td style="text-align:center;padding:4px 6px;font-family:var(--mono);font-size:10px;color:var(--t3)">${esc(monSign(r.mon))}</td>
-        ${mesCols}
-        <td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px;color:${r.otros<0?'var(--red)':''}">${saldoFmt(r.otros)}</td>
-        <td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:12px;font-weight:700;color:${r.total<0?'var(--red)':'var(--txt)'};border-left:2px solid var(--acc)">${saldoFmt(r.total)}</td>
-        <td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px;color:var(--red)">${saldoFmt(r.cheq)}</td>
-      </tr>`;
+      if(r.cod !== lastCod) { rowToggle=!rowToggle; lastCod=r.cod; }
+      const bg = rowToggle ? 'background:rgba(255,255,255,0.04)' : '';
+      const mesCols = r.mes.map(v=>'<span style="flex:0 0 85px;text-align:right;padding:5px 8px;font-family:var(--mono);font-size:11px;color:'+(v<0?'var(--red)':'')+'">'+saldoFmt(v)+'</span>').join('');
+      html += '<div style="display:flex;align-items:center;border-bottom:1px solid var(--b1);'+bg+'">' +
+        '<span style="flex:0 0 75px;padding:5px 10px;font-family:var(--mono);font-size:11px;color:var(--acc)">'+esc(r.cod)+'</span>' +
+        '<span style="flex:1;padding:5px 10px;font-size:12px">'+esc(r.razon)+'</span>' +
+        '<span style="flex:0 0 35px;padding:5px 6px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--t3)">'+esc(monSign(r.mon))+'</span>' +
+        mesCols +
+        '<span style="flex:0 0 85px;text-align:right;padding:5px 8px;font-family:var(--mono);font-size:11px;color:'+(r.otros<0?'var(--red)':'')+'">'+saldoFmt(r.otros)+'</span>' +
+        '<span style="flex:0 0 90px;text-align:right;padding:5px 8px;font-family:var(--mono);font-size:12px;font-weight:700;color:'+(r.total<0?'var(--red)':'var(--txt)')+';border-left:2px solid var(--acc)">'+saldoFmt(r.total)+'</span>' +
+        '<span style="flex:0 0 80px;text-align:right;padding:5px 8px;font-family:var(--mono);font-size:11px;color:var(--red)">'+saldoFmt(r.cheq)+'</span>' +
+      '</div>';
     });
 
-    html += '</tbody></table>';
     body.innerHTML = html;
 
   } catch(e) {
@@ -260,19 +221,4 @@ function printSaldos() {
     '</body></html>');
   win.document.close();
   setTimeout(()=>win.print(),600);
-}
-function exportSaldos() {
-  const body = document.getElementById('saldo-body');
-  const rows_div = body.querySelectorAll('.tbl-body > div');
-  if(!rows_div.length) { toast('Primero consultá los saldos','err'); return; }
-  // Leer encabezados del th-saldo
-  const thSpans = body.querySelectorAll('.th-saldo span');
-  const headers = [...thSpans].map(s=>s.textContent.trim());
-  const rows = [...rows_div].map(div => {
-    if(div.style.height==='3px') return null; // separador
-    const spans = div.querySelectorAll('span');
-    return [...spans].map(s=>s.textContent.trim());
-  }).filter(Boolean);
-  const tit = document.getElementById('saldo-tit')?.textContent||'Saldos';
-  exportToXls(tit, headers, rows);
 }

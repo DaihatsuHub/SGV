@@ -218,16 +218,3 @@ function printHistArt() {
   win.document.close();
   setTimeout(()=>win.print(),500);
 }
-function exportHistArt() {
-  const body = document.getElementById('histart-body');
-  const rowsDivs = body.querySelectorAll('.tbl-body > div');
-  if(!rowsDivs.length) { toast('Primero consultá la historia','err'); return; }
-  const thSpans = body.querySelectorAll('div[style*="background:var(--s3)"] span');
-  const headers = [...thSpans].map(s=>s.textContent.trim());
-  const rows = [...rowsDivs].map(div => {
-    const spans = div.querySelectorAll('span');
-    return [...spans].map(s=>s.textContent.trim());
-  });
-  const tit = document.getElementById('histart-tit')?.textContent||'Historia';
-  exportToXls(tit, headers, rows);
-}
