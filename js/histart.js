@@ -157,7 +157,7 @@ async function renderHistArt() {
 
     const histTop = Math.round(document.querySelector('#page-histart .toolbar')?.getBoundingClientRect().bottom || 110);
     const thSty = `position:sticky;top:${histTop}px;z-index:5;background:var(--s3)`;
-    let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    let html = `<table style="width:100%;border-collapse:separate;border-spacing:0;font-size:12px">
       <thead>
         <tr>
           <th style="${thSty};text-align:left;padding:6px 10px;width:90px">Fecha</th>
