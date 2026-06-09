@@ -136,8 +136,7 @@ async function renderSaldos() {
     // Encabezado en div fijo (como th-art en maestros)
     const thHdr = document.getElementById('saldo-hdr');
     if(thHdr) {
-      const toolbarBottom = document.querySelector('#page-saldo .toolbar')?.getBoundingClientRect().bottom || 155;
-      thHdr.style.cssText = 'display:flex;background:var(--s3);font-family:var(--mono);font-size:11px;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--b1);background:var(--bg);position:sticky;top:'+Math.round(toolbarBottom)+'px;z-index:5';
+      thHdr.style.cssText = 'display:flex;background:var(--s3);font-family:var(--mono);font-size:11px;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--b1)';
       thHdr.innerHTML =
         '<span style="flex:0 0 75px;padding:8px 10px">Código</span>' +
         '<span style="flex:1;padding:8px 10px">Razón Social</span>' +
@@ -180,6 +179,7 @@ async function renderSaldos() {
     });
 
     body.innerHTML = html;
+    setTimeout(saldoInitScroll, 50);
 
   } catch(e) {
     console.error('renderSaldos:', e);
@@ -222,4 +222,34 @@ function printSaldos() {
     '</body></html>');
   win.document.close();
   setTimeout(()=>win.print(),600);
+}
+
+// ── Sticky header por scroll ──────────────────────────────
+function saldoInitScroll() {
+  const hdr = document.getElementById('saldo-hdr');
+  if(!hdr) return;
+  const origTop = hdr.getBoundingClientRect().top + window.scrollY;
+  const toolbarH = document.querySelector('#page-saldo .toolbar')?.offsetHeight || 100;
+  const stickyTop = 48 + toolbarH;
+
+  function onScroll() {
+    const page = document.getElementById('page-saldo');
+    if(!page?.classList.contains('active')) return;
+    if(window.scrollY + stickyTop >= origTop) {
+      hdr.style.position = 'fixed';
+      hdr.style.top = stickyTop + 'px';
+      hdr.style.left = hdr.parentElement.getBoundingClientRect().left + 'px';
+      hdr.style.width = hdr.parentElement.offsetWidth + 'px';
+      hdr.style.zIndex = '10';
+    } else {
+      hdr.style.position = '';
+      hdr.style.top = '';
+      hdr.style.left = '';
+      hdr.style.width = '';
+      hdr.style.zIndex = '';
+    }
+  }
+  window.removeEventListener('scroll', window._saldoScroll);
+  window._saldoScroll = onScroll;
+  window.addEventListener('scroll', onScroll);
 }

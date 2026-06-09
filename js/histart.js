@@ -155,18 +155,16 @@ async function renderHistArt() {
     const fmtN2 = v => v===0||v===null||v===undefined?'':Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
     const fmtFec = s => s?s.substring(0,10).split('-').reverse().join('/'):'—';
 
-    const histTop = Math.round(document.querySelector('#page-histart .toolbar')?.getBoundingClientRect().bottom || 110);
-    const thSty = `position:sticky;top:${histTop}px;z-index:5;background:var(--s3)`;
-    let html = `<table style="width:100%;border-collapse:separate;border-spacing:0;font-size:12px">
+    let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">
       <thead>
-        <tr>
-          <th style="${thSty};text-align:left;padding:6px 10px;width:90px">Fecha</th>
-          <th style="${thSty};text-align:left;padding:6px 10px;width:160px">Comprobante</th>
-          <th style="${thSty};text-align:left;padding:6px 10px">Detalle</th>
-          <th style="${thSty};text-align:right;padding:6px 8px;width:70px">Ingreso</th>
-          <th style="${thSty};text-align:right;padding:6px 8px;width:70px">Egreso</th>
-          <th style="${thSty};text-align:right;padding:6px 8px;width:70px">Stock</th>
-          <th style="${thSty};text-align:right;padding:6px 8px;width:100px">Importe</th>
+        <tr style="background:var(--s3)">
+          <th style="text-align:left;padding:6px 10px;width:90px">Fecha</th>
+          <th style="text-align:left;padding:6px 10px;width:160px">Comprobante</th>
+          <th style="text-align:left;padding:6px 10px">Detalle</th>
+          <th style="text-align:right;padding:6px 8px;width:70px">Ingreso</th>
+          <th style="text-align:right;padding:6px 8px;width:70px">Egreso</th>
+          <th style="text-align:right;padding:6px 8px;width:70px">Stock</th>
+          <th style="text-align:right;padding:6px 8px;width:100px">Importe</th>
         </tr>
       </thead>
       <tbody>`;
@@ -188,6 +186,7 @@ async function renderHistArt() {
 
     html += '</tbody></table>';
     body.innerHTML = html;
+    setTimeout(histArtInitScroll, 50);
 
   } catch(e) {
     console.error('renderHistArt:', e);
@@ -219,4 +218,34 @@ function printHistArt() {
   </body></html>`);
   win.document.close();
   setTimeout(()=>win.print(),500);
+}
+
+// ── Sticky header por scroll ──────────────────────────────
+function histArtInitScroll() {
+  const hdr = document.getElementById('histart-hdr');
+  if(!hdr) return;
+  const origTop = hdr.getBoundingClientRect().top + window.scrollY;
+  const toolbarH = document.querySelector('#page-histart .toolbar')?.offsetHeight || 110;
+  const stickyTop = 48 + toolbarH; // topbar + toolbar
+
+  function onScroll() {
+    const page = document.getElementById('page-histart');
+    if(!page?.classList.contains('active')) return;
+    if(window.scrollY + stickyTop >= origTop) {
+      hdr.style.position = 'fixed';
+      hdr.style.top = stickyTop + 'px';
+      hdr.style.left = hdr.parentElement.getBoundingClientRect().left + 'px';
+      hdr.style.width = hdr.parentElement.offsetWidth + 'px';
+      hdr.style.zIndex = '10';
+    } else {
+      hdr.style.position = '';
+      hdr.style.top = '';
+      hdr.style.left = '';
+      hdr.style.width = '';
+      hdr.style.zIndex = '';
+    }
+  }
+  window.removeEventListener('scroll', window._histScroll);
+  window._histScroll = onScroll;
+  window.addEventListener('scroll', onScroll);
 }
