@@ -142,7 +142,7 @@ async function renderSaldos() {
         '<span style="flex:1;padding:8px 10px">Razón Social</span>' +
         '<span style="flex:0 0 35px;padding:8px 6px;text-align:center">Mon</span>' +
         meses.map(m=>'<span style="flex:0 0 85px;padding:8px 8px;text-align:right">'+m.label+'</span>').join('') +
-        '<span style="flex:0 0 85px;padding:8px 8px;text-align:right">Otros</span>' +
+        '<span style="flex:0 0 85px;padding:8px 8px;text-align:right">Antes</span>' +
         '<span style="flex:0 0 90px;padding:8px 8px;text-align:right;border-left:2px solid var(--acc)">Total</span>' +
         '<span style="flex:0 0 80px;padding:8px 8px;text-align:right">Cheq.</span>';
     }
@@ -179,7 +179,6 @@ async function renderSaldos() {
     });
 
     body.innerHTML = html;
-    setTimeout(saldoInitScroll, 50);
 
   } catch(e) {
     console.error('renderSaldos:', e);
@@ -222,34 +221,4 @@ function printSaldos() {
     '</body></html>');
   win.document.close();
   setTimeout(()=>win.print(),600);
-}
-
-// ── Sticky header por scroll ──────────────────────────────
-function saldoInitScroll() {
-  const hdr = document.getElementById('saldo-hdr');
-  if(!hdr) return;
-  const origTop = hdr.getBoundingClientRect().top + window.scrollY;
-  const toolbarH = document.querySelector('#page-saldo .toolbar')?.offsetHeight || 100;
-  const stickyTop = 48 + toolbarH;
-
-  function onScroll() {
-    const page = document.getElementById('page-saldo');
-    if(!page?.classList.contains('active')) return;
-    if(window.scrollY + stickyTop >= origTop) {
-      hdr.style.position = 'fixed';
-      hdr.style.top = stickyTop + 'px';
-      hdr.style.left = hdr.parentElement.getBoundingClientRect().left + 'px';
-      hdr.style.width = hdr.parentElement.offsetWidth + 'px';
-      hdr.style.zIndex = '10';
-    } else {
-      hdr.style.position = '';
-      hdr.style.top = '';
-      hdr.style.left = '';
-      hdr.style.width = '';
-      hdr.style.zIndex = '';
-    }
-  }
-  window.removeEventListener('scroll', window._saldoScroll);
-  window._saldoScroll = onScroll;
-  window.addEventListener('scroll', onScroll);
 }
