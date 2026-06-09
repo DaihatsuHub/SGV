@@ -158,20 +158,29 @@ async function renderHistArt() {
     // Encabezado en histart-hdr (fijo, fuera del tbl-body)
     const thHdr = document.getElementById('histart-hdr');
     if(thHdr) {
-      thHdr.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed">
+      thHdr.innerHTML = `<table style="width:calc(100% - 0px);border-collapse:collapse;font-size:12px;table-layout:fixed">
+        <colgroup>
+          <col style="width:90px"><col style="width:160px"><col><col style="width:70px">
+          <col style="width:70px"><col style="width:70px"><col style="width:100px">
+        </colgroup>
         <tr style="background:var(--s3)">
-          <th style="text-align:left;padding:6px 10px;width:90px">Fecha</th>
-          <th style="text-align:left;padding:6px 10px;width:160px">Comprobante</th>
+          <th style="text-align:left;padding:6px 10px">Fecha</th>
+          <th style="text-align:left;padding:6px 10px">Comprobante</th>
           <th style="text-align:left;padding:6px 10px">Detalle</th>
-          <th style="text-align:right;padding:6px 8px;width:70px">Ingreso</th>
-          <th style="text-align:right;padding:6px 8px;width:70px">Egreso</th>
-          <th style="text-align:right;padding:6px 8px;width:70px">Stock</th>
-          <th style="text-align:right;padding:6px 8px;width:100px">Importe</th>
+          <th style="text-align:right;padding:6px 8px">Ingreso</th>
+          <th style="text-align:right;padding:6px 8px">Egreso</th>
+          <th style="text-align:right;padding:6px 8px">Stock</th>
+          <th style="text-align:right;padding:6px 8px">Importe</th>
         </tr>
       </table>`;
     }
 
-    let html = `<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed"><tbody>`;
+    let html = `<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed">
+      <colgroup>
+        <col style="width:90px"><col style="width:160px"><col><col style="width:70px">
+        <col style="width:70px"><col style="width:70px"><col style="width:100px">
+      </colgroup>
+      <tbody>`;
 
     filas.forEach((f,i) => {
       const bg = i%2===0?'':'background:rgba(255,255,255,0.03)';
