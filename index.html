@@ -117,7 +117,6 @@
     <button class="btn" id="btn-art-modif" onclick="aModif()">✏️ Modificar</button>
     <button class="btn dng" id="btn-art-baja" onclick="aBaja()">✕ Baja</button>
     <button class="btn scs" onclick="printArt()">🖨 Imprimir</button>
-    <button class="btn" onclick="exportArt()">📊 Excel</button>
     <button class="btn" id="btn-cfg-art" style="display:none" onclick="openColCfg('art')" title="Configurar columnas">⚙️ Columnas</button>
     <button class="chip" id="af-stock" onclick="togArtStock()" style="margin-left:4px">📦 Con Stock</button>
     <div class="spacer"></div>
@@ -147,7 +146,6 @@
     <button class="btn" id="btn-cli-modif" onclick="cModif()">✏️ Modificar</button>
     <button class="btn dng" id="btn-cli-baja" onclick="cBaja()">✕ Baja</button>
     <button class="btn scs" onclick="printCli()">🖨 Imprimir</button>
-    <button class="btn" onclick="exportCli()">📊 Excel</button>
     <button class="btn" id="btn-cfg-cli" style="display:none" onclick="openColCfg('cli')" title="Configurar columnas">⚙️ Columnas</button>
     <div class="spacer"></div>
     <div class="srch-wrap">
@@ -387,12 +385,10 @@
     </select>
     <button class="btn pri" onclick="renderHistArt()">🔍 Ver</button>
     <button class="btn" onclick="printHistArt()">🖨 Imprimir</button>
-    <button class="btn" onclick="exportHistArt()">📊 Excel</button>
   </div>
-  <div class="tbl-wrap">
-    <div id="histart-body">
-      <div class="empty" style="margin-top:40px">Buscá un artículo para ver su historia</div>
-    </div>
+  <div id="histart-hdr"></div>
+  <div id="histart-body">
+    <div class="empty" style="margin-top:40px">Buscá un artículo para ver su historia</div>
   </div>
 </div>
 
@@ -415,12 +411,10 @@
     </select>
     <button class="btn pri" onclick="renderSaldos()">🔍 Consultar</button>
     <button class="btn" onclick="printSaldos()">🖨 Imprimir</button>
-    <button class="btn" onclick="exportSaldos()">📊 Excel</button>
   </div>
-  <div class="tbl-wrap">
-    <div id="saldo-body">
-      <div class="empty" style="margin-top:40px">Seleccioná los parámetros y presioná Consultar</div>
-    </div>
+  <div id="saldo-hdr"></div>
+  <div id="saldo-body">
+    <div class="empty" style="margin-top:40px">Seleccioná los parámetros y presioná Consultar</div>
   </div>
 </div>
 
