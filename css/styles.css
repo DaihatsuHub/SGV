@@ -24,6 +24,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:10
 /* PAGES */
 .page{display:none;padding:20px;max-width:1500px;margin:0 auto}
 .page.active{display:block}
+/* Listados con toolbar fijo y scroll interno */
+.page-list{display:none;flex-direction:column;height:calc(100vh - 48px);overflow:hidden;padding:0;max-width:100%}
+.page-list.active{display:flex}
+.page-list .toolbar{margin:0;padding:10px 20px;background:var(--s1);border-bottom:1px solid var(--b1);flex-shrink:0;position:static}
+.page-list-body{flex:1;overflow-y:auto;padding:0 20px 20px;min-height:0}
 
 /* STATS */
 
@@ -59,6 +64,14 @@ body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:10
 /* TABLE */
 .tbl-wrap{background:var(--s1);border:1px solid var(--b1);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)}
 .tbl-body{height:calc(100vh - 210px);overflow-y:auto}
+#page-saldo{overflow:hidden;height:100vh;display:none;flex-direction:column;padding-bottom:0}
+#page-saldo.active{display:flex}
+#page-saldo .tbl-wrap{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+#page-saldo .tbl-body{flex:1;height:auto}
+#page-histart{overflow:hidden;height:100vh;display:none;flex-direction:column;padding-bottom:0}
+#page-histart.active{display:flex}
+#page-histart .tbl-wrap{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+#page-histart .tbl-body{flex:1;height:auto}
 
 /* ART TABLE */
 .th-art,.tr-art{display:grid;grid-template-columns:110px 1fr 70px 95px 68px 68px 52px 52px 75px;gap:6px;padding:11px 16px;align-items:center}
