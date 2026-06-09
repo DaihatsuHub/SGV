@@ -155,8 +155,10 @@ async function renderHistArt() {
     const fmtN2 = v => v===0||v===null||v===undefined?'':Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
     const fmtFec = s => s?s.substring(0,10).split('-').reverse().join('/'):'—';
 
-    let html = `<table style="width:100%;border-collapse:collapse;font-size:12px">
-      <thead>
+    // Encabezado en histart-hdr (fijo, fuera del tbl-body)
+    const thHdr = document.getElementById('histart-hdr');
+    if(thHdr) {
+      thHdr.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed">
         <tr style="background:var(--s3)">
           <th style="text-align:left;padding:6px 10px;width:90px">Fecha</th>
           <th style="text-align:left;padding:6px 10px;width:160px">Comprobante</th>
@@ -166,8 +168,10 @@ async function renderHistArt() {
           <th style="text-align:right;padding:6px 8px;width:70px">Stock</th>
           <th style="text-align:right;padding:6px 8px;width:100px">Importe</th>
         </tr>
-      </thead>
-      <tbody>`;
+      </table>`;
+    }
+
+    let html = `<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed"><tbody>`;
 
     filas.forEach((f,i) => {
       const bg = i%2===0?'':'background:rgba(255,255,255,0.03)';
@@ -186,7 +190,7 @@ async function renderHistArt() {
 
     html += '</tbody></table>';
     body.innerHTML = html;
-    setTimeout(histArtInitScroll, 50);
+
 
   } catch(e) {
     console.error('renderHistArt:', e);
