@@ -21,7 +21,7 @@ async function doLogin() {
   try {
     // Autenticar con Supabase Auth
     const email = cod.toLowerCase() + '@sgv.local';
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    const { data, error } = await sbClient.auth.signInWithPassword({ email, password: pass });
 
     if (error) {
       errEl.textContent = 'Usuario o contraseña incorrectos';
@@ -30,7 +30,7 @@ async function doLogin() {
     }
 
     // Obtener nivel desde tabla usuarios
-    const { data: uData } = await supabase
+    const { data: uData } = await sbClient
       .from('usuarios')
       .select('codigo, nivel')
       .eq('user_id', data.user.id)
@@ -67,7 +67,7 @@ function loginOk() {
 }
 
 async function cerrarSistema() {
-  await supabase.auth.signOut();
+  await sbClient.auth.signOut();
   usuarioActual = null;
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
