@@ -241,7 +241,7 @@ async function loadUsuarios() {
   try {
     const d = await sbGet('usuarios');
     if (!TABLAS['USUA']) TABLAS['USUA'] = [];
-    TABLAS['USUA'] = d.map(r => ({ TABLA:'USUA', CODIGO:r.codigo, DETALLE:r.password||'', NIVEL:r.nivel||50, STRING1:'', STRING2:'', STRING3:'', FECHA1:'' }));
+    TABLAS['USUA'] = d.map(r => ({ TABLA:'USUA', CODIGO:r.codigo, DETALLE:'••••••', NIVEL:r.nivel||50, STRING1:'', STRING2:'', STRING3:'', FECHA1:'' }));
   } catch(e) { console.warn('loadUsuarios:', e); }
 }
 
