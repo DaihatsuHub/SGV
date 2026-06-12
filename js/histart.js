@@ -77,7 +77,8 @@ async function renderHistArt() {
     const desps = await sbGet('despachos', `dep_art=eq.${encodeURIComponent(cod)}&order=dep_fec.asc`);
 
     // ── Traer items de facturas del artículo ──
-    const hdrs = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+    const token = await getAuthToken();
+    const hdrs = {'apikey':SB_KEY,'Authorization':'Bearer '+token};
     const items = [];
     let offset = 0;
     while(true) {

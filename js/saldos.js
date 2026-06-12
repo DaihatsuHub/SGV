@@ -38,7 +38,8 @@ async function renderSaldos() {
   try {
     // Paginación automática — Supabase limita a 1000 por request
     const baseUrl = `${SB_URL}/rest/v1/facturas?fac_saldo=gt.0&select=fac_nro,fac_fec,fac_cli,fac_saldo,fac_moneda,fac_vend`;
-    const hdrs = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+    const token = await getAuthToken();
+    const hdrs = {'apikey':SB_KEY,'Authorization':'Bearer '+token};
     const facs = [];
     let offset = 0;
     while(true) {
