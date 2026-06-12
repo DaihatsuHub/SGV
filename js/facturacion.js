@@ -456,7 +456,7 @@ async function facAutorizarAfip(facNro) {
     };
     const resp = await fetch(`${SB_URL}/functions/v1/afip-facturar`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY },
+      headers: { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + (await getAuthToken()) },
       body: JSON.stringify(payload)
     });
     const data = await resp.json();
@@ -1300,7 +1300,7 @@ async function nfOnCtipChange() {
   if(!ct){if(el)el.textContent='—';return;}
   // Fetch fresco de Supabase para ver estado actual de bloqueo
   try {
-    const resp=await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${ct.id}&select=id,bloqueado,bloqueado_por,ultimo_nro`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'}});
+    const resp=await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${ct.id}&select=id,bloqueado,bloqueado_por,ultimo_nro`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+(await getAuthToken()),'Content-Type':'application/json'}});
     const data=await resp.json();
     if(data&&data[0]) {
       ct.bloqueado=data[0].bloqueado;
