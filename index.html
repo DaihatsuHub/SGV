@@ -387,7 +387,7 @@
     <button class="btn" onclick="printHistArt()">🖨 Imprimir</button>
   </div>
   <div class="tbl-wrap">
-    <div id="histart-hdr"></div>
+    <div id="histart-hdr" class="th-histart"></div>
     <div id="histart-body" class="tbl-body">
       <div class="empty" style="margin-top:40px">Buscá un artículo para ver su historia</div>
     </div>
@@ -415,7 +415,7 @@
     <button class="btn" onclick="printSaldos()">🖨 Imprimir</button>
   </div>
   <div class="tbl-wrap">
-    <div id="saldo-hdr"></div>
+    <div id="saldo-hdr" class="th-saldo"></div>
     <div id="saldo-body" class="tbl-body">
       <div class="empty" style="margin-top:40px">Seleccioná los parámetros y presioná Consultar</div>
     </div>
@@ -883,6 +883,13 @@
 <!-- ══════════════════════════════════════════════════════ -->
 <!-- JAVASCRIPT                                            -->
 <!-- ══════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const supabase = window.supabase.createClient(
+    'https://blwxnrzrsgxscmsquwlz.supabase.co',
+    'sb_publishable_ClOenbz_NYB1iAPn0VqOAw_Fe6RTlGR'
+  );
+</script>
 <script src="js/supabase.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/columnas.js"></script>

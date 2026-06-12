@@ -8,31 +8,45 @@ let usuaSelIdx  = null;
 let usuarioActual = null;
 
 // ── LOGIN ─────────────────────────────────────────────────
-function doLogin() {
+async function doLogin() {
   const cod  = document.getElementById('l-user').value.trim().toUpperCase();
   const pass = document.getElementById('l-pass').value.trim();
-  document.getElementById('l-err').textContent = '';
-  if (!cod) { document.getElementById('l-err').textContent = 'Ingresá un usuario'; return; }
+  const errEl = document.getElementById('l-err');
+  errEl.textContent = '';
+  if (!cod) { errEl.textContent = 'Ingresá un usuario'; return; }
+  if (!pass) { errEl.textContent = 'Ingresá la contraseña'; return; }
 
-  if (cod === 'RGRDELTA') {
-    usuarioActual = { codigo: cod, nivel: 99 };
-    loginOk(); return;
-  }
+  errEl.textContent = '⏳ Verificando...';
 
-  const usuarios = TABLAS['USUA'] || [];
-  if (usuarios.length === 0) {
-    usuarioActual = { codigo: cod, nivel: 99 };
-    loginOk(); return;
-  }
+  try {
+    // Autenticar con Supabase Auth
+    const email = cod.toLowerCase() + '@sgv.local';
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
 
-  const u = usuarios.find(r => r.CODIGO === cod && r.DETALLE === pass);
-  if (!u) {
-    document.getElementById('l-err').textContent = 'Usuario o contraseña incorrectos';
-    document.getElementById('l-pass').value = '';
-    return;
+    if (error) {
+      errEl.textContent = 'Usuario o contraseña incorrectos';
+      document.getElementById('l-pass').value = '';
+      return;
+    }
+
+    // Obtener nivel desde tabla usuarios
+    const { data: uData } = await supabase
+      .from('usuarios')
+      .select('codigo, nivel')
+      .eq('user_id', data.user.id)
+      .single();
+
+    const nivel = uData ? parseInt(uData.nivel)||0 : 0;
+    const codigo = uData ? uData.codigo : cod;
+
+    usuarioActual = { codigo, nivel, user_id: data.user.id };
+    errEl.textContent = '';
+    loginOk();
+
+  } catch(e) {
+    console.error('doLogin:', e);
+    errEl.textContent = 'Error al conectar';
   }
-  usuarioActual = { codigo: u.CODIGO, nivel: parseInt(u.NIVEL)||0 };
-  loginOk();
 }
 
 function loginOk() {
@@ -52,7 +66,8 @@ function loginOk() {
   renderUsua && renderUsua();
 }
 
-function cerrarSistema() {
+async function cerrarSistema() {
+  await supabase.auth.signOut();
   usuarioActual = null;
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
