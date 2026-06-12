@@ -14,9 +14,15 @@ function syncStatus(txt, color='#93b4d8') {
   if (el) { el.textContent = txt; el.style.color = color; }
 }
 
+async function getAuthToken() {
+  const { data } = await sbClient.auth.getSession();
+  return data.session?.access_token || SB_KEY;
+}
+
 async function sbGet(table, params='') {
+  const token = await getAuthToken();
   const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
-    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + token }
   });
   if (!r.ok) throw new Error(`sbGet ${r.status}`);
   return r.json();
@@ -36,28 +42,31 @@ async function sbGetAll(table, orderField, extraParams='') {
 }
 
 async function sbUpsert(table, data) {
+  const token = await getAuthToken();
   const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
     method: 'POST',
-    headers: { ...SB_HDR, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    headers: { ...SB_HDR, 'Authorization': 'Bearer ' + token, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify(data)
   });
   if (!r.ok) { const t=await r.text(); throw new Error(`sbUpsert ${r.status}: ${t.substring(0,150)}`); }
 }
 
 async function sbUpsertOnConflict(table, data, conflictCol) {
+  const token = await getAuthToken();
   const r = await fetch(`${SB_URL}/rest/v1/${table}?on_conflict=${conflictCol}`, {
     method: 'POST',
-    headers: { ...SB_HDR, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    headers: { ...SB_HDR, 'Authorization': 'Bearer ' + token, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify(data)
   });
   if (!r.ok) { const t=await r.text(); throw new Error(`sbUpsert ${r.status}: ${t.substring(0,150)}`); }
 }
 
 async function sbDelete(table, match) {
+  const token = await getAuthToken();
   const params = Object.entries(match).map(([k,v])=>`${k}=eq.${encodeURIComponent(v)}`).join('&');
   const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
     method: 'DELETE',
-    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + token }
   });
   if (!r.ok) throw new Error(`sbDelete ${r.status}`);
 }
@@ -241,7 +250,7 @@ async function loadUsuarios() {
   try {
     const d = await sbGet('usuarios');
     if (!TABLAS['USUA']) TABLAS['USUA'] = [];
-    TABLAS['USUA'] = d.map(r => ({ TABLA:'USUA', CODIGO:r.codigo, DETALLE:'••••••', NIVEL:r.nivel||50, STRING1:'', STRING2:'', STRING3:'', FECHA1:'' }));
+    TABLAS['USUA'] = d.map(r => ({ TABLA:'USUA', CODIGO:r.codigo, DETALLE:r.password||'', NIVEL:r.nivel||50, STRING1:'', STRING2:'', STRING3:'', FECHA1:'' }));
   } catch(e) { console.warn('loadUsuarios:', e); }
 }
 
