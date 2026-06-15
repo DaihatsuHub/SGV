@@ -62,10 +62,19 @@ const COL_DEFS = {
     {field:'CLI_OBS',    label:'Observaciones',width:'150px', active:false},
     {field:'CLI_CATE',   label:'Categoría',    width:'80px',  active:false},
     {field:'CLI_DTO',    label:'Dto %',        width:'55px',  align:'right', active:false},
+  ],
+  reci: [
+    {field:'REC_NRO',    label:'Recibo',    width:'120px', active:true},
+    {field:'REC_FEC',    label:'Fecha',     width:'100px', active:true},
+    {field:'REC_CLI',    label:'Cliente',   width:'1fr',   active:true},
+    {field:'REC_TOT',    label:'Total',     width:'120px', align:'right', active:true},
+    {field:'REC_EMP',    label:'Empresa',   width:'80px',  active:false},
+    {field:'REC_TALO',   label:'Talonario', width:'80px',  active:false},
+    {field:'REC_ESTADO', label:'Estado',    width:'80px',  align:'center', active:false},
   ]
 };
 
-const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true}, desp:{col:null,asc:true} };
+const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true}, desp:{col:null,asc:true}, reci:{col:null,asc:true} };
 
 function getActiveCols(grid) {
   const cfg  = getConfigUI(grid);
@@ -84,6 +93,7 @@ function toggleSort(grid, field) {
   if (grid==='art') renderArts();
   else if (grid==='cli') renderClis();
   else if (grid==='desp') renderDesp();
+  else if (grid==='reci') renderReci();
 }
 
 function sortArrow(grid, field) {
@@ -101,7 +111,7 @@ function openColCfg(grid) {
   } else {
     ordered = [...defs];
   }
-  const titles = {art:'Artículos', cli:'Clientes', desp:'Despachos'};
+  const titles = {art:'Artículos', cli:'Clientes', desp:'Despachos', reci:'Recibos'};
   document.getElementById('col-cfg-title').textContent = 'Columnas — ' + (titles[grid]||grid);
   const body = document.getElementById('col-cfg-body');
   body.innerHTML = ordered.map(c => {
@@ -177,6 +187,7 @@ async function saveColCfg() {
     if (grid==='art') renderArts();
     else if (grid==='cli') renderClis();
     else if (grid==='desp') renderDesp();
+    else if (grid==='reci') renderReci();
     toast('Configuración guardada', 'scs');
   } catch(e) {
     console.error('saveColCfg:', e);

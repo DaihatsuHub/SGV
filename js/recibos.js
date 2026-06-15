@@ -58,27 +58,65 @@ async function sbLoadRecis(){
 }
 function getReciRows(){
   const q=(document.getElementById('reci-q')?.value||'').toLowerCase();
-  return (RECIS||[]).filter(r=>{
+  let list=(RECIS||[]).filter(r=>{
     if(!q) return true;
     const cli=CLIS.find(c=>(c.CLI_CODIGO||'').trim()===(r.cliente||'').trim());
     return String(r.numero||'').includes(q) ||
       (cli && (cli.CLI_RAZON||'').toLowerCase().includes(q)) ||
       (r.cliente||'').toLowerCase().includes(q);
-  }).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  });
+  const s=(typeof SORT_STATE!=='undefined' && SORT_STATE.reci) ? SORT_STATE.reci : {col:null,asc:true};
+  if(s.col){
+    const razon=x=>{ const c=CLIS.find(k=>(k.CLI_CODIGO||'').trim()===(x.cliente||'').trim()); return (c?c.CLI_RAZON:x.cliente)||''; };
+    list=list.slice().sort((a,b)=>{
+      let va,vb;
+      switch(s.col){
+        case 'REC_NRO': va=(a.empresa||'')+(a.talonario||'')+String(a.numero||'').padStart(10,'0'); vb=(b.empresa||'')+(b.talonario||'')+String(b.numero||'').padStart(10,'0'); break;
+        case 'REC_FEC': va=a.fecha||''; vb=b.fecha||''; break;
+        case 'REC_CLI': va=razon(a); vb=razon(b); break;
+        case 'REC_EMP': va=a.empresa||''; vb=b.empresa||''; break;
+        case 'REC_TALO':va=a.talonario||''; vb=b.talonario||''; break;
+        case 'REC_TOT': va=a.total_abonado||0; vb=b.total_abonado||0; break;
+        case 'REC_ESTADO': va=a.anulado?1:0; vb=b.anulado?1:0; break;
+        default: va=''; vb='';
+      }
+      const r=(typeof va==='number'&&typeof vb==='number')?(va-vb):String(va).localeCompare(String(vb));
+      return s.asc?r:-r;
+    });
+  } else {
+    list=list.slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  }
+  return list;
 }
 function renderReci(){
   const list=getReciRows(); const body=document.getElementById('reci-body'); if(!body) return;
+  const cols=(typeof getActiveCols==='function')?getActiveCols('reci'):[
+    {field:'REC_NRO',label:'Recibo',width:'120px'},{field:'REC_FEC',label:'Fecha',width:'100px'},
+    {field:'REC_CLI',label:'Cliente',width:'1fr'},{field:'REC_TOT',label:'Total',width:'120px',align:'right'}];
+  const gridTpl=cols.map(c=>c.width||'1fr').join(' ');
+  const thead=document.getElementById('reci-thead');
+  if(thead){
+    thead.style.gridTemplateColumns=gridTpl;
+    thead.innerHTML=cols.map(c=>`<span class="th-sortable" onclick="toggleSort('reci','${c.field}')" style="${c.align?'text-align:'+c.align:''}">${c.label}${(typeof sortArrow==='function')?sortArrow('reci',c.field):''}</span>`).join('');
+  }
   if(!list.length){ body.innerHTML='<div class="empty">🔍 Sin resultados</div>'; return; }
   body.innerHTML=list.map((r,i)=>{
     const sel=reciSelIdx===i?'sel':'';
     const cli=CLIS.find(c=>(c.CLI_CODIGO||'').trim()===(r.cliente||'').trim());
     const fec=r.fecha?r.fecha.substring(0,10).split('-').reverse().join('/'):'—';
-    return `<div class="tr-tab ${sel}" onclick="selReci(${i})" ondblclick="reciModif()">
-      <span class="col-cod">${esc(r.empresa||'')}${esc(r.talonario||'')} ${esc(String(r.numero||''))}</span>
-      <span class="col-des">${esc(cli?cli.CLI_RAZON:(r.cliente||''))}</span>
-      <span class="col-sm">${fec}</span>
-      <span class="col-num">${reciFmt(r.total_abonado||0)}</span>
-    </div>`;
+    const emp=r.empresa==='H'?'Hatsu':(r.empresa==='T'?'Tressa':(r.empresa||''));
+    return `<div class="tr-art ${sel}" style="grid-template-columns:${gridTpl}" onclick="selReci(${i})" ondblclick="reciModif()">`+
+      cols.map(c=>{
+        if(c.field==='REC_NRO')   return `<span class="col-cod" style="color:var(--acc)">${esc(r.empresa||'')}${esc(r.talonario||'')} ${esc(String(r.numero||''))}</span>`;
+        if(c.field==='REC_FEC')   return `<span class="col-sm" style="color:var(--t2)">${fec}</span>`;
+        if(c.field==='REC_CLI')   return `<span class="col-des">${esc(cli?cli.CLI_RAZON:(r.cliente||''))}</span>`;
+        if(c.field==='REC_EMP')   return `<span class="col-sm">${esc(emp)}</span>`;
+        if(c.field==='REC_TALO')  return `<span class="col-sm">${esc(r.talonario||'')}</span>`;
+        if(c.field==='REC_TOT')   return `<span class="col-num" style="text-align:right;font-family:var(--mono)">${reciFmt(r.total_abonado||0)}</span>`;
+        if(c.field==='REC_ESTADO')return `<span class="col-sm" style="text-align:center;color:${r.anulado?'var(--red)':'var(--grn)'}">${r.anulado?'Anulado':'OK'}</span>`;
+        return `<span></span>`;
+      }).join('')+
+    `</div>`;
   }).join('');
 }
 function selReci(i){ reciSelIdx=i; renderReci(); }
@@ -96,7 +134,7 @@ function reciAlta(){
   const tls=talosDeEmpresa(emp); _reciHdr.talonario=tls[0]?.tipo||'';
   document.getElementById('rf-talo').value=_reciHdr.talonario;
   _reciHdr.numero=_reciHdr.talonario?taloNextNumero(emp,_reciHdr.talonario):'';
-  document.getElementById('rf-num').value=_reciHdr.numero||'';
+  const numElA=document.getElementById('rf-num'); if(numElA){ numElA.value=_reciHdr.numero||''; numElA.readOnly=true; }
   document.getElementById('rf-fec').value=_reciHdr.fecha;
   document.getElementById('rf-cli').value='';
   ['rf-domic','rf-local','rf-provin','rf-vend'].forEach(id=>{const el=document.getElementById(id); if(el) el.textContent='—';});
@@ -120,7 +158,7 @@ async function reciModif(){
   reciFillTalonarios(rc.empresa);
   document.getElementById('rf-emp').value=rc.empresa;  document.getElementById('rf-emp').disabled=true;
   document.getElementById('rf-talo').value=rc.talonario; document.getElementById('rf-talo').disabled=true;
-  document.getElementById('rf-num').value=rc.numero;
+  const numElM=document.getElementById('rf-num'); if(numElM){ numElM.value=rc.numero; numElM.readOnly=true; }
   document.getElementById('rf-fec').value=_reciHdr.fecha;
   document.getElementById('rf-cot-casio').value=reciFmt(_reciHdr.cotCasio);
   document.getElementById('rf-cot-tressa').value=reciFmt(_reciHdr.cotTressa);
@@ -186,7 +224,20 @@ function reciTaloChange(){ _reciHdr.talonario=document.getElementById('rf-talo')
 function reciSetNumero(){
   if(_reciMode!=='A') return;
   _reciHdr.numero=_reciHdr.talonario?taloNextNumero(_reciHdr.empresa,_reciHdr.talonario):'';
-  document.getElementById('rf-num').value=_reciHdr.numero||'';
+  const el=document.getElementById('rf-num'); if(el){ el.value=_reciHdr.numero||''; el.readOnly=true; }
+}
+// Cuando el número se vuelve editable (por duplicado), reflejar en el estado
+function reciNumeroChange(){
+  _reciHdr.numero = parseInt(document.getElementById('rf-num').value) || '';
+}
+// Sugerir el próximo número libre del talonario (mirando recibos + contador)
+async function reciSugerirNumero(emp, talo){
+  try{
+    const rows=await sbGet('recibos',`empresa=eq.${emp}&talonario=eq.${talo}&order=numero.desc&limit=1`);
+    const maxRec=rows.length?(Number(rows[0].numero)||0):0;
+    const t=taloFind(emp,talo); const ult=t?(Number(t.ultimo_nro)||0):0;
+    return Math.max(maxRec,ult)+1;
+  }catch(e){ return (parseInt(_reciHdr.numero)||0)+1; }
 }
 function reciFechaChange(){ _reciHdr.fecha=document.getElementById('rf-fec').value; }
 function reciHdrCotizChange(){
@@ -414,7 +465,21 @@ async function saveReci(){
       total_abonado:totAbonado, anulado:false };
     let reciboId;
     if(_reciMode==='M' && _reciOrig){ await reciUpdateCabecera(_reciOrig.id,cab); reciboId=_reciOrig.id; }
-    else { reciboId=await reciInsertCabecera(cab); }
+    else {
+      try { reciboId=await reciInsertCabecera(cab); }
+      catch(e){
+        const msg=String((e&&e.message)||'');
+        if(/409|23505|duplicate|already exists/i.test(msg)){
+          const sug=await reciSugerirNumero(hdr.empresa,hdr.talonario);
+          toast(`El recibo Nº ${hdr.numero} ya existe (lo tomó otro usuario). Te sugiero el ${sug}: verificá y guardá de nuevo.`,'err');
+          const numEl=document.getElementById('rf-num');
+          if(numEl){ numEl.readOnly=false; numEl.value=sug; numEl.focus(); }
+          _reciHdr.numero=sug;
+          return;   // queda el modal abierto con todo cargado; el usuario reintenta
+        }
+        throw e;
+      }
+    }
     for(const d of items){
       await sbUpsert('recibo_items',{ recibo_id:reciboId, comprobante:d.fac_nro, fecha:d.fac_fec||null,
         moneda:d.fac_moneda||null, saldo_orig:round2(d.saldo_orig), cotizacion:Math.max(1,d.cotizacion),
@@ -431,7 +496,7 @@ async function saveReci(){
       recibo_numero:hdr.numero, fecha_recibo:hdr.fecha, cliente:hdr.cliente, empresa:hdr.empresa,
       fecha:c.fecha||null, numero:c.numero||null, importe:round2(c.importe), fisico:!!c.fisico, propio:!!c.propio,
       fecha_salida:null, observaciones:null, estado:'cartera' });
-    if(_reciMode==='A') await taloSetUltimo(hdr.empresa,hdr.talonario,hdr.numero);
+    if(_reciMode==='A'){ const t=taloFind(hdr.empresa,hdr.talonario); await taloSetUltimo(hdr.empresa,hdr.talonario, Math.max(parseInt(hdr.numero)||0, t?Number(t.ultimo_nro)||0:0)); }
     closeOv('ov-reci');
     await sbLoadRecis(); reciSelIdx=null; renderReci();
     toast(_reciMode==='A'?'Recibo dado de alta':'Recibo modificado','scs');

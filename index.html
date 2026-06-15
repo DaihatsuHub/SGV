@@ -528,6 +528,7 @@
     <button class="btn pri" id="btn-reci-alta" onclick="reciAlta()">＋ Nuevo</button>
     <button class="btn" id="btn-reci-modif" onclick="reciModif()">✏️ Modificar</button>
     <button class="btn dng" id="btn-reci-baja" onclick="reciBaja()">✕ Anular</button>
+    <button class="btn" id="btn-cfg-reci" style="display:none" onclick="openColCfg('reci')" title="Configurar columnas">⚙️ Columnas</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="reci-q" placeholder="Buscar recibo o cliente..." oninput="renderReci()">
@@ -535,7 +536,7 @@
     </div>
   </div>
   <div class="tbl-wrap">
-    <div class="th-tab"><span>Recibo</span><span>Cliente</span><span>Fecha</span><span>Total</span></div>
+    <div class="th-tab" id="reci-thead" style="display:grid;gap:6px;padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--b1);font-size:11px;color:var(--t2);font-family:var(--mono)"></div>
     <div class="tbl-body" id="reci-body"></div>
   </div>
 </div>
@@ -864,7 +865,7 @@
           <div class="fgrp"><label class="flbl2">Talonario</label>
             <select class="finp" id="rf-talo" onchange="reciTaloChange()"></select></div>
           <div class="fgrp"><label class="flbl2">Número</label>
-            <input class="finp" id="rf-num" readonly style="font-family:var(--mono)"></div>
+            <input class="finp" id="rf-num" readonly oninput="reciNumeroChange()" style="font-family:var(--mono)"></div>
         </div>
         <div>
           <div class="fgrp"><label class="flbl2">Fecha</label>

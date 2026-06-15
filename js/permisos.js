@@ -76,6 +76,7 @@ function aplicarPermisos() {
   _setBtn('btn-reci-alta',  puedeh('reci','alta'));
   _setBtn('btn-reci-modif', puedeh('reci','modif'));
   _setBtn('btn-reci-baja',  puedeh('reci','baja'));
+  _setBtn('btn-cfg-reci',   puedeh('reci','columnas'));
 
   // ── Cobranzas: Talonarios ─────────────────────────────
   _setBtn('btn-talo-alta',  puedeh('talo','alta'));
