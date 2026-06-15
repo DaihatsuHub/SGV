@@ -72,10 +72,23 @@ const COL_DEFS = {
     {field:'REC_CASIO',  label:'Casio',        width:'115px', align:'right', active:true},
     {field:'REC_TRESSA', label:'Tressa',       width:'115px', align:'right', active:true},
     {field:'REC_NRO',    label:'Recibo',       width:'110px', active:false},
+  ],
+  cart: [
+    {field:'CHQ_FEC',  label:'Fecha',        width:'90px',  active:true},
+    {field:'CHQ_NUM',  label:'Número',       width:'90px',  active:true},
+    {field:'CHQ_IMP',  label:'Importe',      width:'110px', align:'right', active:true},
+    {field:'CHQ_CLI',  label:'Cliente',      width:'1fr',   active:true},
+    {field:'CHQ_EMP',  label:'Empresa',      width:'75px',  active:true},
+    {field:'CHQ_FIS',  label:'Tipo cheque',  width:'85px',  active:true},
+    {field:'CHQ_PROP', label:'Origen',       width:'85px',  active:false},
+    {field:'CHQ_REC',  label:'Recibo',       width:'85px',  active:true},
+    {field:'CHQ_EST',  label:'Estado',       width:'150px', active:true},
+    {field:'CHQ_FSAL', label:'Fec.salida',   width:'95px',  active:true},
+    {field:'CHQ_OBS',  label:'Observaciones',width:'1fr',   active:true},
   ]
 };
 
-const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true}, desp:{col:null,asc:true}, reci:{col:null,asc:true} };
+const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true}, desp:{col:null,asc:true}, reci:{col:null,asc:true}, cart:{col:null,asc:true} };
 
 function getActiveCols(grid) {
   const cfg  = getConfigUI(grid);
@@ -95,6 +108,7 @@ function toggleSort(grid, field) {
   else if (grid==='cli') renderClis();
   else if (grid==='desp') renderDesp();
   else if (grid==='reci') renderReci();
+  else if (grid==='cart') renderCart();
 }
 
 function sortArrow(grid, field) {
@@ -112,7 +126,7 @@ function openColCfg(grid) {
   } else {
     ordered = [...defs];
   }
-  const titles = {art:'Artículos', cli:'Clientes', desp:'Despachos', reci:'Recibos'};
+  const titles = {art:'Artículos', cli:'Clientes', desp:'Despachos', reci:'Recibos', cart:'Cartera de Valores'};
   document.getElementById('col-cfg-title').textContent = 'Columnas — ' + (titles[grid]||grid);
   const body = document.getElementById('col-cfg-body');
   body.innerHTML = ordered.map(c => {
@@ -189,6 +203,7 @@ async function saveColCfg() {
     else if (grid==='cli') renderClis();
     else if (grid==='desp') renderDesp();
     else if (grid==='reci') renderReci();
+    else if (grid==='cart') renderCart();
     toast('Configuración guardada', 'scs');
   } catch(e) {
     console.error('saveColCfg:', e);

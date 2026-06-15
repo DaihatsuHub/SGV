@@ -90,7 +90,9 @@ function aplicarPermisos() {
   _setBtn('btn-rete-baja',  puedeh('rete','baja'));
 
   // ── Cobranzas: Cartera de Valores ─────────────────────
-  _setBtn('btn-cart-edit',  puedeh('cart','modif'));
+  _setBtn('btn-cart-edit',    puedeh('cart','modif'));
+  _setBtn('btn-cart-confirm', puedeh('cart','modif'));
+  _setBtn('btn-cfg-cart',     puedeh('cart','columnas'));
 
   // ── Usuarios ──────────────────────────────────────────
   _setBtn('ddi-usua',       puedeh('usuarios','ver'));

@@ -580,8 +580,10 @@
 </div>
 
 <div class="page" id="page-cart">
-  <div class="toolbar">
+  <div class="toolbar" style="flex-wrap:wrap;row-gap:6px">
     <button class="btn" id="btn-cart-edit" onclick="cheqEdit()">✏️ Estado / Salida</button>
+    <button class="btn pri" id="btn-cart-confirm" onclick="openCheqBulk()" style="opacity:.5" disabled>✓ Confirmar (<span id="cart-selcount">0</span>)</button>
+    <button class="btn" id="btn-cfg-cart" style="display:none" onclick="openColCfg('cart')" title="Configurar columnas">⚙️ Columnas</button>
     <div id="cart-filtros" style="display:flex;gap:4px;margin-left:8px">
       <button class="btn fbtn" data-est="todos"      onclick="cheqSetFiltEstado('todos')">Todos</button>
       <button class="btn fbtn" data-est="cartera"    onclick="cheqSetFiltEstado('cartera')">En cartera</button>
@@ -590,17 +592,20 @@
       <button class="btn fbtn" data-est="rechazado"  onclick="cheqSetFiltEstado('rechazado')">Rechazado</button>
       <button class="btn fbtn" data-est="devuelto"   onclick="cheqSetFiltEstado('devuelto')">Devuelto</button>
     </div>
+    <div id="cart-filtros-fis" style="display:flex;gap:4px;margin-left:8px;border-left:1px solid var(--b1);padding-left:8px">
+      <button class="btn fbtn" data-fis="todos"  onclick="cheqSetFiltFisico('todos')">Todos</button>
+      <button class="btn fbtn" data-fis="fisico" onclick="cheqSetFiltFisico('fisico')">Cheques</button>
+      <button class="btn fbtn" data-fis="echeq"  onclick="cheqSetFiltFisico('echeq')">ECheq</button>
+    </div>
     <div class="spacer"></div>
-    <span style="font-size:12px;color:var(--t3);margin-right:10px">Cheques: <b id="cart-count" style="color:var(--txt)">0</b> · Total: <b id="cart-total" style="color:var(--txt);font-family:var(--mono)">0,00</b></span>
+    <span style="font-size:12px;color:var(--t3);margin-right:10px">Sel: <b id="cart-selcount2" style="color:var(--acc)">0</b> · <b id="cart-seltotal" style="color:var(--acc);font-family:var(--mono)">0,00</b> &nbsp;|&nbsp; Cheques: <b id="cart-count" style="color:var(--txt)">0</b> · Total: <b id="cart-total" style="color:var(--txt);font-family:var(--mono)">0,00</b></span>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" id="cart-q" placeholder="Buscar cheque, cliente o recibo..." oninput="renderCart()">
       <button class="srch-clr" onclick="clrSrch('cart-q',function(){renderCart()})" title="Limpiar">✕</button>
     </div>
   </div>
   <div class="tbl-wrap">
-    <div class="th-tab" id="cart-thead" style="display:grid;grid-template-columns:90px 90px 110px 1fr 70px 80px 90px 140px 90px 1fr;gap:6px;padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--b1);font-size:11px;color:var(--t2);font-family:var(--mono)">
-      <span>Fecha</span><span>Número</span><span style="text-align:right">Importe</span><span>Cliente</span><span>Empresa</span><span>Tipo</span><span>Recibo</span><span>Estado</span><span>Fec.salida</span><span>Observaciones</span>
-    </div>
+    <div class="th-tab" id="cart-thead" style="display:grid;gap:6px;padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--b1);font-size:11px;color:var(--t2);font-family:var(--mono)"></div>
     <div class="tbl-body" id="cart-body"></div>
   </div>
 </div>
@@ -1042,6 +1047,30 @@
     <div class="mft">
       <button class="btn" onclick="closeOv('ov-cart')">Cancelar</button>
       <button class="btn pri" onclick="saveCheq()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ov-cartbulk">
+  <div class="modal" style="width:460px">
+    <div class="mhd">
+      <div class="mtit"><span>Confirmar valores</span><span class="mtag tag-m">MASIVO</span></div>
+      <button class="mcls" onclick="closeOv('ov-cartbulk')">✕</button>
+    </div>
+    <div class="mbdy">
+      <div style="font-size:13px;color:var(--acc);margin-bottom:12px" id="cb-info">—</div>
+      <div class="fg">
+        <div class="fgrp full"><label class="flbl2">Estado</label>
+          <select class="finp" id="cb-estado"></select></div>
+        <div class="fgrp"><label class="flbl2">Fecha de salida</label>
+          <input class="finp" id="cb-fsalida" type="date"></div>
+        <div class="fgrp full"><label class="flbl2">Observaciones</label>
+          <textarea class="finp" id="cb-obs" rows="3" style="resize:vertical;font-family:var(--sans)"></textarea></div>
+      </div>
+    </div>
+    <div class="mft">
+      <button class="btn" onclick="closeOv('ov-cartbulk')">Cancelar</button>
+      <button class="btn pri" onclick="saveCheqBulk()">✓ Aceptar</button>
     </div>
   </div>
 </div>
