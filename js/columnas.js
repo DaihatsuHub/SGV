@@ -64,13 +64,14 @@ const COL_DEFS = {
     {field:'CLI_DTO',    label:'Dto %',        width:'55px',  align:'right', active:false},
   ],
   reci: [
-    {field:'REC_NRO',    label:'Recibo',    width:'120px', active:true},
-    {field:'REC_FEC',    label:'Fecha',     width:'100px', active:true},
-    {field:'REC_CLI',    label:'Cliente',   width:'1fr',   active:true},
-    {field:'REC_TOT',    label:'Total',     width:'120px', align:'right', active:true},
-    {field:'REC_EMP',    label:'Empresa',   width:'80px',  active:false},
-    {field:'REC_TALO',   label:'Talonario', width:'80px',  active:false},
-    {field:'REC_ESTADO', label:'Estado',    width:'80px',  align:'center', active:false},
+    {field:'REC_FEC',    label:'Fecha recibo', width:'100px', active:true},
+    {field:'REC_CLI',    label:'Cliente',      width:'1fr',   active:true},
+    {field:'REC_COMP',   label:'Comprobante',  width:'130px', active:true},
+    {field:'REC_MON',    label:'Moneda',       width:'95px',  active:true},
+    {field:'REC_PESOS',  label:'Pesos',        width:'115px', align:'right', active:true},
+    {field:'REC_CASIO',  label:'Casio',        width:'115px', align:'right', active:true},
+    {field:'REC_TRESSA', label:'Tressa',       width:'115px', align:'right', active:true},
+    {field:'REC_NRO',    label:'Recibo',       width:'110px', active:false},
   ]
 };
 

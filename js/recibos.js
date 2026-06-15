@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════
 
 let RECIS = [];
+let RECI_ITEMS = [];
 let reciSelIdx = null;
 let _reciMode = 'A';
 let _reciOrig = null;
@@ -20,6 +21,7 @@ let _reciRetenc = [];
 //   'tressa' → cotización U$T del encabezado
 //   AJUSTAR estas claves según tus códigos reales de fac_moneda:
 const RECI_MON_COTIZ = { 'P':'pesos', 'U':'casio', 'C':'casio', 'T':'tressa' };
+function reciMonKey(moneda){ return RECI_MON_COTIZ[moneda] || 'casio'; }
 
 function reciMonInfo(facMon, hdr) {
   const key  = RECI_MON_COTIZ[facMon] || 'casio';
@@ -56,43 +58,55 @@ async function sbLoadRecis(){
   try { RECIS = await sbGetAll('recibos', 'fecha'); RECIS.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')); }
   catch(e){ console.error('sbLoadRecis:', e); RECIS=[]; }
 }
+async function sbLoadReciItems(){
+  try { RECI_ITEMS = await sbGetAll('recibo_items', 'id'); }
+  catch(e){ console.error('sbLoadReciItems:', e); RECI_ITEMS=[]; }
+}
 function getReciRows(){
   const q=(document.getElementById('reci-q')?.value||'').toLowerCase();
-  let list=(RECIS||[]).filter(r=>{
-    if(!q) return true;
-    const cli=CLIS.find(c=>(c.CLI_CODIGO||'').trim()===(r.cliente||'').trim());
-    return String(r.numero||'').includes(q) ||
-      (cli && (cli.CLI_RAZON||'').toLowerCase().includes(q)) ||
-      (r.cliente||'').toLowerCase().includes(q);
+  const razon=rec=>{ const c=CLIS.find(k=>(k.CLI_CODIGO||'').trim()===(rec.cliente||'').trim()); return (c?c.CLI_RAZON:rec.cliente)||''; };
+  let rows=[];
+  (RECI_ITEMS||[]).forEach(it=>{
+    const rec=(RECIS||[]).find(r=>r.id===it.recibo_id);
+    if(!rec || rec.anulado) return;
+    rows.push({it, rec});
   });
+  if(q) rows=rows.filter(({it,rec})=>
+    String(rec.numero||'').includes(q) ||
+    (it.comprobante||'').toLowerCase().includes(q) ||
+    (rec.cliente||'').toLowerCase().includes(q) ||
+    razon(rec).toLowerCase().includes(q));
+  const monto=(it,key)=> reciMonKey(it.moneda)===key ? (key==='pesos'?(it.abona||0):(it.abona_orig||0)) : 0;
   const s=(typeof SORT_STATE!=='undefined' && SORT_STATE.reci) ? SORT_STATE.reci : {col:null,asc:true};
   if(s.col){
-    const razon=x=>{ const c=CLIS.find(k=>(k.CLI_CODIGO||'').trim()===(x.cliente||'').trim()); return (c?c.CLI_RAZON:x.cliente)||''; };
-    list=list.slice().sort((a,b)=>{
+    rows=rows.slice().sort((A,B)=>{
       let va,vb;
       switch(s.col){
-        case 'REC_NRO': va=(a.empresa||'')+(a.talonario||'')+String(a.numero||'').padStart(10,'0'); vb=(b.empresa||'')+(b.talonario||'')+String(b.numero||'').padStart(10,'0'); break;
-        case 'REC_FEC': va=a.fecha||''; vb=b.fecha||''; break;
-        case 'REC_CLI': va=razon(a); vb=razon(b); break;
-        case 'REC_EMP': va=a.empresa||''; vb=b.empresa||''; break;
-        case 'REC_TALO':va=a.talonario||''; vb=b.talonario||''; break;
-        case 'REC_TOT': va=a.total_abonado||0; vb=b.total_abonado||0; break;
-        case 'REC_ESTADO': va=a.anulado?1:0; vb=b.anulado?1:0; break;
+        case 'REC_FEC':   va=A.rec.fecha||''; vb=B.rec.fecha||''; break;
+        case 'REC_CLI':   va=razon(A.rec); vb=razon(B.rec); break;
+        case 'REC_COMP':  va=A.it.comprobante||''; vb=B.it.comprobante||''; break;
+        case 'REC_MON':   va=A.it.moneda||''; vb=B.it.moneda||''; break;
+        case 'REC_PESOS': va=monto(A.it,'pesos'); vb=monto(B.it,'pesos'); break;
+        case 'REC_CASIO': va=monto(A.it,'casio'); vb=monto(B.it,'casio'); break;
+        case 'REC_TRESSA':va=monto(A.it,'tressa');vb=monto(B.it,'tressa'); break;
+        case 'REC_NRO':   va=(A.rec.empresa||'')+(A.rec.talonario||'')+String(A.rec.numero||'').padStart(10,'0'); vb=(B.rec.empresa||'')+(B.rec.talonario||'')+String(B.rec.numero||'').padStart(10,'0'); break;
         default: va=''; vb='';
       }
       const r=(typeof va==='number'&&typeof vb==='number')?(va-vb):String(va).localeCompare(String(vb));
       return s.asc?r:-r;
     });
   } else {
-    list=list.slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+    rows=rows.slice().sort((a,b)=>(b.rec.fecha||'').localeCompare(a.rec.fecha||'') || (b.rec.numero||0)-(a.rec.numero||0));
   }
-  return list;
+  return rows;
 }
 function renderReci(){
   const list=getReciRows(); const body=document.getElementById('reci-body'); if(!body) return;
   const cols=(typeof getActiveCols==='function')?getActiveCols('reci'):[
-    {field:'REC_NRO',label:'Recibo',width:'120px'},{field:'REC_FEC',label:'Fecha',width:'100px'},
-    {field:'REC_CLI',label:'Cliente',width:'1fr'},{field:'REC_TOT',label:'Total',width:'120px',align:'right'}];
+    {field:'REC_FEC',label:'Fecha recibo',width:'100px'},{field:'REC_CLI',label:'Cliente',width:'1fr'},
+    {field:'REC_COMP',label:'Comprobante',width:'130px'},{field:'REC_MON',label:'Moneda',width:'95px'},
+    {field:'REC_PESOS',label:'Pesos',width:'115px',align:'right'},{field:'REC_CASIO',label:'Casio',width:'115px',align:'right'},
+    {field:'REC_TRESSA',label:'Tressa',width:'115px',align:'right'}];
   const gridTpl=cols.map(c=>c.width||'1fr').join(' ');
   const thead=document.getElementById('reci-thead');
   if(thead){
@@ -100,20 +114,27 @@ function renderReci(){
     thead.innerHTML=cols.map(c=>`<span class="th-sortable" onclick="toggleSort('reci','${c.field}')" style="${c.align?'text-align:'+c.align:''}">${c.label}${(typeof sortArrow==='function')?sortArrow('reci',c.field):''}</span>`).join('');
   }
   if(!list.length){ body.innerHTML='<div class="empty">🔍 Sin resultados</div>'; return; }
-  body.innerHTML=list.map((r,i)=>{
+  body.innerHTML=list.map((row,i)=>{
+    const {it,rec}=row;
     const sel=reciSelIdx===i?'sel':'';
-    const cli=CLIS.find(c=>(c.CLI_CODIGO||'').trim()===(r.cliente||'').trim());
-    const fec=r.fecha?r.fecha.substring(0,10).split('-').reverse().join('/'):'—';
-    const emp=r.empresa==='H'?'Hatsu':(r.empresa==='T'?'Tressa':(r.empresa||''));
+    const cli=CLIS.find(c=>(c.CLI_CODIGO||'').trim()===(rec.cliente||'').trim());
+    const fec=rec.fecha?rec.fecha.substring(0,10).split('-').reverse().join('/'):'—';
+    const key=reciMonKey(it.moneda);
+    const mone=(TABLAS['MONE']||[]).find(m=>(m.CODIGO||'')===(it.moneda||''));
+    const monLabel=mone?(mone.DETALLE||mone.CODIGO):(it.moneda||'');
+    const pesos = key==='pesos'  ? reciFmt(it.abona||0)      : '';
+    const casio = key==='casio'  ? reciFmt(it.abona_orig||0) : '';
+    const tressa= key==='tressa' ? reciFmt(it.abona_orig||0) : '';
     return `<div class="tr-art ${sel}" style="grid-template-columns:${gridTpl}" onclick="selReci(${i})" ondblclick="reciModif()">`+
       cols.map(c=>{
-        if(c.field==='REC_NRO')   return `<span class="col-cod" style="color:var(--acc)">${esc(r.empresa||'')}${esc(r.talonario||'')} ${esc(String(r.numero||''))}</span>`;
         if(c.field==='REC_FEC')   return `<span class="col-sm" style="color:var(--t2)">${fec}</span>`;
-        if(c.field==='REC_CLI')   return `<span class="col-des">${esc(cli?cli.CLI_RAZON:(r.cliente||''))}</span>`;
-        if(c.field==='REC_EMP')   return `<span class="col-sm">${esc(emp)}</span>`;
-        if(c.field==='REC_TALO')  return `<span class="col-sm">${esc(r.talonario||'')}</span>`;
-        if(c.field==='REC_TOT')   return `<span class="col-num" style="text-align:right;font-family:var(--mono)">${reciFmt(r.total_abonado||0)}</span>`;
-        if(c.field==='REC_ESTADO')return `<span class="col-sm" style="text-align:center;color:${r.anulado?'var(--red)':'var(--grn)'}">${r.anulado?'Anulado':'OK'}</span>`;
+        if(c.field==='REC_CLI')   return `<span class="col-des">${esc(rec.cliente||'')}${cli?' — '+esc(cli.CLI_RAZON):''}</span>`;
+        if(c.field==='REC_COMP')  return `<span class="col-cod" style="color:var(--acc)">${esc(it.comprobante||'')}</span>`;
+        if(c.field==='REC_MON')   return `<span class="col-sm">${esc(monLabel)}</span>`;
+        if(c.field==='REC_PESOS') return `<span class="col-num" style="text-align:right;font-family:var(--mono)">${pesos}</span>`;
+        if(c.field==='REC_CASIO') return `<span class="col-num" style="text-align:right;font-family:var(--mono)">${casio}</span>`;
+        if(c.field==='REC_TRESSA')return `<span class="col-num" style="text-align:right;font-family:var(--mono)">${tressa}</span>`;
+        if(c.field==='REC_NRO')   return `<span class="col-sm">${esc(rec.empresa||'')}${esc(rec.talonario||'')} ${esc(String(rec.numero||''))}</span>`;
         return `<span></span>`;
       }).join('')+
     `</div>`;
@@ -151,7 +172,8 @@ function reciAlta(){
 
 async function reciModif(){
   if(reciSelIdx===null){ toast('Seleccioná un recibo','err'); return; }
-  const rc=getReciRows()[reciSelIdx];
+  const sel=getReciRows()[reciSelIdx]; if(!sel){ toast('Seleccioná un recibo','err'); return; }
+  const rc=sel.rec;
   _reciMode='M'; _reciOrig=rc;
   _reciHdr={ empresa:rc.empresa, talonario:rc.talonario, numero:rc.numero, fecha:(rc.fecha||'').substring(0,10),
     cliente:rc.cliente, cotCasio:rc.cot_casio||1, cotTressa:rc.cot_tressa||1 };
@@ -194,12 +216,14 @@ async function reciModif(){
 
 function reciBaja(){
   if(reciSelIdx===null){ toast('Seleccioná un recibo','err'); return; }
-  const rc=getReciRows()[reciSelIdx];
+  const sel=getReciRows()[reciSelIdx]; if(!sel){ toast('Seleccioná un recibo','err'); return; }
+  const rc=sel.rec;
   confirm2(`¿Anular el recibo ${rc.empresa}${rc.talonario} ${rc.numero}?`,'Se revertirán los saldos de las facturas imputadas.',async()=>{
     try{
       await reciRevertir(rc);
       await sbDelete('recibos',{id:rc.id});  // cascade borra items/pagos/cheques
       const idx=RECIS.findIndex(x=>x.id===rc.id); if(idx>=0) RECIS.splice(idx,1);
+      await sbLoadReciItems();
       reciSelIdx=null; renderReci(); toast('Recibo anulado','scs');
     }catch(e){ console.error(e); toast('Error al anular','err'); }
   });
@@ -498,7 +522,7 @@ async function saveReci(){
       fecha_salida:null, observaciones:null, estado:'cartera' });
     if(_reciMode==='A'){ const t=taloFind(hdr.empresa,hdr.talonario); await taloSetUltimo(hdr.empresa,hdr.talonario, Math.max(parseInt(hdr.numero)||0, t?Number(t.ultimo_nro)||0:0)); }
     closeOv('ov-reci');
-    await sbLoadRecis(); reciSelIdx=null; renderReci();
+    await sbLoadRecis(); await sbLoadReciItems(); reciSelIdx=null; renderReci();
     toast(_reciMode==='A'?'Recibo dado de alta':'Recibo modificado','scs');
   }catch(e){ console.error('saveReci:',e); toast('Error al guardar el recibo','err'); }
 }
