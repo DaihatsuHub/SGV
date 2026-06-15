@@ -125,7 +125,7 @@ function renderReci(){
     const pesos = key==='pesos'  ? reciFmt(it.abona||0)      : '';
     const casio = key==='casio'  ? reciFmt(it.abona_orig||0) : '';
     const tressa= key==='tressa' ? reciFmt(it.abona_orig||0) : '';
-    return `<div class="tr-art ${sel}" style="grid-template-columns:${gridTpl}" onclick="selReci(${i})" ondblclick="reciModif()">`+
+    return `<div class="tr-art ${sel}" data-idx="${i}" style="grid-template-columns:${gridTpl}" onclick="selReci(${i})" ondblclick="reciModif()">`+
       cols.map(c=>{
         if(c.field==='REC_FEC')   return `<span class="col-sm" style="color:var(--t2)">${fec}</span>`;
         if(c.field==='REC_CLI')   return `<span class="col-des">${esc(rec.cliente||'')}${cli?' — '+esc(cli.CLI_RAZON):''}</span>`;
@@ -139,6 +139,36 @@ function renderReci(){
       }).join('')+
     `</div>`;
   }).join('');
+  body.querySelector('.tr-art.sel')?.scrollIntoView({block:'nearest'});
+  reciInstallNav();
+}
+
+// Navegación por teclado (flechas + RePág/AvPág + Inicio/Fin), instalada una sola vez.
+let _reciNavInstalled=false;
+function reciInstallNav(){
+  if(_reciNavInstalled) return; _reciNavInstalled=true;
+  document.addEventListener('keydown', function(e){
+    const page=document.getElementById('page-reci');
+    if(!page || !page.classList.contains('active')) return;   // solo en la pantalla de Recibos
+    if(document.querySelector('.ov.open')) return;            // no si hay un modal abierto
+    const ae=document.activeElement;
+    if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return; // no interferir al escribir
+    const total=getReciRows().length; if(!total) return;
+    let next=(reciSelIdx==null)?0:reciSelIdx;
+    switch(e.key){
+      case 'ArrowDown': next++; break;
+      case 'ArrowUp':   next--; break;
+      case 'PageDown':  next+=10; break;
+      case 'PageUp':    next-=10; break;
+      case 'Home':      next=0; break;
+      case 'End':       next=total-1; break;
+      default: return;
+    }
+    e.preventDefault();
+    next=Math.max(0,Math.min(next,total-1));
+    selReci(next);
+    document.getElementById('reci-body')?.querySelector(`[data-idx="${next}"]`)?.scrollIntoView({block:'nearest'});
+  });
 }
 function selReci(i){ reciSelIdx=i; renderReci(); }
 
