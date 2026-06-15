@@ -72,6 +72,21 @@ function aplicarPermisos() {
   _setBtn('btn-desp-baja',  puedeh('desp','baja'));
   _setBtn('btn-cfg-desp',   puedeh('desp','columnas'));
 
+  // ── Cobranzas: Recibos ────────────────────────────────
+  _setBtn('btn-reci-alta',  puedeh('reci','alta'));
+  _setBtn('btn-reci-modif', puedeh('reci','modif'));
+  _setBtn('btn-reci-baja',  puedeh('reci','baja'));
+
+  // ── Cobranzas: Talonarios ─────────────────────────────
+  _setBtn('btn-talo-alta',  puedeh('talo','alta'));
+  _setBtn('btn-talo-modif', puedeh('talo','modif'));
+  _setBtn('btn-talo-baja',  puedeh('talo','baja'));
+
+  // ── Cobranzas: Tipo de Retenciones ────────────────────
+  _setBtn('btn-rete-alta',  puedeh('rete','alta'));
+  _setBtn('btn-rete-modif', puedeh('rete','modif'));
+  _setBtn('btn-rete-baja',  puedeh('rete','baja'));
+
   // ── Usuarios ──────────────────────────────────────────
   _setBtn('ddi-usua',       puedeh('usuarios','ver'));
   _setBtn('btn-permisos',   usuarioActual.nivel >= 88 || usuarioActual.codigo === 'RGRDELTA');
@@ -81,11 +96,17 @@ function aplicarPermisos() {
   _setBtn('tnav-cli', puedeh('cli','ver'));
   _setBtn('tnav-cmp', puedeh('desp','ver'));
   _setBtn('tnav-ven', puedeh('fac','ver') || puedeh('ctip','ver'));
+  _setBtn('tnav-cob', puedeh('reci','ver') || puedeh('talo','ver') || puedeh('rete','ver'));
 
   // ── Subitems Ventas ───────────────────────────────────
   _setBtn('ddi-fac',  puedeh('fac','ver'));
   _setBtn('ddi-ctip', puedeh('ctip','ver'));
   _setBtn('ddi-desp', puedeh('desp','ver'));
+
+  // ── Subitems Cobranzas ────────────────────────────────
+  _setBtn('ddi-reci', puedeh('reci','ver'));
+  _setBtn('ddi-talo', puedeh('talo','ver'));
+  _setBtn('ddi-rete', puedeh('rete','ver'));
 }
 
 // ── Panel interactivo de permisos ─────────────────────────
@@ -95,6 +116,9 @@ const MODULOS_PERM = [
   { key:'desp',     label:'🚢 Despachos' },
   { key:'fac',      label:'🧾 Facturación' },
   { key:'ctip',     label:'📋 Tipos de Comprobantes' },
+  { key:'reci',     label:'🧾 Recibos' },
+  { key:'talo',     label:'📓 Talonarios' },
+  { key:'rete',     label:'🧮 Tipo de Retenciones' },
   { key:'tablas',   label:'📋 Tablas Auxiliares' },
   { key:'usuarios', label:'🔑 Usuarios' },
 ];

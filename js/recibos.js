@@ -246,15 +246,15 @@ function renderReciDeud(){
     const esPeso=(RECI_MON_COTIZ[d.fac_moneda]||'')==='pesos';
     const cotizCell = esPeso
       ? `<span style="text-align:right;color:var(--t3)">1,00</span>`
-      : `<input type="text" value="${reciFmt(d.cotizacion)}" onchange="reciCotizInput(${i},this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px">`;
-    return `<div style="display:grid;grid-template-columns:92px 64px 100px 92px 78px 104px 100px;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--b1);font-size:12px;font-family:var(--mono)">
-      <span style="color:var(--acc);cursor:pointer;text-decoration:underline" onclick="reciAplicarFila(${i})" title="Aplicar: ofrece el saldo o lo que falta de instrumentos">${esc(d.fac_nro)}</span>
+      : `<input type="text" value="${reciFmt(d.cotizacion)}" onclick="event.stopPropagation()" onchange="reciCotizInput(${i},this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px">`;
+    return `<div onclick="reciAplicarFila(${i})" title="Clic para aplicar: ofrece el saldo del comprobante o lo que falta del saldo a aplicar" style="display:grid;grid-template-columns:92px 64px 100px 92px 78px 104px 100px;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--b1);font-size:12px;font-family:var(--mono);cursor:pointer">
+      <span style="color:var(--acc)">${esc(d.fac_nro)}</span>
       <span style="color:var(--t2)">${fec}</span>
       <span style="text-align:right">${esc(d.simbolo)} ${reciFmt(d.saldo_orig)}</span>
       <span style="text-align:right;color:var(--t3)">${esc(d.simbolo)} ${reciFmt(d.abona_orig)}</span>
       ${cotizCell}
       <span style="text-align:right">$ ${reciFmt(d.saldo)}</span>
-      <input type="text" value="${reciFmt(d.abona)}" onchange="reciAbonaInput(${i},this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px;background:var(--s3)">
+      <input type="text" value="${reciFmt(d.abona)}" onclick="event.stopPropagation()" onchange="reciAbonaInput(${i},this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px;background:var(--s3)">
     </div>`;
   }).join('');
   const ts=document.getElementById('rf-tot-saldo'); if(ts) ts.textContent='$ '+reciFmt(_reciDeud.reduce((s,d)=>s+(d.saldo||0),0));
