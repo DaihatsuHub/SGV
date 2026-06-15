@@ -7,6 +7,7 @@
 let RECIS = [];
 let RECI_ITEMS = [];
 let reciSelIdx = null;
+let _reciReadonly = false;
 let _reciMode = 'A';
 let _reciOrig = null;
 let _reciHdr  = {};
@@ -174,7 +175,7 @@ function selReci(i){ reciSelIdx=i; renderReci(); }
 
 // ════════════════ EDITOR — apertura ════════════════
 function reciAlta(){
-  _reciMode='A'; _reciOrig=null;
+  _reciMode='A'; _reciOrig=null; reciResetEnabled();
   _reciDeud=[]; _reciTransf=[]; _reciCheques=[]; _reciRetenc=[];
   const emp='H';
   _reciHdr={ empresa:emp, talonario:'', numero:'', fecha:new Date().toISOString().substring(0,10),
@@ -200,10 +201,24 @@ function reciAlta(){
   document.getElementById('ov-reci').classList.add('open');
 }
 
-async function reciModif(){
+function reciResetEnabled(){
+  const ov=document.getElementById('ov-reci'); if(!ov) return;
+  ov.querySelectorAll('input,select,textarea,button').forEach(el=>{ el.disabled=false; });
+  const sv=document.getElementById('rf-save'); if(sv) sv.style.display='';
+}
+function reciApplyReadonly(){
+  const ov=document.getElementById('ov-reci'); if(!ov) return;
+  ov.querySelectorAll('input,select,textarea').forEach(el=>{ el.disabled=true; });
+  ov.querySelectorAll('button').forEach(el=>{ if(el.id!=='rf-cancel' && !el.classList.contains('mcls')) el.disabled=true; });
+  const sv=document.getElementById('rf-save'); if(sv) sv.style.display='none';
+}
+function reciModif(){ _reciReadonly=false; return _reciOpenEditor(); }
+function reciVer(){ _reciReadonly=true; return _reciOpenEditor(); }
+async function _reciOpenEditor(){
   if(reciSelIdx===null){ toast('Seleccioná un recibo','err'); return; }
   const sel=getReciRows()[reciSelIdx]; if(!sel){ toast('Seleccioná un recibo','err'); return; }
   const rc=sel.rec;
+  reciResetEnabled();
   _reciMode='M'; _reciOrig=rc;
   _reciHdr={ empresa:rc.empresa, talonario:rc.talonario, numero:rc.numero, fecha:(rc.fecha||'').substring(0,10),
     cliente:rc.cliente, cotCasio:rc.cot_casio||1, cotTressa:rc.cot_tressa||1 };
@@ -239,9 +254,10 @@ async function reciModif(){
     _reciCheques=chs.map(c=>({fecha:c.fecha,numero:c.numero,importe:c.importe||0,fisico:!!c.fisico,propio:!!c.propio}));
   }catch(e){ console.error('reciModif load:',e); _reciDeud=[];_reciTransf=[];_reciCheques=[];_reciRetenc=[]; }
   renderReciDeud(); renderReciTransf(); renderReciCheques(); renderReciRetenc(); reciReconcile();
-  document.getElementById('reci-mtit').textContent=`Modificar Recibo ${rc.empresa}${rc.talonario} ${rc.numero}`;
-  setMtag('reci-mtag','MODIFICACIÓN','tag-m');
+  document.getElementById('reci-mtit').textContent=`${_reciReadonly?'Ver':'Modificar'} Recibo ${rc.empresa}${rc.talonario} ${rc.numero}`;
+  setMtag('reci-mtag', _reciReadonly?'SOLO LECTURA':'MODIFICACIÓN','tag-m');
   document.getElementById('ov-reci').classList.add('open');
+  if(_reciReadonly) reciApplyReadonly();
 }
 
 function reciBaja(){
@@ -377,6 +393,7 @@ function reciAbonaInput(i,val){
 }
 // Al clickear el comprobante: ofrecer el menor entre saldo y lo que falta de instrumentos
 function reciAplicarFila(i){
+  if(_reciReadonly) return;
   const d=_reciDeud[i]; if(!d) return;
   const disponible=Math.max(0, round2(reciTotInstrumentos() - (reciTotAbonado() - (d.abona||0))));
   d.abona=round2(Math.min(d.saldo, disponible));

@@ -526,6 +526,7 @@
 <div class="page" id="page-reci">
   <div class="toolbar">
     <button class="btn pri" id="btn-reci-alta" onclick="reciAlta()">＋ Nuevo</button>
+    <button class="btn" id="btn-reci-ver" onclick="reciVer()">👁 Ver</button>
     <button class="btn" id="btn-reci-modif" onclick="reciModif()">✏️ Modificar</button>
     <button class="btn dng" id="btn-reci-baja" onclick="reciBaja()">✕ Anular</button>
     <button class="btn" id="btn-cfg-reci" style="display:none" onclick="openColCfg('reci')" title="Configurar columnas">⚙️ Columnas</button>
@@ -939,7 +940,7 @@
         <span style="color:var(--t3)">Saldo a aplicar <b style="font-family:var(--mono);font-size:15px" id="rf-saldo-aplicar">0,00</b></span>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn" onclick="closeOv('ov-reci')">Cancelar</button>
+        <button class="btn" id="rf-cancel" onclick="closeOv('ov-reci')">Cancelar</button>
         <button class="btn pri" id="rf-save" onclick="saveReci()">💾 Guardar</button>
       </div>
     </div>
