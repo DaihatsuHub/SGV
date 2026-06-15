@@ -31,6 +31,25 @@
   border-radius: 0 !important;
   background: var(--s1);
 }
+/* Recibo: alta a pantalla completa, debajo del topbar (menú activo) */
+#ov-reci {
+  padding: 0 !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  top: 48px !important;
+  height: calc(100% - 48px) !important;
+  background: var(--s1) !important;
+}
+#ov-reci > div {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  background: var(--s1);
+  display: flex !important;
+  flex-direction: column !important;
+}
+#ov-reci .mbdy { max-height: none !important; flex: 1; overflow: auto; }
 </style>
 </head>
 <body>
@@ -887,9 +906,9 @@
       <div style="font-size:12px;color:var(--t2);margin:14px 0 6px">Instrumentos de pago</div>
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px">
         <div class="fgrp" style="flex:1;min-width:150px"><label class="flbl2">Efectivo</label>
-          <input class="finp" id="rf-efectivo" value="0,00" onchange="reciReconcile()" style="text-align:right;font-family:var(--mono)"></div>
+          <input class="finp" id="rf-efectivo" value="0,00" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" onchange="this.value=reciFmt(reciParseNum(this.value));reciReconcile()" style="text-align:right;font-family:var(--mono)"></div>
         <div class="fgrp" style="flex:1;min-width:150px"><label class="flbl2">Ajuste (+/−)</label>
-          <input class="finp" id="rf-ajuste" value="0,00" onchange="reciReconcile()" style="text-align:right;font-family:var(--mono)"></div>
+          <input class="finp" id="rf-ajuste" value="0,00" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" onchange="this.value=reciFmt(reciParseNum(this.value));reciReconcile()" style="text-align:right;font-family:var(--mono)"></div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">

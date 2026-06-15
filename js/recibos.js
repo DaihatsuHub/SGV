@@ -238,14 +238,18 @@ function renderReciDeud(){
   if(!_reciDeud.length){ body.innerHTML='<div class="empty" style="padding:14px">Sin comprobantes deudores</div>'; }
   else body.innerHTML=_reciDeud.map((d,i)=>{
     const fec=d.fac_fec?d.fac_fec.substring(0,10).split('-').reverse().join('/'):'';
+    const esPeso=(RECI_MON_COTIZ[d.fac_moneda]||'')==='pesos';
+    const cotizCell = esPeso
+      ? `<span style="text-align:right;color:var(--t3)">1,00</span>`
+      : `<input type="text" value="${reciFmt(d.cotizacion)}" onchange="reciCotizInput(${i},this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px">`;
     return `<div style="display:grid;grid-template-columns:92px 64px 100px 92px 78px 104px 100px;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--b1);font-size:12px;font-family:var(--mono)">
       <span style="color:var(--acc)">${esc(d.fac_nro)}</span>
       <span style="color:var(--t2)">${fec}</span>
       <span style="text-align:right">${esc(d.simbolo)} ${reciFmt(d.saldo_orig)}</span>
       <span style="text-align:right;color:var(--t3)">${esc(d.simbolo)} ${reciFmt(d.abona_orig)}</span>
-      <input type="text" value="${reciFmt(d.cotizacion)}" onchange="reciCotizInput(${i},this.value)" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px">
+      ${cotizCell}
       <span style="text-align:right">$ ${reciFmt(d.saldo)}</span>
-      <input type="text" value="${reciFmt(d.abona)}" onchange="reciAbonaInput(${i},this.value)" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px;background:var(--s3)">
+      <input type="text" value="${reciFmt(d.abona)}" onchange="reciAbonaInput(${i},this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px;background:var(--s3)">
     </div>`;
   }).join('');
   const ts=document.getElementById('rf-tot-saldo'); if(ts) ts.textContent='$ '+reciFmt(_reciDeud.reduce((s,d)=>s+(d.saldo||0),0));
@@ -253,7 +257,11 @@ function renderReciDeud(){
 }
 function reciAbonaInput(i,val){
   const d=_reciDeud[i]; if(!d) return;
-  let a=reciParseNum(val); if(a<0)a=0; if(a>d.saldo)a=d.saldo;
+  let a=reciParseNum(val); if(a<0)a=0;
+  // tope = menor entre el saldo del comprobante y lo que falta para llegar al total de instrumentos
+  const disponible=Math.max(0, round2(reciTotInstrumentos() - (reciTotAbonado() - (d.abona||0))));
+  const tope=Math.min(d.saldo, disponible);
+  if(a>tope) a=tope;
   d.abona=round2(a); d.abona_orig=d.cotizacion>0?round2(d.abona/d.cotizacion):0;
   renderReciDeud(); reciReconcile();
 }
@@ -273,7 +281,7 @@ function renderReciTransf(){
   const b=document.getElementById('rf-transf-body'); if(!b) return;
   b.innerHTML=_reciTransf.map((t,i)=>`<div style="display:grid;grid-template-columns:1fr 1fr 22px;gap:6px;align-items:center;padding:3px 0">
     <input type="date" value="${t.fecha||''}" onchange="reciTransfInput(${i},'fecha',this.value)" style="height:24px;font-size:12px">
-    <input type="text" value="${reciFmt(t.importe)}" onchange="reciTransfInput(${i},'importe',this.value)" style="height:24px;text-align:right;font-family:var(--mono);font-size:12px">
+    <input type="text" value="${reciFmt(t.importe)}" onchange="reciTransfInput(${i},'importe',this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="height:24px;text-align:right;font-family:var(--mono);font-size:12px">
     <button class="mcls" onclick="reciDelTransf(${i})" title="Quitar">✕</button>
   </div>`).join('');
   const s=document.getElementById('rf-transf-sub'); if(s) s.textContent='$ '+reciFmt(_reciTransf.reduce((a,x)=>a+(x.importe||0),0));
@@ -294,7 +302,7 @@ function renderReciCheques(){
   b.innerHTML=_reciCheques.map((c,i)=>`<div style="display:grid;grid-template-columns:1.1fr 0.7fr 1fr 40px 40px 22px;gap:6px;align-items:center;padding:3px 0">
     <input type="date" value="${c.fecha||''}" onchange="reciChequeInput(${i},'fecha',this.value)" style="height:24px;font-size:12px">
     <input type="text" maxlength="4" value="${esc(c.numero||'')}" placeholder="0000" onchange="reciChequeInput(${i},'numero',this.value)" style="height:24px;font-size:12px;font-family:var(--mono)">
-    <input type="text" value="${reciFmt(c.importe)}" onchange="reciChequeInput(${i},'importe',this.value)" style="height:24px;text-align:right;font-family:var(--mono);font-size:12px">
+    <input type="text" value="${reciFmt(c.importe)}" onchange="reciChequeInput(${i},'importe',this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="height:24px;text-align:right;font-family:var(--mono);font-size:12px">
     <input type="checkbox" ${c.fisico?'checked':''} onchange="reciChequeInput(${i},'fisico',null,this.checked)" title="Físico">
     <input type="checkbox" ${c.propio?'checked':''} onchange="reciChequeInput(${i},'propio',null,this.checked)" title="Propio">
     <button class="mcls" onclick="reciDelCheque(${i})" title="Quitar">✕</button>
@@ -310,7 +318,7 @@ function renderReciRetenc(){
     const opts=(RETES||[]).map(x=>`<option value="${esc(x.codigo)}" ${x.codigo===r.codigo?'selected':''}>${esc(x.codigo)} — ${esc(x.descripcion||'')}</option>`).join('');
     return `<div style="display:grid;grid-template-columns:1.6fr 1fr 22px;gap:6px;align-items:center;padding:3px 0">
       <select onchange="reciRetencInput(${i},'codigo',this.value)" style="height:24px;font-size:12px">${opts}</select>
-      <input type="text" value="${reciFmt(r.importe)}" onchange="reciRetencInput(${i},'importe',this.value)" style="height:24px;text-align:right;font-family:var(--mono);font-size:12px">
+      <input type="text" value="${reciFmt(r.importe)}" onchange="reciRetencInput(${i},'importe',this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="height:24px;text-align:right;font-family:var(--mono);font-size:12px">
       <button class="mcls" onclick="reciDelRetenc(${i})" title="Quitar">✕</button>
     </div>`;
   }).join('');
