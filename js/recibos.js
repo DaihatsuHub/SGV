@@ -35,6 +35,11 @@ function reciDefaultCotiz(tipoKey) {
   const mone = (TABLAS['MONE']||[]).find(m => m.CODIGO===cod);
   return mone ? (parseFloat(mone.STRING2)||1) : 1;
 }
+// Cotización de una moneda por su código (tabla monedas), robusta a espacios/mayúsculas
+function monedaCotiz(cod){
+  const m=(TABLAS['MONE']||[]).find(x=>(x.CODIGO||'').trim().toUpperCase()===String(cod).trim().toUpperCase());
+  return m ? (parseFloat(m.STRING2)||1) : 1;
+}
 
 // ── Utils numéricos ────────────────────────────────────────
 function round2(n){ return Math.round((Number(n)||0)*100)/100; }
@@ -84,7 +89,7 @@ function reciAlta(){
   _reciDeud=[]; _reciTransf=[]; _reciCheques=[]; _reciRetenc=[];
   const emp='H';
   _reciHdr={ empresa:emp, talonario:'', numero:'', fecha:new Date().toISOString().substring(0,10),
-    cliente:'', cotCasio:reciDefaultCotiz('casio'), cotTressa:reciDefaultCotiz('tressa') };
+    cliente:'', cotCasio:monedaCotiz('C'), cotTressa:monedaCotiz('T') };
   ['rf-emp','rf-talo','rf-cli'].forEach(id=>{const el=document.getElementById(id); if(el) el.disabled=false;});
   reciFillTalonarios(emp);
   document.getElementById('rf-emp').value=emp;
@@ -243,7 +248,7 @@ function renderReciDeud(){
       ? `<span style="text-align:right;color:var(--t3)">1,00</span>`
       : `<input type="text" value="${reciFmt(d.cotizacion)}" onchange="reciCotizInput(${i},this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px">`;
     return `<div style="display:grid;grid-template-columns:92px 64px 100px 92px 78px 104px 100px;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--b1);font-size:12px;font-family:var(--mono)">
-      <span style="color:var(--acc)">${esc(d.fac_nro)}</span>
+      <span style="color:var(--acc);cursor:pointer;text-decoration:underline" onclick="reciAplicarFila(${i})" title="Aplicar: ofrece el saldo o lo que falta de instrumentos">${esc(d.fac_nro)}</span>
       <span style="color:var(--t2)">${fec}</span>
       <span style="text-align:right">${esc(d.simbolo)} ${reciFmt(d.saldo_orig)}</span>
       <span style="text-align:right;color:var(--t3)">${esc(d.simbolo)} ${reciFmt(d.abona_orig)}</span>
@@ -265,6 +270,14 @@ function reciAbonaInput(i,val){
   d.abona=round2(a); d.abona_orig=d.cotizacion>0?round2(d.abona/d.cotizacion):0;
   renderReciDeud(); reciReconcile();
 }
+// Al clickear el comprobante: ofrecer el menor entre saldo y lo que falta de instrumentos
+function reciAplicarFila(i){
+  const d=_reciDeud[i]; if(!d) return;
+  const disponible=Math.max(0, round2(reciTotInstrumentos() - (reciTotAbonado() - (d.abona||0))));
+  d.abona=round2(Math.min(d.saldo, disponible));
+  d.abona_orig=d.cotizacion>0?round2(d.abona/d.cotizacion):0;
+  renderReciDeud(); reciReconcile();
+}
 function reciCotizInput(i,val){
   const d=_reciDeud[i]; if(!d) return;
   let c=reciParseNum(val); if(c<1)c=1; d.cotizacion=c;
@@ -276,7 +289,7 @@ function reciCotizInput(i,val){
 // ════════════════ EDITOR — instrumentos ════════════════
 function reciAddTransf(){ _reciTransf.push({fecha:_reciHdr.fecha,importe:0}); renderReciTransf(); reciReconcile(); }
 function reciDelTransf(i){ _reciTransf.splice(i,1); renderReciTransf(); reciReconcile(); }
-function reciTransfInput(i,campo,val){ const t=_reciTransf[i]; if(!t) return; if(campo==='importe') t.importe=reciParseNum(val); else t.fecha=val; reciReconcile(); }
+function reciTransfInput(i,campo,val){ const t=_reciTransf[i]; if(!t) return; if(campo==='importe') t.importe=reciParseNum(val); else t.fecha=val; renderReciTransf(); reciReconcile(); }
 function renderReciTransf(){
   const b=document.getElementById('rf-transf-body'); if(!b) return;
   b.innerHTML=_reciTransf.map((t,i)=>`<div style="display:grid;grid-template-columns:1fr 1fr 22px;gap:6px;align-items:center;padding:3px 0">
@@ -295,7 +308,7 @@ function reciChequeInput(i,campo,val,checked){
   else if(campo==='propio') c.propio=checked;
   else if(campo==='numero') c.numero=(val||'').replace(/\D/g,'').slice(0,4);
   else c.fecha=val;
-  reciReconcile(); if(campo==='numero') renderReciCheques();
+  renderReciCheques(); reciReconcile();
 }
 function renderReciCheques(){
   const b=document.getElementById('rf-cheq-body'); if(!b) return;
@@ -311,7 +324,7 @@ function renderReciCheques(){
 }
 function reciAddRetenc(){ _reciRetenc.push({codigo:(RETES[0]?.codigo||''),importe:0}); renderReciRetenc(); reciReconcile(); }
 function reciDelRetenc(i){ _reciRetenc.splice(i,1); renderReciRetenc(); reciReconcile(); }
-function reciRetencInput(i,campo,val){ const r=_reciRetenc[i]; if(!r) return; if(campo==='importe') r.importe=reciParseNum(val); else r.codigo=val; reciReconcile(); }
+function reciRetencInput(i,campo,val){ const r=_reciRetenc[i]; if(!r) return; if(campo==='importe') r.importe=reciParseNum(val); else r.codigo=val; renderReciRetenc(); reciReconcile(); }
 function renderReciRetenc(){
   const b=document.getElementById('rf-reten-body'); if(!b) return;
   b.innerHTML=_reciRetenc.map((r,i)=>{
