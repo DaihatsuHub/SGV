@@ -270,6 +270,7 @@ function reciBaja(){
       await sbDelete('recibos',{id:rc.id});  // cascade borra items/pagos/cheques
       const idx=RECIS.findIndex(x=>x.id===rc.id); if(idx>=0) RECIS.splice(idx,1);
       await sbLoadReciItems();
+      if(typeof sbLoadCheques==='function'){ await sbLoadCheques(); if(typeof renderCart==='function') renderCart(); }
       reciSelIdx=null; renderReci(); toast('Recibo anulado','scs');
     }catch(e){ console.error(e); toast('Error al anular','err'); }
   });
@@ -569,7 +570,7 @@ async function saveReci(){
       fecha_salida:null, observaciones:null, estado:'cartera' });
     if(_reciMode==='A'){ const t=taloFind(hdr.empresa,hdr.talonario); await taloSetUltimo(hdr.empresa,hdr.talonario, Math.max(parseInt(hdr.numero)||0, t?Number(t.ultimo_nro)||0:0)); }
     closeOv('ov-reci');
-    await sbLoadRecis(); await sbLoadReciItems(); reciSelIdx=null; renderReci();
+    await sbLoadRecis(); await sbLoadReciItems(); if(typeof sbLoadCheques==='function'){ await sbLoadCheques(); if(typeof renderCart==='function') renderCart(); } reciSelIdx=null; renderReci();
     toast(_reciMode==='A'?'Recibo dado de alta':'Recibo modificado','scs');
   }catch(e){ console.error('saveReci:',e); toast('Error al guardar el recibo','err'); }
 }

@@ -89,6 +89,9 @@ function aplicarPermisos() {
   _setBtn('btn-rete-modif', puedeh('rete','modif'));
   _setBtn('btn-rete-baja',  puedeh('rete','baja'));
 
+  // ── Cobranzas: Cartera de Valores ─────────────────────
+  _setBtn('btn-cart-edit',  puedeh('cart','modif'));
+
   // ── Usuarios ──────────────────────────────────────────
   _setBtn('ddi-usua',       puedeh('usuarios','ver'));
   _setBtn('btn-permisos',   usuarioActual.nivel >= 88 || usuarioActual.codigo === 'RGRDELTA');
@@ -98,7 +101,7 @@ function aplicarPermisos() {
   _setBtn('tnav-cli', puedeh('cli','ver'));
   _setBtn('tnav-cmp', puedeh('desp','ver'));
   _setBtn('tnav-ven', puedeh('fac','ver') || puedeh('ctip','ver'));
-  _setBtn('tnav-cob', puedeh('reci','ver') || puedeh('talo','ver') || puedeh('rete','ver'));
+  _setBtn('tnav-cob', puedeh('reci','ver') || puedeh('talo','ver') || puedeh('rete','ver') || puedeh('cart','ver'));
 
   // ── Subitems Ventas ───────────────────────────────────
   _setBtn('ddi-fac',  puedeh('fac','ver'));
@@ -109,6 +112,7 @@ function aplicarPermisos() {
   _setBtn('ddi-reci', puedeh('reci','ver'));
   _setBtn('ddi-talo', puedeh('talo','ver'));
   _setBtn('ddi-rete', puedeh('rete','ver'));
+  _setBtn('ddi-cart', puedeh('cart','ver'));
 }
 
 // ── Panel interactivo de permisos ─────────────────────────
@@ -121,6 +125,7 @@ const MODULOS_PERM = [
   { key:'reci',     label:'🧾 Recibos' },
   { key:'talo',     label:'📓 Talonarios' },
   { key:'rete',     label:'🧮 Tipo de Retenciones' },
+  { key:'cart',     label:'💼 Cartera de Valores' },
   { key:'tablas',   label:'📋 Tablas Auxiliares' },
   { key:'usuarios', label:'🔑 Usuarios' },
 ];

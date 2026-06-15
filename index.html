@@ -116,6 +116,7 @@
         <button class="dd-item" id="ddi-reci" onclick="showSubPage('cob','reci')">🧾 Recibos</button>
         <button class="dd-item" id="ddi-talo" onclick="showSubPage('cob','talo')">📓 Talonarios</button>
         <button class="dd-item" id="ddi-rete" onclick="showSubPage('cob','rete')">🧮 Tipo de Retenciones</button>
+        <button class="dd-item" id="ddi-cart" onclick="showSubPage('cob','cart')">💼 Cartera de Valores</button>
       </div>
     </div>
   </div>
@@ -578,6 +579,32 @@
   </div>
 </div>
 
+<div class="page" id="page-cart">
+  <div class="toolbar">
+    <button class="btn" id="btn-cart-edit" onclick="cheqEdit()">✏️ Estado / Salida</button>
+    <div id="cart-filtros" style="display:flex;gap:4px;margin-left:8px">
+      <button class="btn fbtn" data-est="todos"      onclick="cheqSetFiltEstado('todos')">Todos</button>
+      <button class="btn fbtn" data-est="cartera"    onclick="cheqSetFiltEstado('cartera')">En cartera</button>
+      <button class="btn fbtn" data-est="depositado" onclick="cheqSetFiltEstado('depositado')">Depositado</button>
+      <button class="btn fbtn" data-est="entregado"  onclick="cheqSetFiltEstado('entregado')">Entregado</button>
+      <button class="btn fbtn" data-est="rechazado"  onclick="cheqSetFiltEstado('rechazado')">Rechazado</button>
+      <button class="btn fbtn" data-est="devuelto"   onclick="cheqSetFiltEstado('devuelto')">Devuelto</button>
+    </div>
+    <div class="spacer"></div>
+    <span style="font-size:12px;color:var(--t3);margin-right:10px">Cheques: <b id="cart-count" style="color:var(--txt)">0</b> · Total: <b id="cart-total" style="color:var(--txt);font-family:var(--mono)">0,00</b></span>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" id="cart-q" placeholder="Buscar cheque, cliente o recibo..." oninput="renderCart()">
+      <button class="srch-clr" onclick="clrSrch('cart-q',function(){renderCart()})" title="Limpiar">✕</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <div class="th-tab" id="cart-thead" style="display:grid;grid-template-columns:90px 90px 110px 1fr 70px 80px 90px 140px 90px 1fr;gap:6px;padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--b1);font-size:11px;color:var(--t2);font-family:var(--mono)">
+      <span>Fecha</span><span>Número</span><span style="text-align:right">Importe</span><span>Cliente</span><span>Empresa</span><span>Tipo</span><span>Recibo</span><span>Estado</span><span>Fec.salida</span><span>Observaciones</span>
+    </div>
+    <div class="tbl-body" id="cart-body"></div>
+  </div>
+</div>
+
 <div class="page" id="page-usua">
   <div class="toolbar">
     <button class="btn pri" onclick="usuaAlta()">＋ Alta</button>
@@ -995,6 +1022,30 @@
   </div>
 </div>
 
+<div class="ov" id="ov-cart">
+  <div class="modal" style="width:460px">
+    <div class="mhd">
+      <div class="mtit"><span id="cart-mtit">Cheque</span><span class="mtag tag-m" id="cart-mtag">CARTERA</span></div>
+      <button class="mcls" onclick="closeOv('ov-cart')">✕</button>
+    </div>
+    <div class="mbdy">
+      <div style="font-size:13px;color:var(--t2);margin-bottom:12px" id="cf-info">—</div>
+      <div class="fg">
+        <div class="fgrp full"><label class="flbl2">Estado</label>
+          <select class="finp" id="cf-estado"></select></div>
+        <div class="fgrp"><label class="flbl2">Fecha de salida</label>
+          <input class="finp" id="cf-fsalida" type="date"></div>
+        <div class="fgrp full"><label class="flbl2">Observaciones</label>
+          <textarea class="finp" id="cf-obs" rows="3" style="resize:vertical;font-family:var(--sans)"></textarea></div>
+      </div>
+    </div>
+    <div class="mft">
+      <button class="btn" onclick="closeOv('ov-cart')">Cancelar</button>
+      <button class="btn pri" onclick="saveCheq()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div class="ov" id="ov-usua">
   <div class="modal" style="width:420px">
     <div class="mhd">
@@ -1134,6 +1185,7 @@
 <script src="js/talonarios.js"></script>
 <script src="js/retenciones.js"></script>
 <script src="js/recibos.js"></script>
+<script src="js/cartera.js"></script>
 
 <script>
 // Restaurar panel de factura al volver al módulo
@@ -1161,6 +1213,7 @@ sbLoad().then(async ok => {
       sbLoadRetes(),
       sbLoadRecis(),
       sbLoadReciItems(),
+      sbLoadCheques(),
     ]);
     aplicarPermisos();
     renderArts();
@@ -1170,6 +1223,7 @@ sbLoad().then(async ok => {
     renderTalo && renderTalo();
     renderRete && renderRete();
     renderReci && renderReci();
+    renderCart && renderCart();
     const ddiUsua = document.getElementById('ddi-usua');
     if (ddiUsua && usuarioActual) ddiUsua.style.display = usuarioActual.nivel > 80 ? 'block' : 'none';
   }
