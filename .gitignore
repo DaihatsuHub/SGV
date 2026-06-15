@@ -1,0 +1,8 @@
+# Claves y certificados AFIP - NUNCA al repo publico
+*.b64
+CERTIFICADO HATSU/
+CERTIFICADO TRESSA/
+OLD/
+js/OLD/
+css/OLD/
+.vscode/
