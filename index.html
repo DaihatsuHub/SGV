@@ -91,6 +91,14 @@
         <button class="dd-item" id="ddi-ctip" onclick="showSubPage('ven','ctip')">📋 Tipos de Comprobantes</button>
       </div>
     </div>
+    <div class="dd-wrap">
+      <button class="tnav" id="tnav-cob" onclick="toggleDD('dd-cob',this)">💰 Cobranzas <span class="dd-arrow" id="arr-cob">▼</span></button>
+      <div class="dd-menu" id="dd-cob">
+        <button class="dd-item" id="ddi-reci" onclick="showSubPage('cob','reci')">🧾 Recibos</button>
+        <button class="dd-item" id="ddi-talo" onclick="showSubPage('cob','talo')">📓 Talonarios</button>
+        <button class="dd-item" id="ddi-rete" onclick="showSubPage('cob','rete')">🧮 Tipo de Retenciones</button>
+      </div>
+    </div>
   </div>
   <div class="topbar-right">
     <span class="badge" id="b-sync" style="cursor:pointer;transition:all .3s" onclick="syncNow()" title="Sincronizar ahora">☁️ Conectando...</span>
@@ -495,6 +503,60 @@
 </div>
 
 <!-- ══════ USUARIOS ══════ -->
+<!-- ══════ COBRANZAS: RECIBOS ══════ -->
+<div class="page" id="page-reci">
+  <div class="toolbar">
+    <button class="btn pri" id="btn-reci-alta" onclick="reciAlta()">＋ Nuevo</button>
+    <button class="btn" id="btn-reci-modif" onclick="reciModif()">✏️ Modificar</button>
+    <button class="btn dng" id="btn-reci-baja" onclick="reciBaja()">✕ Anular</button>
+    <div class="spacer"></div>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" id="reci-q" placeholder="Buscar recibo o cliente..." oninput="renderReci()">
+      <button class="srch-clr" onclick="clrSrch('reci-q',function(){renderReci()})" title="Limpiar">✕</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <div class="th-tab"><span>Recibo</span><span>Cliente</span><span>Fecha</span><span>Total</span></div>
+    <div class="tbl-body" id="reci-body"></div>
+  </div>
+</div>
+
+<!-- ══════ COBRANZAS: TALONARIOS ══════ -->
+<div class="page" id="page-talo">
+  <div class="toolbar">
+    <button class="btn pri" id="btn-talo-alta" onclick="taloAlta()">＋ Alta</button>
+    <button class="btn" id="btn-talo-modif" onclick="taloModif()">✏️ Modificar</button>
+    <button class="btn dng" id="btn-talo-baja" onclick="taloBaja()">✕ Baja</button>
+    <div class="spacer"></div>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" id="talo-q" placeholder="Buscar talonario..." oninput="renderTalo()">
+      <button class="srch-clr" onclick="clrSrch('talo-q',function(){renderTalo()})" title="Limpiar">✕</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <div class="th-tab"><span>Empresa / Tipo</span><span>Descripción</span><span>Empresa</span><span>Último Nro</span></div>
+    <div class="tbl-body" id="talo-body"></div>
+  </div>
+</div>
+
+<!-- ══════ COBRANZAS: TIPO DE RETENCIONES ══════ -->
+<div class="page" id="page-rete">
+  <div class="toolbar">
+    <button class="btn pri" id="btn-rete-alta" onclick="reteAlta()">＋ Alta</button>
+    <button class="btn" id="btn-rete-modif" onclick="reteModif()">✏️ Modificar</button>
+    <button class="btn dng" id="btn-rete-baja" onclick="reteBaja()">✕ Baja</button>
+    <div class="spacer"></div>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" id="rete-q" placeholder="Buscar tipo de retención..." oninput="renderRete()">
+      <button class="srch-clr" onclick="clrSrch('rete-q',function(){renderRete()})" title="Limpiar">✕</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <div class="th-tab"><span>Código</span><span>Descripción</span><span></span><span></span></div>
+    <div class="tbl-body" id="rete-body"></div>
+  </div>
+</div>
+
 <div class="page" id="page-usua">
   <div class="toolbar">
     <button class="btn pri" onclick="usuaAlta()">＋ Alta</button>
@@ -767,6 +829,152 @@
 </div>
 
 <!-- MODAL USUARIOS -->
+<!-- ══════ MODAL RECIBO ══════ -->
+<div class="ov" id="ov-reci">
+  <div class="modal" style="width:960px;max-width:96vw">
+    <div class="mhd">
+      <div class="mtit"><span id="reci-mtit">Recibo</span><span class="mtag tag-a" id="reci-mtag">ALTA</span></div>
+      <button class="mcls" onclick="closeOv('ov-reci')">✕</button>
+    </div>
+    <div class="mbdy" style="max-height:74vh;overflow:auto">
+
+      <div style="display:grid;grid-template-columns:0.85fr 1fr 1.15fr;gap:16px;align-items:start;margin-bottom:14px">
+        <div>
+          <div class="fgrp"><label class="flbl2">Empresa</label>
+            <select class="finp" id="rf-emp" onchange="reciEmpresaChange()"><option value="H">Hatsu</option><option value="T">Tressa</option></select></div>
+          <div class="fgrp"><label class="flbl2">Talonario</label>
+            <select class="finp" id="rf-talo" onchange="reciTaloChange()"></select></div>
+          <div class="fgrp"><label class="flbl2">Número</label>
+            <input class="finp" id="rf-num" readonly style="font-family:var(--mono)"></div>
+        </div>
+        <div>
+          <div class="fgrp"><label class="flbl2">Fecha</label>
+            <input class="finp" id="rf-fec" type="date" onchange="reciFechaChange()"></div>
+          <div style="background:var(--s2);border-radius:8px;padding:8px 10px;margin-top:4px">
+            <div style="font-size:11px;color:var(--t3);margin-bottom:5px">Cotizaciones</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0">
+              <span style="font-size:12px;color:var(--t2)">Dólar Casio <span style="font-family:var(--mono);font-size:10px;color:var(--t3)">U$C</span></span>
+              <input class="finp" id="rf-cot-casio" onchange="reciHdrCotizChange()" style="width:92px;height:26px;text-align:right;font-family:var(--mono)"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0">
+              <span style="font-size:12px;color:var(--t2)">Dólar Tressa <span style="font-family:var(--mono);font-size:10px;color:var(--t3)">U$T</span></span>
+              <input class="finp" id="rf-cot-tressa" onchange="reciHdrCotizChange()" style="width:92px;height:26px;text-align:right;font-family:var(--mono)"></div>
+          </div>
+        </div>
+        <div>
+          <div class="fgrp"><label class="flbl2">Cliente</label>
+            <input class="finp" id="rf-cli" list="rf-cli-list" placeholder="Razón social..." onchange="reciClienteChange()">
+            <datalist id="rf-cli-list"></datalist></div>
+          <div style="background:var(--s2);border-radius:8px;padding:8px 10px;font-size:12px;margin-top:4px">
+            <div style="display:flex;justify-content:space-between;padding:2px 0"><span style="color:var(--t3)">Dirección</span><span id="rf-domic">—</span></div>
+            <div style="display:flex;justify-content:space-between;padding:2px 0"><span style="color:var(--t3)">Localidad</span><span id="rf-local">—</span></div>
+            <div style="display:flex;justify-content:space-between;padding:2px 0"><span style="color:var(--t3)">Provincia</span><span id="rf-provin">—</span></div>
+            <div style="display:flex;justify-content:space-between;padding:2px 0"><span style="color:var(--t3)">Vendedor</span><span id="rf-vend">—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:12px;color:var(--t2);margin:4px 0 6px">Comprobantes deudores</div>
+      <div style="border:1px solid var(--b1);border-radius:8px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:92px 64px 100px 92px 78px 104px 100px;gap:6px;padding:6px 8px;background:var(--s2);font-size:11px;color:var(--t3)">
+          <span>Comprobante</span><span>Fecha</span><span style="text-align:right">Saldo orig.</span><span style="text-align:right">Abona orig.</span><span style="text-align:right">Cotiz.</span><span style="text-align:right">Saldo</span><span style="text-align:right">Abona</span>
+        </div>
+        <div id="rf-deud-body"></div>
+        <div style="display:grid;grid-template-columns:92px 64px 100px 92px 78px 104px 100px;gap:6px;padding:7px 8px;border-top:1px solid var(--b1);font-size:12px;font-family:var(--mono);font-weight:600">
+          <span style="color:var(--t3)">Totales</span><span></span><span></span><span></span><span></span><span style="text-align:right" id="rf-tot-saldo">$ 0,00</span><span style="text-align:right;color:var(--acc)" id="rf-tot-abona">$ 0,00</span>
+        </div>
+      </div>
+
+      <div style="font-size:12px;color:var(--t2);margin:14px 0 6px">Instrumentos de pago</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px">
+        <div class="fgrp" style="flex:1;min-width:150px"><label class="flbl2">Efectivo</label>
+          <input class="finp" id="rf-efectivo" value="0,00" onchange="reciReconcile()" style="text-align:right;font-family:var(--mono)"></div>
+        <div class="fgrp" style="flex:1;min-width:150px"><label class="flbl2">Ajuste (+/−)</label>
+          <input class="finp" id="rf-ajuste" value="0,00" onchange="reciReconcile()" style="text-align:right;font-family:var(--mono)"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div style="border:1px solid var(--b1);border-radius:8px;padding:8px 10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:12px;color:var(--t2)">Transferencias</span><button class="btn" style="padding:2px 8px;font-size:11px" onclick="reciAddTransf()">＋ Agregar</button></div>
+          <div id="rf-transf-body"></div>
+          <div style="text-align:right;font-size:11px;color:var(--t2);margin-top:4px;font-family:var(--mono)" id="rf-transf-sub">$ 0,00</div>
+        </div>
+        <div style="border:1px solid var(--b1);border-radius:8px;padding:8px 10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:12px;color:var(--t2)">Retenciones</span><button class="btn" style="padding:2px 8px;font-size:11px" onclick="reciAddRetenc()">＋ Agregar</button></div>
+          <div id="rf-reten-body"></div>
+          <div style="text-align:right;font-size:11px;color:var(--t2);margin-top:4px;font-family:var(--mono)" id="rf-reten-sub">$ 0,00</div>
+        </div>
+      </div>
+
+      <div style="border:1px solid var(--b1);border-radius:8px;padding:8px 10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:12px;color:var(--t2)">Cheques <span style="color:var(--t3)">→ cartera de valores</span></span><button class="btn" style="padding:2px 8px;font-size:11px" onclick="reciAddCheque()">＋ Agregar</button></div>
+        <div style="display:grid;grid-template-columns:1.1fr 0.7fr 1fr 40px 40px 22px;gap:6px;font-size:10px;color:var(--t3);padding:0 0 2px"><span>Fecha</span><span>Número</span><span style="text-align:right">Importe</span><span style="text-align:center">Fís.</span><span style="text-align:center">Prop.</span><span></span></div>
+        <div id="rf-cheq-body"></div>
+        <div style="text-align:right;font-size:11px;color:var(--t2);margin-top:4px;font-family:var(--mono)" id="rf-cheq-sub">$ 0,00</div>
+      </div>
+
+    </div>
+    <div class="mft" style="justify-content:space-between">
+      <div style="display:flex;gap:18px;align-items:center;font-size:12px">
+        <span style="color:var(--t3)">Abonado <b style="color:var(--txt);font-family:var(--mono)" id="rf-tot-abonado">0,00</b></span>
+        <span style="color:var(--t3)">Instrumentos <b style="color:var(--txt);font-family:var(--mono)" id="rf-tot-instr">0,00</b></span>
+        <span id="rf-match" style="font-weight:600">—</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeOv('ov-reci')">Cancelar</button>
+        <button class="btn pri" id="rf-save" onclick="saveReci()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL TALONARIO ══════ -->
+<div class="ov" id="ov-talo">
+  <div class="modal" style="width:440px">
+    <div class="mhd">
+      <div class="mtit"><span id="talo-mtit">Talonario</span><span class="mtag tag-a" id="talo-mtag">ALTA</span></div>
+      <button class="mcls" onclick="closeOv('ov-talo')">✕</button>
+    </div>
+    <div class="mbdy">
+      <div class="fg">
+        <div class="fgrp"><label class="flbl2">Empresa *</label>
+          <select class="finp" id="tlf-emp"><option value="H">Hatsu</option><option value="T">Tressa</option></select></div>
+        <div class="fgrp"><label class="flbl2">Tipo *</label>
+          <select class="finp" id="tlf-tipo"><option value="R">R</option><option value="X">X</option></select></div>
+        <div class="fgrp full"><label class="flbl2">Descripción</label>
+          <input class="finp" id="tlf-desc" maxlength="30" style="text-transform:uppercase"></div>
+        <div class="fgrp"><label class="flbl2">Último Nro</label>
+          <input class="finp" id="tlf-ult" type="number" step="1" value="0"></div>
+      </div>
+    </div>
+    <div class="mft">
+      <button class="btn" onclick="closeOv('ov-talo')">Cancelar</button>
+      <button class="btn pri" onclick="saveTalo()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL TIPO DE RETENCIÓN ══════ -->
+<div class="ov" id="ov-rete">
+  <div class="modal" style="width:440px">
+    <div class="mhd">
+      <div class="mtit"><span id="rete-mtit">Tipo de Retención</span><span class="mtag tag-a" id="rete-mtag">ALTA</span></div>
+      <button class="mcls" onclick="closeOv('ov-rete')">✕</button>
+    </div>
+    <div class="mbdy">
+      <div class="fg">
+        <div class="fgrp"><label class="flbl2">Código *</label>
+          <input class="finp" id="rtf-cod" maxlength="6" style="text-transform:uppercase"></div>
+        <div class="fgrp full"><label class="flbl2">Descripción *</label>
+          <input class="finp" id="rtf-desc" maxlength="40" style="text-transform:uppercase"></div>
+      </div>
+    </div>
+    <div class="mft">
+      <button class="btn" onclick="closeOv('ov-rete')">Cancelar</button>
+      <button class="btn pri" onclick="saveRete()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div class="ov" id="ov-usua">
   <div class="modal" style="width:420px">
     <div class="mhd">
@@ -903,6 +1111,9 @@
 <script src="js/despachos.js"></script>
 <script src="js/saldos.js"></script>
 <script src="js/histart.js"></script>
+<script src="js/talonarios.js"></script>
+<script src="js/retenciones.js"></script>
+<script src="js/recibos.js"></script>
 
 <script>
 // Restaurar panel de factura al volver al módulo
@@ -926,12 +1137,18 @@ sbLoad().then(async ok => {
       sbLoadDesps(),
       sbLoadFacs(),
       sbLoadCtips(),
+      sbLoadTalos(),
+      sbLoadRetes(),
+      sbLoadRecis(),
     ]);
     aplicarPermisos();
     renderArts();
     renderClis();
     renderTab && renderTab();
     renderUsua && renderUsua();
+    renderTalo && renderTalo();
+    renderRete && renderRete();
+    renderReci && renderReci();
     const ddiUsua = document.getElementById('ddi-usua');
     if (ddiUsua && usuarioActual) ddiUsua.style.display = usuarioActual.nivel > 80 ? 'block' : 'none';
   }
