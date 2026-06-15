@@ -349,12 +349,13 @@ function reciTotInstrumentos(){
   return round2(efe+aju+t+c+r);
 }
 function reciReconcile(){
-  const ab=reciTotAbonado(), ins=reciTotInstrumentos();
-  const elAb=document.getElementById('rf-tot-abonado'); if(elAb) elAb.textContent=reciFmt(ab);
-  const elIn=document.getElementById('rf-tot-instr');  if(elIn) elIn.textContent=reciFmt(ins);
-  const ok=Math.abs(ab-ins)<0.01 && ab>0;
-  const m=document.getElementById('rf-match');
-  if(m){ m.textContent= ok?'✓ Coincide':(reciFmt(round2(ins-ab))+' dif.'); m.style.color= ok?'var(--grn)':'var(--red)'; }
+  const abonado = reciTotInstrumentos();   // total del recibo = instrumentos
+  const aplicado = reciTotAbonado();        // lo repartido en los comprobantes
+  const saldoAplicar = round2(abonado - aplicado);
+  const elAb=document.getElementById('rf-abonado'); if(elAb) elAb.textContent=reciFmt(abonado);
+  const elSa=document.getElementById('rf-saldo-aplicar');
+  if(elSa){ elSa.textContent=reciFmt(saldoAplicar); elSa.style.color = Math.abs(saldoAplicar)<0.01 ? 'var(--grn)' : 'var(--red)'; }
+  const ok = abonado>0 && Math.abs(saldoAplicar)<0.01;
   const btn=document.getElementById('rf-save'); if(btn){ btn.disabled=!ok; btn.style.opacity= ok?'1':'0.5'; }
 }
 
@@ -428,7 +429,8 @@ async function saveReci(){
     if(Math.abs(aju)>0.001) await sbUpsert('recibo_pagos',{recibo_id:reciboId,tipo:'ajuste',importe:round2(aju)});
     for(const c of _reciCheques) if((c.importe||0)>0) await sbUpsert('cheques',{ recibo_id:reciboId,
       recibo_numero:hdr.numero, fecha_recibo:hdr.fecha, cliente:hdr.cliente, empresa:hdr.empresa,
-      fecha:c.fecha||null, numero:c.numero||null, importe:round2(c.importe), fisico:!!c.fisico, propio:!!c.propio, estado:'cartera' });
+      fecha:c.fecha||null, numero:c.numero||null, importe:round2(c.importe), fisico:!!c.fisico, propio:!!c.propio,
+      fecha_salida:null, observaciones:null, estado:'cartera' });
     if(_reciMode==='A') await taloSetUltimo(hdr.empresa,hdr.talonario,hdr.numero);
     closeOv('ov-reci');
     await sbLoadRecis(); reciSelIdx=null; renderReci();
