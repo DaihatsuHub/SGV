@@ -101,6 +101,7 @@ function aplicarPermisos() {
   // ── Menús completos ───────────────────────────────────
   _setBtn('tnav-art', puedeh('art','ver'));
   _setBtn('tnav-cli', puedeh('cli','ver'));
+  _setBtn('ddi-ficha', puedeh('cli','ver'));
   _setBtn('tnav-cmp', puedeh('desp','ver'));
   _setBtn('tnav-ven', puedeh('fac','ver') || puedeh('ctip','ver'));
   _setBtn('tnav-cob', puedeh('reci','ver') || puedeh('talo','ver') || puedeh('rete','ver') || puedeh('cart','ver'));
