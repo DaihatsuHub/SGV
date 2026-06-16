@@ -326,6 +326,11 @@ function reciFillClienteList(){
   const dl=document.getElementById('rf-cli-list'); if(!dl) return;
   dl.innerHTML=(CLIS||[]).map(c=>`<option value="${esc(c.CLI_RAZON||'')}">`).join('');
 }
+function rfCliClear(){
+  const el=document.getElementById('rf-cli'); if(!el || el.disabled) return;
+  el.value=''; el.focus();
+  reciClienteChange();
+}
 function reciClienteChange(){
   const val=(document.getElementById('rf-cli').value||'').trim().toLowerCase();
   const c=(CLIS||[]).find(x=>(x.CLI_RAZON||'').trim().toLowerCase()===val);

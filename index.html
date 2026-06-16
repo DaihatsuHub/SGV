@@ -941,7 +941,10 @@
         </div>
         <div>
           <div class="fgrp"><label class="flbl2">Cliente</label>
-            <input class="finp" id="rf-cli" list="rf-cli-list" placeholder="Razón social..." onchange="reciClienteChange()">
+            <div style="position:relative">
+              <input class="finp" id="rf-cli" list="rf-cli-list" placeholder="Razón social..." onfocus="this.select()" onclick="this.select()" onchange="reciClienteChange()" style="width:100%">
+              <button type="button" onclick="rfCliClear()" title="Limpiar" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:14px;line-height:1;padding:0 2px">✕</button>
+            </div>
             <datalist id="rf-cli-list"></datalist></div>
           <div style="background:var(--s2);border-radius:8px;padding:8px 10px;font-size:12px;margin-top:4px">
             <div style="display:flex;justify-content:space-between;padding:2px 0"><span style="color:var(--t3)">Dirección</span><span id="rf-domic">—</span></div>
