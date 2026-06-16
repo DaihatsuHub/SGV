@@ -49,7 +49,8 @@ function renderFicha(){
     </div>`;
 
   // ── IZQUIERDA: comprobantes con saldo + A/Cuenta, encolumnado por moneda ──
-  const comps=(FACS||[]).filter(f=>(f.fac_cli||'').trim()===fichaCliCod && (f.fac_saldo||0)>0);
+  const comps=(FACS||[]).filter(f=>(f.fac_cli||'').trim()===fichaCliCod && (f.fac_saldo||0)>0)
+    .sort((a,b)=>(a.fac_fec||'').localeCompare(b.fac_fec||''));
   const acuenta=[];
   (RECI_ITEMS||[]).forEach(it=>{
     if((it.comprobante||'').toUpperCase()!=='A/CUENTA' && !it.a_cuenta) return;
@@ -57,6 +58,7 @@ function renderFicha(){
     if(!rec || rec.anulado || (rec.cliente||'').trim()!==fichaCliCod) return;
     acuenta.push({it,rec});
   });
+  acuenta.sort((a,b)=>(a.rec.fecha||'').localeCompare(b.rec.fecha||''));
   const LGRID='80px 1fr 95px 95px 95px';
   let totP=0, totT=0, totC=0, lrows='';
   comps.forEach(f=>{
@@ -90,8 +92,8 @@ function renderFicha(){
   // ── DERECHA: cheques encolumnado Físico / ECheq ──
   const hoy=new Date().toISOString().substring(0,10);
   const chs=(CHEQUES||[]).filter(ch=>(ch.cliente||'').trim()===fichaCliCod);
-  const enCart=chs.filter(ch=>(ch.estado||'cartera')==='cartera');
-  const otros =chs.filter(ch=>(ch.estado||'cartera')!=='cartera' && (ch.fecha||'')>=hoy);
+  const enCart=chs.filter(ch=>(ch.estado||'cartera')==='cartera').sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  const otros =chs.filter(ch=>(ch.estado||'cartera')!=='cartera' && (ch.fecha||'')>=hoy).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
   const RGRID='80px 80px 95px 95px 1fr';
   let totFis=0, totEch=0, rrows='';
   const chRow=(ch,gris)=>{
