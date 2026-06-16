@@ -151,7 +151,7 @@
     <div class="spacer"></div>
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="art-q" placeholder="Buscar código o descripción..." oninput="renderArts()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="art-q" placeholder="Buscar código o descripción..." oninput="renderArts()">
       <button class="srch-clr" id="art-q-clr" onclick="clrSrch('art-q',renderArts)" title="Limpiar">✕</button>
     </div>
   </div>
@@ -179,7 +179,7 @@
     <div class="spacer"></div>
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="cli-q" placeholder="Buscar código o razón social..." oninput="renderClis()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="cli-q" placeholder="Buscar código o razón social..." oninput="renderClis()">
       <button class="srch-clr" id="cli-q-clr" onclick="clrSrch('cli-q',renderClis)" title="Limpiar">✕</button>
     </div>
   </div>
@@ -225,7 +225,7 @@
     <div class="spacer"></div>
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="tab-q" placeholder="Buscar código o detalle..." oninput="renderTab()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="tab-q" placeholder="Buscar código o detalle..." oninput="renderTab()">
       <button class="srch-clr" onclick="clrSrch('tab-q',function(){renderTab()})" title="Limpiar">✕</button>
     </div>
   </div>
@@ -243,7 +243,7 @@
     <button class="btn dng" id="btn-marc-baja" onclick="tabBaja('MARC')">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="marc-q" placeholder="Buscar..." oninput="renderTabGral('MARC')">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="marc-q" placeholder="Buscar..." oninput="renderTabGral('MARC')">
       <button class="srch-clr" onclick="clrSrch('marc-q',function(){renderTabGral('MARC')})" title="Limpiar">✕</button>
     </div>
   </div>
@@ -261,7 +261,7 @@
     <button class="btn dng" id="btn-rubr-baja" onclick="tabBaja('RUBR')">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="rubr-q" placeholder="Buscar..." oninput="renderTabGral('RUBR')">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="rubr-q" placeholder="Buscar..." oninput="renderTabGral('RUBR')">
       <button class="srch-clr" onclick="clrSrch('rubr-q',function(){renderTabGral('RUBR')})" title="Limpiar">✕</button>
     </div>
   </div>
@@ -279,7 +279,7 @@
     <button class="btn dng" id="btn-prov-baja" onclick="tabBaja('PROV')">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="prov-q" placeholder="Buscar..." oninput="renderTabGral('PROV')">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="prov-q" placeholder="Buscar..." oninput="renderTabGral('PROV')">
       <button class="srch-clr" onclick="clrSrch('prov-q',function(){renderTabGral('PROV')})" title="Limpiar">✕</button>
     </div>
   </div>
@@ -297,7 +297,7 @@
     <button class="btn dng" id="btn-cpag-baja" onclick="tabBaja('CPAG')">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="cpag-q" placeholder="Buscar..." oninput="renderTabGral('CPAG')">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="cpag-q" placeholder="Buscar..." oninput="renderTabGral('CPAG')">
       <button class="srch-clr" onclick="clrSrch('cpag-q',function(){renderTabGral('CPAG')})" title="Limpiar">✕</button>
     </div>
   </div>
@@ -315,7 +315,7 @@
     <button class="btn dng" id="btn-vend-baja" onclick="tabBaja('VEND')">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="vend-q" placeholder="Buscar..." oninput="renderTabGral('VEND')">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="vend-q" placeholder="Buscar..." oninput="renderTabGral('VEND')">
       <button class="srch-clr" onclick="clrSrch('vend-q',function(){renderTabGral('VEND')})" title="Limpiar">✕</button>
     </div>
   </div>
@@ -333,7 +333,7 @@
     <button class="btn dng" id="btn-cate-baja" onclick="tabBaja('CATE')">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="cate-q" placeholder="Buscar..." oninput="renderTabGral('CATE')">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="cate-q" placeholder="Buscar..." oninput="renderTabGral('CATE')">
       <button class="srch-clr" onclick="clrSrch('cate-q',function(){renderTabGral('CATE')})" title="Limpiar">✕</button>
     </div>
   </div>
@@ -351,7 +351,7 @@
     <button class="btn dng" id="btn-grup-baja" onclick="tabBaja('GRUP')">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="grup-q" placeholder="Buscar..." oninput="renderTabGral('GRUP')">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="grup-q" placeholder="Buscar..." oninput="renderTabGral('GRUP')">
       <button class="srch-clr" onclick="clrSrch('grup-q',function(){renderTabGral('GRUP')})" title="Limpiar">✕</button>
     </div>
   </div>
@@ -378,7 +378,7 @@
     <input type="date" class="fsel" id="fac-fecha" onchange="setFacFecha(this.value)" title="Filtrar por fecha" style="cursor:pointer">
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="fac-q" placeholder="Buscar factura o cliente..." onkeydown="if(event.key==='Enter')buscarFac()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="fac-q" placeholder="Buscar factura o cliente..." onkeydown="if(event.key==='Enter')buscarFac()">
       <button class="srch-clr" onclick="clrSrch('fac-q',buscarFac)" title="Limpiar">✕</button>
     </div>
   </div>
@@ -459,7 +459,7 @@
     <div class="spacer"></div>
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="ctip-q" placeholder="Buscar..." oninput="renderCtip()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="ctip-q" placeholder="Buscar..." oninput="renderCtip()">
       <button class="srch-clr" onclick="clrSrch('ctip-q',renderCtip)" title="Limpiar">✕</button>
     </div>
   </div>
@@ -479,7 +479,7 @@
     <button class="btn dng" id="btn-mone-baja" onclick="tabBaja('MONE')">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="mone-q" placeholder="Buscar..." oninput="renderTabGral('MONE')">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="mone-q" placeholder="Buscar..." oninput="renderTabGral('MONE')">
       <button class="srch-clr" onclick="clrSrch('mone-q',function(){renderTabGral('MONE')})" title="Limpiar">✕</button>
     </div>
   </div>
@@ -508,7 +508,7 @@
       <option value="nro-desc">Nro ↓</option>
     </select>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="desp-q" placeholder="Buscar despacho o artículo..." oninput="renderDesp()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="desp-q" placeholder="Buscar despacho o artículo..." oninput="renderDesp()">
       <button class="srch-clr" onclick="clrSrch('desp-q',function(){renderDesp()})" title="Limpiar">✕</button>
     </div>
   </div>
@@ -534,7 +534,7 @@
     <button class="btn" id="btn-cfg-reci" style="display:none" onclick="openColCfg('reci')" title="Configurar columnas">⚙️ Columnas</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="reci-q" placeholder="Buscar recibo o cliente..." oninput="renderReci()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="reci-q" placeholder="Buscar recibo o cliente..." oninput="renderReci()">
       <button class="srch-clr" onclick="clrSrch('reci-q',function(){renderReci()})" title="Limpiar">✕</button>
     </div>
   </div>
@@ -552,7 +552,7 @@
     <button class="btn dng" id="btn-talo-baja" onclick="taloBaja()">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="talo-q" placeholder="Buscar talonario..." oninput="renderTalo()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="talo-q" placeholder="Buscar talonario..." oninput="renderTalo()">
       <button class="srch-clr" onclick="clrSrch('talo-q',function(){renderTalo()})" title="Limpiar">✕</button>
     </div>
   </div>
@@ -570,7 +570,7 @@
     <button class="btn dng" id="btn-rete-baja" onclick="reteBaja()">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="rete-q" placeholder="Buscar tipo de retención..." oninput="renderRete()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="rete-q" placeholder="Buscar tipo de retención..." oninput="renderRete()">
       <button class="srch-clr" onclick="clrSrch('rete-q',function(){renderRete()})" title="Limpiar">✕</button>
     </div>
   </div>
@@ -601,7 +601,7 @@
     <div class="spacer"></div>
     <span style="font-size:12px;color:var(--t3);margin-right:10px">Sel: <b id="cart-selcount2" style="color:var(--acc)">0</b> · <b id="cart-seltotal" style="color:var(--acc);font-family:var(--mono)">0,00</b> &nbsp;|&nbsp; Cheques: <b id="cart-count" style="color:var(--txt)">0</b> · Total: <b id="cart-total" style="color:var(--txt);font-family:var(--mono)">0,00</b></span>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="cart-q" placeholder="Buscar cheque, cliente o recibo..." oninput="renderCart()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="cart-q" placeholder="Buscar cheque, cliente o recibo..." oninput="renderCart()">
       <button class="srch-clr" onclick="clrSrch('cart-q',function(){renderCart()})" title="Limpiar">✕</button>
     </div>
   </div>
@@ -614,9 +614,9 @@
 <div class="page" id="page-ficha">
   <div class="toolbar">
     <div class="srch-wrap" style="min-width:380px"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="ficha-cli" list="ficha-cli-list" placeholder="Razón social o código del cliente..." oninput="fichaOnPick()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="ficha-cli" list="ficha-cli-list" placeholder="Razón social o código del cliente..." oninput="fichaOnPick()">
       <datalist id="ficha-cli-list"></datalist>
-      <button class="srch-clr" onclick="clrSrch('ficha-cli',function(){fichaClear()})" title="Limpiar">✕</button>
+      <button class="srch-clr" onclick="document.getElementById('ficha-cli').value='';fichaClear();" title="Limpiar">✕</button>
     </div>
     <div class="spacer"></div>
   </div>
@@ -643,7 +643,7 @@
     <button class="btn dng" onclick="usuaBaja()">✕ Baja</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" id="usua-q" placeholder="Buscar usuario..." oninput="renderUsua()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="usua-q" placeholder="Buscar usuario..." oninput="renderUsua()">
       <button class="srch-clr" onclick="clrSrch('usua-q',function(){renderUsua()})" title="Limpiar">✕</button>
     </div>
   </div>
