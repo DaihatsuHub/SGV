@@ -73,14 +73,11 @@ function renderOC(){
 
   if(!list.length){ body.innerHTML='<div class="empty">🔍 Sin órdenes</div>'; renderOCDetail(null); ocInstallNav(); return; }
 
-  const dmd=p=>{ const a=p[0],s=p[1]; if(a<=0) return '<span style="color:var(--t4,#3a4760)">·</span>';
-    return `<span style="color:${s>0.005?'var(--red)':'var(--grn)'}">◆</span>`; };
+  const dmd=s=>{ s=Number(s)||0; if(Math.abs(s)<=0.005) return ''; return `<span style="color:${s>0?'var(--red)':'var(--grn)'}">◆</span>`; };
 
   body.innerHTML=list.map((o,i)=>{
     const sel=ocSelIdx===i?'sel':'';
-    const ind=[ [Number(o.anticipo)||0, Number(o.saldo_ant)||0],
-                [Number(o.saldo)||0,    Number(o.saldo_sal)||0],
-                [Number(o.derecho)||0,  Number(o.saldo_der)||0] ];
+    const ind=[ Number(o.saldo_ant)||0, Number(o.saldo_sal)||0, Number(o.saldo_der)||0 ];
     return `<div class="tr-art ${sel}" data-idx="${i}" style="grid-template-columns:54px 1fr 60px;gap:6px;padding:8px 12px" onclick="selOC(${i})" ondblclick="ocModif()">`
       + `<span class="col-cod" style="font-family:var(--mono)">${esc(String(o.pedido||''))}</span>`
       + `<span class="col-des">${esc(o.proveedor||'')}</span>`
