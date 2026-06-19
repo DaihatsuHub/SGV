@@ -209,9 +209,11 @@ async function vmesExportar(){
     row.getCell(cDIng).numFmt='#,##0';  row.getCell(cDIng).alignment={horizontal:'right'};
     [cPrecio,cFob,cGas,cCosto].forEach(ci=>{ row.getCell(ci).numFmt='#,##0.00'; row.getCell(ci).alignment={horizontal:'right'}; });
     row.getCell(cDFec).alignment={horizontal:'center'};
-    // fondos naranja en Código y Stock
+    // fondos naranja en Código y Stock; Precio naranja + negrita
     row.getCell(2).fill=orangeFill;
     row.getCell(cStock).fill=orangeFill;
+    row.getCell(cPrecio).fill=orangeFill;
+    row.getCell(cPrecio).font={bold:true};
     // columna negra separadora
     row.getCell(cBlack).fill=blackFill;
     // borde simple en toda la fila
