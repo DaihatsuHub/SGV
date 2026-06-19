@@ -12,6 +12,12 @@ let _ocEditItems = [];        // items en edición
 // ── formato ───────────────────────────────────────────────
 function ocFmt(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function ocFmt3(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:3,maximumFractionDigits:3}); }
+function ocNum(v){
+  if(v===''||v==null) return null;
+  let s=String(v).trim().replace(/\s/g,'');
+  if(s.includes(',')) s=s.replace(/\./g,'').replace(',','.');   // 1.234,56 -> 1234.56
+  const n=parseFloat(s); return isNaN(n)?null:n;
+}
 function ocInt(n){ return (Number(n)||0).toLocaleString('es-AR'); }
 function ocFecFmt(d){ return d ? String(d).substring(0,10).split('-').reverse().join('/') : ''; }
 function ocFecISO(d){ return d ? String(d).substring(0,10) : ''; }
@@ -174,18 +180,18 @@ function ocEditRenderItems(){
   const c=document.getElementById('oce-items'); if(!c) return;
   c.innerHTML=_ocEditItems.map((it,i)=>`
     <div class="oce-itrow">
-      <input class="finp" list="oce-art-list" value="${esc(it.codint||'')}" onchange="ocEditItChg(${i},'codint',this.value)" placeholder="cód. interno">
-      <input class="finp" value="${esc(it.codprov||'')}" onchange="ocEditItChg(${i},'codprov',this.value)" placeholder="cód. prov.">
-      <input class="finp" type="number" value="${it.cantped||0}" oninput="ocEditItChg(${i},'cantped',this.value)" style="text-align:right">
-      <input class="finp" type="number" value="${it.cantent||0}" oninput="ocEditItChg(${i},'cantent',this.value)" style="text-align:right">
-      <input class="finp" type="number" step="0.001" value="${it.costo||0}" oninput="ocEditItChg(${i},'costo',this.value)" style="text-align:right">
+      <input class="finp" list="oce-art-list" value="${esc(it.codint||'')}" onchange="ocEditItChg(${i},'codint',this.value)" onfocus="this.select()" onclick="this.select()" placeholder="cód. interno">
+      <input class="finp" value="${esc(it.codprov||'')}" onchange="ocEditItChg(${i},'codprov',this.value)" onfocus="this.select()" onclick="this.select()" placeholder="cód. prov.">
+      <input class="finp" type="text" inputmode="numeric" value="${it.cantped||0}" oninput="ocEditItChg(${i},'cantped',this.value)" onfocus="this.select()" onclick="this.select()" style="text-align:right">
+      <input class="finp" type="text" inputmode="numeric" value="${it.cantent||0}" oninput="ocEditItChg(${i},'cantent',this.value)" onfocus="this.select()" onclick="this.select()" style="text-align:right">
+      <input class="finp" type="text" inputmode="decimal" value="${it.costo||0}" oninput="ocEditItChg(${i},'costo',this.value)" onfocus="this.select()" onclick="this.select()" style="text-align:right">
       <span class="mono" style="text-align:right;align-self:center;color:var(--txt)">${ocFmt((Number(it.cantped)||0)*(Number(it.costo)||0))}</span>
       <button class="btn dng" style="padding:2px 7px" onclick="ocEditDelItem(${i})" title="Quitar">✕</button>
     </div>`).join('') || '<div class="empty" style="padding:10px">Sin renglones — agregá con “＋ Renglón”.</div>';
 }
 function ocEditItChg(i,campo,val){
   if(!_ocEditItems[i]) return;
-  _ocEditItems[i][campo] = (campo==='codint'||campo==='codprov') ? val : (Number(val)||0);
+  _ocEditItems[i][campo] = (campo==='codint'||campo==='codprov') ? val : (ocNum(val)||0);
   if(campo==='codint'){
     const art=ARTS.find(a=>(a.ART_COD||'').trim()===(val||'').trim());
     const r=document.querySelectorAll('#oce-items .oce-itrow')[i];
@@ -200,8 +206,8 @@ function ocEditCalc(){
   const tEl=document.getElementById('oce-total'); if(tEl) tEl.textContent=ocFmt(tot);
   // saldo de cada bloque = importe − pago
   [['ant'],['sal'],['der']].forEach(([p])=>{
-    const imp=Number(document.getElementById('oce-'+p+'-imp')?.value)||0;
-    const pago=Number(document.getElementById('oce-'+p+'-pago')?.value)||0;
+    const imp=ocNum(document.getElementById('oce-'+p+'-imp')?.value)||0;
+    const pago=ocNum(document.getElementById('oce-'+p+'-pago')?.value)||0;
     const sEl=document.getElementById('oce-'+p+'-saldo');
     if(sEl){ const s=imp-pago; sEl.textContent=ocFmt(s); sEl.style.color=s>0.005?'var(--red)':'var(--grn)'; }
   });
@@ -215,10 +221,10 @@ async function saveOC(){
   if(_ocEditNum===null && OCS.some(o=>Number(o.pedido)===ped)){
     toast(`El pedido ${ped} ya existe`,'err'); return;
   }
-  const numF=id=>{ const v=document.getElementById(id).value; return v===''?null:(Number(v)||0); };
+  const numF=id=>{ const v=document.getElementById(id).value; return v.trim()===''?null:(ocNum(v)||0); };
   const fecF=id=>{ const v=document.getElementById(id).value; return v||null; };
   const total=_ocEditItems.reduce((s,it)=>s+(Number(it.cantped)||0)*(Number(it.costo)||0),0);
-  const sld=(impId,pagoId)=>{ const i=Number(document.getElementById(impId).value)||0, p=Number(document.getElementById(pagoId).value)||0; return (document.getElementById(impId).value==='')?null:(i-p); };
+  const sld=(impId,pagoId)=>{ const raw=document.getElementById(impId).value; if(raw.trim()==='') return null; return (ocNum(raw)||0)-(ocNum(document.getElementById(pagoId).value)||0); };
 
   const hdr={
     pedido:ped, fecha:fecF('oce-fecha'), proveedor:prov,
@@ -237,8 +243,9 @@ async function saveOC(){
       if(!(it.codint||'').trim() && !(Number(it.cantped))) continue;
       await sbUpsert('oc_items', {
         pedido:ped, codprov:it.codprov||null, subcod:null, codint:it.codint||null,
-        envio:hdr.envio, am:hdr.am, cantped:Number(it.cantped)||0, cantent:Number(it.cantent)||0,
-        cantpl:null, costo:Number(it.costo)||0, total:(Number(it.cantped)||0)*(Number(it.costo)||0)
+        envio:hdr.envio, am:hdr.am,
+        cantped:Math.round(Number(it.cantped)||0), cantent:Math.round(Number(it.cantent)||0), cantpl:null,
+        costo:Number(it.costo)||0, total:(Number(it.cantped)||0)*(Number(it.costo)||0)
       });
     }
     closeOv('ov-oce');

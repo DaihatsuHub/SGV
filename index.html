@@ -1139,7 +1139,7 @@
     </div>
     <div class="mbdy">
       <div class="fg" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-        <div class="fgrp"><label class="flbl2">Pedido *</label><input class="finp" id="oce-ped" type="number"></div>
+        <div class="fgrp"><label class="flbl2">Pedido *</label><input class="finp" id="oce-ped" type="text" inputmode="numeric" onfocus="this.select()" onclick="this.select()"></div>
         <div class="fgrp"><label class="flbl2">Fecha</label><input class="finp" id="oce-fecha" type="date"></div>
         <div class="fgrp"><label class="flbl2">Empresa</label><select class="finp" id="oce-emp"><option value="H">Hatsu</option><option value="T">Tressa</option></select></div>
         <div class="fgrp"><label class="flbl2">Vía</label><select class="finp" id="oce-am"><option value="M">Marítimo</option><option value="A">Aéreo</option></select></div>
@@ -1151,23 +1151,23 @@
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">
         <div class="oc-payc">
           <div style="font-weight:600;font-size:12px;margin-bottom:5px">Anticipo</div>
-          <label class="flbl2">Importe</label><input class="finp" id="oce-ant-imp" type="number" step="0.01" oninput="ocEditCalc()">
+          <label class="flbl2">Importe</label><input class="finp" id="oce-ant-imp" type="text" inputmode="decimal" onfocus="this.select()" onclick="this.select()" oninput="ocEditCalc()">
           <label class="flbl2" style="margin-top:4px">Fecha</label><input class="finp" id="oce-ant-fec" type="date">
-          <label class="flbl2" style="margin-top:4px">Pago</label><input class="finp" id="oce-ant-pago" type="number" step="0.01" oninput="ocEditCalc()">
+          <label class="flbl2" style="margin-top:4px">Pago</label><input class="finp" id="oce-ant-pago" type="text" inputmode="decimal" onfocus="this.select()" onclick="this.select()" oninput="ocEditCalc()">
           <div class="oc-pr" style="margin-top:5px;border-top:1px solid var(--b1);padding-top:4px"><span>Saldo</span><span class="mono" id="oce-ant-saldo">0,00</span></div>
         </div>
         <div class="oc-payc">
           <div style="font-weight:600;font-size:12px;margin-bottom:5px">Saldo</div>
-          <label class="flbl2">Importe</label><input class="finp" id="oce-sal-imp" type="number" step="0.01" oninput="ocEditCalc()">
+          <label class="flbl2">Importe</label><input class="finp" id="oce-sal-imp" type="text" inputmode="decimal" onfocus="this.select()" onclick="this.select()" oninput="ocEditCalc()">
           <label class="flbl2" style="margin-top:4px">Fecha</label><input class="finp" id="oce-sal-fec" type="date">
-          <label class="flbl2" style="margin-top:4px">Pago</label><input class="finp" id="oce-sal-pago" type="number" step="0.01" oninput="ocEditCalc()">
+          <label class="flbl2" style="margin-top:4px">Pago</label><input class="finp" id="oce-sal-pago" type="text" inputmode="decimal" onfocus="this.select()" onclick="this.select()" oninput="ocEditCalc()">
           <div class="oc-pr" style="margin-top:5px;border-top:1px solid var(--b1);padding-top:4px"><span>Saldo</span><span class="mono" id="oce-sal-saldo">0,00</span></div>
         </div>
         <div class="oc-payc">
           <div style="font-weight:600;font-size:12px;margin-bottom:5px">Derecho</div>
-          <label class="flbl2">Importe</label><input class="finp" id="oce-der-imp" type="number" step="0.01" oninput="ocEditCalc()">
+          <label class="flbl2">Importe</label><input class="finp" id="oce-der-imp" type="text" inputmode="decimal" onfocus="this.select()" onclick="this.select()" oninput="ocEditCalc()">
           <label class="flbl2" style="margin-top:4px">Fecha</label><input class="finp" id="oce-der-fec" type="date">
-          <label class="flbl2" style="margin-top:4px">Pago</label><input class="finp" id="oce-der-pago" type="number" step="0.01" oninput="ocEditCalc()">
+          <label class="flbl2" style="margin-top:4px">Pago</label><input class="finp" id="oce-der-pago" type="text" inputmode="decimal" onfocus="this.select()" onclick="this.select()" oninput="ocEditCalc()">
           <div class="oc-pr" style="margin-top:5px;border-top:1px solid var(--b1);padding-top:4px"><span>Saldo</span><span class="mono" id="oce-der-saldo">0,00</span></div>
         </div>
       </div>
