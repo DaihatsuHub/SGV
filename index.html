@@ -634,7 +634,7 @@
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" onfocus="this.select()" onclick="this.select()" id="oc-q" placeholder="Buscar pedido, proveedor u orden..." oninput="renderOC()">
-      <button class="srch-clr" onclick="clrSrch('oc-q',function(){renderOC()})" title="Limpiar">✕</button>
+      <button class="srch-clr" id="oc-q-clr" onclick="clrSrch('oc-q',function(){renderOC()})" title="Limpiar">✕</button>
     </div>
   </div>
   <div style="flex:1;min-height:0;display:grid;grid-template-columns:340px 1fr;gap:10px;padding:10px 12px">
@@ -1143,8 +1143,8 @@
         <div class="fgrp"><label class="flbl2">Fecha</label><input class="finp" id="oce-fecha" type="date"></div>
         <div class="fgrp"><label class="flbl2">Empresa</label><select class="finp" id="oce-emp"><option value="H">Hatsu</option><option value="T">Tressa</option></select></div>
         <div class="fgrp"><label class="flbl2">Vía</label><select class="finp" id="oce-am"><option value="M">Marítimo</option><option value="A">Aéreo</option></select></div>
-        <div class="fgrp" style="grid-column:span 2"><label class="flbl2">Proveedor *</label><input class="finp" id="oce-prov" onfocus="this.select()"></div>
-        <div class="fgrp"><label class="flbl2">Orden prov.</label><input class="finp" id="oce-orden" onfocus="this.select()"></div>
+        <div class="fgrp" style="grid-column:span 2"><label class="flbl2">Proveedor *</label><input class="finp" id="oce-prov" onfocus="this.select()" onclick="this.select()"></div>
+        <div class="fgrp"><label class="flbl2">Orden prov.</label><input class="finp" id="oce-orden" onfocus="this.select()" onclick="this.select()"></div>
         <div class="fgrp"><label class="flbl2">Envío</label><input class="finp" id="oce-envio" type="date"></div>
       </div>
 

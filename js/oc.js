@@ -92,7 +92,7 @@ function renderOC(){
 function selOC(i){ ocSelIdx=i; renderOC(); }
 
 async function ocSetFecha(pedido, key, val){
-  const map={ant:'fecha_ant', sal:'fecha_sal', der:'fecha_der'};
+  const map={ant:'fecha_ant', sal:'fecha_sal', der:'fecha_der', env:'envio'};
   const field=map[key]; if(!field) return;
   const o=OCS.find(x=>Number(x.pedido)===Number(pedido)); if(!o) return;
   const prev=o[field]; o[field]=val||null;
@@ -112,17 +112,20 @@ function renderOCDetail(o){
 
   const empPill=e=>{ const b=e==='Hatsu'; return `<span style="font-size:10px;padding:1px 8px;border-radius:10px;background:${b?'#16314e':'#3a2c12'};color:${b?'#7cc0ff':'#e7a13b'}">${e}</span>`; };
   const glb=(l,v)=>`<div class="oc-glb"><div class="oc-glb-l">${l}</div><div class="oc-glb-v">${v}</div></div>`;
-  // 3) Envío a la IZQUIERDA de Vía
+  const canEdit=(typeof puedeh==='function') && puedeh('oc','modif');
+  // 3) Envío a la IZQUIERDA de Vía (editable si tiene permiso)
   const totItems=ocTotalItems(o.pedido);
+  const envVal = canEdit
+    ? `<input type="date" value="${ocFecISO(o.envio)}" onchange="ocSetFecha(${o.pedido},'env',this.value)" style="background:var(--s1);border:1px solid var(--b1);border-radius:5px;color:var(--txt);font-size:12px;padding:0 4px;max-width:122px">`
+    : (ocFecFmt(o.envio)||'—');
   document.getElementById('ocd-globos').innerHTML=
     glb('Fecha', ocFecFmt(o.fecha)||'—') +
     glb('Empresa', empPill(ocEmpLabel(o.rubro))) +
     glb('Orden prov.', `<span style="font-family:var(--mono)">${esc(o.orden||'—')}</span>`) +
-    glb('Envío', ocFecFmt(o.envio)||'—') +
+    glb('Envío', envVal) +
     glb('Vía', (o.am||'').trim()?ocAmLabel(o.am):'—') +
     `<div class="oc-glb" style="background:#10233a;border-color:#2b5780"><div class="oc-glb-l">Total OC</div><div class="oc-glb-v" style="font-size:15px;font-weight:600;color:#9cc8ff;font-family:var(--mono)">${ocFmt(totItems)}</div></div>`;
 
-  const canEdit=(typeof puedeh==='function') && puedeh('oc','modif');
   const payc=(t,key,imp,fec,pago,saldo)=>{ const has=(Number(imp)||0)>0;
     const fecCell = canEdit
       ? `<input type="date" value="${ocFecISO(fec)}" onchange="ocSetFecha(${o.pedido},'${key}',this.value)" style="background:var(--s1);border:1px solid var(--b1);border-radius:5px;color:var(--txt);font-size:11px;padding:1px 4px;max-width:118px">`
@@ -190,12 +193,22 @@ function _ocFill(o){
 }
 
 function ocEditAddItem(){ _ocEditItems.push({ codint:'', codprov:'', cantped:0, cantent:0, costo:0 }); ocEditRenderItems(); ocEditCalc(); }
+function ocEditClearCod(i){
+  if(!_ocEditItems[i]) return;
+  _ocEditItems[i].codint='';
+  const r=document.querySelectorAll('#oce-items .oce-itrow')[i];
+  const inp=r && r.querySelector('input[list="oce-art-list"]');
+  if(inp){ inp.value=''; inp.focus(); }
+}
 function ocEditDelItem(i){ _ocEditItems.splice(i,1); ocEditRenderItems(); ocEditCalc(); }
 function ocEditRenderItems(){
   const c=document.getElementById('oce-items'); if(!c) return;
   c.innerHTML=_ocEditItems.map((it,i)=>`
     <div class="oce-itrow">
-      <input class="finp" list="oce-art-list" value="${esc(it.codint||'')}" onchange="ocEditItChg(${i},'codint',this.value)" onfocus="this.select()" onclick="this.select()" placeholder="cód. interno">
+      <span style="position:relative;display:block">
+        <input class="finp" list="oce-art-list" value="${esc(it.codint||'')}" onchange="ocEditItChg(${i},'codint',this.value)" onfocus="this.select()" onclick="this.select()" placeholder="cód. interno" style="width:100%;padding-right:22px">
+        <button type="button" tabindex="-1" onclick="ocEditClearCod(${i})" title="Limpiar" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:13px;line-height:1;padding:0">✕</button>
+      </span>
       <input class="finp" value="${esc(it.codprov||'')}" onchange="ocEditItChg(${i},'codprov',this.value)" onfocus="this.select()" onclick="this.select()" placeholder="cód. prov.">
       <input class="finp" type="text" inputmode="numeric" value="${it.cantped||0}" oninput="ocEditItChg(${i},'cantped',this.value)" onfocus="this.select()" onclick="this.select()" style="text-align:right">
       <input class="finp" type="text" inputmode="numeric" value="${it.cantent||0}" oninput="ocEditItChg(${i},'cantent',this.value)" onfocus="this.select()" onclick="this.select()" style="text-align:right">
