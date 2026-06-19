@@ -64,6 +64,8 @@
 .oce-itrow .finp{padding:4px 6px;font-size:12px}
 .ocpg-row{display:grid;grid-template-columns:110px 1fr 110px;gap:6px;padding:6px 12px;font-size:12px;border-bottom:1px solid var(--b1)}
 .ocpg-hd{background:var(--s2);color:var(--t2);font-size:9px;text-transform:uppercase;letter-spacing:.3px;font-weight:600}
+.ocpagar-row{display:grid;grid-template-columns:28px 88px 54px 1fr 100px 78px 100px;gap:6px;padding:5px 10px;font-size:12px;border-bottom:1px solid var(--b1);align-items:center}
+.ocpagar-hd{background:var(--s2);color:var(--t2);font-size:9px;text-transform:uppercase;letter-spacing:.3px;font-weight:600;position:sticky;top:0;z-index:1}
 </style>
 </head>
 <body>
@@ -113,8 +115,7 @@
     <div class="dd-wrap">
       <button class="tnav" id="tnav-cmp" onclick="toggleDD('dd-cmp',this)">🛒 Compras <span class="dd-arrow" id="arr-cmp">▼</span></button>
       <div class="dd-menu" id="dd-cmp">
-        <div style="padding:6px 14px 2px;font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--t3);text-transform:uppercase">Ordenes de Compra</div>
-        <button class="dd-item" id="ddi-oc" style="padding-left:26px" onclick="showSubPage('cmp','oc');renderOC()">📋 ABM Ordenes de Compra</button>
+        <button class="dd-item" id="ddi-oc" onclick="showSubPage('cmp','oc');renderOC()">📋 Ordenes de Compra</button>
         <button class="dd-item" id="ddi-desp" onclick="showSubPage('cmp','desp')">🚢 Despachos</button>
       </div>
     </div>
@@ -633,6 +634,7 @@
     <button class="btn pri" id="btn-oc-alta" onclick="ocAlta()">＋ Nueva OC</button>
     <button class="btn" id="btn-oc-modif" onclick="ocModif()">✏️ Modificar</button>
     <button class="btn dng" id="btn-oc-baja" onclick="ocBaja()">🗑️ Eliminar</button>
+    <button class="btn" id="btn-oc-pagar" onclick="ocPagarOpen()">📅 Órdenes a Pagar</button>
     <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" onfocus="this.select()" onclick="this.select()" id="oc-q" placeholder="Buscar pedido, proveedor u orden..." oninput="renderOC()">
@@ -647,7 +649,8 @@
       </div>
       <div class="tbl-body" id="oc-body"></div>
     </div>
-    <div id="oc-detalle" style="display:none;overflow:auto;min-height:0">
+    <div style="min-height:0;overflow:auto">
+    <div id="oc-detalle" style="display:none">
       <div style="font-size:15px;font-weight:600;color:var(--txt);margin:0 2px 8px;display:flex;align-items:center;gap:8px">
         <span style="color:var(--acc)">🧾</span><span id="ocd-prov">—</span>
         <span class="mono" style="color:var(--t3);font-size:13px">· Pedido <span id="ocd-ped"></span></span>
@@ -659,6 +662,33 @@
         <div class="oc-itrow oc-itrow-hd"><span>Cód. prov.</span><span>Cód. interno</span><span style="text-align:right">Pedido</span><span style="text-align:right">Saldo</span><span style="text-align:right">Costo</span><span style="text-align:right">Total</span></div>
         <div id="ocd-items" style="max-height:300px;overflow:auto"></div>
       </div>
+    </div>
+    <div id="oc-pagar" style="display:none">
+      <div style="display:flex;align-items:center;gap:8px;margin:0 2px 10px">
+        <span style="font-size:15px;font-weight:600;color:var(--txt)">📅 Órdenes a Pagar</span>
+        <button class="btn" style="margin-left:auto;padding:3px 9px" onclick="ocPagarClose()">✕ Cerrar</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-bottom:10px">
+        <div class="fgrp"><label class="flbl2">Desde</label><input class="finp" id="ocpg-desde" type="date" onchange="ocPagarRender()"></div>
+        <div class="fgrp"><label class="flbl2">Hasta</label><input class="finp" id="ocpg-hasta" type="date" onchange="ocPagarRender()"></div>
+        <div class="fgrp"><label class="flbl2">Tipo</label>
+          <select class="finp" id="ocpg-tipo" onchange="ocPagarRender()">
+            <option value="TODOS">Todos</option><option value="ANT">Anticipo</option><option value="SAL">Saldo</option><option value="DER">Derechos</option>
+          </select>
+        </div>
+      </div>
+      <div style="border:1px solid var(--b1);border-radius:8px;overflow:hidden">
+        <div class="ocpagar-row ocpagar-hd">
+          <span><input type="checkbox" id="ocpg-all" onchange="ocPagarToggleAll(this.checked)"></span>
+          <span>Fecha</span><span>Pedido</span><span>Proveedor</span><span>Orden</span><span>Qué</span><span style="text-align:right">Importe</span>
+        </div>
+        <div id="ocpg-list" style="max-height:46vh;overflow:auto"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:13px">
+        <span style="color:var(--t2)">Seleccionado: <b class="mono" id="ocpg-seltot" style="color:var(--acc)">0,00</b></span>
+        <span style="color:var(--t2)">Total: <b class="mono" id="ocpg-tot" style="color:var(--txt)">0,00</b></span>
+      </div>
+    </div>
     </div>
   </div>
 </div>

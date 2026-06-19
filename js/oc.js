@@ -8,6 +8,9 @@ let OCITEMS = [];
 let OCPAGOS = [];
 let ocSelIdx = null;
 let _ocPagoPed = null;
+let _ocPagarOpen = false;
+let _ocPagarSel = new Set();
+let _ocPagarRows = [];
 let _ocEditNum = null;        // pedido en edición (null = alta)
 let _ocEditItems = [];        // items en edición
 
@@ -89,7 +92,7 @@ function renderOC(){
 
   if(ocSelIdx===null || ocSelIdx>=list.length) ocSelIdx=0;
   body.querySelector('.tr-art.sel')?.scrollIntoView({block:'nearest'});
-  renderOCDetail(list[ocSelIdx]);
+  if(!_ocPagarOpen) renderOCDetail(list[ocSelIdx]);
   ocInstallNav();
 }
 
@@ -391,6 +394,84 @@ function ocPagosVer(pedido){
     : '<div class="empty" style="padding:12px">Sin pagos</div>';
   document.getElementById('ocpagos-tot').textContent=ocFmt(pagos.reduce((s,p)=>s+(Number(p.importe)||0),0));
   document.getElementById('ov-ocpagos').classList.add('open');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ÓRDENES A PAGAR (vencimientos impagos por fecha)
+// ═══════════════════════════════════════════════════════════
+function ocPagarOpen(){
+  _ocPagarOpen=true; _ocPagarSel=new Set();
+  const det=document.getElementById('oc-detalle'); if(det) det.style.display='none';
+  const pan=document.getElementById('oc-pagar'); if(pan) pan.style.display='block';
+  ocPagarRender();
+}
+function ocPagarClose(){
+  _ocPagarOpen=false;
+  const pan=document.getElementById('oc-pagar'); if(pan) pan.style.display='none';
+  const o=getOCRows()[ocSelIdx];
+  if(o){ const det=document.getElementById('oc-detalle'); if(det) det.style.display='block'; renderOCDetail(o); }
+}
+function ocPagarRows(){
+  const desde=document.getElementById('ocpg-desde')?.value||'';
+  const hasta=document.getElementById('ocpg-hasta')?.value||'';
+  const tipo=document.getElementById('ocpg-tipo')?.value||'TODOS';
+  const blocks=[
+    {t:'ANT', lbl:'Anticipo', fecF:'fecha_ant', salF:'saldo_ant'},
+    {t:'SAL', lbl:'Saldo',    fecF:'fecha_sal', salF:'saldo_sal'},
+    {t:'DER', lbl:'Derechos', fecF:'fecha_der', salF:'saldo_der'},
+  ];
+  const rows=[];
+  (OCS||[]).forEach(o=>{
+    blocks.forEach(b=>{
+      if(tipo!=='TODOS' && tipo!==b.t) return;
+      const saldo=Number(o[b.salF])||0;
+      if(saldo<=0.005) return;                       // solo impagos
+      const fec=o[b.fecF]?String(o[b.fecF]).substring(0,10):'';
+      if(desde && (!fec || fec<desde)) return;       // filtro período
+      if(hasta && (!fec || fec>hasta)) return;
+      rows.push({pedido:o.pedido, proveedor:o.proveedor||'', orden:o.orden||'', que:b.lbl, tipo:b.t, fecha:fec, importe:saldo});
+    });
+  });
+  rows.sort((a,b)=>String(a.fecha||'9999-99-99').localeCompare(String(b.fecha||'9999-99-99')));
+  return rows;
+}
+function ocPagarKey(r){ return r.pedido+'-'+r.tipo; }
+function ocPagarRender(){
+  const rows=ocPagarRows(); _ocPagarRows=rows;
+  // limpiar selección de filas que ya no figuran
+  const keys=new Set(rows.map(ocPagarKey));
+  [..._ocPagarSel].forEach(k=>{ if(!keys.has(k)) _ocPagarSel.delete(k); });
+
+  const list=document.getElementById('ocpg-list'); if(!list) return;
+  list.innerHTML = rows.length ? rows.map(r=>{
+    const k=ocPagarKey(r);
+    return `<div class="ocpagar-row">
+      <span><input type="checkbox" ${_ocPagarSel.has(k)?'checked':''} onchange="ocPagarToggleSel('${k}',this.checked)"></span>
+      <span>${ocFecFmt(r.fecha)||'—'}</span>
+      <span class="mono">${esc(String(r.pedido))}</span>
+      <span class="col-des">${esc(r.proveedor)}</span>
+      <span class="mono" style="font-size:11px">${esc(r.orden||'—')}</span>
+      <span>${r.que}</span>
+      <span class="mono" style="text-align:right;color:var(--txt)">${ocFmt(r.importe)}</span>
+    </div>`;
+  }).join('') : '<div class="empty" style="padding:14px">Sin órdenes a pagar en el período</div>';
+
+  const tEl=document.getElementById('ocpg-tot'); if(tEl) tEl.textContent=ocFmt(rows.reduce((s,r)=>s+r.importe,0));
+  const all=document.getElementById('ocpg-all'); if(all) all.checked = rows.length>0 && rows.every(r=>_ocPagarSel.has(ocPagarKey(r)));
+  ocPagarUpdateSel();
+}
+function ocPagarToggleSel(key, checked){
+  if(checked) _ocPagarSel.add(key); else _ocPagarSel.delete(key);
+  const all=document.getElementById('ocpg-all'); if(all) all.checked=_ocPagarRows.length>0 && _ocPagarRows.every(r=>_ocPagarSel.has(ocPagarKey(r)));
+  ocPagarUpdateSel();
+}
+function ocPagarToggleAll(checked){
+  _ocPagarSel=new Set(); if(checked) _ocPagarRows.forEach(r=>_ocPagarSel.add(ocPagarKey(r)));
+  ocPagarRender();
+}
+function ocPagarUpdateSel(){
+  let tot=0; _ocPagarRows.forEach(r=>{ if(_ocPagarSel.has(ocPagarKey(r))) tot+=r.importe; });
+  const el=document.getElementById('ocpg-seltot'); if(el) el.textContent=ocFmt(tot);
 }
 
 // ── navegación por teclado ────────────────────────────────
