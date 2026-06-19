@@ -202,7 +202,7 @@ function ocEditRenderItems(){
       <input class="finp" type="text" inputmode="decimal" value="${it.costo||0}" oninput="ocEditItChg(${i},'costo',this.value)" onfocus="this.select()" onclick="this.select()" style="text-align:right">
       <span class="mono oce-sub" style="text-align:right;align-self:center;color:var(--txt)">${ocFmt3((Number(it.cantped)||0)*(Number(it.costo)||0))}</span>
       <button class="btn dng" style="padding:2px 7px" onclick="ocEditDelItem(${i})" title="Quitar">✕</button>
-    </div>`).join('') || '<div class="empty" style="padding:10px">Sin renglones — agregá con “＋ Renglón”.</div>';
+    </div>`).join('') || '<div class="empty" style="padding:10px">Sin items — agregá con “＋ Item”.</div>';
 }
 function ocEditItChg(i,campo,val){
   if(!_ocEditItems[i]) return;
