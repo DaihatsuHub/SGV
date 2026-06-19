@@ -166,10 +166,12 @@ async function vmesExportar(){
   const ORANGE='FFFFA500', BLACK='FF000000';
   const orangeFill={type:'pattern',pattern:'solid',fgColor:{argb:ORANGE}};
   const blackFill ={type:'pattern',pattern:'solid',fgColor:{argb:BLACK}};
+  const thin={style:'thin',color:{argb:BLACK}};
+  const allB={top:thin,left:thin,right:thin,bottom:thin};
 
   // columnas: ... Stock | [COLUMNA NEGRA ~1cm] | DFec ...
   const headers=['Marca','Código','PR', ...months.map(m=>m.label), 'Stock','', 'DFec','DIng','Precio','FOB','Gasto2','Costo2'];
-  const widths =[10,16,6, ...months.map(()=>8), 9, 4.8, 10,9,12,10,9,11];
+  const widths =[10,16,6, ...months.map(()=>8), 9, 1, 10,9,12,10,9,11];
 
   const wb=new ExcelJS.Workbook();
   const ws=wb.addWorksheet('Ventas mensuales');
@@ -178,7 +180,6 @@ async function vmesExportar(){
   // posiciones (1-based)
   const cM0=4, cMn=3+nM, cStock=4+nM, cBlack=5+nM, cDFec=6+nM, cDIng=7+nM, cPrecio=8+nM, cFob=9+nM, cGas=10+nM, cCosto=11+nM;
   const totalCols=headers.length;
-  const half=Math.ceil(totalCols/2);
 
   // títulos: negrita + centrados + fondo naranja (col negra va negra)
   const hr=ws.addRow(headers);
@@ -186,16 +187,15 @@ async function vmesExportar(){
     cell.font={bold:true};
     cell.alignment={horizontal:'center',vertical:'middle'};
     cell.fill = (col===cBlack)?blackFill:orangeFill;
-    cell.border={bottom:{style:'thin',color:{argb:BLACK}}};
+    cell.border=allB;
   });
 
   let prevMarca=null;
   rows.forEach(r=>{
-    // separador entre marcas: fila negra de la mitad del ancho
+    // separador entre marcas: fila negra a todo el ancho (hasta Costo)
     if(prevMarca!==null && r.marca!==prevMarca){
       const sep=ws.addRow([]); sep.height=7;
-      for(let i=1;i<=half;i++) sep.getCell(i).fill=blackFill;
-      sep.getCell(cBlack).fill=blackFill;
+      for(let i=1;i<=totalCols;i++){ sep.getCell(i).fill=blackFill; sep.getCell(i).border=allB; }
     }
     prevMarca=r.marca;
 
@@ -214,6 +214,8 @@ async function vmesExportar(){
     row.getCell(cStock).fill=orangeFill;
     // columna negra separadora
     row.getCell(cBlack).fill=blackFill;
+    // borde simple en toda la fila
+    for(let i=1;i<=totalCols;i++) row.getCell(i).border=allB;
   });
 
   ws.views=[{state:'frozen', ySplit:1}];
