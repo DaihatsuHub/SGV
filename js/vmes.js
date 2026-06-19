@@ -71,10 +71,10 @@ async function vmesGenerar(){
   });
 
   // filas (filtradas por marca; sin ventas y stock 0 -> no mostrar)
-  const marcaSet=new Set(marcas);
+  const marcaSet=new Set(marcas.map(m=>(m||'').trim().toUpperCase()));
   const rows=[];
   (ARTS||[]).forEach(a=>{
-    if(!marcaSet.has((a.ART_MARCA||'').trim())) return;
+    if(!marcaSet.has((a.ART_MARCA||'').trim().toUpperCase())) return;
     const art=(a.ART_COD||'').trim();
     const v=ventas[art]||{};
     const stock=(Number(a.ART_STK)||0)+(Number(a.ART_STKT)||0);
@@ -163,41 +163,57 @@ async function vmesExportar(){
   const nM=months.length;
   const fdate=d=>{ if(!d) return ''; const p=d.substring(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0].slice(-2)}`:''; };
 
-  const headers=['Marca','Código','PR', ...months.map(m=>m.label), 'Stock','DFec','DIng','Precio','FOB','Gasto2','Costo2'];
-  const widths =[10,16,6, ...months.map(()=>8), 9,10,9,12,10,9,11];
+  const ORANGE='FFFFA500', BLACK='FF000000';
+  const orangeFill={type:'pattern',pattern:'solid',fgColor:{argb:ORANGE}};
+  const blackFill ={type:'pattern',pattern:'solid',fgColor:{argb:BLACK}};
+
+  // columnas: ... Stock | [COLUMNA NEGRA ~1cm] | DFec ...
+  const headers=['Marca','Código','PR', ...months.map(m=>m.label), 'Stock','', 'DFec','DIng','Precio','FOB','Gasto2','Costo2'];
+  const widths =[10,16,6, ...months.map(()=>8), 9, 4.8, 10,9,12,10,9,11];
 
   const wb=new ExcelJS.Workbook();
   const ws=wb.addWorksheet('Ventas mensuales');
   ws.columns=widths.map(w=>({width:w}));
 
-  // títulos: negrita + centrados + borde inferior negro
+  // posiciones (1-based)
+  const cM0=4, cMn=3+nM, cStock=4+nM, cBlack=5+nM, cDFec=6+nM, cDIng=7+nM, cPrecio=8+nM, cFob=9+nM, cGas=10+nM, cCosto=11+nM;
+  const totalCols=headers.length;
+  const half=Math.ceil(totalCols/2);
+
+  // títulos: negrita + centrados + fondo naranja (col negra va negra)
   const hr=ws.addRow(headers);
-  hr.eachCell({includeEmpty:true},cell=>{
+  hr.eachCell({includeEmpty:true},(cell,col)=>{
     cell.font={bold:true};
     cell.alignment={horizontal:'center',vertical:'middle'};
-    cell.border={bottom:{style:'thin',color:{argb:'FF000000'}}};
+    cell.fill = (col===cBlack)?blackFill:orangeFill;
+    cell.border={bottom:{style:'thin',color:{argb:BLACK}}};
   });
-
-  // posiciones de columnas (1-based)
-  const cM0=4, cMn=3+nM, cStock=4+nM, cDFec=5+nM, cDIng=6+nM, cPrecio=7+nM, cFob=8+nM, cGas=9+nM, cCosto=10+nM;
 
   let prevMarca=null;
   rows.forEach(r=>{
-    const vals=[ r.marca, r.cod, r.pr,
-      ...r.mes.map(q=>q||null),
-      r.stock||0, fdate(r.dfec), r.ding||null,
-      r.precio||0, r.fob||0, r.gas2||0, r.costo||0 ];
-    const row=ws.addRow(vals);
-    // formatos numéricos
-    for(let i=cM0;i<=cMn;i++){ row.getCell(i).numFmt='#,##0'; row.getCell(i).alignment={horizontal:'right'}; }
-    [cStock,cDIng].forEach(ci=>{ row.getCell(ci).numFmt='#,##0'; row.getCell(ci).alignment={horizontal:'right'}; });
-    [cPrecio,cFob,cGas,cCosto].forEach(ci=>{ row.getCell(ci).numFmt='#,##0.00'; row.getCell(ci).alignment={horizontal:'right'}; });
-    row.getCell(cDFec).alignment={horizontal:'center'};
-    // línea negra al cambiar de marca
+    // separador entre marcas: fila negra de la mitad del ancho
     if(prevMarca!==null && r.marca!==prevMarca){
-      row.eachCell({includeEmpty:true},cell=>{ cell.border={...(cell.border||{}), top:{style:'medium',color:{argb:'FF000000'}}}; });
+      const sep=ws.addRow([]); sep.height=7;
+      for(let i=1;i<=half;i++) sep.getCell(i).fill=blackFill;
+      sep.getCell(cBlack).fill=blackFill;
     }
     prevMarca=r.marca;
+
+    const vals=[ r.marca, r.cod, r.pr,
+      ...r.mes.map(q=>q||null),
+      r.stock||0, '', fdate(r.dfec), r.ding||null,
+      r.precio||0, r.fob||0, r.gas2||0, r.costo||0 ];
+    const row=ws.addRow(vals);
+    for(let i=cM0;i<=cMn;i++){ row.getCell(i).numFmt='#,##0'; row.getCell(i).alignment={horizontal:'right'}; }
+    row.getCell(cStock).numFmt='#,##0'; row.getCell(cStock).alignment={horizontal:'right'};
+    row.getCell(cDIng).numFmt='#,##0';  row.getCell(cDIng).alignment={horizontal:'right'};
+    [cPrecio,cFob,cGas,cCosto].forEach(ci=>{ row.getCell(ci).numFmt='#,##0.00'; row.getCell(ci).alignment={horizontal:'right'}; });
+    row.getCell(cDFec).alignment={horizontal:'center'};
+    // fondos naranja en Código y Stock
+    row.getCell(2).fill=orangeFill;
+    row.getCell(cStock).fill=orangeFill;
+    // columna negra separadora
+    row.getCell(cBlack).fill=blackFill;
   });
 
   ws.views=[{state:'frozen', ySplit:1}];
