@@ -5,7 +5,9 @@
 
 let OCS = [];
 let OCITEMS = [];
+let OCPAGOS = [];
 let ocSelIdx = null;
+let _ocPagoPed = null;
 let _ocEditNum = null;        // pedido en edición (null = alta)
 let _ocEditItems = [];        // items en edición
 
@@ -34,6 +36,11 @@ async function sbLoadOCItems(){
   try{ OCITEMS = await sbGetAll('oc_items','pedido'); }
   catch(e){ console.error('sbLoadOCItems:', e); OCITEMS=[]; }
 }
+async function sbLoadOCPagos(){
+  try{ OCPAGOS = await sbGetAll('oc_pagos','pedido'); }
+  catch(e){ console.error('sbLoadOCPagos:', e); OCPAGOS=[]; }
+}
+function ocPagosDe(pedido){ return (OCPAGOS||[]).filter(p=>Number(p.pedido)===Number(pedido)); }
 function ocItemsDe(pedido){ return (OCITEMS||[]).filter(it=>Number(it.pedido)===Number(pedido)); }
 function ocTotalItems(pedido){ return ocItemsDe(pedido).reduce((s,it)=>s+(Number(it.total)||0),0); }
 function ocProxNumero(){ const m=(OCS||[]).reduce((x,o)=>Math.max(x,Number(o.pedido)||0),0); return m+1; }
@@ -155,6 +162,16 @@ function renderOCDetail(o){
         + `<span class="mono" style="text-align:right;color:var(--txt)">${ocFmt3(it.total)}</span>`
         + `</div>`; }).join('')
     : '<div class="empty" style="padding:12px">Sin renglones</div>';
+
+  // botones de pagos
+  const actEl=document.getElementById('ocd-actions');
+  if(actEl){
+    const pend=ocPend(o), pagos=ocPagosDe(o.pedido);
+    let h='';
+    if(canEdit && pend>0.005) h+=`<button class="btn pri" onclick="ocPagoOpen(${o.pedido})">＋ Pagos</button>`;
+    if(pagos.length) h+=`<button class="btn" onclick="ocPagosVer(${o.pedido})">👁️ Ver Pagos (${pagos.length})</button>`;
+    actEl.innerHTML=h;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -297,6 +314,87 @@ function ocBaja(){
 }
 
 function ocVer(){ ocModif(); }   // doble clic / botón Ver abre el detalle editable
+
+// ═══════════════════════════════════════════════════════════
+// PAGOS (anticipo / saldo / derechos)
+// ═══════════════════════════════════════════════════════════
+const OC_PAGO_LBL={ANT:'Anticipo', SAL:'Saldo', DER:'Derechos'};
+const OC_PAGO_F  ={ANT:['pago_ant','saldo_ant'], SAL:['pago_sal','saldo_sal'], DER:['pago_der','saldo_der']};
+
+function ocPagoOpen(pedido){
+  const o=OCS.find(x=>Number(x.pedido)===Number(pedido)); if(!o) return;
+  _ocPagoPed=Number(pedido);
+  document.getElementById('ocpago-tit').textContent=`Registrar pago · Pedido ${pedido}`;
+  document.getElementById('ocpago-fecha').value=new Date().toISOString().substring(0,10);
+  document.getElementById('ocpago-imp').value='';
+  const blocks=[
+    {t:'ANT', saldo:Number(o.saldo_ant)||0},
+    {t:'SAL', saldo:Number(o.saldo_sal)||0},
+    {t:'DER', saldo:Number(o.saldo_der)||0},
+  ].filter(b=>b.saldo>0.005);
+  document.getElementById('ocpago-opts').innerHTML=blocks.map((b,i)=>
+    `<label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer">
+       <input type="radio" name="ocpago-tipo" value="${b.t}" data-saldo="${b.saldo}" ${i===0?'checked':''} onchange="ocPagoChk()">
+       ${OC_PAGO_LBL[b.t]} <span style="color:var(--t3);font-size:11px">(pend. ${ocFmt(b.saldo)})</span>
+     </label>`).join('');
+  ocPagoChk();
+  document.getElementById('ov-ocpago').classList.add('open');
+  setTimeout(()=>document.getElementById('ocpago-imp')?.focus(),60);
+}
+
+function ocPagoChk(){
+  const sel=document.querySelector('input[name="ocpago-tipo"]:checked');
+  const saldo=sel?(Number(sel.dataset.saldo)||0):0;
+  const imp=ocNum(document.getElementById('ocpago-imp').value)||0;
+  const hint=document.getElementById('ocpago-hint');
+  const btn=document.getElementById('ocpago-save');
+  let ok=true, msg='';
+  if(!sel){ ok=false; msg='Elegí a qué aplicar el pago.'; }
+  else if(imp<=0){ ok=false; msg='Ingresá un importe.'; }
+  else if(imp>saldo+0.005){ ok=false; msg=`No puede superar el saldo pendiente (${ocFmt(saldo)}).`; }
+  else { msg=`Saldo del bloque luego del pago: ${ocFmt(saldo-imp)}`; }
+  if(hint){ hint.textContent=msg; hint.style.color=ok?'var(--t3)':'var(--red)'; }
+  if(btn){ btn.disabled=!ok; btn.style.opacity=ok?'1':'.5'; }
+}
+
+async function ocPagoSave(){
+  const o=OCS.find(x=>Number(x.pedido)===Number(_ocPagoPed)); if(!o) return;
+  const sel=document.querySelector('input[name="ocpago-tipo"]:checked');
+  if(!sel){ toast('Elegí a qué aplicar','err'); return; }
+  const tipo=sel.value;
+  const fecha=document.getElementById('ocpago-fecha').value||null;
+  const imp=ocNum(document.getElementById('ocpago-imp').value)||0;
+  const [pagoF,saldoF]=OC_PAGO_F[tipo];
+  const saldoActual=Number(o[saldoF])||0;
+  if(imp<=0){ toast('Importe inválido','err'); return; }
+  if(imp>saldoActual+0.005){ toast('Supera el saldo pendiente','err'); return; }
+  const nuevoPago=(Number(o[pagoF])||0)+imp;
+  const nuevoSaldo=saldoActual-imp;
+  try{
+    await sbUpsert('oc_pagos', {pedido:_ocPagoPed, tipo, fecha, importe:imp});
+    await sbUpsert('ordenes_compra', {pedido:_ocPagoPed, [pagoF]:nuevoPago, [saldoF]:nuevoSaldo});
+    o[pagoF]=nuevoPago; o[saldoF]=nuevoSaldo;
+    await sbLoadOCPagos();
+    closeOv('ov-ocpago');
+    renderOC();
+    toast('Pago registrado','scs');
+  }catch(e){ console.error('ocPagoSave:', e); toast('Error al registrar el pago','err'); }
+}
+
+function ocPagosVer(pedido){
+  const pagos=ocPagosDe(pedido).slice().sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
+  document.getElementById('ocpagos-tit').textContent=`Pagos · Pedido ${pedido}`;
+  const list=document.getElementById('ocpagos-list');
+  list.innerHTML = pagos.length ? pagos.map(p=>
+    `<div class="ocpg-row">
+       <span>${ocFecFmt(p.fecha)||'—'}</span>
+       <span>${OC_PAGO_LBL[p.tipo]||p.tipo||''}</span>
+       <span class="mono" style="text-align:right;color:var(--txt)">${ocFmt(p.importe)}</span>
+     </div>`).join('')
+    : '<div class="empty" style="padding:12px">Sin pagos</div>';
+  document.getElementById('ocpagos-tot').textContent=ocFmt(pagos.reduce((s,p)=>s+(Number(p.importe)||0),0));
+  document.getElementById('ov-ocpagos').classList.add('open');
+}
 
 // ── navegación por teclado ────────────────────────────────
 let _ocNavInstalled=false;

@@ -200,7 +200,7 @@ async function sbLoad() {
       STRING1:r.signo||'$', STRING2:String(r.cotizacion||1), STRING3:'', FECHA1:'', NIVEL:0
     }));
     // Órdenes de Compra (encabezados + renglones)
-    if (typeof sbLoadOC === 'function') { await sbLoadOC(); await sbLoadOCItems(); }
+    if (typeof sbLoadOC === 'function') { await sbLoadOC(); await sbLoadOCItems(); if (typeof sbLoadOCPagos === 'function') await sbLoadOCPagos(); }
     syncStatus(`☁️ ${ARTS.length} art · ${CLIS.length} cli`, '#4ade80');
     setTimeout(()=>syncStatus('☁️ Conectado', '#93b4d8'), 3000);
     return true;
