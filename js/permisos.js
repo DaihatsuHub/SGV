@@ -108,6 +108,7 @@ function aplicarPermisos() {
 
   // ── Subitems Ventas ───────────────────────────────────
   _setBtn('ddi-fac',  puedeh('fac','ver'));
+  _setBtn('ddi-vmes', puedeh('fac','ver'));
   _setBtn('ddi-ctip', puedeh('ctip','ver'));
   _setBtn('ddi-desp', puedeh('desp','ver'));
 
