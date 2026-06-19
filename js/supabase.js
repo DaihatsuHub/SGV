@@ -14,6 +14,16 @@ function syncStatus(txt, color='#93b4d8') {
   if (el) { el.textContent = txt; el.style.color = color; }
 }
 
+// Estado de guardado centralizado (usado por sbUpsert/sbDelete)
+let _syncTimer = null;
+function syncSaving() { syncStatus('💾 Guardando...', '#93b4d8'); }
+function syncOk() {
+  syncStatus('☁️ Guardado ✓', '#4ade80');
+  if (_syncTimer) clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => syncStatus('☁️ Conectado', '#93b4d8'), 2000);
+}
+function syncErr() { syncStatus('⚠️ Error al guardar', '#f87171'); }
+
 async function getAuthToken() {
   const { data } = await sbClient.auth.getSession();
   return data.session?.access_token || SB_KEY;
@@ -42,33 +52,45 @@ async function sbGetAll(table, orderField, extraParams='') {
 }
 
 async function sbUpsert(table, data) {
-  const token = await getAuthToken();
-  const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
-    method: 'POST',
-    headers: { ...SB_HDR, 'Authorization': 'Bearer ' + token, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify(data)
-  });
-  if (!r.ok) { const t=await r.text(); throw new Error(`sbUpsert ${r.status}: ${t.substring(0,150)}`); }
+  syncSaving();
+  try {
+    const token = await getAuthToken();
+    const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: { ...SB_HDR, 'Authorization': 'Bearer ' + token, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(data)
+    });
+    if (!r.ok) { const t=await r.text(); throw new Error(`sbUpsert ${r.status}: ${t.substring(0,150)}`); }
+    syncOk();
+  } catch(e) { syncErr(); throw e; }
 }
 
 async function sbUpsertOnConflict(table, data, conflictCol) {
-  const token = await getAuthToken();
-  const r = await fetch(`${SB_URL}/rest/v1/${table}?on_conflict=${conflictCol}`, {
-    method: 'POST',
-    headers: { ...SB_HDR, 'Authorization': 'Bearer ' + token, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify(data)
-  });
-  if (!r.ok) { const t=await r.text(); throw new Error(`sbUpsert ${r.status}: ${t.substring(0,150)}`); }
+  syncSaving();
+  try {
+    const token = await getAuthToken();
+    const r = await fetch(`${SB_URL}/rest/v1/${table}?on_conflict=${conflictCol}`, {
+      method: 'POST',
+      headers: { ...SB_HDR, 'Authorization': 'Bearer ' + token, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(data)
+    });
+    if (!r.ok) { const t=await r.text(); throw new Error(`sbUpsert ${r.status}: ${t.substring(0,150)}`); }
+    syncOk();
+  } catch(e) { syncErr(); throw e; }
 }
 
 async function sbDelete(table, match) {
-  const token = await getAuthToken();
-  const params = Object.entries(match).map(([k,v])=>`${k}=eq.${encodeURIComponent(v)}`).join('&');
-  const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
-    method: 'DELETE',
-    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + token }
-  });
-  if (!r.ok) throw new Error(`sbDelete ${r.status}`);
+  syncSaving();
+  try {
+    const token = await getAuthToken();
+    const params = Object.entries(match).map(([k,v])=>`${k}=eq.${encodeURIComponent(v)}`).join('&');
+    const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + token }
+    });
+    if (!r.ok) throw new Error(`sbDelete ${r.status}`);
+    syncOk();
+  } catch(e) { syncErr(); throw e; }
 }
 
 // ── Mapeo DB → objeto JS ─────────────────────────────────
@@ -180,7 +202,7 @@ async function sbLoad() {
     // Órdenes de Compra (encabezados + renglones)
     if (typeof sbLoadOC === 'function') { await sbLoadOC(); await sbLoadOCItems(); }
     syncStatus(`☁️ ${ARTS.length} art · ${CLIS.length} cli`, '#4ade80');
-    setTimeout(()=>syncStatus('☁️ Supabase', '#93b4d8'), 3000);
+    setTimeout(()=>syncStatus('☁️ Conectado', '#93b4d8'), 3000);
     return true;
   } catch(e) {
     syncStatus('⚠️ Sin conexión', '#fbbf24');
@@ -190,21 +212,13 @@ async function sbLoad() {
 }
 
 async function sbSaveArt(art) {
-  syncStatus('💾 Guardando...', '#93b4d8');
-  try {
-    await sbUpsert('articulos', artToDb(art));
-    syncStatus('☁️ Guardado ✓', '#4ade80');
-    setTimeout(()=>syncStatus('☁️ Supabase', '#93b4d8'), 2000);
-  } catch(e) { syncStatus('⚠️ Error al guardar', '#f87171'); console.error(e); }
+  try { await sbUpsert('articulos', artToDb(art)); }
+  catch(e) { console.error(e); }
 }
 
 async function sbSaveCli(cli) {
-  syncStatus('💾 Guardando...', '#93b4d8');
-  try {
-    await sbUpsert('clientes', cliToDb(cli));
-    syncStatus('☁️ Guardado ✓', '#4ade80');
-    setTimeout(()=>syncStatus('☁️ Supabase', '#93b4d8'), 2000);
-  } catch(e) { syncStatus('⚠️ Error al guardar', '#f87171'); console.error(e); }
+  try { await sbUpsert('clientes', cliToDb(cli)); }
+  catch(e) { console.error(e); }
 }
 
 async function deleteArt(cod) {
