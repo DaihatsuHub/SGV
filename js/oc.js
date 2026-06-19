@@ -185,19 +185,15 @@ function ocEditRenderItems(){
       <input class="finp" type="text" inputmode="numeric" value="${it.cantped||0}" oninput="ocEditItChg(${i},'cantped',this.value)" onfocus="this.select()" onclick="this.select()" style="text-align:right">
       <input class="finp" type="text" inputmode="numeric" value="${it.cantent||0}" oninput="ocEditItChg(${i},'cantent',this.value)" onfocus="this.select()" onclick="this.select()" style="text-align:right">
       <input class="finp" type="text" inputmode="decimal" value="${it.costo||0}" oninput="ocEditItChg(${i},'costo',this.value)" onfocus="this.select()" onclick="this.select()" style="text-align:right">
-      <span class="mono" style="text-align:right;align-self:center;color:var(--txt)">${ocFmt((Number(it.cantped)||0)*(Number(it.costo)||0))}</span>
+      <span class="mono oce-sub" style="text-align:right;align-self:center;color:var(--txt)">${ocFmt((Number(it.cantped)||0)*(Number(it.costo)||0))}</span>
       <button class="btn dng" style="padding:2px 7px" onclick="ocEditDelItem(${i})" title="Quitar">✕</button>
     </div>`).join('') || '<div class="empty" style="padding:10px">Sin renglones — agregá con “＋ Renglón”.</div>';
 }
 function ocEditItChg(i,campo,val){
   if(!_ocEditItems[i]) return;
   _ocEditItems[i][campo] = (campo==='codint'||campo==='codprov') ? val : (ocNum(val)||0);
-  if(campo==='codint'){
-    const art=ARTS.find(a=>(a.ART_COD||'').trim()===(val||'').trim());
-    const r=document.querySelectorAll('#oce-items .oce-itrow')[i];
-    if(art && r){ const dn=r.querySelector('.oce-itdes'); if(dn) dn.textContent=art.ART_DES||''; }
-  }
-  if(campo==='cantped'||campo==='costo') ocEditRenderItems();
+  const r=document.querySelectorAll('#oce-items .oce-itrow')[i];
+  if(r){ const sub=r.querySelector('.oce-sub'); if(sub){ const it=_ocEditItems[i]; sub.textContent=ocFmt((Number(it.cantped)||0)*(Number(it.costo)||0)); } }
   ocEditCalc();
 }
 function ocEditCalc(){
@@ -258,19 +254,18 @@ async function saveOC(){
 }
 
 // ── baja ──────────────────────────────────────────────────
-async function ocBaja(){
+function ocBaja(){
   if(ocSelIdx===null){ toast('Seleccioná una orden','err'); return; }
   const o=getOCRows()[ocSelIdx]; if(!o){ toast('Seleccioná una orden','err'); return; }
-  const ok=(typeof confirm2==='function')
-    ? await confirm2(`¿Eliminar la OC del pedido ${o.pedido}? Se borran también sus renglones.`)
-    : confirm(`¿Eliminar la OC del pedido ${o.pedido}?`);
-  if(!ok) return;
-  try{
-    await sbDelete('ordenes_compra', {pedido:o.pedido});
-    OCS=OCS.filter(x=>Number(x.pedido)!==Number(o.pedido));
-    OCITEMS=OCITEMS.filter(x=>Number(x.pedido)!==Number(o.pedido));
-    ocSelIdx=null; renderOC(); toast('Orden eliminada','scs');
-  }catch(e){ console.error('ocBaja:', e); toast('Error al eliminar','err'); }
+  confirm2(`¿Eliminar la OC del pedido ${o.pedido}?`, 'Se borran también sus renglones.', async ()=>{
+    try{
+      await sbDelete('oc_items', {pedido:o.pedido});
+      await sbDelete('ordenes_compra', {pedido:o.pedido});
+      OCS=OCS.filter(x=>Number(x.pedido)!==Number(o.pedido));
+      OCITEMS=OCITEMS.filter(x=>Number(x.pedido)!==Number(o.pedido));
+      ocSelIdx=null; renderOC(); toast('Orden eliminada','scs');
+    }catch(e){ console.error('ocBaja:', e); toast('Error al eliminar','err'); }
+  });
 }
 
 function ocVer(){ ocModif(); }   // doble clic / botón Ver abre el detalle editable
