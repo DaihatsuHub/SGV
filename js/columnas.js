@@ -85,10 +85,24 @@ const COL_DEFS = {
     {field:'CHQ_EST',  label:'Estado',       width:'150px', active:true},
     {field:'CHQ_FSAL', label:'Fec.salida',   width:'95px',  active:true},
     {field:'CHQ_OBS',  label:'Observaciones',width:'1fr',   active:true},
+  ],
+  oc: [
+    {field:'OC_PED',  label:'Pedido',     width:'80px',  active:true},
+    {field:'OC_FEC',  label:'Fecha',      width:'90px',  active:true},
+    {field:'OC_PROV', label:'Proveedor',  width:'1fr',   active:true},
+    {field:'OC_ORD',  label:'Orden',      width:'110px', active:true},
+    {field:'OC_RUB',  label:'Rubro',      width:'70px',  active:true},
+    {field:'OC_ENV',  label:'Envío',      width:'90px',  active:true},
+    {field:'OC_AM',   label:'A/M',        width:'55px',  active:false},
+    {field:'OC_TOT',  label:'Total',      width:'110px', align:'right', active:true},
+    {field:'OC_ANT',  label:'Anticipo',   width:'105px', align:'right', active:false},
+    {field:'OC_SAL',  label:'Saldo',      width:'105px', align:'right', active:false},
+    {field:'OC_DER',  label:'Derecho',    width:'105px', align:'right', active:false},
+    {field:'OC_PEND', label:'Pendiente',  width:'110px', align:'right', active:true},
   ]
 };
 
-const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true}, desp:{col:null,asc:true}, reci:{col:null,asc:true}, cart:{col:null,asc:true} };
+const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true}, desp:{col:null,asc:true}, reci:{col:null,asc:true}, cart:{col:null,asc:true}, oc:{col:null,asc:true} };
 
 function getActiveCols(grid) {
   const cfg  = getConfigUI(grid);
@@ -109,6 +123,7 @@ function toggleSort(grid, field) {
   else if (grid==='desp') renderDesp();
   else if (grid==='reci') renderReci();
   else if (grid==='cart') renderCart();
+  else if (grid==='oc') renderOC();
 }
 
 function sortArrow(grid, field) {
@@ -126,7 +141,7 @@ function openColCfg(grid) {
   } else {
     ordered = [...defs];
   }
-  const titles = {art:'Artículos', cli:'Clientes', desp:'Despachos', reci:'Recibos', cart:'Cartera de Valores'};
+  const titles = {art:'Artículos', cli:'Clientes', desp:'Despachos', reci:'Recibos', cart:'Cartera de Valores', oc:'Ordenes de Compra'};
   document.getElementById('col-cfg-title').textContent = 'Columnas — ' + (titles[grid]||grid);
   const body = document.getElementById('col-cfg-body');
   body.innerHTML = ordered.map(c => {
@@ -204,6 +219,7 @@ async function saveColCfg() {
     else if (grid==='desp') renderDesp();
     else if (grid==='reci') renderReci();
     else if (grid==='cart') renderCart();
+  else if (grid==='oc') renderOC();
     toast('Configuración guardada', 'scs');
   } catch(e) {
     console.error('saveColCfg:', e);

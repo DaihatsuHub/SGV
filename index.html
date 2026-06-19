@@ -50,6 +50,10 @@
   flex-direction: column !important;
 }
 #ov-reci .mbdy { max-height: none !important; flex: 1; overflow: auto; }
+.ocd-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--t3);font-weight:700;margin-bottom:2px}
+.ocd-val{color:var(--txt)}
+.ocd-it-row{display:grid;grid-template-columns:120px 1fr 110px 80px 80px 90px 100px;gap:6px;padding:6px 10px;font-size:12px;border-bottom:1px solid var(--b1)}
+.ocd-it-hd{background:var(--s2);color:var(--t2);font-weight:600;position:sticky;top:0;z-index:1}
 </style>
 </head>
 <body>
@@ -99,6 +103,8 @@
     <div class="dd-wrap">
       <button class="tnav" id="tnav-cmp" onclick="toggleDD('dd-cmp',this)">🛒 Compras <span class="dd-arrow" id="arr-cmp">▼</span></button>
       <div class="dd-menu" id="dd-cmp">
+        <div style="padding:6px 14px 2px;font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--t3);text-transform:uppercase">Ordenes de Compra</div>
+        <button class="dd-item" id="ddi-oc" style="padding-left:26px" onclick="showSubPage('cmp','oc');renderOC()">📋 ABM Ordenes de Compra</button>
         <button class="dd-item" id="ddi-desp" onclick="showSubPage('cmp','desp')">🚢 Despachos</button>
       </div>
     </div>
@@ -612,6 +618,26 @@
   </div>
 </div>
 
+<div class="page" id="page-oc">
+  <div class="toolbar" style="flex-wrap:wrap;row-gap:6px">
+    <button class="btn" id="btn-oc-ver" onclick="ocVer()">🔍 Ver / Detalle</button>
+    <button class="btn pri" id="btn-oc-alta" onclick="ocAlta()">＋ Nueva OC</button>
+    <button class="btn" id="btn-oc-modif" onclick="ocModif()">✏️ Modificar</button>
+    <button class="btn dng" id="btn-oc-baja" onclick="ocBaja()">🗑️ Eliminar</button>
+    <button class="btn" id="btn-cfg-oc" style="display:none" onclick="openColCfg('oc')" title="Configurar columnas">⚙️ Columnas</button>
+    <div class="spacer"></div>
+    <span style="font-size:12px;color:var(--t3);margin-right:10px">Órdenes: <b id="oc-count" style="color:var(--txt)">0</b> · Total: <b id="oc-total" style="color:var(--txt);font-family:var(--mono)">0,00</b> · Pendiente: <b id="oc-pend" style="color:var(--red);font-family:var(--mono)">0,00</b></span>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="oc-q" placeholder="Buscar pedido, proveedor u orden..." oninput="renderOC()">
+      <button class="srch-clr" onclick="clrSrch('oc-q',function(){renderOC()})" title="Limpiar">✕</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <div class="th-tab" id="oc-thead" style="display:grid;gap:6px;padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--b1);font-size:11px;color:var(--t2);font-family:var(--mono)"></div>
+    <div class="tbl-body" id="oc-body"></div>
+  </div>
+</div>
+
 <div class="page" id="page-ficha">
   <div class="toolbar">
     <div class="srch-wrap" style="min-width:380px"><span class="srch-ico">⌕</span>
@@ -1083,6 +1109,43 @@
   </div>
 </div>
 
+<div class="ov" id="ov-oc">
+  <div class="modal" style="width:780px;max-width:96vw">
+    <div class="mhd">
+      <div class="mtit"><span id="oc-mtit">Orden de Compra</span><span class="mtag tag-m">DETALLE</span></div>
+      <button class="mcls" onclick="closeOv('ov-oc')">✕</button>
+    </div>
+    <div class="mbdy">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px 14px;font-size:13px;margin-bottom:14px">
+        <div><div class="ocd-lbl">Pedido</div><div class="ocd-val" id="ocd-pedido">—</div></div>
+        <div><div class="ocd-lbl">Fecha</div><div class="ocd-val" id="ocd-fecha">—</div></div>
+        <div style="grid-column:span 2"><div class="ocd-lbl">Proveedor</div><div class="ocd-val" id="ocd-prov">—</div></div>
+        <div><div class="ocd-lbl">Orden prov.</div><div class="ocd-val" id="ocd-orden">—</div></div>
+        <div><div class="ocd-lbl">Rubro</div><div class="ocd-val" id="ocd-rubro">—</div></div>
+        <div><div class="ocd-lbl">Envío</div><div class="ocd-val" id="ocd-envio">—</div></div>
+        <div><div class="ocd-lbl">Vía</div><div class="ocd-val" id="ocd-am">—</div></div>
+        <div style="grid-column:span 4"><div class="ocd-lbl">Total</div><div class="ocd-val" id="ocd-total" style="font-family:var(--mono);font-size:15px;font-weight:700">—</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:90px repeat(4,1fr);gap:6px;font-size:12px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:8px 10px;margin-bottom:14px">
+        <div class="ocd-lbl"></div><div class="ocd-lbl" style="text-align:right">Importe</div><div class="ocd-lbl">Fecha</div><div class="ocd-lbl" style="text-align:right">Pago</div><div class="ocd-lbl" style="text-align:right">Saldo</div>
+        <div><b>Anticipo</b></div><div id="ocd-ant-imp" style="text-align:right;font-family:var(--mono)">—</div><div id="ocd-ant-fec">—</div><div id="ocd-ant-pago" style="text-align:right;font-family:var(--mono)">—</div><div id="ocd-ant-saldo" style="text-align:right;font-family:var(--mono)">—</div>
+        <div><b>Saldo</b></div><div id="ocd-sal-imp" style="text-align:right;font-family:var(--mono)">—</div><div id="ocd-sal-fec">—</div><div id="ocd-sal-pago" style="text-align:right;font-family:var(--mono)">—</div><div id="ocd-sal-saldo" style="text-align:right;font-family:var(--mono)">—</div>
+        <div><b>Derecho</b></div><div id="ocd-der-imp" style="text-align:right;font-family:var(--mono)">—</div><div id="ocd-der-fec">—</div><div id="ocd-der-pago" style="text-align:right;font-family:var(--mono)">—</div><div id="ocd-der-saldo" style="text-align:right;font-family:var(--mono)">—</div>
+      </div>
+      <div style="font-size:12px;color:var(--t2);margin-bottom:6px">Renglones (<span id="ocd-items-cnt">0</span>) · Total items: <b id="ocd-items-tot" style="font-family:var(--mono)">0,00</b></div>
+      <div style="border:1px solid var(--b1);border-radius:8px;overflow:hidden">
+        <div class="ocd-it-row ocd-it-hd">
+          <span>Cód. interno</span><span>Descripción</span><span>Cód. prov.</span><span style="text-align:right">Pedida</span><span style="text-align:right">Entreg.</span><span style="text-align:right">Costo</span><span style="text-align:right">Total</span>
+        </div>
+        <div id="ocd-items" style="max-height:320px;overflow:auto"></div>
+      </div>
+    </div>
+    <div class="mft">
+      <button class="btn" onclick="closeOv('ov-oc')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="ov" id="ov-cart">
   <div class="modal" style="width:460px">
     <div class="mhd">
@@ -1271,6 +1334,7 @@
 <script src="js/retenciones.js"></script>
 <script src="js/recibos.js"></script>
 <script src="js/cartera.js"></script>
+<script src="js/oc.js"></script>
 <script src="js/fichacli.js"></script>
 <script src="js/vmes.js"></script>
 

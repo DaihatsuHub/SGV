@@ -94,6 +94,13 @@ function aplicarPermisos() {
   _setBtn('btn-cart-confirm', puedeh('cart','modif'));
   _setBtn('btn-cfg-cart',     puedeh('cart','columnas'));
 
+  // ── Compras: Ordenes de Compra ────────────────────────
+  _setBtn('btn-oc-ver',   puedeh('oc','ver'));
+  _setBtn('btn-oc-alta',  puedeh('oc','alta'));
+  _setBtn('btn-oc-modif', puedeh('oc','modif'));
+  _setBtn('btn-oc-baja',  puedeh('oc','baja'));
+  _setBtn('btn-cfg-oc',   puedeh('oc','columnas'));
+
   // ── Usuarios ──────────────────────────────────────────
   _setBtn('ddi-usua',       puedeh('usuarios','ver'));
   _setBtn('btn-permisos',   usuarioActual.nivel >= 88 || usuarioActual.codigo === 'RGRDELTA');
@@ -102,7 +109,7 @@ function aplicarPermisos() {
   _setBtn('tnav-art', puedeh('art','ver'));
   _setBtn('tnav-cli', puedeh('cli','ver'));
   _setBtn('ddi-ficha', puedeh('cli','ver'));
-  _setBtn('tnav-cmp', puedeh('desp','ver'));
+  _setBtn('tnav-cmp', puedeh('desp','ver') || puedeh('oc','ver'));
   _setBtn('tnav-ven', puedeh('fac','ver') || puedeh('ctip','ver'));
   _setBtn('tnav-cob', puedeh('reci','ver') || puedeh('talo','ver') || puedeh('rete','ver') || puedeh('cart','ver'));
 
@@ -111,6 +118,7 @@ function aplicarPermisos() {
   _setBtn('ddi-vmes', puedeh('fac','ver'));
   _setBtn('ddi-ctip', puedeh('ctip','ver'));
   _setBtn('ddi-desp', puedeh('desp','ver'));
+  _setBtn('ddi-oc',   puedeh('oc','ver'));
 
   // ── Subitems Cobranzas ────────────────────────────────
   _setBtn('ddi-reci', puedeh('reci','ver'));
@@ -123,6 +131,7 @@ function aplicarPermisos() {
 const MODULOS_PERM = [
   { key:'art',      label:'📦 Artículos' },
   { key:'cli',      label:'👥 Clientes' },
+  { key:'oc',       label:'🛒 Ordenes de Compra' },
   { key:'desp',     label:'🚢 Despachos' },
   { key:'fac',      label:'🧾 Facturación' },
   { key:'ctip',     label:'📋 Tipos de Comprobantes' },
