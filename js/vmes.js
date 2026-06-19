@@ -127,29 +127,88 @@ function vmesRender(rows, months){
   }).join('');
 }
 
-// ── Salida a Excel (CSV es-AR: separador ; y coma decimal) ──
-function vmesExportar(){
-  if(!_vmesRows.length){ toast('Generá el listado primero','err'); return; }
-  const rows=_vmesRows.slice().sort((a,b)=> (a.marca||'').localeCompare(b.marca||'') || a.cod.localeCompare(b.cod));
-  const sep=';';
-  const csvEsc=v=>{ v=(v==null?'':String(v)); return /[";\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
-  const money=v=>(Number(v)||0).toFixed(2).replace('.',',');
-  const qty=v=>{ const n=Number(v)||0; return Number.isInteger(n)?String(n):String(n).replace('.',','); };
-  const fdate=d=>{ if(!d) return ''; const p=d.substring(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0].slice(-2)}`:''; };
-  const head=['Marca','Código','PR', ..._vmesMonths.map(m=>m.label), 'Stock','DFec','DIng','Precio','FOB','Gasto2','Costo2'];
-  const lines=[head.map(csvEsc).join(sep)];
-  rows.forEach(r=>{
-    const cells=[ r.marca, r.cod, r.pr,
-      ...r.mes.map(q=>q?qty(q):''),
-      qty(r.stock), fdate(r.dfec), r.ding?qty(r.ding):'',
-      money(r.precio), money(r.fob), money(r.gas2), money(r.costo) ];
-    lines.push(cells.map(csvEsc).join(sep));
+// ── Salida a Excel (.xlsx con ExcelJS) ────────────────────
+function vmesLoadExcelJS(){
+  if(typeof ExcelJS!=='undefined') return Promise.resolve();
+  const urls=[
+    'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js',
+    'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js',
+    'https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js'
+  ];
+  return new Promise((resolve,reject)=>{
+    let i=0;
+    const tryNext=()=>{
+      if(typeof ExcelJS!=='undefined') return resolve();
+      if(i>=urls.length) return reject(new Error('No se pudo cargar ExcelJS'));
+      const sc=document.createElement('script');
+      sc.src=urls[i++];
+      sc.onload=()=>resolve();
+      sc.onerror=()=>{ sc.remove(); tryNext(); };
+      document.head.appendChild(sc);
+    };
+    tryNext();
   });
-  const csv='\uFEFF'+lines.join('\r\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='ventas_mensuales_x_articulo.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+async function vmesExportar(){
+  if(!_vmesRows.length){ toast('Generá el listado primero','err'); return; }
+  const status=document.getElementById('vmes-status');
+  try{
+    if(status) status.textContent='Generando Excel…';
+    await vmesLoadExcelJS();
+  }catch(e){ console.error(e); toast('No se pudo cargar Excel (¿sin conexión?)','err'); if(status) status.textContent=''; return; }
+
+  const rows=_vmesRows.slice().sort((a,b)=> (a.marca||'').localeCompare(b.marca||'') || a.cod.localeCompare(b.cod));
+  const months=_vmesMonths;
+  const nM=months.length;
+  const fdate=d=>{ if(!d) return ''; const p=d.substring(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0].slice(-2)}`:''; };
+
+  const headers=['Marca','Código','PR', ...months.map(m=>m.label), 'Stock','DFec','DIng','Precio','FOB','Gasto2','Costo2'];
+  const widths =[10,16,6, ...months.map(()=>8), 9,10,9,12,10,9,11];
+
+  const wb=new ExcelJS.Workbook();
+  const ws=wb.addWorksheet('Ventas mensuales');
+  ws.columns=widths.map(w=>({width:w}));
+
+  // títulos: negrita + centrados + borde inferior negro
+  const hr=ws.addRow(headers);
+  hr.eachCell({includeEmpty:true},cell=>{
+    cell.font={bold:true};
+    cell.alignment={horizontal:'center',vertical:'middle'};
+    cell.border={bottom:{style:'thin',color:{argb:'FF000000'}}};
+  });
+
+  // posiciones de columnas (1-based)
+  const cM0=4, cMn=3+nM, cStock=4+nM, cDFec=5+nM, cDIng=6+nM, cPrecio=7+nM, cFob=8+nM, cGas=9+nM, cCosto=10+nM;
+
+  let prevMarca=null;
+  rows.forEach(r=>{
+    const vals=[ r.marca, r.cod, r.pr,
+      ...r.mes.map(q=>q||null),
+      r.stock||0, fdate(r.dfec), r.ding||null,
+      r.precio||0, r.fob||0, r.gas2||0, r.costo||0 ];
+    const row=ws.addRow(vals);
+    // formatos numéricos
+    for(let i=cM0;i<=cMn;i++){ row.getCell(i).numFmt='#,##0'; row.getCell(i).alignment={horizontal:'right'}; }
+    [cStock,cDIng].forEach(ci=>{ row.getCell(ci).numFmt='#,##0'; row.getCell(ci).alignment={horizontal:'right'}; });
+    [cPrecio,cFob,cGas,cCosto].forEach(ci=>{ row.getCell(ci).numFmt='#,##0.00'; row.getCell(ci).alignment={horizontal:'right'}; });
+    row.getCell(cDFec).alignment={horizontal:'center'};
+    // línea negra al cambiar de marca
+    if(prevMarca!==null && r.marca!==prevMarca){
+      row.eachCell({includeEmpty:true},cell=>{ cell.border={...(cell.border||{}), top:{style:'medium',color:{argb:'FF000000'}}}; });
+    }
+    prevMarca=r.marca;
+  });
+
+  ws.views=[{state:'frozen', ySplit:1}];
+
+  try{
+    const buf=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='ventas_mensuales_x_articulo.xlsx';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    if(status) status.textContent=`${rows.length} artículo(s)`;
+  }catch(e){ console.error(e); toast('Error generando el Excel','err'); if(status) status.textContent=''; }
 }
