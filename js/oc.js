@@ -1,38 +1,38 @@
 // ═══════════════════════════════════════════════════════════
-// ÓRDENES DE COMPRA  (ABM)
+// ÓRDENES DE COMPRA  (ABM master-detail)
 // Tablas: ordenes_compra (encabezado) · oc_items (renglones)
 // ═══════════════════════════════════════════════════════════
 
 let OCS = [];
 let OCITEMS = [];
 let ocSelIdx = null;
+let _ocEditNum = null;        // pedido en edición (null = alta)
+let _ocEditItems = [];        // items en edición
 
 // ── formato ───────────────────────────────────────────────
-function ocFmt(n){
-  return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
-}
-function ocFecFmt(d){
-  return d ? String(d).substring(0,10).split('-').reverse().join('/') : '';
-}
-function ocPend(o){
-  return (Number(o.saldo_ant)||0)+(Number(o.saldo_sal)||0)+(Number(o.saldo_der)||0);
-}
-function ocAmLabel(am){
-  const a=(am||'').trim().toUpperCase();
-  return a==='A'?'Aéreo':(a==='M'?'Marítimo':a);
-}
+function ocFmt(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function ocInt(n){ return (Number(n)||0).toLocaleString('es-AR'); }
+function ocFecFmt(d){ return d ? String(d).substring(0,10).split('-').reverse().join('/') : ''; }
+function ocFecISO(d){ return d ? String(d).substring(0,10) : ''; }
+function ocPend(o){ return (Number(o.saldo_ant)||0)+(Number(o.saldo_sal)||0)+(Number(o.saldo_der)||0); }
+function ocEmpLabel(r){ const x=(r||'').trim().toUpperCase(); return x==='H'?'Hatsu':(x==='T'?'Tressa':(r||'')); }
+function ocAmLabel(a){ const x=(a||'').trim().toUpperCase(); return x==='A'?'Aéreo':(x==='M'?'Marítimo':(a||'')); }
 
 // ── carga ─────────────────────────────────────────────────
 async function sbLoadOC(){
-  try{ OCS = await sbGetAll('ordenes_compra','pedido'); OCS.sort((a,b)=>(Number(b.pedido)||0)-(Number(a.pedido)||0)); }
+  try{ OCS = await sbGetAll('ordenes_compra','pedido'); OCS.sort((a,b)=>(Number(a.pedido)||0)-(Number(b.pedido)||0)); }
   catch(e){ console.error('sbLoadOC:', e); OCS=[]; }
 }
 async function sbLoadOCItems(){
   try{ OCITEMS = await sbGetAll('oc_items','pedido'); }
   catch(e){ console.error('sbLoadOCItems:', e); OCITEMS=[]; }
 }
-function ocItemsDe(pedido){
-  return (OCITEMS||[]).filter(it=>Number(it.pedido)===Number(pedido));
+function ocItemsDe(pedido){ return (OCITEMS||[]).filter(it=>Number(it.pedido)===Number(pedido)); }
+function ocTotalItems(pedido){ return ocItemsDe(pedido).reduce((s,it)=>s+(Number(it.total)||0),0); }
+function ocProxNumero(){ const m=(OCS||[]).reduce((x,o)=>Math.max(x,Number(o.pedido)||0),0); return m+1; }
+function ocFillArtList(){
+  const dl=document.getElementById('oce-art-list'); if(!dl || dl.childElementCount) return;
+  dl.innerHTML=(ARTS||[]).map(a=>`<option value="${esc((a.ART_COD||'').trim())}">${esc((a.ART_DES||'').trim())}</option>`).join('');
 }
 
 // ── filas (búsqueda + orden) ──────────────────────────────
@@ -44,140 +44,209 @@ function getOCRows(){
     (o.proveedor||'').toLowerCase().includes(q) ||
     (o.orden||'').toLowerCase().includes(q)
   );
-  const s=(typeof SORT_STATE!=='undefined' && SORT_STATE.oc) ? SORT_STATE.oc : {col:null,asc:true};
-  if(s.col){
-    list=list.slice().sort((a,b)=>{
-      let va,vb;
-      switch(s.col){
-        case 'OC_PED':  va=Number(a.pedido)||0; vb=Number(b.pedido)||0; break;
-        case 'OC_FEC':  va=a.fecha||''; vb=b.fecha||''; break;
-        case 'OC_PROV': va=a.proveedor||''; vb=b.proveedor||''; break;
-        case 'OC_ORD':  va=a.orden||''; vb=b.orden||''; break;
-        case 'OC_RUB':  va=a.rubro||''; vb=b.rubro||''; break;
-        case 'OC_ENV':  va=a.envio||''; vb=b.envio||''; break;
-        case 'OC_AM':   va=a.am||''; vb=b.am||''; break;
-        case 'OC_TOT':  va=Number(a.total)||0; vb=Number(b.total)||0; break;
-        case 'OC_ANT':  va=Number(a.anticipo)||0; vb=Number(b.anticipo)||0; break;
-        case 'OC_SAL':  va=Number(a.saldo)||0; vb=Number(b.saldo)||0; break;
-        case 'OC_DER':  va=Number(a.derecho)||0; vb=Number(b.derecho)||0; break;
-        case 'OC_PEND': va=ocPend(a); vb=ocPend(b); break;
-        default: va=''; vb='';
-      }
-      const r=(typeof va==='number'&&typeof vb==='number')?(va-vb):String(va).localeCompare(String(vb));
-      return s.asc?r:-r;
-    });
-  }
+  // orden inicial por PEDIDO asc (ya viene ordenado de sbLoadOC)
   return list;
 }
 
-// ── render listado ────────────────────────────────────────
+// ── render lista izquierda + detalle derecha ──────────────
 function renderOC(){
   const body=document.getElementById('oc-body'); if(!body) return;
   const list=getOCRows();
 
-  // totales
-  const totT=list.reduce((s,o)=>s+(Number(o.total)||0),0);
   const totP=list.reduce((s,o)=>s+ocPend(o),0);
-  const tEl=document.getElementById('oc-total'); if(tEl) tEl.textContent=ocFmt(totT);
+  const cEl=document.getElementById('oc-count'); if(cEl) cEl.textContent=list.length;
   const pEl=document.getElementById('oc-pend');  if(pEl) pEl.textContent=ocFmt(totP);
-  const cEl=document.getElementById('oc-count');  if(cEl) cEl.textContent=list.length;
 
-  const cols=(typeof getActiveCols==='function')?getActiveCols('oc'):[];
-  const gridTpl=cols.map(c=>c.width||'1fr').join(' ');
-  const thead=document.getElementById('oc-thead');
-  if(thead){
-    thead.style.gridTemplateColumns=gridTpl;
-    thead.innerHTML=cols.map(c=>`<span class="th-sortable" onclick="toggleSort('oc','${c.field}')" style="${c.align?'text-align:'+c.align:''}">${c.label}${(typeof sortArrow==='function')?sortArrow('oc',c.field):''}</span>`).join('');
-  }
+  if(!list.length){ body.innerHTML='<div class="empty">🔍 Sin órdenes</div>'; renderOCDetail(null); ocInstallNav(); return; }
 
-  if(!list.length){ body.innerHTML='<div class="empty">🔍 Sin órdenes de compra</div>'; ocInstallNav(); return; }
+  const dmd=p=>{ const a=p[0],s=p[1]; if(a<=0) return '<span style="color:var(--t4,#3a4760)">·</span>';
+    return `<span style="color:${s>0.005?'var(--red)':'var(--grn)'}">◆</span>`; };
 
   body.innerHTML=list.map((o,i)=>{
     const sel=ocSelIdx===i?'sel':'';
-    const pend=ocPend(o);
-    const cell=f=>{
-      switch(f){
-        case 'OC_PED':  return `<span class="col-cod" style="font-family:var(--mono)">${esc(String(o.pedido||''))}</span>`;
-        case 'OC_FEC':  return `<span class="col-sm" style="color:var(--t2)">${ocFecFmt(o.fecha)}</span>`;
-        case 'OC_PROV': return `<span class="col-des">${esc(o.proveedor||'')}</span>`;
-        case 'OC_ORD':  return `<span class="col-sm" style="font-family:var(--mono)">${esc(o.orden||'')}</span>`;
-        case 'OC_RUB':  return `<span class="col-sm">${esc(o.rubro||'')}</span>`;
-        case 'OC_ENV':  return `<span class="col-sm">${ocFecFmt(o.envio)}</span>`;
-        case 'OC_AM':   return `<span class="col-sm">${esc((o.am||'').trim())}</span>`;
-        case 'OC_TOT':  return `<span class="col-num" style="text-align:right;font-family:var(--mono)">${ocFmt(o.total)}</span>`;
-        case 'OC_ANT':  return `<span class="col-num" style="text-align:right;font-family:var(--mono)">${ocFmt(o.anticipo)}</span>`;
-        case 'OC_SAL':  return `<span class="col-num" style="text-align:right;font-family:var(--mono)">${ocFmt(o.saldo)}</span>`;
-        case 'OC_DER':  return `<span class="col-num" style="text-align:right;font-family:var(--mono)">${ocFmt(o.derecho)}</span>`;
-        case 'OC_PEND': return `<span class="col-num" style="text-align:right;font-family:var(--mono);color:${pend>0.005?'var(--red)':'var(--grn)'};font-weight:600">${ocFmt(pend)}</span>`;
-        default: return `<span></span>`;
-      }
-    };
-    return `<div class="tr-art ${sel}" data-idx="${i}" style="grid-template-columns:${gridTpl}" onclick="selOC(${i})" ondblclick="ocVer()">`
-      + cols.map(co=>cell(co.field)).join('') + `</div>`;
+    const ind=[ [Number(o.anticipo)||0, Number(o.saldo_ant)||0],
+                [Number(o.saldo)||0,    Number(o.saldo_sal)||0],
+                [Number(o.derecho)||0,  Number(o.saldo_der)||0] ];
+    return `<div class="tr-art ${sel}" data-idx="${i}" style="grid-template-columns:54px 1fr 46px" onclick="selOC(${i})" ondblclick="ocModif()">`
+      + `<span class="col-cod" style="font-family:var(--mono)">${esc(String(o.pedido||''))}</span>`
+      + `<span class="col-des">${esc(o.proveedor||'')}</span>`
+      + `<span style="text-align:center;letter-spacing:2px">${dmd(ind[0])}${dmd(ind[1])}${dmd(ind[2])}</span>`
+      + `</div>`;
   }).join('');
+
+  if(ocSelIdx===null || ocSelIdx>=list.length) ocSelIdx=0;
   body.querySelector('.tr-art.sel')?.scrollIntoView({block:'nearest'});
+  renderOCDetail(list[ocSelIdx]);
   ocInstallNav();
 }
 
 function selOC(i){ ocSelIdx=i; renderOC(); }
 
-// ── ficha / detalle (solo lectura) ────────────────────────
-function ocVer(){
-  if(ocSelIdx===null){ toast('Seleccioná una orden','err'); return; }
-  const o=getOCRows()[ocSelIdx]; if(!o){ toast('Seleccioná una orden','err'); return; }
+function renderOCDetail(o){
+  const wrap=document.getElementById('oc-detalle'); if(!wrap) return;
+  if(!o){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
 
-  document.getElementById('oc-mtit').textContent=`Orden de Compra · Pedido ${o.pedido||''}`;
+  document.getElementById('ocd-prov').textContent=o.proveedor||'—';
+  document.getElementById('ocd-ped').textContent=o.pedido||'';
 
-  // datos encabezado
-  const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
-  set('ocd-pedido',   o.pedido||'');
-  set('ocd-fecha',    ocFecFmt(o.fecha)||'—');
-  set('ocd-prov',     o.proveedor||'—');
-  set('ocd-orden',    o.orden||'—');
-  set('ocd-rubro',    o.rubro||'—');
-  set('ocd-envio',    ocFecFmt(o.envio)||'—');
-  set('ocd-am',       (o.am||'').trim()?ocAmLabel(o.am):'—');
-  set('ocd-total',    ocFmt(o.total));
+  const empPill=e=>{ const b=e==='Hatsu'; return `<span style="font-size:10px;padding:1px 8px;border-radius:10px;background:${b?'#16314e':'#3a2c12'};color:${b?'#7cc0ff':'#e7a13b'}">${e}</span>`; };
+  const glb=(l,v)=>`<div class="oc-glb"><div class="oc-glb-l">${l}</div><div class="oc-glb-v">${v}</div></div>`;
+  // 3) Envío a la IZQUIERDA de Vía
+  const totItems=ocTotalItems(o.pedido);
+  document.getElementById('ocd-globos').innerHTML=
+    glb('Fecha', ocFecFmt(o.fecha)||'—') +
+    glb('Empresa', empPill(ocEmpLabel(o.rubro))) +
+    glb('Orden prov.', `<span style="font-family:var(--mono)">${esc(o.orden||'—')}</span>`) +
+    glb('Envío', ocFecFmt(o.envio)||'—') +
+    glb('Vía', (o.am||'').trim()?ocAmLabel(o.am):'—') +
+    `<div class="oc-glb" style="background:#10233a;border-color:#2b5780"><div class="oc-glb-l">Total OC</div><div class="oc-glb-v" style="font-size:15px;font-weight:600;color:#9cc8ff;font-family:var(--mono)">${ocFmt(totItems)}</div></div>`;
 
-  // bloques de pago
-  const fila=(pre,imp,fec,pago,saldo)=>{
-    set(pre+'-imp',   ocFmt(imp));
-    set(pre+'-fec',   ocFecFmt(fec)||'—');
-    set(pre+'-pago',  ocFmt(pago));
-    set(pre+'-saldo', ocFmt(saldo));
-    const sEl=document.getElementById(pre+'-saldo');
-    if(sEl) sEl.style.color=(Number(saldo)||0)>0.005?'var(--red)':'var(--grn)';
-  };
-  fila('ocd-ant', o.anticipo, o.fecha_ant, o.pago_ant, o.saldo_ant);
-  fila('ocd-sal', o.saldo,    o.fecha_sal, o.pago_sal, o.saldo_sal);
-  fila('ocd-der', o.derecho,  o.fecha_der, o.pago_der, o.saldo_der);
+  const payc=(t,imp,fec,pago,saldo)=>{ const has=(Number(imp)||0)>0;
+    return `<div class="oc-payc">
+      <div style="font-size:12px;font-weight:600;color:var(--txt);margin-bottom:4px">${t}</div>
+      <div class="oc-pr"><span>Importe</span><span class="mono" style="color:var(--txt)">${has?ocFmt(imp):'—'}</span></div>
+      <div class="oc-pr"><span>Fecha</span><span>${ocFecFmt(fec)||'—'}</span></div>
+      <div class="oc-pr"><span>Pago</span><span class="mono">${has?ocFmt(pago):'—'}</span></div>
+      <div class="oc-pr" style="border-top:1px solid var(--b1);margin-top:3px;padding-top:3px"><span>Saldo</span><span class="mono" style="color:${has&&(Number(saldo)||0)>0.005?'var(--red)':'var(--grn)'};font-weight:600">${has?ocFmt(saldo):'—'}</span></div>
+    </div>`; };
+  document.getElementById('ocd-pagos').innerHTML=
+    payc('Anticipo', o.anticipo, o.fecha_ant, o.pago_ant, o.saldo_ant) +
+    payc('Saldo',    o.saldo,    o.fecha_sal, o.pago_sal, o.saldo_sal) +
+    payc('Derecho',  o.derecho,  o.fecha_der, o.pago_der, o.saldo_der);
 
-  // items
   const its=ocItemsDe(o.pedido);
   const tb=document.getElementById('ocd-items');
-  if(tb){
-    if(!its.length){ tb.innerHTML='<div class="empty" style="padding:14px">Sin renglones</div>'; }
-    else{
-      tb.innerHTML=its.map(it=>{
-        const art=ARTS.find(a=>(a.ART_COD||'').trim()===(it.codint||'').trim());
-        const des=art?art.ART_DES:'';
-        return `<div class="ocd-it-row">`
-          + `<span style="font-family:var(--mono)">${esc(it.codint||'')}</span>`
-          + `<span class="col-des">${esc(des)}</span>`
-          + `<span style="font-family:var(--mono)">${esc(it.codprov||'')}</span>`
-          + `<span style="text-align:right">${(Number(it.cantped)||0).toLocaleString('es-AR')}</span>`
-          + `<span style="text-align:right">${(Number(it.cantent)||0).toLocaleString('es-AR')}</span>`
-          + `<span style="text-align:right;font-family:var(--mono)">${ocFmt(it.costo)}</span>`
-          + `<span style="text-align:right;font-family:var(--mono)">${ocFmt(it.total)}</span>`
-          + `</div>`;
-      }).join('');
-    }
-  }
-  const totIt=its.reduce((s,it)=>s+(Number(it.total)||0),0);
-  set('ocd-items-tot', ocFmt(totIt));
-  const cnt=document.getElementById('ocd-items-cnt'); if(cnt) cnt.textContent=its.length;
+  tb.innerHTML = its.length ? its.map(it=>{
+      const art=ARTS.find(a=>(a.ART_COD||'').trim()===(it.codint||'').trim());
+      return `<div class="oc-itrow">`
+        + `<span class="mono" style="color:var(--txt)">${esc(it.codint||'')}</span>`
+        + `<span class="col-des" style="color:var(--t2)">${esc(art?art.ART_DES:'')}</span>`
+        + `<span style="text-align:right">${ocInt(it.cantped)}</span>`
+        + `<span style="text-align:right;color:var(--t3)">${ocInt(it.cantent)}</span>`
+        + `<span style="text-align:right" class="mono">${ocFmt(it.costo)}</span>`
+        + `<span style="text-align:right" class="mono" style="color:var(--txt)">${ocFmt(it.total)}</span>`
+        + `</div>`; }).join('')
+    : '<div class="empty" style="padding:12px">Sin renglones</div>';
+  document.getElementById('ocd-itn').textContent=its.length;
+  document.getElementById('ocd-itt').textContent=ocFmt(its.reduce((s,it)=>s+(Number(it.total)||0),0));
+}
 
-  document.getElementById('ov-oc').classList.add('open');
+// ═══════════════════════════════════════════════════════════
+// EDITOR (alta / modificación)
+// ═══════════════════════════════════════════════════════════
+function ocAlta(){
+  _ocEditNum=null; _ocEditItems=[];
+  _ocFill({ pedido:ocProxNumero(), fecha:new Date().toISOString().substring(0,10), rubro:'H', am:'M' });
+  document.getElementById('oce-mtit').textContent='Nueva Orden de Compra';
+  document.getElementById('oce-mtag').textContent='ALTA';
+  ocFillArtList();
+  ocEditRenderItems(); ocEditCalc();
+  document.getElementById('ov-oce').classList.add('open');
+  setTimeout(()=>document.getElementById('oce-prov')?.focus(),60);
+}
+function ocModif(){
+  if(ocSelIdx===null){ toast('Seleccioná una orden','err'); return; }
+  const o=getOCRows()[ocSelIdx]; if(!o){ toast('Seleccioná una orden','err'); return; }
+  _ocEditNum=Number(o.pedido);
+  _ocEditItems=ocItemsDe(o.pedido).map(it=>({ codint:it.codint||'', codprov:it.codprov||'', cantped:Number(it.cantped)||0, cantent:Number(it.cantent)||0, costo:Number(it.costo)||0 }));
+  _ocFill(o);
+  document.getElementById('oce-mtit').textContent=`Modificar OC · Pedido ${o.pedido}`;
+  document.getElementById('oce-mtag').textContent='MODIF';
+  ocFillArtList();
+  ocEditRenderItems(); ocEditCalc();
+  document.getElementById('ov-oce').classList.add('open');
+}
+function _ocFill(o){
+  const v=(id,val)=>{ const el=document.getElementById(id); if(el) el.value=(val??''); };
+  v('oce-ped', o.pedido); v('oce-fecha', ocFecISO(o.fecha)); v('oce-prov', o.proveedor);
+  v('oce-orden', o.orden); v('oce-emp', (o.rubro||'H').trim().toUpperCase()==='T'?'T':'H');
+  v('oce-envio', ocFecISO(o.envio)); v('oce-am', (o.am||'M').trim().toUpperCase()==='A'?'A':'M');
+  v('oce-ant-imp', o.anticipo); v('oce-ant-fec', ocFecISO(o.fecha_ant)); v('oce-ant-pago', o.pago_ant);
+  v('oce-sal-imp', o.saldo);    v('oce-sal-fec', ocFecISO(o.fecha_sal)); v('oce-sal-pago', o.pago_sal);
+  v('oce-der-imp', o.derecho);  v('oce-der-fec', ocFecISO(o.fecha_der)); v('oce-der-pago', o.pago_der);
+}
+
+function ocEditAddItem(){ _ocEditItems.push({ codint:'', codprov:'', cantped:0, cantent:0, costo:0 }); ocEditRenderItems(); ocEditCalc(); }
+function ocEditDelItem(i){ _ocEditItems.splice(i,1); ocEditRenderItems(); ocEditCalc(); }
+function ocEditRenderItems(){
+  const c=document.getElementById('oce-items'); if(!c) return;
+  c.innerHTML=_ocEditItems.map((it,i)=>`
+    <div class="oce-itrow">
+      <input class="finp" list="oce-art-list" value="${esc(it.codint||'')}" onchange="ocEditItChg(${i},'codint',this.value)" placeholder="cód. interno">
+      <input class="finp" value="${esc(it.codprov||'')}" onchange="ocEditItChg(${i},'codprov',this.value)" placeholder="cód. prov.">
+      <input class="finp" type="number" value="${it.cantped||0}" oninput="ocEditItChg(${i},'cantped',this.value)" style="text-align:right">
+      <input class="finp" type="number" value="${it.cantent||0}" oninput="ocEditItChg(${i},'cantent',this.value)" style="text-align:right">
+      <input class="finp" type="number" step="0.01" value="${it.costo||0}" oninput="ocEditItChg(${i},'costo',this.value)" style="text-align:right">
+      <span class="mono" style="text-align:right;align-self:center;color:var(--txt)">${ocFmt((Number(it.cantped)||0)*(Number(it.costo)||0))}</span>
+      <button class="btn dng" style="padding:2px 7px" onclick="ocEditDelItem(${i})" title="Quitar">✕</button>
+    </div>`).join('') || '<div class="empty" style="padding:10px">Sin renglones — agregá con “＋ Renglón”.</div>';
+}
+function ocEditItChg(i,campo,val){
+  if(!_ocEditItems[i]) return;
+  _ocEditItems[i][campo] = (campo==='codint'||campo==='codprov') ? val : (Number(val)||0);
+  if(campo==='codint'){
+    const art=ARTS.find(a=>(a.ART_COD||'').trim()===(val||'').trim());
+    const r=document.querySelectorAll('#oce-items .oce-itrow')[i];
+    if(art && r){ const dn=r.querySelector('.oce-itdes'); if(dn) dn.textContent=art.ART_DES||''; }
+  }
+  if(campo==='cantped'||campo==='costo') ocEditRenderItems();
+  ocEditCalc();
+}
+function ocEditCalc(){
+  // total OC = suma de items (cantped × costo)
+  let tot=0; _ocEditItems.forEach(it=>{ tot+=(Number(it.cantped)||0)*(Number(it.costo)||0); });
+  const tEl=document.getElementById('oce-total'); if(tEl) tEl.textContent=ocFmt(tot);
+  // saldo de cada bloque = importe − pago
+  [['ant'],['sal'],['der']].forEach(([p])=>{
+    const imp=Number(document.getElementById('oce-'+p+'-imp')?.value)||0;
+    const pago=Number(document.getElementById('oce-'+p+'-pago')?.value)||0;
+    const sEl=document.getElementById('oce-'+p+'-saldo');
+    if(sEl){ const s=imp-pago; sEl.textContent=ocFmt(s); sEl.style.color=s>0.005?'var(--red)':'var(--grn)'; }
+  });
+}
+
+async function saveOC(){
+  const ped=parseInt(document.getElementById('oce-ped').value,10);
+  if(!ped){ toast('Falta el número de pedido','err'); return; }
+  const prov=document.getElementById('oce-prov').value.trim();
+  if(!prov){ toast('Falta el proveedor','err'); return; }
+  if(_ocEditNum===null && OCS.some(o=>Number(o.pedido)===ped)){
+    toast(`El pedido ${ped} ya existe`,'err'); return;
+  }
+  const numF=id=>{ const v=document.getElementById(id).value; return v===''?null:(Number(v)||0); };
+  const fecF=id=>{ const v=document.getElementById(id).value; return v||null; };
+  const total=_ocEditItems.reduce((s,it)=>s+(Number(it.cantped)||0)*(Number(it.costo)||0),0);
+  const sld=(impId,pagoId)=>{ const i=Number(document.getElementById(impId).value)||0, p=Number(document.getElementById(pagoId).value)||0; return (document.getElementById(impId).value==='')?null:(i-p); };
+
+  const hdr={
+    pedido:ped, fecha:fecF('oce-fecha'), proveedor:prov,
+    orden:document.getElementById('oce-orden').value.trim()||null,
+    rubro:document.getElementById('oce-emp').value, envio:fecF('oce-envio'),
+    am:document.getElementById('oce-am').value, total:total,
+    anticipo:numF('oce-ant-imp'), fecha_ant:fecF('oce-ant-fec'), pago_ant:numF('oce-ant-pago'), saldo_ant:sld('oce-ant-imp','oce-ant-pago'),
+    saldo:numF('oce-sal-imp'),    fecha_sal:fecF('oce-sal-fec'), pago_sal:numF('oce-sal-pago'), saldo_sal:sld('oce-sal-imp','oce-sal-pago'),
+    derecho:numF('oce-der-imp'),  fecha_der:fecF('oce-der-fec'), pago_der:numF('oce-der-pago'), saldo_der:sld('oce-der-imp','oce-der-pago')
+  };
+  try{
+    await sbUpsert('ordenes_compra', hdr);
+    // reemplazo de items
+    await sbDelete('oc_items', {pedido:ped});
+    for(const it of _ocEditItems){
+      if(!(it.codint||'').trim() && !(Number(it.cantped))) continue;
+      await sbUpsert('oc_items', {
+        pedido:ped, codprov:it.codprov||null, subcod:null, codint:it.codint||null,
+        envio:hdr.envio, am:hdr.am, cantped:Number(it.cantped)||0, cantent:Number(it.cantent)||0,
+        cantpl:null, costo:Number(it.costo)||0, total:(Number(it.cantped)||0)*(Number(it.costo)||0)
+      });
+    }
+    closeOv('ov-oce');
+    await sbLoadOC(); await sbLoadOCItems();
+    const idx=getOCRows().findIndex(o=>Number(o.pedido)===ped);
+    ocSelIdx=idx>=0?idx:0;
+    renderOC();
+    toast(_ocEditNum===null?'Orden creada':'Orden actualizada','scs');
+  }catch(e){ console.error('saveOC:', e); toast('Error al guardar','err'); }
 }
 
 // ── baja ──────────────────────────────────────────────────
@@ -189,19 +258,14 @@ async function ocBaja(){
     : confirm(`¿Eliminar la OC del pedido ${o.pedido}?`);
   if(!ok) return;
   try{
-    await sbDelete('ordenes_compra', {pedido:o.pedido});   // oc_items cae por ON DELETE CASCADE
+    await sbDelete('ordenes_compra', {pedido:o.pedido});
     OCS=OCS.filter(x=>Number(x.pedido)!==Number(o.pedido));
     OCITEMS=OCITEMS.filter(x=>Number(x.pedido)!==Number(o.pedido));
     ocSelIdx=null; renderOC(); toast('Orden eliminada','scs');
   }catch(e){ console.error('ocBaja:', e); toast('Error al eliminar','err'); }
 }
 
-// ── alta / modif (próximo paso) ───────────────────────────
-function ocAlta(){ toast('Editor de alta — próximo paso','err'); }
-function ocModif(){
-  if(ocSelIdx===null){ toast('Seleccioná una orden','err'); return; }
-  toast('Editor de modificación — próximo paso','err');
-}
+function ocVer(){ ocModif(); }   // doble clic / botón Ver abre el detalle editable
 
 // ── navegación por teclado ────────────────────────────────
 let _ocNavInstalled=false;
@@ -218,11 +282,11 @@ function ocInstallNav(){
     switch(e.key){
       case 'ArrowDown': next++; break;
       case 'ArrowUp':   next--; break;
-      case 'PageDown':  next+=10; break;
-      case 'PageUp':    next-=10; break;
+      case 'PageDown':  next+=12; break;
+      case 'PageUp':    next-=12; break;
       case 'Home':      next=0; break;
       case 'End':       next=total-1; break;
-      case 'Enter':     ocVer(); return;
+      case 'Enter':     ocModif(); return;
       default: return;
     }
     e.preventDefault();
