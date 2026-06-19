@@ -74,7 +74,7 @@ function renderOC(){
     const ind=[ [Number(o.anticipo)||0, Number(o.saldo_ant)||0],
                 [Number(o.saldo)||0,    Number(o.saldo_sal)||0],
                 [Number(o.derecho)||0,  Number(o.saldo_der)||0] ];
-    return `<div class="tr-art ${sel}" data-idx="${i}" style="grid-template-columns:54px 1fr 60px" onclick="selOC(${i})" ondblclick="ocModif()">`
+    return `<div class="tr-art ${sel}" data-idx="${i}" style="grid-template-columns:54px 1fr 60px;gap:6px;padding:8px 12px" onclick="selOC(${i})" ondblclick="ocModif()">`
       + `<span class="col-cod" style="font-family:var(--mono)">${esc(String(o.pedido||''))}</span>`
       + `<span class="col-des">${esc(o.proveedor||'')}</span>`
       + `<span style="display:grid;grid-template-columns:repeat(3,1fr);text-align:center">`
@@ -90,6 +90,17 @@ function renderOC(){
 }
 
 function selOC(i){ ocSelIdx=i; renderOC(); }
+
+async function ocSetFecha(pedido, key, val){
+  const map={ant:'fecha_ant', sal:'fecha_sal', der:'fecha_der'};
+  const field=map[key]; if(!field) return;
+  const o=OCS.find(x=>Number(x.pedido)===Number(pedido)); if(!o) return;
+  const prev=o[field]; o[field]=val||null;
+  try{
+    await sbUpsert('ordenes_compra', {pedido:Number(pedido), [field]:(val||null)});
+    toast('Fecha actualizada','scs');
+  }catch(e){ o[field]=prev; console.error('ocSetFecha:', e); toast('Error al guardar','err'); }
+}
 
 function renderOCDetail(o){
   const wrap=document.getElementById('oc-detalle'); if(!wrap) return;
@@ -111,18 +122,22 @@ function renderOCDetail(o){
     glb('Vía', (o.am||'').trim()?ocAmLabel(o.am):'—') +
     `<div class="oc-glb" style="background:#10233a;border-color:#2b5780"><div class="oc-glb-l">Total OC</div><div class="oc-glb-v" style="font-size:15px;font-weight:600;color:#9cc8ff;font-family:var(--mono)">${ocFmt(totItems)}</div></div>`;
 
-  const payc=(t,imp,fec,pago,saldo)=>{ const has=(Number(imp)||0)>0;
+  const canEdit=(typeof puedeh==='function') && puedeh('oc','modif');
+  const payc=(t,key,imp,fec,pago,saldo)=>{ const has=(Number(imp)||0)>0;
+    const fecCell = canEdit
+      ? `<input type="date" value="${ocFecISO(fec)}" onchange="ocSetFecha(${o.pedido},'${key}',this.value)" style="background:var(--s1);border:1px solid var(--b1);border-radius:5px;color:var(--txt);font-size:11px;padding:1px 4px;max-width:118px">`
+      : (ocFecFmt(fec)||'—');
     return `<div class="oc-payc">
       <div style="font-size:12px;font-weight:600;color:var(--txt);margin-bottom:4px">${t}</div>
       <div class="oc-pr"><span>Importe</span><span class="mono" style="color:var(--txt)">${has?ocFmt(imp):'—'}</span></div>
-      <div class="oc-pr"><span>Fecha</span><span>${ocFecFmt(fec)||'—'}</span></div>
+      <div class="oc-pr" style="align-items:center"><span>Fecha</span><span>${fecCell}</span></div>
       <div class="oc-pr"><span>Pago</span><span class="mono">${has?ocFmt(pago):'—'}</span></div>
       <div class="oc-pr" style="border-top:1px solid var(--b1);margin-top:3px;padding-top:3px"><span>Saldo</span><span class="mono" style="color:${has&&(Number(saldo)||0)>0.005?'var(--red)':'var(--grn)'};font-weight:600">${has?ocFmt(saldo):'—'}</span></div>
     </div>`; };
   document.getElementById('ocd-pagos').innerHTML=
-    payc('Anticipo', o.anticipo, o.fecha_ant, o.pago_ant, o.saldo_ant) +
-    payc('Saldo',    o.saldo,    o.fecha_sal, o.pago_sal, o.saldo_sal) +
-    payc('Derecho',  o.derecho,  o.fecha_der, o.pago_der, o.saldo_der);
+    payc('Anticipo','ant', o.anticipo, o.fecha_ant, o.pago_ant, o.saldo_ant) +
+    payc('Saldo',   'sal', o.saldo,    o.fecha_sal, o.pago_sal, o.saldo_sal) +
+    payc('Derecho', 'der', o.derecho,  o.fecha_der, o.pago_der, o.saldo_der);
 
   const its=ocItemsDe(o.pedido);
   const tb=document.getElementById('ocd-items');
@@ -134,7 +149,7 @@ function renderOCDetail(o){
         + `<span style="text-align:right">${ocInt(ped)}</span>`
         + `<span style="text-align:right;color:${sld>0?'var(--txt)':'var(--t3)'}">${ocInt(sld)}</span>`
         + `<span style="text-align:right" class="mono">${ocFmt3(it.costo)}</span>`
-        + `<span style="text-align:right" class="mono" style="color:var(--txt)">${ocFmt(it.total)}</span>`
+        + `<span class="mono" style="text-align:right;color:var(--txt)">${ocFmt3(it.total)}</span>`
         + `</div>`; }).join('')
     : '<div class="empty" style="padding:12px">Sin renglones</div>';
 }
@@ -185,7 +200,7 @@ function ocEditRenderItems(){
       <input class="finp" type="text" inputmode="numeric" value="${it.cantped||0}" oninput="ocEditItChg(${i},'cantped',this.value)" onfocus="this.select()" onclick="this.select()" style="text-align:right">
       <input class="finp" type="text" inputmode="numeric" value="${it.cantent||0}" oninput="ocEditItChg(${i},'cantent',this.value)" onfocus="this.select()" onclick="this.select()" style="text-align:right">
       <input class="finp" type="text" inputmode="decimal" value="${it.costo||0}" oninput="ocEditItChg(${i},'costo',this.value)" onfocus="this.select()" onclick="this.select()" style="text-align:right">
-      <span class="mono oce-sub" style="text-align:right;align-self:center;color:var(--txt)">${ocFmt((Number(it.cantped)||0)*(Number(it.costo)||0))}</span>
+      <span class="mono oce-sub" style="text-align:right;align-self:center;color:var(--txt)">${ocFmt3((Number(it.cantped)||0)*(Number(it.costo)||0))}</span>
       <button class="btn dng" style="padding:2px 7px" onclick="ocEditDelItem(${i})" title="Quitar">✕</button>
     </div>`).join('') || '<div class="empty" style="padding:10px">Sin renglones — agregá con “＋ Renglón”.</div>';
 }
@@ -193,7 +208,7 @@ function ocEditItChg(i,campo,val){
   if(!_ocEditItems[i]) return;
   _ocEditItems[i][campo] = (campo==='codint'||campo==='codprov') ? val : (ocNum(val)||0);
   const r=document.querySelectorAll('#oce-items .oce-itrow')[i];
-  if(r){ const sub=r.querySelector('.oce-sub'); if(sub){ const it=_ocEditItems[i]; sub.textContent=ocFmt((Number(it.cantped)||0)*(Number(it.costo)||0)); } }
+  if(r){ const sub=r.querySelector('.oce-sub'); if(sub){ const it=_ocEditItems[i]; sub.textContent=ocFmt3((Number(it.cantped)||0)*(Number(it.costo)||0)); } }
   ocEditCalc();
 }
 function ocEditCalc(){
