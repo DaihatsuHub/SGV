@@ -11,6 +11,7 @@ let _ocEditItems = [];        // items en edición
 
 // ── formato ───────────────────────────────────────────────
 function ocFmt(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function ocFmt3(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:3,maximumFractionDigits:3}); }
 function ocInt(n){ return (Number(n)||0).toLocaleString('es-AR'); }
 function ocFecFmt(d){ return d ? String(d).substring(0,10).split('-').reverse().join('/') : ''; }
 function ocFecISO(d){ return d ? String(d).substring(0,10) : ''; }
@@ -67,10 +68,12 @@ function renderOC(){
     const ind=[ [Number(o.anticipo)||0, Number(o.saldo_ant)||0],
                 [Number(o.saldo)||0,    Number(o.saldo_sal)||0],
                 [Number(o.derecho)||0,  Number(o.saldo_der)||0] ];
-    return `<div class="tr-art ${sel}" data-idx="${i}" style="grid-template-columns:54px 1fr 46px" onclick="selOC(${i})" ondblclick="ocModif()">`
+    return `<div class="tr-art ${sel}" data-idx="${i}" style="grid-template-columns:54px 1fr 60px" onclick="selOC(${i})" ondblclick="ocModif()">`
       + `<span class="col-cod" style="font-family:var(--mono)">${esc(String(o.pedido||''))}</span>`
       + `<span class="col-des">${esc(o.proveedor||'')}</span>`
-      + `<span style="text-align:center;letter-spacing:2px">${dmd(ind[0])}${dmd(ind[1])}${dmd(ind[2])}</span>`
+      + `<span style="display:grid;grid-template-columns:repeat(3,1fr);text-align:center">`
+      +   `<span>${dmd(ind[0])}</span><span>${dmd(ind[1])}</span><span>${dmd(ind[2])}</span>`
+      + `</span>`
       + `</div>`;
   }).join('');
 
@@ -118,18 +121,16 @@ function renderOCDetail(o){
   const its=ocItemsDe(o.pedido);
   const tb=document.getElementById('ocd-items');
   tb.innerHTML = its.length ? its.map(it=>{
-      const art=ARTS.find(a=>(a.ART_COD||'').trim()===(it.codint||'').trim());
+      const ped=Number(it.cantped)||0, ent=Number(it.cantent)||0, sld=ped-ent;
       return `<div class="oc-itrow">`
+        + `<span class="mono">${esc(it.codprov||'')}</span>`
         + `<span class="mono" style="color:var(--txt)">${esc(it.codint||'')}</span>`
-        + `<span class="col-des" style="color:var(--t2)">${esc(art?art.ART_DES:'')}</span>`
-        + `<span style="text-align:right">${ocInt(it.cantped)}</span>`
-        + `<span style="text-align:right;color:var(--t3)">${ocInt(it.cantent)}</span>`
-        + `<span style="text-align:right" class="mono">${ocFmt(it.costo)}</span>`
+        + `<span style="text-align:right">${ocInt(ped)}</span>`
+        + `<span style="text-align:right;color:${sld>0?'var(--txt)':'var(--t3)'}">${ocInt(sld)}</span>`
+        + `<span style="text-align:right" class="mono">${ocFmt3(it.costo)}</span>`
         + `<span style="text-align:right" class="mono" style="color:var(--txt)">${ocFmt(it.total)}</span>`
         + `</div>`; }).join('')
     : '<div class="empty" style="padding:12px">Sin renglones</div>';
-  document.getElementById('ocd-itn').textContent=its.length;
-  document.getElementById('ocd-itt').textContent=ocFmt(its.reduce((s,it)=>s+(Number(it.total)||0),0));
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -177,7 +178,7 @@ function ocEditRenderItems(){
       <input class="finp" value="${esc(it.codprov||'')}" onchange="ocEditItChg(${i},'codprov',this.value)" placeholder="cód. prov.">
       <input class="finp" type="number" value="${it.cantped||0}" oninput="ocEditItChg(${i},'cantped',this.value)" style="text-align:right">
       <input class="finp" type="number" value="${it.cantent||0}" oninput="ocEditItChg(${i},'cantent',this.value)" style="text-align:right">
-      <input class="finp" type="number" step="0.01" value="${it.costo||0}" oninput="ocEditItChg(${i},'costo',this.value)" style="text-align:right">
+      <input class="finp" type="number" step="0.001" value="${it.costo||0}" oninput="ocEditItChg(${i},'costo',this.value)" style="text-align:right">
       <span class="mono" style="text-align:right;align-self:center;color:var(--txt)">${ocFmt((Number(it.cantped)||0)*(Number(it.costo)||0))}</span>
       <button class="btn dng" style="padding:2px 7px" onclick="ocEditDelItem(${i})" title="Quitar">✕</button>
     </div>`).join('') || '<div class="empty" style="padding:10px">Sin renglones — agregá con “＋ Renglón”.</div>';
