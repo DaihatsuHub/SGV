@@ -77,14 +77,12 @@ async function renderHistArt() {
     const desps = await sbGet('despachos', `dep_art=eq.${encodeURIComponent(cod)}&order=dep_fec.asc`);
 
     // ── Traer items de facturas del artículo ──
-    const token = await getAuthToken();
-    const hdrs = {'apikey':SB_KEY,'Authorization':'Bearer '+token};
     const items = [];
     let offset = 0;
     while(true) {
-      const r = await fetch(`${SB_URL}/rest/v1/fac_items?ite_art=eq.${encodeURIComponent(cod)}&select=ite_nro,ite_art,ite_can,ite_uni,ite_imp&limit=1000&offset=${offset}`, {headers:hdrs});
-      const pg = await r.json();
-      if(!pg||!pg.length) break;
+      const res = await apiGet(`/read/fac_items?ite_art=eq.${encodeURIComponent(cod)}&select=ite_nro,ite_art,ite_can,ite_uni,ite_imp&limit=1000&offset=${offset}`);
+      const pg = res.rows || [];
+      if(!pg.length) break;
       items.push(...pg);
       if(pg.length < 1000) break;
       offset += 1000;
@@ -93,12 +91,12 @@ async function renderHistArt() {
     const nros = [...new Set(items.map(i=>i.ite_nro).filter(Boolean))];
     const facsMap = {};
     if(nros.length) {
-      // Fetch en lotes de 50
+      // En lotes de 50
       for(let i=0; i<nros.length; i+=50) {
         const lote = nros.slice(i,i+50).map(n=>`"${n}"`).join(',');
-        const rf = await fetch(`${SB_URL}/rest/v1/facturas?fac_nro=in.(${lote})&select=fac_nro,fac_fec,fac_cli`, {headers:hdrs});
-        const pf = await rf.json();
-        if(pf&&pf.length) pf.forEach(f=>facsMap[f.fac_nro]=f);
+        const rf = await apiGet(`/read/facturas?fac_nro=in.(${encodeURIComponent(lote)})&select=fac_nro,fac_fec,fac_cli`);
+        const pf = rf.rows || [];
+        if(pf.length) pf.forEach(f=>facsMap[f.fac_nro]=f);
       }
     }
 

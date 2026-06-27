@@ -29,13 +29,13 @@ async function getAuthToken() {
   return data.session?.access_token || SB_KEY;
 }
 
+// ── Acceso a la base SIEMPRE a través del server (cierre de seguridad) ──
+// Lecturas vía GET /read/:tabla ; escrituras vía POST /write.
+// El navegador YA NO toca Supabase directo: lo hace el server con service_role.
+
 async function sbGet(table, params='') {
-  const token = await getAuthToken();
-  const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
-    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + token }
-  });
-  if (!r.ok) throw new Error(`sbGet ${r.status}`);
-  return r.json();
+  const res = await apiGet('/read/' + table + (params ? ('?' + params) : ''));
+  return res.rows;
 }
 
 async function sbGetAll(table, orderField, extraParams='') {
@@ -53,44 +53,20 @@ async function sbGetAll(table, orderField, extraParams='') {
 
 async function sbUpsert(table, data) {
   syncSaving();
-  try {
-    const token = await getAuthToken();
-    const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
-      method: 'POST',
-      headers: { ...SB_HDR, 'Authorization': 'Bearer ' + token, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify(data)
-    });
-    if (!r.ok) { const t=await r.text(); throw new Error(`sbUpsert ${r.status}: ${t.substring(0,150)}`); }
-    syncOk();
-  } catch(e) { syncErr(); throw e; }
+  try { await apiPost('/write', { op:'upsert', tabla:table, data }); syncOk(); }
+  catch(e) { syncErr(); throw e; }
 }
 
 async function sbUpsertOnConflict(table, data, conflictCol) {
   syncSaving();
-  try {
-    const token = await getAuthToken();
-    const r = await fetch(`${SB_URL}/rest/v1/${table}?on_conflict=${conflictCol}`, {
-      method: 'POST',
-      headers: { ...SB_HDR, 'Authorization': 'Bearer ' + token, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify(data)
-    });
-    if (!r.ok) { const t=await r.text(); throw new Error(`sbUpsert ${r.status}: ${t.substring(0,150)}`); }
-    syncOk();
-  } catch(e) { syncErr(); throw e; }
+  try { await apiPost('/write', { op:'upsert', tabla:table, data, onConflict:conflictCol }); syncOk(); }
+  catch(e) { syncErr(); throw e; }
 }
 
 async function sbDelete(table, match) {
   syncSaving();
-  try {
-    const token = await getAuthToken();
-    const params = Object.entries(match).map(([k,v])=>`${k}=eq.${encodeURIComponent(v)}`).join('&');
-    const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
-      method: 'DELETE',
-      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + token }
-    });
-    if (!r.ok) throw new Error(`sbDelete ${r.status}`);
-    syncOk();
-  } catch(e) { syncErr(); throw e; }
+  try { await apiPost('/write', { op:'delete', tabla:table, match }); syncOk(); }
+  catch(e) { syncErr(); throw e; }
 }
 
 // ── Mapeo DB → objeto JS ─────────────────────────────────
@@ -165,40 +141,14 @@ function cliToDb(c) {
 async function sbLoad() {
   syncStatus('☁️ Cargando...');
   try {
-    const [dArts, dClis] = await Promise.all([
-      sbGetAll('articulos', 'art_cod'),
-      sbGetAll('clientes',  'cli_codigo'),
+    const [resArts, resClis, resTabs] = await Promise.all([
+      apiGet('/articulos'),                 // ← artículos desde TU server Fastify
+      apiGet('/clientes'),                  // ← clientes desde TU server Fastify
+      apiGet('/tablas'),                    // ← tablas auxiliares desde TU server Fastify
     ]);
-    const [dRubr, dSrub, dMarc, dProv, dVend, dCpag, dPcia, dGrup, dCate, dExpr, dMone] = await Promise.all([
-      sbGet('rubros',      'order=codigo.asc'),
-      sbGet('subrubros',   'order=codigo.asc'),
-      sbGet('marcas',      'order=codigo.asc'),
-      sbGet('proveedores', 'order=codigo.asc'),
-      sbGet('vendedores',  'order=codigo.asc'),
-      sbGet('condpago',    'order=codigo.asc'),
-      sbGet('provincias',  'order=codigo.asc'),
-      sbGet('grupos',      'order=codigo.asc'),
-      sbGet('categorias',  'order=codigo.asc'),
-      sbGet('expresos',    'order=codigo.asc'),
-      sbGet('monedas',     'order=codigo.asc'),
-    ]);
-    ARTS = dArts.map(dbToArt);
-    CLIS = dClis.map(dbToCli);
-    TABLAS = {};
-    const mapTab = (key, rows, extra) => {
-      TABLAS[key] = rows.map(r => ({
-        TABLA: key, CODIGO: r.codigo, DETALLE: r.detalle||'',
-        STRING1: extra ? (r[extra]||'') : '', STRING2:'', STRING3:'', FECHA1:'', NIVEL:0
-      }));
-    };
-    mapTab('RUBR', dRubr); mapTab('SRUB', dSrub); mapTab('MARC', dMarc);
-    mapTab('PROV', dProv, 'direccion'); mapTab('VEND', dVend); mapTab('CPAG', dCpag);
-    mapTab('PCIA', dPcia, 'alicuota'); mapTab('GRUP', dGrup); mapTab('CATE', dCate);
-    mapTab('EXPR', dExpr, 'direccion');
-    TABLAS['MONE'] = dMone.map(r => ({
-      TABLA:'MONE', CODIGO:r.codigo, DETALLE:r.detalle||'',
-      STRING1:r.signo||'$', STRING2:String(r.cotizacion||1), STRING3:'', FECHA1:'', NIVEL:0
-    }));
+    ARTS = resArts.articulos;   // ya vienen mapeados (ART_*) desde el server
+    CLIS = resClis.clientes;    // ya vienen mapeados (CLI_*) desde el server
+    TABLAS = resTabs.tablas;    // tablas auxiliares ya mapeadas desde el server
     // Órdenes de Compra (encabezados + renglones)
     if (typeof sbLoadOC === 'function') { await sbLoadOC(); await sbLoadOCItems(); if (typeof sbLoadOCPagos === 'function') await sbLoadOCPagos(); }
     syncStatus(`☁️ ${ARTS.length} art · ${CLIS.length} cli`, '#4ade80');
@@ -212,22 +162,26 @@ async function sbLoad() {
 }
 
 async function sbSaveArt(art) {
-  try { await sbUpsert('articulos', artToDb(art)); }
-  catch(e) { console.error(e); }
+  syncSaving();
+  try { await apiPost('/articulos/guardar', { articulo: art }); syncOk(); }
+  catch(e) { console.error('sbSaveArt:', e); syncErr(); }
 }
 
 async function sbSaveCli(cli) {
-  try { await sbUpsert('clientes', cliToDb(cli)); }
-  catch(e) { console.error(e); }
+  syncSaving();
+  try { await apiPost('/clientes/guardar', { cliente: cli }); syncOk(); }
+  catch(e) { console.error('sbSaveCli:', e); syncErr(); }
 }
 
 async function deleteArt(cod) {
-  try { await sbDelete('articulos', { art_cod: cod }); }
-  catch(e) { console.error('deleteArt:', e); }
+  syncSaving();
+  try { await apiPost('/articulos/borrar', { codigo: cod }); syncOk(); }
+  catch(e) { console.error('deleteArt:', e); syncErr(); }
 }
 async function deleteCli(cod) {
-  try { await sbDelete('clientes', { cli_codigo: cod }); }
-  catch(e) { console.error('deleteCli:', e); }
+  syncSaving();
+  try { await apiPost('/clientes/borrar', { codigo: cod }); syncOk(); }
+  catch(e) { console.error('deleteCli:', e); syncErr(); }
 }
 
 const TAB_MAP = {
@@ -239,19 +193,24 @@ const TAB_MAP = {
 async function saveTabRow(row) {
   const tbl = TAB_MAP[row.TABLA];
   if (!tbl) return;
-  const data = { codigo: row.CODIGO, detalle: row.DETALLE||'' };
-  if (tbl === 'proveedores' || tbl === 'expresos') data.direccion = row.STRING1||'';
-  if (tbl === 'provincias') data.alicuota = parseFloat(row.STRING1)||0;
-  if (tbl === 'monedas') { data.signo = row.STRING1||'$'; data.cotizacion = parseFloat(row.STRING2)||1; }
-  try { await sbUpsert(tbl, data); }
-  catch(e) { console.error('saveTabRow:', e); }
+  syncSaving();
+  try {
+    await apiPost('/tablas/guardar', {
+      tabla: row.TABLA, codigo: row.CODIGO, detalle: row.DETALLE||'',
+      string1: row.STRING1||'', string2: row.STRING2||''
+    });
+    syncOk();
+  } catch(e) { console.error('saveTabRow:', e); syncErr(); }
 }
 
 async function deleteTabRow(tabla, codigo) {
   const tbl = TAB_MAP[tabla];
   if (!tbl) return;
-  try { await sbDelete(tbl, { codigo }); }
-  catch(e) { console.error('deleteTabRow:', e); }
+  syncSaving();
+  try {
+    await apiPost('/tablas/borrar', { tabla, codigo });
+    syncOk();
+  } catch(e) { console.error('deleteTabRow:', e); syncErr(); }
 }
 
 async function saveUsuario(cod, pass, nivel) {
@@ -264,9 +223,9 @@ async function deleteUsuario(cod) {
 }
 async function loadUsuarios() {
   try {
-    const d = await sbGet('usuarios');
+    const res = await apiGet('/usuarios');
     if (!TABLAS['USUA']) TABLAS['USUA'] = [];
-    TABLAS['USUA'] = d.map(r => ({ TABLA:'USUA', CODIGO:r.codigo, DETALLE:r.password||'', NIVEL:r.nivel||50, STRING1:'', STRING2:'', STRING3:'', FECHA1:'' }));
+    TABLAS['USUA'] = res.usuarios.map(r => ({ TABLA:'USUA', CODIGO:r.codigo, DETALLE:'••••••', NIVEL:r.nivel||0, user_id:r.user_id, STRING1:'', STRING2:'', STRING3:'', FECHA1:'' }));
   } catch(e) { console.warn('loadUsuarios:', e); }
 }
 

@@ -104,9 +104,9 @@ async function ocSetFecha(pedido, key, val){
   const o=OCS.find(x=>Number(x.pedido)===Number(pedido)); if(!o) return;
   const prev=o[field]; o[field]=val||null;
   try{
-    await sbUpsert('ordenes_compra', {pedido:Number(pedido), [field]:(val||null)});
+    await apiPost('/oc/fecha', {pedido:Number(pedido), field, valor:(val||null)});
     toast('Fecha actualizada','scs');
-  }catch(e){ o[field]=prev; console.error('ocSetFecha:', e); toast('Error al guardar','err'); }
+  }catch(e){ o[field]=prev; console.error('ocSetFecha:', e); toast('Error: '+e.message,'err'); }
 }
 
 function renderOCDetail(o){
@@ -277,25 +277,26 @@ async function saveOC(){
     derecho:numF('oce-der-imp'),  fecha_der:fecF('oce-der-fec'), pago_der:numF('oce-der-pago'), saldo_der:sld('oce-der-imp','oce-der-pago')
   };
   try{
-    await sbUpsert('ordenes_compra', hdr);
-    // reemplazo de items
-    await sbDelete('oc_items', {pedido:ped});
+    const items=[];
     for(const it of _ocEditItems){
       if(!(it.codint||'').trim() && !(Number(it.cantped))) continue;
-      await sbUpsert('oc_items', {
+      items.push({
         pedido:ped, codprov:it.codprov||null, subcod:null, codint:it.codint||null,
         envio:hdr.envio, am:hdr.am,
         cantped:Math.round(Number(it.cantped)||0), cantent:Math.round(Number(it.cantent)||0), cantpl:null,
         costo:Number(it.costo)||0, total:(Number(it.cantped)||0)*(Number(it.costo)||0)
       });
     }
+    syncSaving();
+    await apiPost('/oc/guardar', { hdr, items });
     closeOv('ov-oce');
     await sbLoadOC(); await sbLoadOCItems();
     const idx=getOCRows().findIndex(o=>Number(o.pedido)===ped);
     ocSelIdx=idx>=0?idx:0;
     renderOC();
+    syncOk();
     toast(_ocEditNum===null?'Orden creada':'Orden actualizada','scs');
-  }catch(e){ console.error('saveOC:', e); toast('Error al guardar','err'); }
+  }catch(e){ console.error('saveOC:', e); syncErr(); toast('Error: '+e.message,'err'); }
 }
 
 // ── baja ──────────────────────────────────────────────────
@@ -303,13 +304,13 @@ function ocBaja(){
   if(ocSelIdx===null){ toast('Seleccioná una orden','err'); return; }
   const o=getOCRows()[ocSelIdx]; if(!o){ toast('Seleccioná una orden','err'); return; }
   confirm2(`¿Eliminar la OC del pedido ${o.pedido}?`, 'Se borran también sus renglones.', async ()=>{
+    syncSaving();
     try{
-      await sbDelete('oc_items', {pedido:o.pedido});
-      await sbDelete('ordenes_compra', {pedido:o.pedido});
+      await apiPost('/oc/borrar', {pedido:o.pedido});
       OCS=OCS.filter(x=>Number(x.pedido)!==Number(o.pedido));
       OCITEMS=OCITEMS.filter(x=>Number(x.pedido)!==Number(o.pedido));
-      ocSelIdx=null; renderOC(); toast('Orden eliminada','scs');
-    }catch(e){ console.error('ocBaja:', e); toast('Error al eliminar','err'); }
+      ocSelIdx=null; renderOC(); syncOk(); toast('Orden eliminada','scs');
+    }catch(e){ console.error('ocBaja:', e); syncErr(); toast('Error: '+e.message,'err'); }
   });
 }
 
@@ -364,21 +365,17 @@ async function ocPagoSave(){
   const tipo=sel.value;
   const fecha=document.getElementById('ocpago-fecha').value||null;
   const imp=ocNum(document.getElementById('ocpago-imp').value)||0;
-  const [pagoF,saldoF]=OC_PAGO_F[tipo];
-  const saldoActual=Number(o[saldoF])||0;
   if(imp<=0){ toast('Importe inválido','err'); return; }
-  if(imp>saldoActual+0.005){ toast('Supera el saldo pendiente','err'); return; }
-  const nuevoPago=(Number(o[pagoF])||0)+imp;
-  const nuevoSaldo=saldoActual-imp;
+  syncSaving();
   try{
-    await sbUpsert('oc_pagos', {pedido:_ocPagoPed, tipo, fecha, importe:imp});
-    await sbUpsert('ordenes_compra', {pedido:_ocPagoPed, [pagoF]:nuevoPago, [saldoF]:nuevoSaldo});
-    o[pagoF]=nuevoPago; o[saldoF]=nuevoSaldo;
+    const res=await apiPost('/oc/pago', {pedido:_ocPagoPed, tipo, fecha, importe:imp});
+    o[res.pagoF]=res.nuevoPago; o[res.saldoF]=res.nuevoSaldo;
     await sbLoadOCPagos();
     closeOv('ov-ocpago');
     renderOC();
+    syncOk();
     toast('Pago registrado','scs');
-  }catch(e){ console.error('ocPagoSave:', e); toast('Error al registrar el pago','err'); }
+  }catch(e){ console.error('ocPagoSave:', e); syncErr(); toast('Error: '+e.message,'err'); }
 }
 
 function ocPagosVer(pedido){

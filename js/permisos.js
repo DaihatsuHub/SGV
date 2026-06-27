@@ -214,20 +214,13 @@ async function savePermisos() {
   if (!updates.length) { toast('No hay datos para guardar','err'); return; }
 
   try {
-    for (const u of updates) {
-      await fetch(`${SB_URL}/rest/v1/permisos?modulo=eq.${u.modulo}&accion=eq.${u.accion}`, {
-        method: 'PATCH',
-        headers: { ...SB_HDR },
-        body: JSON.stringify({ nivel_min: u.nivel_min })
-      });
-      const idx = _permisos.findIndex(x => x.modulo===u.modulo && x.accion===u.accion);
-      if (idx >= 0) _permisos[idx].nivel_min = u.nivel_min;
-    }
+    const res = await apiPost('/permisos', { updates });
+    if (res.permisos) _permisos = res.permisos;   // refrescar con lo que devolvió el server
     document.getElementById('ov-permisos').classList.remove('open');
     toast('Permisos guardados', 'scs');
     aplicarPermisos();
   } catch(e) {
     console.error('savePermisos:', e);
-    toast('Error al guardar permisos', 'err');
+    toast('Error al guardar permisos: '+e.message, 'err');
   }
 }

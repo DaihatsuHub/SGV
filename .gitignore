@@ -1,8 +1,27 @@
-# Claves y certificados AFIP - NUNCA al repo publico
+.env
+.env.*
 *.b64
-CERTIFICADO HATSU/
-CERTIFICADO TRESSA/
-OLD/
-js/OLD/
-css/OLD/
+CERTIFICADO
+CERTIFICADO*/
+test-afip.ps1
+*.pfx
+*.key
+*.pem
+server.js
+crear-auth.js
+reset-pass.js
+hash-passwords.js
+package.json
+package-lock.json
+node_modules/
+supabase/
 .vscode/
+Thumbs.db
+OLD/
+**/OLD/
+*.bak
+*.old
+*.tmp
+texto.txt
+TEXTO.txt
+x.modulo

@@ -47,21 +47,56 @@ async function doLogin() {
   }
 }
 
-function loginOk() {
+async function loginOk() {
   document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
+  // Mostrar pantalla de carga ANTES de revelar la app
+  showAppLoading(true);
+  try {
+    // Cargar TODOS los datos antes de mostrar la app (token ya disponible)
+    if (typeof iniciarApp === 'function') await iniciarApp();
+  } catch (e) {
+    console.error('iniciarApp:', e);
+    showAppLoadingError('No se pudieron cargar los datos. Revisá la conexión con el servidor e intentá de nuevo.');
+    return;
+  }
+  // Datos cargados → preparar y revelar la app
   document.getElementById('b-user').textContent = usuarioActual.codigo;
   const ddiUsua = document.getElementById('ddi-usua');
   if (ddiUsua) ddiUsua.style.display = usuarioActual.nivel > 80 ? 'block' : 'none';
-  // Botón permisos solo para RGRDELTA
   const btnPerm = document.getElementById('btn-permisos');
   if (btnPerm) btnPerm.style.display = usuarioActual.codigo === 'RGRDELTA' ? '' : 'none';
-  // Aplicar permisos a la UI
   if (typeof aplicarPermisos === 'function') aplicarPermisos();
-  // Mostrar pantalla de bienvenida
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-welcome')?.classList.add('active');
   renderUsua && renderUsua();
+  showAppLoading(false);
+  document.getElementById('app').style.display = 'block';
+}
+
+// Pantalla de carga entre login y app
+function showAppLoading(on) {
+  const el = document.getElementById('app-loading');
+  if (!el) return;
+  if (on) {
+    const txt = document.getElementById('app-loading-txt');
+    if (txt) txt.textContent = 'Cargando datos…';
+    const spin = el.querySelector('.app-load-spin');
+    if (spin) spin.style.display = '';
+    el.style.display = 'flex';
+  } else {
+    el.style.display = 'none';
+  }
+}
+function showAppLoadingError(msg) {
+  const el = document.getElementById('app-loading');
+  if (!el) return;
+  const spin = el.querySelector('.app-load-spin');
+  if (spin) spin.style.display = 'none';
+  const txt = document.getElementById('app-loading-txt');
+  if (txt) txt.innerHTML =
+    `<div style="color:#f87171;max-width:340px;text-align:center;line-height:1.5">${msg}</div>` +
+    `<button onclick="location.reload()" style="margin-top:14px;padding:8px 18px;background:#4f8ef7;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px">Reintentar</button>`;
+  el.style.display = 'flex';
 }
 
 async function cerrarSistema() {
@@ -104,6 +139,7 @@ function selUsua(i) { usuaSelIdx=i; renderUsua(); }
 function usuaAlta() {
   document.getElementById('uf-cod').value='';
   document.getElementById('uf-pass').value='';
+  document.getElementById('uf-pass').placeholder='';
   document.getElementById('uf-nivel').value='';
   document.getElementById('uf-cod').disabled=false;
   document.getElementById('usua-mtit').textContent='Nuevo Usuario';
@@ -117,7 +153,8 @@ function usuaModif() {
   const r = getUsuaRows()[usuaSelIdx];
   document.getElementById('uf-cod').value=r.CODIGO;
   document.getElementById('uf-cod').disabled=true;
-  document.getElementById('uf-pass').value=r.DETALLE;
+  document.getElementById('uf-pass').value='';                                   // vacío: la clave NO se toca salvo que escribas una nueva
+  document.getElementById('uf-pass').placeholder='(dejar vacío para no cambiarla)';
   document.getElementById('uf-nivel').value=r.NIVEL;
   document.getElementById('usua-mtit').textContent='Modificar: '+r.CODIGO;
   setMtag('usua-mtag','MODIFICACIÓN','tag-m');
@@ -131,19 +168,13 @@ function usuaBaja() {
   if (r.CODIGO === usuarioActual?.codigo) { toast('No podés eliminar tu propio usuario','err'); return; }
   confirm2('¿Dar de baja "'+r.CODIGO+'"?', 'El usuario será eliminado.', async ()=>{
     try {
-      const res = await fetch(`${SB_URL}/functions/v1/sgv-usuarios`, {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SB_KEY },
-        body: JSON.stringify({ accion:'baja', codigo:r.CODIGO, user_id:r.user_id||null })
-      });
-      const data = await res.json();
-      if (!data.ok) { toast('Error: ' + data.error, 'err'); return; }
+      await apiPost('/usuarios/baja', { codigo:r.CODIGO });
       const idx=(TABLAS['USUA']||[]).findIndex(x=>x.CODIGO===r.CODIGO);
       if(idx>=0) TABLAS['USUA'].splice(idx,1);
       usuaSelIdx=null; renderUsua();
       toast('Usuario eliminado','scs');
     } catch(e) {
-      toast('Error al eliminar usuario','err');
+      toast('Error al eliminar: '+e.message,'err');
     }
   });
 }
@@ -152,36 +183,27 @@ async function saveUsua() {
   const cod   = document.getElementById('uf-cod').value.trim().toUpperCase();
   const pass  = document.getElementById('uf-pass').value.trim();
   const nivel = parseInt(document.getElementById('uf-nivel').value)||0;
-  if (!cod||!pass) { toast('Usuario y contraseña son obligatorios','err'); return; }
+  if (!cod) { toast('El usuario es obligatorio','err'); return; }
+  if (window._ue==='A' && !pass) { toast('La contraseña es obligatoria','err'); return; }
   if (nivel<1||nivel>99) { toast('El nivel debe ser entre 1 y 99','err'); return; }
 
   try {
-    const accion = window._ue==='A' ? 'alta' : 'modificar';
-    const user_id = window._ue==='M'
-      ? (TABLAS['USUA']||[]).find(r=>r.CODIGO===cod)?.user_id || null
-      : null;
-
-    const r = await fetch(`${SB_URL}/functions/v1/sgv-usuarios`, {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+SB_KEY },
-      body: JSON.stringify({ accion, codigo:cod, password:pass, nivel, user_id })
-    });
-    const res = await r.json();
-    if (!res.ok) { toast('Error: ' + res.error, 'err'); return; }
-
-    if (!TABLAS['USUA']) TABLAS['USUA']=[];
     if (window._ue==='A') {
+      const res = await apiPost('/usuarios/alta', { codigo:cod, password:pass, nivel });
+      if (!TABLAS['USUA']) TABLAS['USUA']=[];
       TABLAS['USUA'].push({ TABLA:'USUA', CODIGO:cod, DETALLE:'••••••', NIVEL:nivel, user_id:res.user_id, STRING1:'', STRING2:'', STRING3:'', FECHA1:'' });
       toast('Usuario dado de alta','scs');
     } else {
+      // pass vacío = NO se cambia la contraseña (solo el nivel)
+      await apiPost('/usuarios/modificar', { codigo:cod, password:pass, nivel });
       const idx = TABLAS['USUA'].findIndex(r=>r.CODIGO===cod);
       if(idx>=0) { TABLAS['USUA'][idx].NIVEL=nivel; }
-      toast('Usuario modificado','scs');
+      toast(pass ? 'Usuario y contraseña actualizados' : 'Usuario modificado','scs');
     }
     closeOv('ov-usua'); renderUsua();
   } catch(e) {
     console.error('saveUsua:', e);
-    toast('Error al guardar usuario','err');
+    toast('Error: '+e.message,'err');
   }
 }
 

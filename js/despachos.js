@@ -132,20 +132,17 @@ function despBaja() {
     `¿Dar de baja "${d.dep_desp}${d.dep_sub?' '+d.dep_sub:''}"?`,
     `Artículo: ${d.dep_art} — Se revertirá el stock.`,
     async () => {
+      syncSaving();
       try {
-        // Revertir stock del artículo
-        await despActualizarStock(d, true);
-        // Eliminar de Supabase
-        await fetch(`${SB_URL}/rest/v1/despachos?dep_desp=eq.${encodeURIComponent(d.dep_desp)}&dep_art=eq.${encodeURIComponent(d.dep_art)}`,{
-          method:'DELETE', headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
-        });
-        // Eliminar de memoria
+        const res = await apiPost('/despachos/borrar', { desp:d.dep_desp, art:d.dep_art });
+        aplicarStockMemoria(res.stock);
         const idx = DESPS.findIndex(x=>x.dep_desp===d.dep_desp&&x.dep_art===d.dep_art);
         if(idx>=0) DESPS.splice(idx,1);
         despSelIdx=null;
         renderDesp();
+        syncOk();
         toast('Despacho eliminado','scs');
-      } catch(e){ console.error(e); toast('Error al eliminar','err'); }
+      } catch(e){ console.error(e); syncErr(); toast('Error al eliminar: '+e.message,'err'); }
     }
   );
 }
@@ -188,43 +185,15 @@ function dfEntChange() {
   if(depEntEl && depEntEl.value==0) depEntEl.value = val;
 }
 
-// ── Actualizar stock del artículo ─────────────────────────
-async function despActualizarStock(d, revertir=false) {
-  const emp   = despEmpresa(d.dep_desp);
-  const art   = ARTS.find(a=>(a.ART_COD||'').trim()===(d.dep_art||'').trim());
-  if(!art) return;
-
-  const signo = revertir ? -1 : 1;
-  const ent    = (d.dep_ent||0)    * signo;
-  const sal    = (d.dep_sal||0)    * signo;
-  const depEnt = (d.dep_depent||0) * signo;
-  const depSal = (d.dep_depsal||0) * signo;
-
-  let patch = {};
-  if(emp==='H') {
-    patch.art_stk  = Math.max(0, (art.ART_STK||0)  + ent - sal);
-    patch.art_deph = Math.max(0, (art.ART_DEPH||0) + depEnt - depSal);
-  } else if(emp==='T') {
-    patch.art_stkt = Math.max(0, (art.ART_STKT||0)  + ent - sal);
-    patch.art_dept = Math.max(0, (art.ART_DEPT||0)  + depEnt - depSal);
-  }
-
-  if(!Object.keys(patch).length) return;
-
-  await fetch(`${SB_URL}/rest/v1/articulos?art_cod=eq.${encodeURIComponent(d.dep_art)}`,{
-    method:'PATCH',
-    headers:{...SB_HDR},
-    body:JSON.stringify(patch)
-  });
-
-  // Actualizar en memoria
-  if(emp==='H') {
-    art.ART_STK  = patch.art_stk;
-    art.ART_DEPH = patch.art_deph;
-  } else {
-    art.ART_STKT = patch.art_stkt;
-    art.ART_DEPT = patch.art_dept;
-  }
+// ── Actualizar stock del artículo EN MEMORIA (el server ya lo grabó) ──
+function aplicarStockMemoria(stock) {
+  if (!stock || !stock.art_cod) return;
+  const art = ARTS.find(a => (a.ART_COD||'').trim() === stock.art_cod.trim());
+  if (!art) return;
+  if (stock.art_stk  !== undefined) art.ART_STK  = stock.art_stk;
+  if (stock.art_stkt !== undefined) art.ART_STKT = stock.art_stkt;
+  if (stock.art_deph !== undefined) art.ART_DEPH = stock.art_deph;
+  if (stock.art_dept !== undefined) art.ART_DEPT = stock.art_dept;
 }
 
 // ── Guardar ───────────────────────────────────────────────
@@ -253,82 +222,37 @@ async function saveDesp() {
     if(existe){ toast('Ya existe ese artículo en ese despacho','err'); return; }
   }
 
-  const data = {
-    dep_desp:desp, dep_sub:sub||null, dep_fec:fec, dep_art:art,
-    dep_proc:proc||null, dep_adua:adua||null,
-    dep_ent:ent, dep_sal:0, dep_fob:fob, dep_gas:0, dep_gas2:gas2,
-    dep_moneda:mone||null, dep_costo: Math.round(fob*(1+gas2/100)*100)/100,
-    dep_depent:depent, dep_depsal:0
-  };
-
+  syncSaving();
   try {
+    const res = await apiPost('/despachos/guardar', {
+      modo: window._de, desp, sub, fec, art, ent, fob, gas2, adua, proc, mone, depent
+    });
+    aplicarStockMemoria(res.stock);
     if(window._de==='A') {
-      await sbUpsert('despachos', data);
-      DESPS.push(data);
-      await despActualizarStock(data);
+      DESPS.push(res.despacho);
       toast('Despacho dado de alta','scs');
     } else {
-      const orig = window._despOrig;
-      // Revertir stock anterior
-      await despActualizarStock(orig, true);
-      // Actualizar datos (no cambiar dep_ent en modif, solo otros campos)
-      const patchData = {
-        dep_sub:sub||null, dep_fec:fec, dep_proc:proc||null, dep_adua:adua||null,
-        dep_fob:fob, dep_gas2:gas2, dep_moneda:mone||null,
-        dep_costo: Math.round(fob*(1+gas2/100)*100)/100,
-        dep_ent:ent, dep_depent:depent
-      };
-      await fetch(`${SB_URL}/rest/v1/despachos?dep_desp=eq.${encodeURIComponent(desp)}&dep_art=eq.${encodeURIComponent(art)}`,{
-        method:'PATCH', headers:{...SB_HDR}, body:JSON.stringify(patchData)
-      });
-      // Actualizar en memoria
       const idx=DESPS.findIndex(d=>d.dep_desp===desp&&d.dep_art===art);
-      if(idx>=0) Object.assign(DESPS[idx], patchData);
-      // Aplicar nuevo stock
-      const updated = DESPS[idx>=0?idx:0];
-      await despActualizarStock(updated);
+      if(idx>=0) DESPS[idx]=res.despacho;
       toast('Despacho modificado','scs');
     }
+    syncOk();
     closeOv('ov-desp');
     despSelIdx=null;
     renderDesp();
-  } catch(e){ console.error(e); toast('Error al guardar','err'); }
+  } catch(e){ console.error(e); syncErr(); toast('Error: '+e.message,'err'); }
 }
 
 // ── Recalcular costo de todos los despachos ───────────────
 async function despRecalcularCostos() {
   confirm2('¿Recalcular costos?', 'Se actualizará dep_costo = FOB × (1 + Gastos%/100) en todos los despachos.', async () => {
-    let ok=0, err=0;
-    for(const d of DESPS) {
-      const fob  = d.dep_fob||0;
-      const gas2 = d.dep_gas2||0;
-      const costo = Math.round(fob*(1+gas2/100)*100)/100;
-      if(costo === (d.dep_costo||0)) continue;
-      try {
-        await fetch(`${SB_URL}/rest/v1/despachos?dep_desp=eq.${encodeURIComponent(d.dep_desp)}&dep_art=eq.${encodeURIComponent(d.dep_art)}`,{
-          method:'PATCH', headers:{...SB_HDR}, body:JSON.stringify({dep_costo:costo})
-        });
-        d.dep_costo = costo;
-        ok++;
-      } catch(e){ err++; }
-    }
-    renderDesp();
-    toast(`Costos actualizados: ${ok} registros${err>0?' ('+err+' errores)':''}`, ok>0?'scs':'err');
+    syncSaving();
+    try {
+      const res = await apiPost('/despachos/recalcular-costos', {});
+      await sbLoadDesps();          // recargar con los costos nuevos
+      renderDesp();
+      syncOk();
+      toast(`Costos actualizados: ${res.actualizados} registros`, 'scs');
+    } catch(e){ console.error(e); syncErr(); toast('Error al recalcular: '+e.message,'err'); }
   });
-}
-function exportDesp() {
-  const list = filtDesps();
-  const headers = ['Despacho','Sub','Fecha','Artículo','Descripción','Procedencia','Aduana','Ingreso','Egreso','Stock','FOB','Gastos%','Moneda','Costo','Dep.Ent','Dep.Sal'];
-  const rows = list.map(d => {
-    const art = ARTS.find(a=>(a.ART_COD||'').trim()===(d.dep_art||'').trim());
-    const fec = d.dep_fec?d.dep_fec.substring(0,10).split('-').reverse().join('/'):'';
-    return [
-      d.dep_desp||'', d.dep_sub||'', fec, d.dep_art||'',
-      art?art.ART_DES:'', d.dep_proc||'', d.dep_adua||'',
-      d.dep_ent||0, d.dep_sal||0, (d.dep_ent||0)-(d.dep_sal||0),
-      d.dep_fob||0, d.dep_gas2||0, d.dep_moneda||'',
-      d.dep_costo||0, d.dep_depent||0, d.dep_depsal||0
-    ];
-  });
-  exportToXls('Despachos', headers, rows);
 }

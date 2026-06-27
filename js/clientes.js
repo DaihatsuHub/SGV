@@ -239,15 +239,3 @@ function printCli(){
   const rows=list.map(c=>`<tr><td style="font-family:monospace">${esc(c.CLI_CODIGO)}</td><td>${esc(c.CLI_RAZON||'')}</td><td>${esc(c.CLI_DOMIC||'')}</td><td>${esc(c.CLI_LOCAL||'')}</td><td style="font-family:monospace">${esc(c.CLI_CUIT||'')}</td><td>${IVA[c.CLI_IVA]||'—'}</td><td>${esc(c.CLI_CONPAG||'')}</td></tr>`).join('');
   openPrint('👥 Listado de Clientes',`<table><thead><tr><th>CÓDIGO</th><th>RAZÓN SOCIAL</th><th>DOMICILIO</th><th>LOCALIDAD</th><th>CUIT</th><th>IVA</th><th>COND.PAGO</th></tr></thead><tbody>${rows}</tbody></table>`,list.length);
 }
-function exportCli() {
-  const list = filtClis();
-  const headers = ['Código','Razón Social','Domicilio','Localidad','CP','Provincia','CUIT','IVA','Cond.Pago','Dto%','Vendedor','Expreso','Teléfono','Email','ABC','Crédito','Estado'];
-  const rows = list.map(c => [
-    c.CLI_CODIGO, c.CLI_RAZON||'', c.CLI_DOMIC||'', c.CLI_LOCAL||'', c.CLI_CODPOS||'',
-    PCIA[c.CLI_PROVIN]||c.CLI_PROVIN||'', c.CLI_CUIT||'', IVA[c.CLI_IVA]||c.CLI_IVA||'',
-    c.CLI_CONPAG||'', c.CLI_DTO||0, c.CLI_VEND||'', c.CLI_EXPRE||'',
-    c.CLI_TELEF||'', c.CLI_EMAIL||'', c.CLI_ABC||'', c.CLI_ICRED||0,
-    c.CLI_INCOB?'INCOB':c.CLI_PREINC?'PRE-INC':c.CLI_NODAR?'NO DAR':'OK'
-  ]);
-  exportToXls('Clientes', headers, rows);
-}

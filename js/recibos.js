@@ -265,14 +265,15 @@ function reciBaja(){
   const sel=getReciRows()[reciSelIdx]; if(!sel){ toast('Seleccioná un recibo','err'); return; }
   const rc=sel.rec;
   confirm2(`¿Anular el recibo ${rc.empresa}${rc.talonario} ${rc.numero}?`,'Se revertirán los saldos de las facturas imputadas.',async()=>{
+    syncSaving();
     try{
-      await reciRevertir(rc);
-      await sbDelete('recibos',{id:rc.id});  // cascade borra items/pagos/cheques
+      const res=await apiPost('/recibos/anular', { id:rc.id });
+      (res.facturas||[]).forEach(f=>{ const fac=FACS.find(x=>(x.fac_nro||'').trim()===String(f.fac_nro).trim()); if(fac) fac.fac_saldo=f.fac_saldo; });
       const idx=RECIS.findIndex(x=>x.id===rc.id); if(idx>=0) RECIS.splice(idx,1);
       await sbLoadReciItems();
       if(typeof sbLoadCheques==='function'){ await sbLoadCheques(); if(typeof renderCart==='function') renderCart(); }
-      reciSelIdx=null; renderReci(); toast('Recibo anulado','scs');
-    }catch(e){ console.error(e); toast('Error al anular','err'); }
+      reciSelIdx=null; renderReci(); syncOk(); toast('Recibo anulado','scs');
+    }catch(e){ console.error(e); syncErr(); toast('Error al anular: '+e.message,'err'); }
   });
 }
 
@@ -488,44 +489,9 @@ function reciReconcile(){
 }
 
 // ════════════════ Guardar ════════════════
-async function reciInsertCabecera(data){
-  const token=await getAuthToken();
-  const r=await fetch(`${SB_URL}/rest/v1/recibos`,{method:'POST',
-    headers:{...SB_HDR,'Authorization':'Bearer '+token,'Prefer':'return=representation'},
-    body:JSON.stringify(data)});
-  if(!r.ok){ const t=await r.text(); throw new Error('insert recibo '+r.status+': '+t.substring(0,150)); }
-  const rows=await r.json(); return rows[0]?.id;
-}
-async function reciUpdateCabecera(id,data){
-  const d={...data}; delete d.id;
-  const token=await getAuthToken();
-  const r=await fetch(`${SB_URL}/rest/v1/recibos?id=eq.${id}`,{method:'PATCH',
-    headers:{...SB_HDR,'Authorization':'Bearer '+token}, body:JSON.stringify(d)});
-  if(!r.ok) throw new Error('update recibo '+r.status);
-}
-async function reciPatchFac(facNro,patch){
-  const token=await getAuthToken();
-  const r=await fetch(`${SB_URL}/rest/v1/facturas?fac_nro=eq.${encodeURIComponent(facNro)}`,{method:'PATCH',
-    headers:{...SB_HDR,'Authorization':'Bearer '+token}, body:JSON.stringify(patch)});
-  if(!r.ok){ const t=await r.text(); throw new Error('patch fac '+r.status+': '+t.substring(0,120)); }
-}
-async function reciDescontarFac(facNro,abonaOrig){
-  const f=FACS.find(x=>(x.fac_nro||'').trim()===(facNro||'').trim()); if(!f) return;
-  const nuevo=Math.max(0,round2((f.fac_saldo||0)-(abonaOrig||0)));
-  await reciPatchFac(facNro,{fac_saldo:nuevo}); f.fac_saldo=nuevo;
-}
-async function reciRevertir(orig){
-  const items=await sbGet('recibo_items',`recibo_id=eq.${orig.id}&order=id.asc`);
-  for(const it of items){
-    const f=FACS.find(x=>(x.fac_nro||'').trim()===(it.comprobante||'').trim());
-    if(f){ const nuevo=round2((f.fac_saldo||0)+(it.abona_orig||0)); await reciPatchFac(it.comprobante,{fac_saldo:nuevo}); f.fac_saldo=nuevo; }
-  }
-}
-async function reciBorrarHijos(reciboId){
-  await sbDelete('recibo_items',{recibo_id:reciboId});
-  await sbDelete('recibo_pagos',{recibo_id:reciboId});
-  await sbDelete('cheques',{recibo_id:reciboId});
-}
+// (Los helpers viejos reciInsertCabecera/reciUpdateCabecera/reciPatchFac/
+//  reciDescontarFac/reciRevertir/reciBorrarHijos se eliminaron: saveReci ahora
+//  hace todo en el server vía POST /recibos/guardar.)
 
 async function saveReci(){
   const hdr=_reciHdr;
@@ -535,47 +501,40 @@ async function saveReci(){
   const totAbonado=round2(items.reduce((s,d)=>s+(d.abona||0),0));
   if(totAbonado<=0){ toast('Cargá al menos un importe a abonar','err'); return; }
   if(Math.abs(reciTotInstrumentos()-totAbonado)>0.01){ toast('Los instrumentos no coinciden con lo abonado','err'); return; }
+  const efe=reciParseNum(document.getElementById('rf-efectivo')?.value||'0');
+  const aju=reciParseNum(document.getElementById('rf-ajuste')?.value||'0');
+  const payload={
+    modo:_reciMode,
+    origId:(_reciMode==='M' && _reciOrig)?_reciOrig.id:null,
+    hdr:{ empresa:hdr.empresa, talonario:hdr.talonario, numero:hdr.numero, fecha:hdr.fecha,
+          cliente:hdr.cliente, cotCasio:hdr.cotCasio||0, cotTressa:hdr.cotTressa||0 },
+    items:items.map(d=>({ fac_nro:d.fac_nro, fac_fec:d.fac_fec||null, fac_moneda:d.fac_moneda||null,
+          saldo_orig:round2(d.saldo_orig), cotizacion:Math.max(1,d.cotizacion),
+          saldo:round2(d.saldo), abona:round2(d.abona), abona_orig:round2(d.abona_orig) })),
+    pagos:{ efectivo:round2(efe), ajuste:round2(aju),
+          transferencias:_reciTransf.filter(t=>(t.importe||0)>0).map(t=>({fecha:t.fecha||null,importe:round2(t.importe)})),
+          retenciones:_reciRetenc.filter(r=>(r.importe||0)>0).map(r=>({codigo:r.codigo||null,importe:round2(r.importe)})) },
+    cheques:_reciCheques.filter(c=>(c.importe||0)>0).map(c=>({fecha:c.fecha||null,numero:c.numero||null,importe:round2(c.importe),fisico:!!c.fisico,propio:!!c.propio}))
+  };
+
+  syncSaving();
   try{
-    if(_reciMode==='M' && _reciOrig){ await reciRevertir(_reciOrig); await reciBorrarHijos(_reciOrig.id); }
-    const cab={ empresa:hdr.empresa, talonario:hdr.talonario, numero:hdr.numero, fecha:hdr.fecha,
-      cliente:hdr.cliente, cot_casio:hdr.cotCasio||0, cot_tressa:hdr.cotTressa||0,
-      total_abonado:totAbonado, anulado:false };
-    let reciboId;
-    if(_reciMode==='M' && _reciOrig){ await reciUpdateCabecera(_reciOrig.id,cab); reciboId=_reciOrig.id; }
-    else {
-      try { reciboId=await reciInsertCabecera(cab); }
-      catch(e){
-        const msg=String((e&&e.message)||'');
-        if(/409|23505|duplicate|already exists/i.test(msg)){
-          const sug=await reciSugerirNumero(hdr.empresa,hdr.talonario);
-          toast(`El recibo Nº ${hdr.numero} ya existe (lo tomó otro usuario). Te sugiero el ${sug}: verificá y guardá de nuevo.`,'err');
-          const numEl=document.getElementById('rf-num');
-          if(numEl){ numEl.readOnly=false; numEl.value=sug; numEl.focus(); }
-          _reciHdr.numero=sug;
-          return;   // queda el modal abierto con todo cargado; el usuario reintenta
-        }
-        throw e;
-      }
+    const res=await apiPost('/recibos/guardar', payload);
+    if(res.duplicate){
+      const sug=res.sugerido;
+      toast(`El recibo Nº ${hdr.numero} ya existe (lo tomó otro usuario). Te sugiero el ${sug}: verificá y guardá de nuevo.`,'err');
+      const numEl=document.getElementById('rf-num');
+      if(numEl){ numEl.readOnly=false; numEl.value=sug; numEl.focus(); }
+      _reciHdr.numero=sug; syncOk();
+      return;
     }
-    for(const d of items){
-      await sbUpsert('recibo_items',{ recibo_id:reciboId, comprobante:d.fac_nro, fecha:d.fac_fec||null,
-        moneda:d.fac_moneda||null, saldo_orig:round2(d.saldo_orig), cotizacion:Math.max(1,d.cotizacion),
-        saldo:round2(d.saldo), abona:round2(d.abona), abona_orig:round2(d.abona_orig) });
-      await reciDescontarFac(d.fac_nro,d.abona_orig);
-    }
-    const efe=reciParseNum(document.getElementById('rf-efectivo')?.value||'0');
-    const aju=reciParseNum(document.getElementById('rf-ajuste')?.value||'0');
-    if(efe>0) await sbUpsert('recibo_pagos',{recibo_id:reciboId,tipo:'efectivo',importe:round2(efe)});
-    for(const t of _reciTransf) if((t.importe||0)>0) await sbUpsert('recibo_pagos',{recibo_id:reciboId,tipo:'transferencia',fecha:t.fecha||null,importe:round2(t.importe)});
-    for(const r of _reciRetenc) if((r.importe||0)>0) await sbUpsert('recibo_pagos',{recibo_id:reciboId,tipo:'retencion',ret_codigo:r.codigo||null,importe:round2(r.importe)});
-    if(Math.abs(aju)>0.001) await sbUpsert('recibo_pagos',{recibo_id:reciboId,tipo:'ajuste',importe:round2(aju)});
-    for(const c of _reciCheques) if((c.importe||0)>0) await sbUpsert('cheques',{ recibo_id:reciboId,
-      recibo_numero:hdr.numero, fecha_recibo:hdr.fecha, cliente:hdr.cliente, empresa:hdr.empresa,
-      fecha:c.fecha||null, numero:c.numero||null, importe:round2(c.importe), fisico:!!c.fisico, propio:!!c.propio,
-      fecha_salida:null, observaciones:null, estado:'cartera' });
-    if(_reciMode==='A'){ const t=taloFind(hdr.empresa,hdr.talonario); await taloSetUltimo(hdr.empresa,hdr.talonario, Math.max(parseInt(hdr.numero)||0, t?Number(t.ultimo_nro)||0:0)); }
+    // saldos de facturas actualizados por el server
+    (res.facturas||[]).forEach(f=>{ const fac=FACS.find(x=>(x.fac_nro||'').trim()===String(f.fac_nro).trim()); if(fac) fac.fac_saldo=f.fac_saldo; });
+    // bump del número de talonario (alta) — sigue del lado cliente por ahora
+    if(_reciMode==='A' && res.talo){ const t=taloFind(res.talo.empresa,res.talo.tipo); if(t && (Number(res.talo.ultimo_nro)||0)>(Number(t.ultimo_nro)||0)) t.ultimo_nro=res.talo.ultimo_nro; }
     closeOv('ov-reci');
     await sbLoadRecis(); await sbLoadReciItems(); if(typeof sbLoadCheques==='function'){ await sbLoadCheques(); if(typeof renderCart==='function') renderCart(); } reciSelIdx=null; renderReci();
+    syncOk();
     toast(_reciMode==='A'?'Recibo dado de alta':'Recibo modificado','scs');
-  }catch(e){ console.error('saveReci:',e); toast('Error al guardar el recibo','err'); }
+  }catch(e){ console.error('saveReci:',e); syncErr(); toast('Error: '+e.message,'err'); }
 }

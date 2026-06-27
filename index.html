@@ -84,6 +84,13 @@
   </div>
 </div>
 
+<!-- PANTALLA DE CARGA (entre login y app) -->
+<div id="app-loading" style="display:none;position:fixed;inset:0;z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0f1115;font-family:system-ui,Arial,sans-serif">
+  <div class="app-load-spin" style="width:46px;height:46px;border:4px solid rgba(255,255,255,.15);border-top-color:#4f8ef7;border-radius:50%;animation:appLoadSpin .8s linear infinite"></div>
+  <div id="app-loading-txt" style="color:#cfd6e4;font-size:15px">Cargando datos…</div>
+</div>
+<style>@keyframes appLoadSpin{to{transform:rotate(360deg)}}</style>
+
 <!-- APP -->
 <div id="app" style="display:none">
 
@@ -144,6 +151,7 @@
     <span class="badge" id="b-user" style="color:#fff;cursor:default">—</span>
     <button class="tnav" id="ddi-usua" style="display:none;font-size:12px;padding:4px 10px" onclick="showPage('usua',this)">🔑 Usuarios</button>
     <button class="tnav" id="btn-permisos" style="display:none;font-size:12px;padding:4px 10px" onclick="openPermisos()">🛡️ Permisos</button>
+    <button class="tnav" id="btn-calc" style="font-size:14px;padding:4px 10px" onclick="openCalc()" title="Calculadora (Esc para cerrar)">🧮</button>
     <button class="tnav" style="font-size:12px;padding:4px 10px;color:#f87171" onclick="cerrarSistema()">⏻ Salir</button>
   </div>
 </div>
@@ -1411,6 +1419,7 @@
 <!-- JAVASCRIPT                                            -->
 <!-- ══════════════════════════════════════════════════════ -->
 <script src="js/supabase-client.js"></script>
+<script src="js/api.js"></script>
 <script>
   const sbClient = window.supabase.createClient(
     'https://blwxnrzrsgxscmsquwlz.supabase.co',
@@ -1436,6 +1445,7 @@
 <script src="js/cartera.js"></script>
 <script src="js/oc.js"></script>
 <script src="js/fichacli.js"></script>
+<script src="js/calc.js"></script>
 <script src="js/vmes.js"></script>
 
 <script>
@@ -1451,36 +1461,38 @@ document.addEventListener('click', function(e) {
   }
 });
 
-sbLoad().then(async ok => {
-  if (ok) {
-    await Promise.all([
-      loadUsuarios(),
-      loadAllConfigUI(),
-      loadPermisos(),
-      sbLoadDesps(),
-      sbLoadFacs(),
-      sbLoadCtips(),
-      sbLoadTalos(),
-      sbLoadRetes(),
-      sbLoadRecis(),
-      sbLoadReciItems(),
-      sbLoadCheques(),
-    ]);
-    aplicarPermisos();
-    renderArts();
-    renderClis();
-    renderTab && renderTab();
-    renderUsua && renderUsua();
-    renderTalo && renderTalo();
-    renderRete && renderRete();
-    renderReci && renderReci();
-    renderCart && renderCart();
-    renderFicha && renderFicha();
-    vmesRenderMarcas && vmesRenderMarcas();
-    const ddiUsua = document.getElementById('ddi-usua');
-    if (ddiUsua && usuarioActual) ddiUsua.style.display = usuarioActual.nivel > 80 ? 'block' : 'none';
-  }
-});
+// El arranque ya NO corre solo: se llama desde loginOk() (en usuarios.js),
+// recién cuando hay sesión de Supabase Auth (token disponible para el server).
+async function iniciarApp() {
+  const ok = await sbLoad();
+  if (!ok) throw new Error('No se pudieron cargar los datos iniciales');
+  await Promise.all([
+    loadUsuarios(),
+    loadAllConfigUI(),
+    loadPermisos(),
+    sbLoadDesps(),
+    sbLoadFacs(),
+    sbLoadCtips(),
+    sbLoadTalos(),
+    sbLoadRetes(),
+    sbLoadRecis(),
+    sbLoadReciItems(),
+    sbLoadCheques(),
+  ]);
+  aplicarPermisos();
+  renderArts();
+  renderClis();
+  renderTab && renderTab();
+  renderUsua && renderUsua();
+  renderTalo && renderTalo();
+  renderRete && renderRete();
+  renderReci && renderReci();
+  renderCart && renderCart();
+  renderFicha && renderFicha();
+  vmesRenderMarcas && vmesRenderMarcas();
+  const ddiUsua = document.getElementById('ddi-usua');
+  if (ddiUsua && usuarioActual) ddiUsua.style.display = usuarioActual.nivel > 80 ? 'block' : 'none';
+}
 </script>
 </div><!-- /app -->
 </body>

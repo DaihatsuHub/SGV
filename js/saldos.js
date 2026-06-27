@@ -36,17 +36,15 @@ async function renderSaldos() {
   body.innerHTML = '<div class="empty" style="margin-top:40px">⏳ Cargando...</div>';
 
   try {
-    // Paginación automática — Supabase limita a 1000 por request
-    const baseUrl = `${SB_URL}/rest/v1/facturas?fac_saldo=gt.0&select=fac_nro,fac_fec,fac_cli,fac_saldo,fac_moneda,fac_vend`;
-    const token = await getAuthToken();
-    const hdrs = {'apikey':SB_KEY,'Authorization':'Bearer '+token};
+    // Paginación automática — el server limita a 1000 por request
+    const baseRead = `/read/facturas?fac_saldo=gt.0&select=fac_nro,fac_fec,fac_cli,fac_saldo,fac_moneda,fac_vend`;
     const facs = [];
     let offset = 0;
     while(true) {
       body.innerHTML = `<div class="empty" style="margin-top:40px">⏳ Cargando... (${facs.length} registros)</div>`;
-      const r = await fetch(`${baseUrl}&limit=1000&offset=${offset}`, {headers:hdrs});
-      const page = await r.json();
-      if(!page||!page.length) break;
+      const res = await apiGet(`${baseRead}&limit=1000&offset=${offset}`);
+      const page = res.rows || [];
+      if(!page.length) break;
       facs.push(...page);
       if(page.length < 1000) break;
       offset += 1000;

@@ -159,11 +159,12 @@ function ctipBaja() {
   const c=filtCtip()[ctipSelIdx];
   confirm2(`¿Eliminar tipo "${c.empresa}${c.prefijo} ${TIPO_LABEL[c.tipo]||c.tipo}"?`,'El tipo será eliminado.',async()=>{
     try {
-      await sbDelete('comp_tipos',{id:c.id});
+      const res=await apiPost('/comp_tipos/borrar',{id:c.id});
+      if(!res.ok){ toast(res.error||'No se pudo eliminar','err'); return; }
       const idx=CTIPS.findIndex(x=>x.id===c.id);
       if(idx>=0) CTIPS.splice(idx,1);
       ctipSelIdx=null; renderCtip(); toast('Tipo eliminado','scs');
-    } catch(e){toast('Error al eliminar','err');}
+    } catch(e){toast('Error al eliminar: '+e.message,'err');}
   });
 }
 async function saveCtip() {
@@ -174,18 +175,15 @@ async function saveCtip() {
   const contable=document.getElementById('ctip-contable').value==='1';
   if(!prefijo||prefijo.length!==3){toast('El prefijo debe tener exactamente 3 caracteres','err');return;}
   const data={empresa,prefijo,tipo,ultimo_nro:ultimo,contable};
+  const id = window._ctipe==='A' ? null : (filtCtip()[ctipSelIdx]?.id);
+  syncSaving();
   try {
-    if(window._ctipe==='A'){
-      const existe=CTIPS.find(c=>c.empresa===empresa&&c.prefijo===prefijo&&c.tipo===tipo);
-      if(existe){toast('Ya existe ese tipo','err');return;}
-      await sbUpsert('comp_tipos',data);
-    } else {
-      const c=filtCtip()[ctipSelIdx];
-      await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${c.id}`,{method:'PATCH',headers:{...SB_HDR},body:JSON.stringify(data)});
-    }
+    const res=await apiPost('/comp_tipos/guardar',{ id, empresa, prefijo, tipo, ultimo_nro:ultimo, contable });
+    if(!res.ok){ syncErr(); toast(res.error||'No se pudo guardar','err'); return; }
     await sbLoadCtips(); closeOv('ov-ctip'); ctipSelIdx=null; renderCtip();
+    syncOk();
     toast(window._ctipe==='A'?'Tipo dado de alta':'Tipo modificado','scs');
-  } catch(e){console.error(e);toast('Error al guardar','err');}
+  } catch(e){console.error(e); syncErr(); toast('Error al guardar: '+e.message,'err');}
 }
 
 function filtFacs() {
@@ -407,6 +405,55 @@ async function renderFacDetalle(f) {
 }
 
 // AUTORIZAR AFIP
+// Cartel de error de AFIP: muestra el mensaje original + una explicación clara.
+function facAfipError(rawMsg){
+  const msg=String(rawMsg||'').trim();
+  const low=msg.toLowerCase();
+  let trad=null;
+  if(/debito o credito|cbteasoc|periodoasoc|comprobante.*asociad/.test(low))
+    trad={t:'Falta el comprobante asociado',d:'Estás autorizando una Nota de Crédito o Débito. AFIP exige indicar la factura original asociada. Este sistema todavía no envía ese dato para NC/ND.'};
+  else if(/no se corresponde|próximo a autorizar|proximo a autorizar|correlativ|ultimo autorizado|último autorizado/.test(low))
+    trad={t:'Numeración o fecha fuera de orden',d:'El número o la fecha no coinciden con lo que espera AFIP. Los comprobantes se autorizan en orden correlativo, y la fecha no puede ser anterior al último autorizado ni tener más de 5 días de diferencia con hoy. Revisá número y fecha.'};
+  else if(/cbtefch|n-5|n\+5|rango.*fecha|fecha.*rango/.test(low))
+    trad={t:'Fecha fuera de rango',d:'La fecha del comprobante debe estar dentro de los 5 días anteriores o posteriores a hoy, y no puede ser anterior al último comprobante autorizado. Corregí la fecha y reintentá.'};
+  else if(/consumidor final|docnro|doctipo|identificar al/.test(low))
+    trad={t:'Falta identificar al cliente',d:'Para este importe AFIP no acepta “Consumidor Final” sin datos: hay que identificar al cliente con CUIT o DNI. Cargá el documento del cliente y reintentá.'};
+  else if(/cuit|padron|padrón/.test(low))
+    trad={t:'Documento del cliente inválido',d:'El CUIT/CUIL del cliente no es válido o no figura en los padrones de AFIP. Verificá el número de documento del cliente.'};
+  else if(/token|sign|firma|certific|no autorizado a realizar/.test(low))
+    trad={t:'Problema de autenticación',d:'AFIP rechazó el token, la firma o el certificado. Suele ser un tema del certificado digital o de la hora del sistema. Si persiste, revisá el certificado y su vencimiento.'};
+  else if(/no respond|timeout|no disponible|caido|caído|50[234]/.test(low))
+    trad={t:'AFIP no disponible',d:'El servicio de AFIP no respondió o está caído temporalmente. Esperá unos minutos y reintentá.'};
+
+  const prev=document.getElementById('afip-err-ov'); if(prev) prev.remove();
+  const ov=document.createElement('div');
+  ov.id='afip-err-ov';
+  ov.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML=
+    `<div style="background:var(--s1,#1e1e22);border:1px solid var(--red,#e5484d);border-radius:12px;max-width:480px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.5);font-family:system-ui,Arial,sans-serif;overflow:hidden">
+       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--red,#e5484d)">
+         <span style="color:#fff;font-weight:700;font-size:14px">⚠️ AFIP rechazó el comprobante</span>
+         <button id="afip-err-x" style="background:rgba(255,255,255,.22);border:none;color:#fff;width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:14px">✕</button>
+       </div>
+       <div style="padding:16px;color:var(--txt,#e8e8e8)">
+         ${trad?`<div style="font-size:14px;font-weight:700;color:var(--txt,#fff);margin-bottom:5px">${trad.t}</div>
+         <div style="font-size:13px;color:var(--t2,#bbb);line-height:1.5;margin-bottom:14px">${trad.d}</div>`:''}
+         <div style="font-size:10px;color:var(--t3,#888);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Mensaje original de AFIP</div>
+         <div style="background:var(--s3,#2a2a2e);border-radius:6px;padding:10px 12px;font-family:var(--mono,monospace);font-size:12px;color:var(--t1,#ddd);line-height:1.45;white-space:pre-wrap;word-break:break-word">${esc(msg)}</div>
+       </div>
+       <div style="padding:0 16px 16px;display:flex;justify-content:flex-end">
+         <button id="afip-err-ok" class="btn" style="padding:7px 16px;font-size:13px">Entendido</button>
+       </div>
+     </div>`;
+  document.body.appendChild(ov);
+  const close=()=>{ ov.remove(); document.removeEventListener('keydown',onKey); };
+  function onKey(e){ if(e.key==='Escape') close(); }
+  ov.querySelector('#afip-err-x').onclick=close;
+  ov.querySelector('#afip-err-ok').onclick=close;
+  ov.onclick=(e)=>{ if(e.target===ov) close(); };
+  document.addEventListener('keydown',onKey);
+}
+
 async function facAutorizarAfip(facNro) {
   const f = FACS.find(x=>x.fac_nro===facNro);
   if (!f) { toast('Factura no encontrada','err'); return; }
@@ -417,19 +464,26 @@ async function facAutorizarAfip(facNro) {
     const cli = facFindCli(f.fac_cli);
     const empresa = f.fac_empresa || (f.fac_nro||'').substring(0,1);
     const prefijo = facGetPrefijo(f.fac_nro);
-    const ctip = CTIPS.find(c=>c.prefijo===prefijo&&c.empresa===empresa);
-    if (!ctip) throw new Error('Tipo de comprobante no encontrado');
-    const tiva = f.fac_tiva || '';
-    let cbteTipo;
-    if (ctip.tipo === 'F') {
-      cbteTipo = tiva==='I' ? 1 : tiva==='C'||tiva==='M'||tiva==='N' ? 6 : 11;
-    } else if (ctip.tipo === 'C') {
-      cbteTipo = tiva==='I' ? 3 : tiva==='C'||tiva==='M'||tiva==='N' ? 8 : 13;
-    } else if (ctip.tipo === 'D') {
-      cbteTipo = tiva==='I' ? 2 : tiva==='C'||tiva==='M'||tiva==='N' ? 7 : 12;
-    } else {
-      throw new Error('Tipo de comprobante no soportado para AFIP');
+    // El tipo sale de la última letra del número (F/C/D/R). Si una factura vieja
+    // no tiene letra, se cae al ctip por prefijo+empresa como respaldo.
+    // Tipo de DOCUMENTO (Factura/NC/ND) = última letra del número (F/C/D/R)
+    let tipoChar = facGetTipo(f.fac_nro);
+    if (!['F','C','D'].includes(tipoChar)) {
+      const ctipFb = CTIPS.find(c=>c.prefijo===prefijo&&c.empresa===empresa);
+      tipoChar = ctipFb ? ctipFb.tipo : 'F';
     }
+    const tiva = f.fac_tiva || '';
+    // LETRA AFIP (A/B/C) = 2do carácter del prefijo (ej. "HA4" → "A").
+    // Si el prefijo no la trae clara, se deduce de la condición de IVA como respaldo.
+    let letra = (prefijo.charAt(1) || '').toUpperCase();
+    if (!['A','B','C'].includes(letra)) {
+      letra = tiva==='I' ? 'A' : (tiva==='C'||tiva==='M'||tiva==='N') ? 'B' : 'C';
+    }
+    let cbteTipo;
+    if (tipoChar === 'F')      cbteTipo = letra==='A' ? 1 : letra==='C' ? 11 : 6;
+    else if (tipoChar === 'C') cbteTipo = letra==='A' ? 3 : letra==='C' ? 13 : 8;
+    else if (tipoChar === 'D') cbteTipo = letra==='A' ? 2 : letra==='C' ? 12 : 7;
+    else throw new Error('Tipo de comprobante no soportado para AFIP');
     const ptoVtaStr = prefijo.replace(/[^0-9]/g,'');
     const ptoVta = parseInt(ptoVtaStr) || 1;
     const docTipo = cli?.CLI_CUIT ? 80 : 99;
@@ -460,12 +514,8 @@ async function facAutorizarAfip(facNro) {
       body: JSON.stringify(payload)
     });
     const data = await resp.json();
-    if (!resp.ok || !data.cae) throw new Error(data.errores || data.error || 'Error desconocido de AFIP');
-    await fetch(`${SB_URL}/rest/v1/facturas?fac_nro=eq.${encodeURIComponent(facNro)}`, {
-      method: 'PATCH',
-      headers: { ...SB_HDR },
-      body: JSON.stringify({ fac_cae: data.cae, fac_cae_vto: data.caeVto, fac_afip_st: 'autorizado' })
-    });
+    if (!resp.ok || !data.cae) { console.error('AFIP respuesta completa:', data); throw new Error(data.errores || data.error || ('AFIP respondió: ' + JSON.stringify(data))); }
+    await apiPost('/facturas/cae', { fac_nro: facNro, cae: data.cae, caeVto: data.caeVto });
     const idx = FACS.findIndex(x=>x.fac_nro===facNro);
     if (idx>=0) {
       FACS[idx].fac_cae     = data.cae;
@@ -478,7 +528,7 @@ async function facAutorizarAfip(facNro) {
     if(fidx>=0) selFac(fidx);
   } catch(e) {
     console.error('facAutorizarAfip:', e);
-    toast(`Error AFIP: ${e.message}`, 'err');
+    facAfipError(e.message);
     if (btn) { btn.disabled=false; btn.textContent='⚡ Autorizar AFIP'; }
   }
 }
@@ -776,7 +826,7 @@ function renderFacModal(fecha, empresa, cliCod) {
             </div>
             <div>
               <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Número</label>
-              <span id="nf-preview-nro" style="font-family:var(--mono);font-size:12px;color:var(--acc);background:var(--s3);padding:4px 8px;border-radius:4px;display:block">—</span>
+              <input id="nf-num" class="finp" placeholder="—" title="Podés cambiar el número" style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--acc);background:var(--s3);padding:6px 10px;border-radius:4px;display:block;width:100%;text-align:center">
             </div>
             <div>
               <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Fecha *</label>
@@ -802,12 +852,12 @@ function renderFacModal(fecha, empresa, cliCod) {
               <div style="position:relative">
                 <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Razón Social</label>
                 <div style="position:relative;display:flex;align-items:center">
-                  <input class="finp" id="nf-cli-busq" placeholder="Buscar..." style="width:100%;padding-right:22px"
-                    oninput="nfOnCliBusqInput()"
-                    onblur="setTimeout(()=>{const s=document.getElementById('nf-cli-sug');if(s)s.style.display='none'},200)">
+                  <input class="finp" id="nf-cli-busq" list="nf-cli-list" placeholder="Buscar por razón social..." style="width:100%;padding-right:22px"
+                    onfocus="nfFillCliList();this.select()" onclick="this.select()"
+                    onchange="nfOnCliBusqPick()">
                   <button onclick="nfLimpiarBusqCli()" style="position:absolute;right:4px;background:none;border:none;color:var(--t3);cursor:pointer;font-size:12px;padding:0">✕</button>
                 </div>
-                <div id="nf-cli-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--s1);border:1px solid var(--acc);border-radius:0 0 6px 6px;z-index:200;max-height:160px;overflow-y:auto"></div>
+                <datalist id="nf-cli-list"></datalist>
               </div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
@@ -1276,11 +1326,7 @@ let _nfCtipBloqueadoId = null;
 async function nfDesbloquearCtip() {
   if(_nfCtipBloqueadoId) {
     try {
-      await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${_nfCtipBloqueadoId}`,{
-        method:'PATCH', headers:{...SB_HDR},
-        body:JSON.stringify({bloqueado:false, bloqueado_por:null})
-      });
-      // actualizar local
+      await apiPost('/comp_tipos/desbloquear', { id: _nfCtipBloqueadoId });
       const ct=CTIPS.find(x=>x.id===_nfCtipBloqueadoId);
       if(ct){ct.bloqueado=false;ct.bloqueado_por=null;}
     } catch(e){console.error('nfDesbloquearCtip:',e);}
@@ -1290,42 +1336,33 @@ async function nfDesbloquearCtip() {
 
 async function nfOnCtipChange() {
   const val=document.getElementById('nf-ctip')?.value||'';
-  const el=document.getElementById('nf-preview-nro');
+  const el=document.getElementById('nf-num');
   // Desbloquear el anterior si había uno
   await nfDesbloquearCtip();
-  if(!val){if(el)el.textContent='—';return;}
+  if(!val){if(el)el.value='';return;}
   const [prefijo,tipo]=val.split('|');
   const emp=document.getElementById('nf-empresa').value;
   const ct=CTIPS.find(c=>c.empresa===emp&&c.prefijo===prefijo&&c.tipo===tipo);
-  if(!ct){if(el)el.textContent='—';return;}
-  // Fetch fresco de Supabase para ver estado actual de bloqueo
-  try {
-    const resp=await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${ct.id}&select=id,bloqueado,bloqueado_por,ultimo_nro`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+(await getAuthToken()),'Content-Type':'application/json'}});
-    const data=await resp.json();
-    if(data&&data[0]) {
-      ct.bloqueado=data[0].bloqueado;
-      ct.bloqueado_por=data[0].bloqueado_por;
-      ct.ultimo_nro=data[0].ultimo_nro;
-    }
-  } catch(e){console.error('nfOnCtipChange fetch:',e);}
-  // Verificar si está bloqueado por otro usuario
+  if(!ct){if(el)el.value='';return;}
+  // Bloqueo atómico en el server (lee estado fresco + bloquea si está libre o es mío)
   const miUsuario=usuarioActual?.codigo||'?';
-  if(ct.bloqueado && ct.bloqueado_por && ct.bloqueado_por!==miUsuario) {
-    toast(`⚠️ ${ct.bloqueado_por} está facturando con este tipo. Esperá un momento.`,'err');
-    document.getElementById('nf-ctip').value='';
-    if(el) el.textContent='—';
+  try {
+    const res=await apiPost('/comp_tipos/bloquear', { id: ct.id, por: miUsuario });
+    if(!res.locked) {
+      toast(`⚠️ ${res.bloqueado_por} está facturando con este tipo. Esperá un momento.`,'err');
+      document.getElementById('nf-ctip').value='';
+      if(el) el.value='';
+      return;
+    }
+    ct.bloqueado=true; ct.bloqueado_por=miUsuario;
+    if(res.ultimo_nro!==undefined) ct.ultimo_nro=res.ultimo_nro;
+    _nfCtipBloqueadoId=ct.id;
+  } catch(e){
+    console.error('nfOnCtipChange lock:',e);
+    toast('No se pudo reservar la numeración','err');
     return;
   }
-  // Bloquear
-  try {
-    await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${ct.id}`,{
-      method:'PATCH', headers:{...SB_HDR},
-      body:JSON.stringify({bloqueado:true, bloqueado_por:miUsuario})
-    });
-    ct.bloqueado=true; ct.bloqueado_por=miUsuario;
-    _nfCtipBloqueadoId=ct.id;
-  } catch(e){console.error('nfOnCtipChange lock:',e);}
-  if(el) el.textContent=`${prefijo}-${String((ct.ultimo_nro||0)+1).padStart(6,'0')}`;
+  if(el) el.value=`${prefijo}-${String((ct.ultimo_nro||0)+1).padStart(6,'0')}${tipo}`;
   nfRenderItems();
   nfCalcTotales();
 }
@@ -1371,6 +1408,18 @@ function nfSelCliSug(cod) {
   const sug=document.getElementById('nf-cli-sug');
   if(sug){sug.innerHTML='';sug.style.display='none';}
   nfSetCliente(cli);
+}
+// Búsqueda por razón social con datalist nativo (igual que recibos/ficha)
+function nfFillCliList(){
+  const dl=document.getElementById('nf-cli-list'); if(!dl || dl.dataset.filled) return;
+  dl.innerHTML=(CLIS||[]).map(c=>`<option value="${esc(c.CLI_RAZON||'')}">`).join('');
+  dl.dataset.filled='1';
+}
+function nfOnCliBusqPick(){
+  const val=(document.getElementById('nf-cli-busq')?.value||'').trim().toLowerCase();
+  if(!val) return;
+  const c=(CLIS||[]).find(x=>(x.CLI_RAZON||'').trim().toLowerCase()===val);
+  if(c) nfSetCliente(c);
 }
 function nfSetCliente(cli) {
   // Setea todos los campos del cliente de una vez
@@ -1667,9 +1716,6 @@ async function nfGuardar() {
   const [prefijo,tipo]=ctipVal.split('|');
   const ct=CTIPS.find(c=>c.empresa===empresa&&c.prefijo===prefijo&&c.tipo===tipo);
   if(!ct){toast('Tipo de comprobante no encontrado','err');return;}
-  const nroSig=(ct.ultimo_nro||0)+1;
-  const facNro=`${prefijo}-${String(nroSig).padStart(6,'0')}`;
-  if(FACS.find(f=>f.fac_nro===facNro)){toast(`El número ${facNro} ya existe`,'err');return;}
   const esA=nfEsFacturaA();
   const tot=window._nfTotales||{};
   const dto=parseFloat(document.getElementById('nf-dto')?.value||0)||0;
@@ -1677,8 +1723,9 @@ async function nfGuardar() {
   const transp=document.getElementById('nf-transp')?.value||'';
   const vend=document.getElementById('nf-vend')?.value||'';
   const remito=document.getElementById('nf-remito')?.value||'';
+  // El número lo asigna el server (autoritativo). No mandamos fac_nro.
   const facData={
-    fac_nro:facNro,fac_fec:fecha,fac_cli:cliCod,
+    fac_fec:fecha,fac_cli:cliCod,
     fac_empresa:empresa,fac_ctip:prefijo,fac_tiva:tiva,fac_moneda:moneda,
     fac_sub:tot.subtotal||0,fac_iva:esA?(tot.iva||0):0,
     fac_total:tot.total||0,fac_saldo:tot.total||0,fac_percib:0,
@@ -1686,24 +1733,29 @@ async function nfGuardar() {
     fac_vend:vend,
     fac_afip_st:'pendiente',fac_cae:null,fac_cae_vto:null
   };
+  const itemsAGrabar=FAC_ITEMS_NUEVA.filter(it=>(it.ite_can||0)>0&&(it.ite_imp||0)>0).map(it=>{
+    const div=1+(it.ite_iva_porc||0)/100;
+    const neto=esA?it.ite_uni/div:it.ite_uni;
+    return {
+      ite_art:it.ite_art||'',
+      ite_desp:it.ite_desp_nro||'',
+      ite_can:it.ite_can,ite_uni:it.ite_uni,
+      ite_imp:neto*(it.ite_can||1),
+      ite_iva_porc:esA?(it.ite_iva_porc||21):0,
+      ite_iva_imp:esA?(it.ite_uni-neto)*(it.ite_can||1):0,
+      ite_impu:0,ite_costo:it.ite_uni
+    };
+  });
+  syncSaving();
   try {
-    await sbUpsert('facturas',facData);
-    const itemsAGrabar=FAC_ITEMS_NUEVA.filter(it=>(it.ite_can||0)>0&&(it.ite_imp||0)>0);
-    for(const it of itemsAGrabar){
-      const div=1+(it.ite_iva_porc||0)/100;
-      const neto=esA?it.ite_uni/div:it.ite_uni;
-      await sbUpsert('fac_items',{
-        ite_nro:facNro,ite_art:it.ite_art||'',
-        ite_desp:it.ite_desp_nro||'',
-        ite_can:it.ite_can,ite_uni:it.ite_uni,
-        ite_imp:neto*(it.ite_can||1),
-        ite_iva_porc:esA?(it.ite_iva_porc||21):0,
-        ite_iva_imp:esA?(it.ite_uni-neto)*(it.ite_can||1):0,
-        ite_impu:0,ite_costo:it.ite_uni
-      });
-    }
-    await fetch(`${SB_URL}/rest/v1/comp_tipos?id=eq.${ct.id}`,{method:'PATCH',headers:{...SB_HDR},body:JSON.stringify({ultimo_nro:nroSig, bloqueado:false, bloqueado_por:null})});
-    ct.ultimo_nro=nroSig; ct.bloqueado=false; ct.bloqueado_por=null;
+    // número editable (si lo cambiaste); si no, el server usa ultimo_nro+1
+    let numeroManual=null;
+    const _numEl=document.getElementById('nf-num');
+    if(_numEl){ const n=parseInt((String(_numEl.value||'').split('-').pop()||'').trim(),10); if(n>0) numeroManual=n; }
+    const res=await apiPost('/facturas/guardar',{ ctId:ct.id, prefijo, tipo, empresa, numero:numeroManual, facData, items:itemsAGrabar });
+    if(!res.ok){ syncErr(); toast(res.error||'No se pudo guardar','err'); return; }
+    const facNro=res.facNro;
+    ct.ultimo_nro=res.nuevoUltimo; ct.bloqueado=false; ct.bloqueado_por=null;
     _nfCtipBloqueadoId=null;
     await sbLoadFacs();
     FAC_MODO=null; FAC_ITEMS_NUEVA=[];
@@ -1711,10 +1763,11 @@ async function nfGuardar() {
     const ovNf=document.getElementById('ov-nf');
     if(ovNf) ovNf.classList.remove('open');
     renderFac();
+    syncOk();
     toast(`✓ Factura ${facNro} guardada como borrador`,'scs');
     const idx=filtFacs().findIndex(f=>f.fac_nro===facNro);
     if(idx>=0) selFac(idx);
-  } catch(e){console.error('nfGuardar:',e);toast('Error al guardar','err');}
+  } catch(e){console.error('nfGuardar:',e); syncErr(); toast('Error al guardar: '+e.message,'err');}
 }
 
 async function openTop10() {

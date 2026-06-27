@@ -125,3 +125,26 @@ function renderFicha(){
   const fmtD=d=>d?d.substring(0,10).split('-').reverse().join('/'):'—';
   pie.innerHTML=`🧾 Última compra (factura): <b style="color:var(--txt)">${fmtD(ultFac)}</b> &nbsp;·&nbsp; 💵 Último pago (recibo): <b style="color:var(--txt)">${fmtD(ultPago)}</b>`;
 }
+
+// ── Auto-refresco de la ficha ──────────────────────────────
+// La ficha se recalcula sola cada vez que se la muestra, con datos
+// frescos de memoria (FACS, RECIS, CHEQUES, RECI_ITEMS). NO depende
+// de recibos/facturación ni de cómo navegue el sistema.
+(function(){
+  const refrescar=()=>{ if(typeof fichaCliCod!=='undefined' && fichaCliCod && typeof renderFicha==='function') renderFicha(); };
+
+  // 1) Al clickear "Ficha del Cliente" en el menú (cubre la navegación normal)
+  const btn=document.getElementById('ddi-ficha');
+  if(btn) btn.addEventListener('click', ()=>setTimeout(refrescar,0));
+
+  // 2) Cuando la página de la ficha pasa a estar VISIBLE (cualquier método).
+  //    offsetParent===null cuando la página (o un ancestro) está oculta.
+  const pg=document.getElementById('page-ficha');
+  if(pg && 'MutationObserver' in window){
+    let visible = pg.offsetParent!==null;
+    const chequear=()=>{ const ahora=pg.offsetParent!==null; if(ahora && !visible) refrescar(); visible=ahora; };
+    const obs=new MutationObserver(chequear);
+    obs.observe(pg,{attributes:true,attributeFilter:['class','style']});
+    if(pg.parentElement) obs.observe(pg.parentElement,{attributes:true,attributeFilter:['class','style']});
+  }
+})();
