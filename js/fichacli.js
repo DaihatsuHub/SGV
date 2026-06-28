@@ -39,6 +39,14 @@ function renderFicha(){
   const c=CLIS.find(x=>(x.CLI_CODIGO||'').trim()===fichaCliCod);
   if(!c){ datos.innerHTML='<div style="color:var(--red);padding:14px">Cliente no encontrado.</div>'; return; }
 
+  // Carga diferida: la ficha necesita facturas (hoy diferidas, no se cargan al login)
+  if(!window._facsLoaded){
+    datos.innerHTML='<div style="color:var(--t3);padding:24px;text-align:center">⏳ Cargando datos del cliente…</div>';
+    if(izq) izq.innerHTML=''; if(der) der.innerHTML=''; if(pie) pie.innerHTML='';
+    ensureFacturas().then(()=>renderFicha()).catch(e=>console.error('ficha/facturas:',e));
+    return;
+  }
+
   const vend=(typeof reciVendDesc==='function')?reciVendDesc(c.CLI_VEND):'';
   datos.innerHTML=`
     <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:baseline">

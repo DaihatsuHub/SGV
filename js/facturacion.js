@@ -17,6 +17,17 @@ async function sbLoadFacs() {
     FACS.sort((a,b) => (b.fac_fec||'').localeCompare(a.fac_fec||''));
   } catch(e) { console.error('sbLoadFacs:', e); }
 }
+
+// Carga facturas bajo demanda (idempotente). La usan el módulo Facturas,
+// Recibos (lista de deudores) y la Ficha del cliente. Facturas YA NO se carga al login.
+async function ensureFacturas(){
+  if(window._facsLoaded) return;
+  if(window._facsLoadingPromise) return window._facsLoadingPromise;
+  window._facsLoadingPromise = (typeof sbLoadFacs==='function' ? sbLoadFacs() : Promise.resolve())
+    .then(()=>{ window._facsLoaded=true; window._facsLoadingPromise=null; })
+    .catch(e=>{ window._facsLoadingPromise=null; console.error('ensureFacturas:',e); throw e; });
+  return window._facsLoadingPromise;
+}
 async function sbLoadCtips() {
   try { CTIPS = await sbGet('comp_tipos','order=empresa.asc,prefijo.asc,tipo.asc'); }
   catch(e) { console.error('sbLoadCtips:', e); }
@@ -259,8 +270,14 @@ function buscarFac() {
 }
 
 function renderFac() {
-  const list=filtFacs();
   const body=document.getElementById('fac-body');
+  // Carga diferida: facturas no se cargan al login; se traen al abrir el módulo
+  if(!window._facsLoaded){
+    if(body) body.innerHTML='<div class="empty">⏳ Cargando facturas…</div>';
+    ensureFacturas().then(()=>renderFac()).catch(()=>{ if(body) body.innerHTML='<div class="empty">⚠️ Error al cargar facturas</div>'; });
+    return;
+  }
+  const list=filtFacs();
   if(!list.length){body.innerHTML='<div class="empty">🔍 Sin resultados</div>';return;}
   if(facSelIdx===null||facSelIdx>=list.length){
     const uf=list.map(f=>f.fac_fec||'').filter(Boolean).reduce((a,b)=>a>b?a:b,'');
@@ -356,6 +373,7 @@ async function renderFacDetalle(f) {
           <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:${contColor2}">${esc(f.fac_nro||'')}</div>
           <div style="font-size:12px;color:var(--t2)">${TIPO_LABEL[tipoChar]||''}</div>
           <div style="font-size:11px;color:var(--t3)">Fecha: ${fec}</div>
+          ${f.fac_usuario?`<div style="font-size:11px;color:var(--t3)">Emitió: ${esc(f.fac_usuario)}</div>`:''}
         </div>
       </div>
       ${caeInfo}

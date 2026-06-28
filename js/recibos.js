@@ -175,6 +175,7 @@ function selReci(i){ reciSelIdx=i; renderReci(); }
 
 // ════════════════ EDITOR — apertura ════════════════
 function reciAlta(){
+  ensureFacturas();  // arranca la carga de facturas (la necesita reciLoadDeudores al elegir cliente)
   _reciMode='A'; _reciOrig=null; reciResetEnabled();
   _reciDeud=[]; _reciTransf=[]; _reciCheques=[]; _reciRetenc=[];
   const emp='H';
@@ -254,7 +255,8 @@ async function _reciOpenEditor(){
     _reciCheques=chs.map(c=>({fecha:c.fecha,numero:c.numero,importe:c.importe||0,fisico:!!c.fisico,propio:!!c.propio}));
   }catch(e){ console.error('reciModif load:',e); _reciDeud=[];_reciTransf=[];_reciCheques=[];_reciRetenc=[]; }
   renderReciDeud(); renderReciTransf(); renderReciCheques(); renderReciRetenc(); reciReconcile();
-  document.getElementById('reci-mtit').textContent=`${_reciReadonly?'Ver':'Modificar'} Recibo ${rc.empresa}${rc.talonario} ${rc.numero}`;
+  const _creador = (_reciReadonly && rc.usuario_alta) ? `  ·  creado por ${rc.usuario_alta}` : '';
+  document.getElementById('reci-mtit').textContent=`${_reciReadonly?'Ver':'Modificar'} Recibo ${rc.empresa}${rc.talonario} ${rc.numero}${_creador}`;
   setMtag('reci-mtag', _reciReadonly?'SOLO LECTURA':'MODIFICACIÓN','tag-m');
   document.getElementById('ov-reci').classList.add('open');
   if(_reciReadonly) reciApplyReadonly();
@@ -332,7 +334,7 @@ function rfCliClear(){
   el.value=''; el.focus();
   reciClienteChange();
 }
-function reciClienteChange(){
+async function reciClienteChange(){
   const val=(document.getElementById('rf-cli').value||'').trim().toLowerCase();
   const c=(CLIS||[]).find(x=>(x.CLI_RAZON||'').trim().toLowerCase()===val);
   if(!c){ _reciHdr.cliente='';
@@ -344,6 +346,7 @@ function reciClienteChange(){
   document.getElementById('rf-local').textContent=c.CLI_LOCAL||'—';
   document.getElementById('rf-provin').textContent=(PCIA[c.CLI_PROVIN]||c.CLI_PROVIN||'—');
   document.getElementById('rf-vend').textContent=reciVendDesc(c.CLI_VEND)||(c.CLI_VEND||'—');
+  await ensureFacturas();   // facturas cargadas antes de buscar los deudores
   reciLoadDeudores();
 }
 
