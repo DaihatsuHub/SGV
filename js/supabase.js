@@ -149,8 +149,8 @@ async function sbLoad() {
     ARTS = resArts.articulos;   // ya vienen mapeados (ART_*) desde el server
     CLIS = resClis.clientes;    // ya vienen mapeados (CLI_*) desde el server
     TABLAS = resTabs.tablas;    // tablas auxiliares ya mapeadas desde el server
-    // Órdenes de Compra (encabezados + renglones)
-    if (typeof sbLoadOC === 'function') { await sbLoadOC(); await sbLoadOCItems(); if (typeof sbLoadOCPagos === 'function') await sbLoadOCPagos(); }
+    // (Órdenes de Compra se cargan en paralelo con el resto en iniciarApp,
+    //  no acá en fila, para no demorar el arranque.)
     syncStatus(`☁️ ${ARTS.length} art · ${CLIS.length} cli`, '#4ade80');
     setTimeout(()=>syncStatus('☁️ Conectado', '#93b4d8'), 3000);
     return true;

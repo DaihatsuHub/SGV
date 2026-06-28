@@ -1466,7 +1466,7 @@ document.addEventListener('click', function(e) {
 async function iniciarApp() {
   const ok = await sbLoad();
   if (!ok) throw new Error('No se pudieron cargar los datos iniciales');
-  await Promise.all([
+  const cargas = [
     loadUsuarios(),
     loadAllConfigUI(),
     loadPermisos(),
@@ -1478,7 +1478,12 @@ async function iniciarApp() {
     sbLoadRecis(),
     sbLoadReciItems(),
     sbLoadCheques(),
-  ]);
+  ];
+  // Órdenes de compra: en paralelo con todo lo demás (antes iban en fila)
+  if (typeof sbLoadOC === 'function') cargas.push(sbLoadOC());
+  if (typeof sbLoadOCItems === 'function') cargas.push(sbLoadOCItems());
+  if (typeof sbLoadOCPagos === 'function') cargas.push(sbLoadOCPagos());
+  await Promise.all(cargas);
   aplicarPermisos();
   renderArts();
   renderClis();
