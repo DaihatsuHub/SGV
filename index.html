@@ -1479,10 +1479,8 @@ async function iniciarApp() {
     sbLoadReciItems(),
     sbLoadCheques(),
   ];
-  // Órdenes de compra: en paralelo con todo lo demás (antes iban en fila)
-  if (typeof sbLoadOC === 'function') cargas.push(sbLoadOC());
-  if (typeof sbLoadOCItems === 'function') cargas.push(sbLoadOCItems());
-  if (typeof sbLoadOCPagos === 'function') cargas.push(sbLoadOCPagos());
+  // Órdenes de compra: YA NO se cargan al login.
+  // Se cargan al abrir el módulo (carga diferida, ver renderOC en oc.js).
   await Promise.all(cargas);
   aplicarPermisos();
   renderArts();

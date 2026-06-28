@@ -68,6 +68,20 @@ function getOCRows(){
 // ── render lista izquierda + detalle derecha ──────────────
 function renderOC(){
   const body=document.getElementById('oc-body'); if(!body) return;
+  // ── Carga diferida: la 1ra vez que se abre OC, traer sus datos (no se cargan al login) ──
+  if(!window._ocLoaded){
+    if(!window._ocLoading){
+      window._ocLoading=true;
+      body.innerHTML='<div class="empty">⏳ Cargando órdenes de compra…</div>';
+      Promise.all([
+        typeof sbLoadOC==='function'      ? sbLoadOC()      : null,
+        typeof sbLoadOCItems==='function' ? sbLoadOCItems() : null,
+        typeof sbLoadOCPagos==='function' ? sbLoadOCPagos() : null
+      ]).then(()=>{ window._ocLoaded=true; window._ocLoading=false; renderOC(); })
+        .catch(e=>{ window._ocLoading=false; console.error('carga OC:',e); body.innerHTML='<div class="empty">⚠️ Error al cargar órdenes</div>'; });
+    }
+    return;
+  }
   const list=getOCRows();
 
   const totP=list.reduce((s,o)=>s+ocPend(o),0);
