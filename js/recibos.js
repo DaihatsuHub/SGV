@@ -176,6 +176,7 @@ function selReci(i){ reciSelIdx=i; renderReci(); }
 // ════════════════ EDITOR — apertura ════════════════
 function reciAlta(){
   ensureFacturas();  // arranca la carga de facturas (la necesita reciLoadDeudores al elegir cliente)
+  const _wrapCre=document.getElementById('rf-creado-wrap'); if(_wrapCre) _wrapCre.hidden=true;  // recibo nuevo: sin creador aún
   _reciMode='A'; _reciOrig=null; reciResetEnabled();
   _reciDeud=[]; _reciTransf=[]; _reciCheques=[]; _reciRetenc=[];
   const emp='H';
@@ -255,8 +256,10 @@ async function _reciOpenEditor(){
     _reciCheques=chs.map(c=>({fecha:c.fecha,numero:c.numero,importe:c.importe||0,fisico:!!c.fisico,propio:!!c.propio}));
   }catch(e){ console.error('reciModif load:',e); _reciDeud=[];_reciTransf=[];_reciCheques=[];_reciRetenc=[]; }
   renderReciDeud(); renderReciTransf(); renderReciCheques(); renderReciRetenc(); reciReconcile();
-  const _creador = (_reciReadonly && rc.usuario_alta) ? `  ·  creado por ${rc.usuario_alta}` : '';
-  document.getElementById('reci-mtit').textContent=`${_reciReadonly?'Ver':'Modificar'} Recibo ${rc.empresa}${rc.talonario} ${rc.numero}${_creador}`;
+  document.getElementById('reci-mtit').textContent=`${_reciReadonly?'Ver':'Modificar'} Recibo ${rc.empresa}${rc.talonario} ${rc.numero}`;
+  // Auditoría: quién creó el recibo, en la fila de totales (Abonado / Saldo)
+  const _wrapCre=document.getElementById('rf-creado-wrap'), _elCre=document.getElementById('rf-creado');
+  if(_wrapCre){ if(rc.usuario_alta){ if(_elCre) _elCre.textContent=rc.usuario_alta; _wrapCre.hidden=false; } else { _wrapCre.hidden=true; } }
   setMtag('reci-mtag', _reciReadonly?'SOLO LECTURA':'MODIFICACIÓN','tag-m');
   document.getElementById('ov-reci').classList.add('open');
   if(_reciReadonly) reciApplyReadonly();
