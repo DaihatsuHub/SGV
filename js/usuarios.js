@@ -47,6 +47,46 @@ async function doLogin() {
   }
 }
 
+// ─────────────────────────────────────────────────────────
+//  Sesión fijada por navegador: si ya hay una sesión activa,
+//  el usuario queda fijo (no editable) y solo se pide la clave.
+//  Evita que convivan dos usuarios distintos en el mismo navegador.
+// ─────────────────────────────────────────────────────────
+async function initLoginScreen(){
+  try{
+    const { data:{ session } } = await sbClient.auth.getSession();
+    const inp  = document.getElementById('l-user');
+    const hint = document.getElementById('l-fija');
+    if(session && session.user){
+      const { data: u } = await sbClient.from('usuarios')
+        .select('codigo').eq('user_id', session.user.id).maybeSingle();
+      const cod = (u && u.codigo) ? u.codigo : '';
+      if(cod && inp){
+        inp.value = cod;
+        inp.readOnly = true;
+        inp.style.opacity = '0.65';
+        inp.style.cursor = 'not-allowed';
+        if(hint) hint.style.display = '';
+        const pass = document.getElementById('l-pass'); if(pass) pass.focus();
+        return;
+      }
+    }
+    // sin sesión activa → login normal (usuario editable)
+    if(inp){ inp.readOnly=false; inp.style.opacity=''; inp.style.cursor=''; }
+    if(hint) hint.style.display='none';
+  }catch(e){ console.warn('initLoginScreen:', e); }
+}
+
+// Ejecutar al cargar la página
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', initLoginScreen);
+else initLoginScreen();
+
+// Si en OTRA pestaña cambia la sesión (login/logout), re-evaluar el bloqueo
+window.addEventListener('storage', ()=>{
+  const ls=document.getElementById('login-screen');
+  if(ls && ls.style.display!=='none') initLoginScreen();
+});
+
 async function loginOk() {
   document.getElementById('login-screen').style.display = 'none';
   // Mostrar pantalla de carga ANTES de revelar la app
@@ -106,9 +146,10 @@ async function cerrarSistema() {
   usuarioActual = null;
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('l-user').value = '';
+  const _lu=document.getElementById('l-user'); if(_lu){ _lu.value=''; _lu.readOnly=false; _lu.style.opacity=''; _lu.style.cursor=''; }
   document.getElementById('l-pass').value = '';
   document.getElementById('l-err').textContent = '';
+  const _lf=document.getElementById('l-fija'); if(_lf) _lf.style.display='none';
   document.querySelectorAll('.dd-menu').forEach(m=>m.classList.remove('open'));
   document.querySelectorAll('.dd-arrow').forEach(a=>a.classList.remove('open'));
 }
