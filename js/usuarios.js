@@ -71,6 +71,7 @@ async function loginOk() {
   renderUsua && renderUsua();
   showAppLoading(false);
   document.getElementById('app').style.display = 'block';
+  inactStart();  // control de inactividad (auto-logout a los 60 min)
 }
 
 // Pantalla de carga entre login y app
@@ -100,6 +101,7 @@ function showAppLoadingError(msg) {
 }
 
 async function cerrarSistema() {
+  inactStop();  // frenar el control de inactividad
   await sbClient.auth.signOut();
   usuarioActual = null;
   document.getElementById('app').style.display = 'none';
@@ -109,6 +111,54 @@ async function cerrarSistema() {
   document.getElementById('l-err').textContent = '';
   document.querySelectorAll('.dd-menu').forEach(m=>m.classList.remove('open'));
   document.querySelectorAll('.dd-arrow').forEach(a=>a.classList.remove('open'));
+}
+
+// ─────────────────────────────────────────────────────────
+//  Auto-logout por inactividad: 60 min, con aviso 1 min antes
+// ─────────────────────────────────────────────────────────
+const INACT_MS      = 60*60*1000;   // cierra a los 60 min sin actividad
+const INACT_WARN_MS = 59*60*1000;   // avisa al minuto 59 (1 min antes)
+let _inactTimer=null, _inactWarn=null, _inactLast=0;
+
+function inactStart(){
+  ['mousemove','mousedown','keydown','scroll','touchstart','click'].forEach(ev=>
+    document.addEventListener(ev, inactReset, { passive:true }));
+  inactReset();
+}
+function inactStop(){
+  clearTimeout(_inactTimer); clearTimeout(_inactWarn);
+  inactHideWarn();
+}
+function inactReset(){
+  if(!usuarioActual) return;
+  const warnVisible = document.getElementById('inact-warn')?.style.display==='flex';
+  const now=Date.now();
+  if(!warnVisible && now-_inactLast < 3000) return;   // throttle de actividad normal
+  _inactLast=now;
+  clearTimeout(_inactTimer); clearTimeout(_inactWarn);
+  inactHideWarn();
+  _inactWarn  = setTimeout(inactShowWarn, INACT_WARN_MS);
+  _inactTimer = setTimeout(()=>{ inactStop(); if(typeof cerrarSistema==='function') cerrarSistema(); }, INACT_MS);
+}
+function inactShowWarn(){
+  let ov=document.getElementById('inact-warn');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='inact-warn';
+    ov.style.cssText='position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center;background:rgba(0,0,0,.55);font-family:system-ui,Arial,sans-serif';
+    ov.innerHTML='<div style="background:#1a1d24;border:1px solid #333;border-radius:12px;padding:26px 30px;max-width:360px;text-align:center;color:#cfd6e4">'+
+      '<div style="font-size:16px;margin-bottom:8px">Tu sesión está por cerrarse</div>'+
+      '<div style="font-size:13px;color:#9aa6ba;line-height:1.5;margin-bottom:18px">Por inactividad vas a salir en 1 minuto. ¿Querés seguir conectado?</div>'+
+      '<button id="inact-stay" style="padding:9px 22px;background:#4f8ef7;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px">Seguir conectado</button>'+
+      '</div>';
+    document.body.appendChild(ov);
+    document.getElementById('inact-stay').addEventListener('click', inactReset);
+  }
+  ov.style.display='flex';
+}
+function inactHideWarn(){
+  const ov=document.getElementById('inact-warn');
+  if(ov) ov.style.display='none';
 }
 
 // ── ABM USUARIOS ──────────────────────────────────────────
