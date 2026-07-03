@@ -2,6 +2,13 @@
 // NAVEGACIÓN
 // ═══════════════════════════════════════════════════════════
 
+// Ejecuta una acción del menú Utilidades (cierra el desplegable primero).
+function utilRun(fn){
+  document.querySelectorAll('.dd-menu').forEach(m=>m.classList.remove('open'));
+  document.querySelectorAll('.dd-arrow').forEach(a=>a.classList.remove('open'));
+  if(typeof fn==='function') fn();
+}
+
 function _setPageTitle(sub){
   const tb = document.getElementById('page-titlebar');
   if(!tb) return;

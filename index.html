@@ -147,12 +147,18 @@
         <button class="dd-item" id="ddi-cart" onclick="showSubPage('cob','cart')">💼 Cartera de Valores</button>
       </div>
     </div>
+    <div class="dd-wrap">
+      <button class="tnav" id="tnav-util" onclick="toggleDD('dd-util',this)">🔧 Utilidades <span class="dd-arrow" id="arr-util">▼</span></button>
+      <div class="dd-menu" id="dd-util">
+        <button class="dd-item" id="ddi-backup" onclick="utilRun(hacerBackup)">🗄️ Backup</button>
+        <button class="dd-item" id="ddi-usua" onclick="showSubPage('util','usua')">🔑 Usuarios</button>
+        <button class="dd-item" id="btn-permisos" onclick="utilRun(openPermisos)">🛡️ Permisos</button>
+      </div>
+    </div>
   </div>
   <div class="topbar-right">
     <span class="badge" id="b-sync" style="cursor:pointer;transition:all .3s" onclick="syncNow()" title="Sincronizar ahora">☁️ Conectando...</span>
     <span class="badge" id="b-user" style="color:#fff;cursor:default">—</span>
-    <button class="tnav" id="ddi-usua" style="display:none;font-size:12px;padding:4px 10px" onclick="showPage('usua',this)">🔑 Usuarios</button>
-    <button class="tnav" id="btn-permisos" style="display:none;font-size:12px;padding:4px 10px" onclick="openPermisos()">🛡️ Permisos</button>
     <button class="tnav" id="btn-calc" style="font-size:14px;padding:4px 10px" onclick="openCalc()" title="Calculadora (Esc para cerrar)">🧮</button>
     <button class="tnav" style="font-size:12px;padding:4px 10px;color:#f87171" onclick="cerrarSistema()">⏻ Salir</button>
   </div>
@@ -1492,6 +1498,7 @@
 <script src="js/calc.js"></script>
 <script src="js/vmes.js"></script>
 <script src="js/resumen.js"></script>
+<script src="js/backup.js"></script>
 
 <script>
 // Restaurar panel de factura al volver al módulo

@@ -108,16 +108,16 @@ function aplicarPermisos() {
   _setBtn('btn-cfg-oc',   puedeh('oc','columnas'));
 
   // ── Usuarios ──────────────────────────────────────────
-  _setBtn('ddi-usua',       puedeh('usuarios','ver'));
-  _setBtn('btn-permisos',   nivelEfectivo() >= 88);
+  // (ddi-usua y btn-permisos se resuelven en el loop de MENU_DEF, más abajo)
 
   // ── Menú: cada ítem visible según su permiso 'ver' (driven by MENU_DEF) ──
   // Cada ítem del menú tiene su módulo propio. Para agregar uno nuevo,
   // sumalo a MENU_DEF (más abajo) y queda contemplado acá y en el panel.
+  // Ítems con nivelMin se muestran por nivel (ej. Permisos: nivel>=88), no por módulo.
   MENU_DEF.forEach(g => {
     let algunoVisible = false;
     g.items.forEach(it => {
-      const ve = puedeh(it.mod, 'ver');
+      const ve = (it.nivelMin != null) ? (nivelEfectivo() >= it.nivelMin) : puedeh(it.mod, 'ver');
       _setBtn(it.id, ve);
       if (ve) algunoVisible = true;
       if (it.tabla) {   // botones alta/modif/baja de la tabla → su propio módulo
@@ -172,13 +172,15 @@ const MENU_DEF = [
     { id:'ddi-rete', mod:'rete', label:'🧮 Tipo de Retenciones' },
     { id:'ddi-cart', mod:'cart', label:'💼 Cartera de Valores' },
   ]},
-  { grupo:'🔑 Sistema', tnav:null, items:[
-    { id:'ddi-usua', mod:'usuarios', label:'🔑 Usuarios' },
+  { grupo:'🔧 Utilidades', tnav:'tnav-util', items:[
+    { id:'ddi-backup',   mod:'backup',   label:'🗄️ Backup' },
+    { id:'ddi-usua',     mod:'usuarios', label:'🔑 Usuarios' },
+    { id:'btn-permisos', nivelMin:88,    label:'🛡️ Permisos' },
   ]},
 ];
 
-// Módulos del panel de permisos, DERIVADOS del menú (mismo orden).
-const MODULOS_PERM = MENU_DEF.flatMap(g => g.items.map(it => ({ key:it.mod, label:it.label })));
+// Módulos del panel de permisos, DERIVADOS del menú (mismo orden). Solo ítems con módulo.
+const MODULOS_PERM = MENU_DEF.flatMap(g => g.items.filter(it => it.mod).map(it => ({ key:it.mod, label:it.label })));
 
 // Mapa pantalla→módulo (derivado de MENU_DEF: id 'ddi-<sub>' → mod).
 const SUB_MODULO = {};
