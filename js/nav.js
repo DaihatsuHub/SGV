@@ -32,6 +32,7 @@ function showSubPage(menu, sub) {
   if      (sub==='art')  renderArts();
   else if (sub==='marc') renderTabGral('MARC');
   else if (sub==='rubr') renderTabGral('RUBR');
+  else if (sub==='ccos') renderTabGral('CCOS');
   else if (sub==='prov') renderTabGral('PROV');
   else if (sub==='desp') renderDesp();
   else if (sub==='cli')  renderClis();

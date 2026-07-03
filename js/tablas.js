@@ -7,6 +7,7 @@ let tabSelIdx = null;
 const TAB_CONFIG = {
   MARC: { label:'Marcas',           lbl1:'Info',       lbl2:'' },
   RUBR: { label:'Rubros',           lbl1:'Grupo',      lbl2:'' },
+  CCOS: { label:'Centros de Costos', lbl1:'',          lbl2:'' },
   PROV: { label:'Proveedores',      lbl1:'Info',       lbl2:'' },
   VEND: { label:'Vendedores',       lbl1:'Info',       lbl2:'' },
   CPAG: { label:'Cond. de Pago',    lbl1:'Info',       lbl2:'' },
@@ -96,7 +97,7 @@ function setTabLabels() {
 }
 function saveTab() {
   // Si viene de subtabla (MARC/RUBR), usar _tabEditTipo
-  if (_tabEditTipo && ['MARC','RUBR','PROV','VEND','CPAG','PCIA','GRUP','CATE','EXPR','SRUB','MONE'].includes(_tabEditTipo)) {
+  if (_tabEditTipo && ['MARC','RUBR','CCOS','PROV','VEND','CPAG','PCIA','GRUP','CATE','EXPR','SRUB','MONE'].includes(_tabEditTipo)) {
     const cod = document.getElementById('tf-cod').value.trim().toUpperCase();
     const det = document.getElementById('tf-det').value.trim().toUpperCase();
     if (!cod||!det) { toast('Código y detalle son obligatorios','err'); return; }

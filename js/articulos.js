@@ -109,6 +109,7 @@ function artDetail(idx){
   document.getElementById('art-dp-body').innerHTML = [
     ['Código',a.ART_COD],['Rubro',a.ART_RUB||'—'],['Sub-Rubro',a.ART_SRUB||'—'],
     ['Marca',a.ART_MARCA||'—'],['Proveedor',a.ART_PROV||'—'],
+    ['Centro de Costos',a.ART_CCOS||'—'],
     ['Precio','$'+fmt(a.ART_PRE)+' (IVA '+(a.ART_IVA!==null&&a.ART_IVA!==undefined?a.ART_IVA:21)+'%)'],
     ['Stock Hatsu',  sH===0?'—':sH],
     ['Stock Tressa', sT===0?'—':sT],
@@ -146,13 +147,15 @@ function aBaja(){
   });
 }
 
-function fillArtSelects(selMarc, selRub, selSrub, selProv, selMone='P') {
+function fillArtSelects(selMarc, selRub, selSrub, selProv, selMone='P', selCcos='') {
   const opts = (tab, sel) => '<option value="">— Sin —</option>' +
     (TABLAS[tab]||[]).map(r=>`<option value="${r.CODIGO}"${r.CODIGO===sel?' selected':''}>${r.CODIGO} — ${r.DETALLE}</option>`).join('');
   document.getElementById('af-marc').innerHTML = opts('MARC', selMarc);
   document.getElementById('af-rub').innerHTML  = opts('RUBR', selRub);
   document.getElementById('af-srub').innerHTML = opts('SRUB', selSrub);
   document.getElementById('af-prov').innerHTML = opts('PROV', selProv);
+  const ccosEl = document.getElementById('af-ccos');
+  if (ccosEl) ccosEl.innerHTML = opts('CCOS', selCcos);
   const moneEl = document.getElementById('af-moneda');
   if (moneEl) moneEl.innerHTML = (TABLAS['MONE']||[]).map(m=>`<option value="${m.CODIGO}"${m.CODIGO===selMone?' selected':''}>${m.STRING1} ${m.DETALLE}</option>`).join('');
 }
@@ -183,7 +186,7 @@ function fillArtForm(a){
   const actTog = document.getElementById('atog-act');
   if(actInp) actInp.value = actVal;
   if(actTog) actTog.classList.toggle('on', actVal==='S');
-  fillArtSelects(a.ART_MARCA, a.ART_RUB, a.ART_SRUB, a.ART_PROV, a.ART_MONEDA||'P');
+  fillArtSelects(a.ART_MARCA, a.ART_RUB, a.ART_SRUB, a.ART_PROV, a.ART_MONEDA||'P', a.ART_CCOS||'');
   const ivaEl=document.getElementById('af-iva');
   if(ivaEl) ivaEl.value=String(a.ART_IVA!==null&&a.ART_IVA!==undefined?a.ART_IVA:21);
 }
@@ -198,6 +201,7 @@ function saveArt(){
     ART_RUB:   document.getElementById('af-rub').value,
     ART_SRUB:  document.getElementById('af-srub')?.value||null,
     ART_MARCA: document.getElementById('af-marc').value,
+    ART_CCOS:  document.getElementById('af-ccos')?.value||null,
     ART_PRE:   parseFloat(document.getElementById('af-pre').value)||0,
     ART_STK:   parseInt(document.getElementById('af-stk').value)||0,
     ART_STKT:  parseInt(document.getElementById('af-stkt').value)||0,

@@ -105,6 +105,7 @@
         <button class="dd-item" id="ddi-art" onclick="showSubPage('art','art')">📋 Maestro de Artículos</button>
         <button class="dd-item" id="ddi-marc" onclick="showSubPage('art','marc')">🏷️ Tabla de Marcas</button>
         <button class="dd-item" id="ddi-rubr" onclick="showSubPage('art','rubr')">📦 Tabla de Rubros</button>
+        <button class="dd-item" id="ddi-ccos" onclick="showSubPage('art','ccos')">🏢 Centros de Costos</button>
         <button class="dd-item" id="ddi-prov" onclick="showSubPage('art','prov')">🏭 Tabla de Proveedores</button>
         <button class="dd-item" id="ddi-mone" onclick="showSubPage('art','mone')">💱 Monedas</button>
       </div>
@@ -295,6 +296,24 @@
   <div class="tbl-wrap">
     <div class="th-tab"><span>Código</span><span>Descripción</span><span>Grupo</span><span></span></div>
     <div class="tbl-body" id="rubr-body"></div>
+  </div>
+</div>
+
+<!-- ══════ CENTROS DE COSTOS ══════ -->
+<div class="page" id="page-ccos">
+  <div class="toolbar">
+    <button class="btn pri" id="btn-ccos-alta" onclick="tabAlta('CCOS')">＋ Alta</button>
+    <button class="btn" id="btn-ccos-modif" onclick="tabModif('CCOS')">✏️ Modificar</button>
+    <button class="btn dng" id="btn-ccos-baja" onclick="tabBaja('CCOS')">✕ Baja</button>
+    <div class="spacer"></div>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="ccos-q" placeholder="Buscar..." oninput="renderTabGral('CCOS')">
+      <button class="srch-clr" onclick="clrSrch('ccos-q',function(){renderTabGral('CCOS')})" title="Limpiar">✕</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <div class="th-tab"><span>Código</span><span>Descripción</span><span></span><span></span></div>
+    <div class="tbl-body" id="ccos-body"></div>
   </div>
 </div>
 
@@ -843,6 +862,7 @@
         <div class="fgrp"><label class="flbl2">Marca</label><select class="finp" id="af-marc"><option value="">— Sin marca —</option></select></div>
         <div class="fgrp"><label class="flbl2">Proveedor</label><select class="finp" id="af-prov"><option value="">— Sin proveedor —</option></select></div>
         <div class="fgrp"><label class="flbl2">Rubro</label><select class="finp" id="af-rub"><option value="">— Sin rubro —</option></select></div>
+        <div class="fgrp"><label class="flbl2">Centro de Costos</label><select class="finp" id="af-ccos"><option value="">— Sin —</option></select></div>
         <div class="fgrp"><label class="flbl2">Sub-Rubro</label><select class="finp" id="af-srub"><option value="">— Sin sub-rubro —</option></select></div>
         <div class="fgrp"><label class="flbl2">Grupo</label><input class="finp" id="af-grup" maxlength="5" style="text-transform:uppercase"></div>
         <div class="fgrp"><label class="flbl2">Sexo</label>

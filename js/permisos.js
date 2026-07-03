@@ -143,6 +143,7 @@ const MENU_DEF = [
     { id:'ddi-art',  mod:'art',  label:'📋 Maestro de Artículos' },
     { id:'ddi-marc', mod:'marc', label:'🏷️ Marcas',      tabla:true },
     { id:'ddi-rubr', mod:'rubr', label:'📦 Rubros',      tabla:true },
+    { id:'ddi-ccos', mod:'ccos', label:'🏢 Centros de Costos', tabla:true },
     { id:'ddi-prov', mod:'prov', label:'🏭 Proveedores', tabla:true },
     { id:'ddi-mone', mod:'mone', label:'💱 Monedas',     tabla:true },
   ]},

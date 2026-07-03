@@ -187,7 +187,8 @@ async function deleteCli(cod) {
 const TAB_MAP = {
   RUBR:'rubros', SRUB:'subrubros', MARC:'marcas', PROV:'proveedores',
   VEND:'vendedores', CPAG:'condpago', PCIA:'provincias',
-  GRUP:'grupos', CATE:'categorias', EXPR:'expresos', MONE:'monedas'
+  GRUP:'grupos', CATE:'categorias', EXPR:'expresos', MONE:'monedas',
+  CCOS:'centros_costos'
 };
 
 async function saveTabRow(row) {
