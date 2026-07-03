@@ -4,6 +4,8 @@
 
 let _permisos = [];
 
+let _nivelReal = null;  // nivel autoritativo leído del server (no falseable por consola)
+
 async function loadPermisos() {
   try {
     _permisos = await sbGet('permisos', 'order=modulo.asc,accion.asc');
@@ -11,14 +13,26 @@ async function loadPermisos() {
     console.warn('loadPermisos:', e);
     _permisos = [];
   }
+  // Nivel REAL del usuario (del token, vía server). puedeh() usa ESTE,
+  // no usuarioActual.nivel, que es editable por consola.
+  try {
+    const me = await apiGet('/me');
+    _nivelReal = (me && me.usuario) ? (me.usuario.nivel || 0) : null;
+  } catch(e) { _nivelReal = null; }
+}
+
+// Nivel efectivo: el real del server si está disponible; si no, el local (fallback).
+function nivelEfectivo() {
+  return (_nivelReal != null) ? _nivelReal : (usuarioActual?.nivel || 0);
 }
 
 function puedeh(modulo, accion) {
   if (!usuarioActual) return false;
-  if (usuarioActual.codigo === 'RGRDELTA') return true;
+  const nivel = nivelEfectivo();
+  if (nivel >= 99) return true;   // superusuario por NIVEL real (no por código, que es falseable)
   const p = _permisos.find(x => x.modulo === modulo && x.accion === accion);
   if (!p) return false;
-  return (usuarioActual.nivel || 0) >= (p.nivel_min || 99);
+  return nivel >= (p.nivel_min || 99);
 }
 
 function _setBtn(id, visible) {
@@ -95,7 +109,7 @@ function aplicarPermisos() {
 
   // ── Usuarios ──────────────────────────────────────────
   _setBtn('ddi-usua',       puedeh('usuarios','ver'));
-  _setBtn('btn-permisos',   usuarioActual.nivel >= 88 || usuarioActual.codigo === 'RGRDELTA');
+  _setBtn('btn-permisos',   nivelEfectivo() >= 88);
 
   // ── Menú: cada ítem visible según su permiso 'ver' (driven by MENU_DEF) ──
   // Cada ítem del menú tiene su módulo propio. Para agregar uno nuevo,
@@ -185,7 +199,7 @@ const ACCIONES_PERM = [
 ];
 
 function openPermisos() {
-  if (!usuarioActual || (usuarioActual.nivel < 88 && usuarioActual.codigo !== 'RGRDELTA')) {
+  if (!usuarioActual || nivelEfectivo() < 88) {
     toast('Sin acceso','err'); return;
   }
   const ov = document.getElementById('ov-permisos');
