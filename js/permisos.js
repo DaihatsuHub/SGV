@@ -41,20 +41,12 @@ function aplicarPermisos() {
   _setBtn('btn-cli-baja',   puedeh('cli','baja'));
   _setBtn('btn-cfg-cli',    puedeh('cli','columnas'));
 
-  // ── Tablas (página unificada) ──────────────────────────
-  _setBtn('btn-tab-alta',   puedeh('tablas','alta'));
-  _setBtn('btn-tab-modif',  puedeh('tablas','modif'));
-  _setBtn('btn-tab-baja',   puedeh('tablas','baja'));
-
-  // ── Tablas auxiliares individuales ────────────────────
-  const pTab = puedeh('tablas','alta');
-  const pTabM = puedeh('tablas','modif');
-  const pTabB = puedeh('tablas','baja');
-  ['marc','rubr','prov','cpag','vend','cate','grup','mone'].forEach(t => {
-    _setBtn(`btn-${t}-alta`,  pTab);
-    _setBtn(`btn-${t}-modif`, pTabM);
-    _setBtn(`btn-${t}-baja`,  pTabB);
-  });
+  // ── Página genérica "Tablas": visible si hay permiso en alguna tabla auxiliar ──
+  const _auxMods = ['marc','rubr','prov','cpag','vend','cate','grup','mone'];
+  _setBtn('btn-tab-alta',  _auxMods.some(t=>puedeh(t,'alta')));
+  _setBtn('btn-tab-modif', _auxMods.some(t=>puedeh(t,'modif')));
+  _setBtn('btn-tab-baja',  _auxMods.some(t=>puedeh(t,'baja')));
+  // (Los botones btn-<tabla>-alta/modif/baja de cada tabla se setean en el loop de MENU_DEF, más abajo.)
 
   // ── Facturación ───────────────────────────────────────
   _setBtn('btn-fac-alta',   puedeh('fac','alta'));
@@ -105,61 +97,73 @@ function aplicarPermisos() {
   _setBtn('ddi-usua',       puedeh('usuarios','ver'));
   _setBtn('btn-permisos',   usuarioActual.nivel >= 88 || usuarioActual.codigo === 'RGRDELTA');
 
-  // ── Menús completos (grupos) ──────────────────────────
-  _setBtn('tnav-art', puedeh('art','ver') || puedeh('tablas','ver'));
-  _setBtn('tnav-cli', puedeh('cli','ver') || puedeh('tablas','ver'));
-  _setBtn('tnav-cmp', puedeh('desp','ver') || puedeh('oc','ver'));
-  _setBtn('tnav-ven', puedeh('fac','ver') || puedeh('ctip','ver'));
-  _setBtn('tnav-cob', puedeh('reci','ver') || puedeh('talo','ver') || puedeh('rete','ver') || puedeh('cart','ver'));
-
-  // ── Subitems Artículos ────────────────────────────────
-  _setBtn('ddi-art',  puedeh('art','ver'));
-  _setBtn('ddi-marc', puedeh('tablas','ver'));
-  _setBtn('ddi-rubr', puedeh('tablas','ver'));
-  _setBtn('ddi-prov', puedeh('tablas','ver'));
-  _setBtn('ddi-mone', puedeh('tablas','ver'));
-
-  // ── Subitems Clientes ─────────────────────────────────
-  _setBtn('ddi-cli',   puedeh('cli','ver'));
-  _setBtn('ddi-ficha', puedeh('cli','ver'));
-  _setBtn('ddi-cpag',  puedeh('tablas','ver'));
-  _setBtn('ddi-vend',  puedeh('tablas','ver'));
-  _setBtn('ddi-cate',  puedeh('tablas','ver'));
-  _setBtn('ddi-grup',  puedeh('tablas','ver'));
-
-  // ── Subitems Compras ──────────────────────────────────
-  _setBtn('ddi-oc',   puedeh('oc','ver'));
-  _setBtn('ddi-desp', puedeh('desp','ver'));
-
-  // ── Subitems Ventas ───────────────────────────────────
-  _setBtn('ddi-fac',     puedeh('fac','ver'));
-  _setBtn('ddi-vmes',    puedeh('fac','ver'));
-  _setBtn('ddi-histart', puedeh('fac','ver'));
-  _setBtn('ddi-saldo',   puedeh('fac','ver'));
-  _setBtn('ddi-ctip',    puedeh('ctip','ver'));
-
-  // ── Subitems Cobranzas ────────────────────────────────
-  _setBtn('ddi-reci', puedeh('reci','ver'));
-  _setBtn('ddi-talo', puedeh('talo','ver'));
-  _setBtn('ddi-rete', puedeh('rete','ver'));
-  _setBtn('ddi-cart', puedeh('cart','ver'));
+  // ── Menú: cada ítem visible según su permiso 'ver' (driven by MENU_DEF) ──
+  // Cada ítem del menú tiene su módulo propio. Para agregar uno nuevo,
+  // sumalo a MENU_DEF (más abajo) y queda contemplado acá y en el panel.
+  MENU_DEF.forEach(g => {
+    let algunoVisible = false;
+    g.items.forEach(it => {
+      const ve = puedeh(it.mod, 'ver');
+      _setBtn(it.id, ve);
+      if (ve) algunoVisible = true;
+      if (it.tabla) {   // botones alta/modif/baja de la tabla → su propio módulo
+        _setBtn(`btn-${it.mod}-alta`,  puedeh(it.mod,'alta'));
+        _setBtn(`btn-${it.mod}-modif`, puedeh(it.mod,'modif'));
+        _setBtn(`btn-${it.mod}-baja`,  puedeh(it.mod,'baja'));
+      }
+    });
+    if (g.tnav) _setBtn(g.tnav, algunoVisible);  // el grupo se ve si algún ítem adentro es visible
+  });
 }
 
 // ── Panel interactivo de permisos ─────────────────────────
-const MODULOS_PERM = [
-  { key:'art',      label:'📦 Artículos' },
-  { key:'cli',      label:'👥 Clientes' },
-  { key:'oc',       label:'🛒 Ordenes de Compra' },
-  { key:'desp',     label:'🚢 Despachos' },
-  { key:'fac',      label:'🧾 Facturación' },
-  { key:'ctip',     label:'📋 Tipos de Comprobantes' },
-  { key:'reci',     label:'🧾 Recibos' },
-  { key:'talo',     label:'📓 Talonarios' },
-  { key:'rete',     label:'🧮 Tipo de Retenciones' },
-  { key:'cart',     label:'💼 Cartera de Valores' },
-  { key:'tablas',   label:'📋 Tablas Auxiliares' },
-  { key:'usuarios', label:'🔑 Usuarios' },
+// ═══════════════════════════════════════════════════════════
+//  MENU_DEF — fuente ÚNICA del menú y los permisos (1 por ítem).
+//  Para agregar un ítem nuevo al menú: sumalo acá con su id (ddi-*)
+//  y su módulo. Queda contemplado en el menú Y en el panel de permisos,
+//  en este mismo orden. Sin tocar nada más.
+//    tabla:true → además controla los botones btn-<mod>-alta/modif/baja.
+// ═══════════════════════════════════════════════════════════
+const MENU_DEF = [
+  { grupo:'📦 Artículos', tnav:'tnav-art', items:[
+    { id:'ddi-art',  mod:'art',  label:'📋 Maestro de Artículos' },
+    { id:'ddi-marc', mod:'marc', label:'🏷️ Marcas',      tabla:true },
+    { id:'ddi-rubr', mod:'rubr', label:'📦 Rubros',      tabla:true },
+    { id:'ddi-prov', mod:'prov', label:'🏭 Proveedores', tabla:true },
+    { id:'ddi-mone', mod:'mone', label:'💱 Monedas',     tabla:true },
+  ]},
+  { grupo:'👥 Clientes', tnav:'tnav-cli', items:[
+    { id:'ddi-cli',   mod:'cli',   label:'📋 Maestro de Clientes' },
+    { id:'ddi-ficha', mod:'ficha', label:'🪪 Ficha del Cliente' },
+    { id:'ddi-cpag',  mod:'cpag',  label:'💳 Condiciones de Pago', tabla:true },
+    { id:'ddi-vend',  mod:'vend',  label:'👤 Vendedores',          tabla:true },
+    { id:'ddi-cate',  mod:'cate',  label:'🏷️ Categorías',          tabla:true },
+    { id:'ddi-grup',  mod:'grup',  label:'📂 Grupos',              tabla:true },
+  ]},
+  { grupo:'🛒 Compras', tnav:'tnav-cmp', items:[
+    { id:'ddi-oc',   mod:'oc',   label:'📋 Ordenes de Compra' },
+    { id:'ddi-desp', mod:'desp', label:'🚢 Despachos' },
+  ]},
+  { grupo:'🧾 Ventas', tnav:'tnav-ven', items:[
+    { id:'ddi-fac',     mod:'fac',     label:'📄 Facturación' },
+    { id:'ddi-vmes',    mod:'vmes',    label:'📅 Ventas mensuales x Artículo' },
+    { id:'ddi-histart', mod:'histart', label:'📈 Historia por Artículo' },
+    { id:'ddi-saldo',   mod:'saldo',   label:'📊 Saldos por Mes' },
+    { id:'ddi-ctip',    mod:'ctip',    label:'📋 Tipos de Comprobantes' },
+  ]},
+  { grupo:'💼 Cobranzas', tnav:'tnav-cob', items:[
+    { id:'ddi-reci', mod:'reci', label:'🧾 Recibos' },
+    { id:'ddi-talo', mod:'talo', label:'📓 Talonarios' },
+    { id:'ddi-rete', mod:'rete', label:'🧮 Tipo de Retenciones' },
+    { id:'ddi-cart', mod:'cart', label:'💼 Cartera de Valores' },
+  ]},
+  { grupo:'🔑 Sistema', tnav:null, items:[
+    { id:'ddi-usua', mod:'usuarios', label:'🔑 Usuarios' },
+  ]},
 ];
+
+// Módulos del panel de permisos, DERIVADOS del menú (mismo orden).
+const MODULOS_PERM = MENU_DEF.flatMap(g => g.items.map(it => ({ key:it.mod, label:it.label })));
 const ACCIONES_PERM = [
   { key:'ver',      label:'Ver' },
   { key:'alta',     label:'Alta' },
