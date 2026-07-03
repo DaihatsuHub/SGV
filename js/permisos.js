@@ -258,7 +258,11 @@ function renderPermisosPanel() {
   `;
 }
 
+let _savingPerm = false;   // evita doble click mientras guarda
+
 async function savePermisos() {
+  if (_savingPerm) return;   // ya está guardando: ignorar clicks repetidos
+
   const inputs = document.querySelectorAll('#permisos-body input[data-modulo]');
   const updates = [];
   inputs.forEach(inp => {
@@ -272,14 +276,40 @@ async function savePermisos() {
 
   if (!updates.length) { toast('No hay datos para guardar','err'); return; }
 
+  // ── Bloquear el botón y mostrar contador de segundos ──
+  _savingPerm = true;
+  const btn = document.getElementById('btn-save-perm');
+  const txtOrig = btn ? btn.textContent : '';
+  let seg = 0;
+  let timer = null;
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = '0.7';
+    btn.style.cursor = 'wait';
+    btn.textContent = '⏳ Guardando… 0s';
+    timer = setInterval(() => { seg++; btn.textContent = '⏳ Guardando… ' + seg + 's'; }, 1000);
+  }
+  const restaurar = () => {
+    if (timer) clearInterval(timer);
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = '';
+      btn.style.cursor = '';
+      btn.textContent = txtOrig || '💾 Guardar Permisos';
+    }
+    _savingPerm = false;
+  };
+
   try {
     const res = await apiPost('/permisos', { updates });
     if (res.permisos) _permisos = res.permisos;   // refrescar con lo que devolvió el server
+    restaurar();
     document.getElementById('ov-permisos').classList.remove('open');
     toast('Permisos guardados', 'scs');
     aplicarPermisos();
   } catch(e) {
     console.error('savePermisos:', e);
+    restaurar();
     toast('Error al guardar permisos: '+e.message, 'err');
   }
 }
