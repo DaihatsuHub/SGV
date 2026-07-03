@@ -33,31 +33,32 @@ function cerrarResumen(){
 }
 
 // ── Armar el árbol agrupado ───────────────────────────────
-// Devuelve: [{ key, ccos, totU, totT, rubros:[{ key, rubro, totU, totT, marcas:[{ key, marca, totU, totT, arts:[fila] }] }] }]
+// Jerarquía: Centro de Costos → Marca → Rubro → (artículos)
+// Devuelve: [{ key, ccos, totU, totT, marcas:[{ key, marca, totU, totT, rubros:[{ key, rubro, totU, totT, arts:[fila] }] }] }]
 function _resBuildTree(rows){
   const byC = {};
   for(const f of rows){
     const c = f.ccos||'(sin centro)';
-    const ru= f.rubro||'(sin rubro)';
     const ma= f.marca||'(sin marca)';
-    byC[c] = byC[c] || { key:'c|'+c, ccos:c, totU:0, totT:0, _r:{} };
+    const ru= f.rubro||'(sin rubro)';
+    byC[c] = byC[c] || { key:'c|'+c, ccos:c, totU:0, totT:0, _m:{} };
     const nc = byC[c];
-    nc._r[ru] = nc._r[ru] || { key:'c|'+c+'|r|'+ru, rubro:ru, totU:0, totT:0, _m:{} };
-    const nr = nc._r[ru];
-    nr._m[ma] = nr._m[ma] || { key:'c|'+c+'|r|'+ru+'|m|'+ma, marca:ma, totU:0, totT:0, arts:[] };
-    const nm = nr._m[ma];
-    nm.arts.push(f);
-    nm.totU += f.unid||0;  nm.totT += f.total||0;
+    nc._m[ma] = nc._m[ma] || { key:'c|'+c+'|m|'+ma, marca:ma, totU:0, totT:0, _r:{} };
+    const nm = nc._m[ma];
+    nm._r[ru] = nm._r[ru] || { key:'c|'+c+'|m|'+ma+'|r|'+ru, rubro:ru, totU:0, totT:0, arts:[] };
+    const nr = nm._r[ru];
+    nr.arts.push(f);
     nr.totU += f.unid||0;  nr.totT += f.total||0;
+    nm.totU += f.unid||0;  nm.totT += f.total||0;
     nc.totU += f.unid||0;  nc.totT += f.total||0;
   }
   // ordenar y aplanar los diccionarios a arrays
   const cs = Object.values(byC).sort((a,b)=>a.ccos.localeCompare(b.ccos));
   for(const c of cs){
-    c.rubros = Object.values(c._r).sort((a,b)=>a.rubro.localeCompare(b.rubro));
-    for(const r of c.rubros){
-      r.marcas = Object.values(r._m).sort((a,b)=>a.marca.localeCompare(b.marca));
-      for(const m of r.marcas) m.arts.sort((a,b)=>(a.art||'').localeCompare(b.art||''));
+    c.marcas = Object.values(c._m).sort((a,b)=>a.marca.localeCompare(b.marca));
+    for(const m of c.marcas){
+      m.rubros = Object.values(m._r).sort((a,b)=>a.rubro.localeCompare(b.rubro));
+      for(const r of m.rubros) r.arts.sort((a,b)=>(a.art||'').localeCompare(b.art||''));
     }
   }
   return cs;
@@ -88,18 +89,18 @@ function renderResumen(){
     <span>C.Costo</span><span>Marca</span><span>Rubro</span><span>SubR</span><span>Artículo</span><span>Descripción</span><span style="text-align:right">Unid</span><span style="text-align:right">Costo</span><span style="text-align:right">Total</span></div>`;
 
   for(const c of tree){
-    const cOpen = _resOpen[c.key] !== false;   // por defecto abierto en nivel 1
+    const cOpen = _resOpen[c.key] !== false;   // nivel 1 (C.Costo): abierto por defecto
     html += row(0, [`<b>${c.ccos}</b>`,'','','','','', `<b>${_resFmtN(c.totU)}</b>`, '', `<b>${_resFmtN2(c.totT)}</b>`], 'res-c', c.key, true, cOpen);
     if(!cOpen) continue;
-    for(const r of c.rubros){
-      const rOpen = _resOpen[r.key] !== false;
-      html += row(1, ['', '', `<b>${r.rubro}</b>`,'','','', _resFmtN(r.totU), '', _resFmtN2(r.totT)], 'res-r', r.key, true, rOpen);
-      if(!rOpen) continue;
-      for(const m of r.marcas){
-        const mOpen = _resOpen[m.key] === true;   // marcas cerradas por defecto (detalle oculto)
-        html += row(2, ['', m.marca, '','','','', _resFmtN(m.totU), '', _resFmtN2(m.totT)], 'res-m', m.key, true, mOpen);
-        if(!mOpen) continue;
-        for(const a of m.arts){
+    for(const m of c.marcas){
+      const mOpen = _resOpen[m.key] !== false;   // nivel 2 (Marca): abierto por defecto
+      html += row(1, ['', `<b>${m.marca}</b>`, '','','','', _resFmtN(m.totU), '', _resFmtN2(m.totT)], 'res-m', m.key, true, mOpen);
+      if(!mOpen) continue;
+      for(const r of m.rubros){
+        const rOpen = _resOpen[r.key] === true;   // nivel 3 (Rubro): cerrado por defecto (detalle oculto)
+        html += row(2, ['', '', r.rubro, '','','', _resFmtN(r.totU), '', _resFmtN2(r.totT)], 'res-r', r.key, true, rOpen);
+        if(!rOpen) continue;
+        for(const a of r.arts){
           html += row(3, ['', a.marca, a.rubro, a.srub, a.art, a.des, _resFmtN(a.unid), _resFmtN2(a.costo), _resFmtN2(a.total)], 'res-det', a.art, false, false);
         }
       }
@@ -114,9 +115,9 @@ function renderResumen(){
 }
 
 function toggleResNode(key){
-  // default abierto para c y r; cerrado para marcas. Invertir respetando el default.
-  const isMarca = key.includes('|m|');
-  const cur = isMarca ? (_resOpen[key]===true) : (_resOpen[key]!==false);
+  // default: C.Costo y Marca abiertos; Rubro (nivel más profundo, con '|r|') cerrado.
+  const isRubro = key.includes('|r|');
+  const cur = isRubro ? (_resOpen[key]===true) : (_resOpen[key]!==false);
   _resOpen[key] = !cur;
   renderResumen();
 }
@@ -124,15 +125,15 @@ function toggleResNode(key){
 function resExpandirTodo(){
   const tree = _resBuildTree(_resRows||[]);
   for(const c of tree){ _resOpen[c.key]=true;
-    for(const r of c.rubros){ _resOpen[r.key]=true;
-      for(const m of r.marcas){ _resOpen[m.key]=true; } } }
+    for(const m of c.marcas){ _resOpen[m.key]=true;
+      for(const r of m.rubros){ _resOpen[r.key]=true; } } }
   renderResumen();
 }
 function resContraerTodo(){
   const tree = _resBuildTree(_resRows||[]);
   for(const c of tree){ _resOpen[c.key]=false;
-    for(const r of c.rubros){ _resOpen[r.key]=false;
-      for(const m of r.marcas){ _resOpen[m.key]=false; } } }
+    for(const m of c.marcas){ _resOpen[m.key]=false;
+      for(const r of m.rubros){ _resOpen[r.key]=false; } } }
   renderResumen();
 }
 
@@ -145,11 +146,11 @@ function imprimirResumen(){
   let rows = '';
   for(const c of tree){
     rows += `<tr class="c"><td colspan="6"><b>${c.ccos}</b></td><td class="n"><b>${_resFmtN(c.totU)}</b></td><td></td><td class="n"><b>${_resFmtN2(c.totT)}</b></td></tr>`;
-    for(const r of c.rubros){
-      rows += `<tr class="r"><td></td><td></td><td colspan="4"><b>${r.rubro}</b></td><td class="n">${_resFmtN(r.totU)}</td><td></td><td class="n">${_resFmtN2(r.totT)}</td></tr>`;
-      for(const m of r.marcas){
-        rows += `<tr class="m"><td></td><td colspan="5"><b>${m.marca}</b></td><td class="n">${_resFmtN(m.totU)}</td><td></td><td class="n">${_resFmtN2(m.totT)}</td></tr>`;
-        for(const a of m.arts){
+    for(const m of c.marcas){
+      rows += `<tr class="m"><td></td><td colspan="5"><b>${m.marca}</b></td><td class="n"><b>${_resFmtN(m.totU)}</b></td><td></td><td class="n"><b>${_resFmtN2(m.totT)}</b></td></tr>`;
+      for(const r of m.rubros){
+        rows += `<tr class="r"><td></td><td></td><td colspan="4"><b>${r.rubro}</b></td><td class="n">${_resFmtN(r.totU)}</td><td></td><td class="n">${_resFmtN2(r.totT)}</td></tr>`;
+        for(const a of r.arts){
           rows += `<tr><td></td><td>${a.marca}</td><td>${a.rubro}</td><td>${a.srub||''}</td><td>${a.art}</td><td>${a.des||''}</td><td class="n">${_resFmtN(a.unid)}</td><td class="n">${_resFmtN2(a.costo)}</td><td class="n">${_resFmtN2(a.total)}</td></tr>`;
         }
       }
@@ -231,15 +232,15 @@ async function excelResumen(){
     cr.font = { bold:true };
     cr.eachCell(cell=>{ cell.border = { top:{style:'medium'} }; });
     setNums(cr);
-    for(const r of c.rubros){
-      const rr = ws.addRow(['', '', r.rubro,'','','', r.totU, null, r.totT]);
-      rr.font = { bold:true, color:{argb:'FF444444'} };
-      setNums(rr);
-      for(const m of r.marcas){
-        const mr = ws.addRow(['', m.marca, '','','','', m.totU, null, m.totT]);
-        mr.font = { italic:true };
-        setNums(mr);
-        for(const a of m.arts){
+    for(const m of c.marcas){
+      const mr = ws.addRow(['', m.marca, '','','','', m.totU, null, m.totT]);
+      mr.font = { bold:true, color:{argb:'FF444444'} };
+      setNums(mr);
+      for(const r of m.rubros){
+        const rr = ws.addRow(['', '', r.rubro,'','','', r.totU, null, r.totT]);
+        rr.font = { italic:true };
+        setNums(rr);
+        for(const a of r.arts){
           const ar = ws.addRow(['', a.marca, a.rubro, a.srub||'', a.art, a.des||'', a.unid, a.costo, a.total]);
           setNums(ar);
         }
