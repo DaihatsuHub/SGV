@@ -2,11 +2,20 @@
 // NAVEGACIÓN
 // ═══════════════════════════════════════════════════════════
 
+function _setPageTitle(sub){
+  const tb = document.getElementById('page-titlebar');
+  if(!tb) return;
+  const t = (typeof tituloDeSub==='function') ? tituloDeSub(sub) : '';
+  if(t){ tb.textContent = t; tb.style.display=''; }
+  else { tb.style.display='none'; }
+}
+
 function showPage(pg, el){
   if (typeof accesoSubPermitido==='function' && !accesoSubPermitido(pg)) {
     if (typeof toast==='function') toast('🔒 Sin acceso a esta pantalla','err');
     return;
   }
+  _setPageTitle(pg);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tnav').forEach(t=>t.classList.remove('active'));
   const pageEl = document.getElementById('page-'+pg);
@@ -21,6 +30,7 @@ function showSubPage(menu, sub) {
     if (typeof toast==='function') toast('🔒 Sin acceso a esta pantalla','err');
     return;
   }
+  _setPageTitle(sub);
   document.querySelectorAll('.dd-menu').forEach(m=>m.classList.remove('open'));
   document.querySelectorAll('.dd-arrow').forEach(a=>a.classList.remove('open'));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));

@@ -182,7 +182,15 @@ const MODULOS_PERM = MENU_DEF.flatMap(g => g.items.map(it => ({ key:it.mod, labe
 
 // Mapa pantalla→módulo (derivado de MENU_DEF: id 'ddi-<sub>' → mod).
 const SUB_MODULO = {};
-MENU_DEF.forEach(g => g.items.forEach(it => { SUB_MODULO[it.id.replace(/^ddi-/, '')] = it.mod; }));
+const SUB_LABEL  = {};
+MENU_DEF.forEach(g => g.items.forEach(it => {
+  const sub = it.id.replace(/^ddi-/, '');
+  SUB_MODULO[sub] = it.mod;
+  SUB_LABEL[sub]  = it.label;
+}));
+
+// Título de una pantalla (para la barra de título). '' si no está en el menú.
+function tituloDeSub(sub){ return SUB_LABEL[sub] || ''; }
 
 // ¿El usuario puede VER esta pantalla? Lo usa la navegación (nav.js) para no
 // abrir una pantalla sin permiso, aunque se fuerce el menú. (Sin módulo → permitida.)
