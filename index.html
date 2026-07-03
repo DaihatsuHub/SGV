@@ -177,6 +177,7 @@
     <button class="btn" id="btn-art-modif" onclick="aModif()">✏️ Modificar</button>
     <button class="btn dng" id="btn-art-baja" onclick="aBaja()">✕ Baja</button>
     <button class="btn scs" onclick="printArt()">🖨 Imprimir</button>
+    <button class="btn scs" onclick="abrirResumen()">📊 Resumen</button>
     <button class="btn" id="btn-cfg-art" style="display:none" onclick="openColCfg('art')" title="Configurar columnas">⚙️ Columnas</button>
     <button class="chip" id="af-stock" onclick="togArtStock()" style="margin-left:4px">📦 Con Stock</button>
     <div class="spacer"></div>
@@ -1443,6 +1444,24 @@
 <!-- ══════════════════════════════════════════════════════ -->
 <!-- JAVASCRIPT                                            -->
 <!-- ══════════════════════════════════════════════════════ -->
+<!-- ══════ OVERLAY: RESUMEN DE STOCK VALORIZADO ══════ -->
+<div class="ov" id="ov-resumen">
+  <div class="modal" style="width:96vw;max-width:1240px;height:92vh;display:flex;flex-direction:column">
+    <div class="mhd">
+      <div class="mtit"><span>📊 Resumen de Stock Valorizado</span></div>
+      <button class="mcls" onclick="cerrarResumen()">✕</button>
+    </div>
+    <div class="toolbar" style="padding:8px 12px;gap:6px;border-bottom:1px solid var(--b1);flex-wrap:wrap">
+      <button class="btn" onclick="resExpandirTodo()">➕ Expandir todo</button>
+      <button class="btn" onclick="resContraerTodo()">➖ Contraer todo</button>
+      <div class="spacer"></div>
+      <button class="btn scs" onclick="imprimirResumen()">🖨 Imprimir</button>
+      <button class="btn scs" onclick="excelResumen()">📥 Excel</button>
+    </div>
+    <div class="mbdy" id="res-body" style="flex:1;overflow:auto;padding:0"></div>
+  </div>
+</div>
+
 <script src="js/supabase-client.js"></script>
 <script src="js/api.js"></script>
 <script>
@@ -1472,6 +1491,7 @@
 <script src="js/fichacli.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/vmes.js"></script>
+<script src="js/resumen.js"></script>
 
 <script>
 // Restaurar panel de factura al volver al módulo
