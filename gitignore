@@ -1,0 +1,43 @@
+# ════════════════════════════════════════════════════
+#  .gitignore del FRONT (daihatsuhub.github.io / SGV)
+#  Bloquea secretos, archivos del server y basura.
+# ════════════════════════════════════════════════════
+
+# ── Secretos: NUNCA subir ──
+.env
+.env.*
+*.b64
+CERTIFICADO
+CERTIFICADO*/
+test-afip.ps1
+*.pfx
+*.key
+*.pem
+
+# ── Cosas del SERVER (viven en el repo sgv-server, no acá) ──
+server.js
+crear-auth.js
+reset-pass.js
+hash-passwords.js
+package.json
+package-lock.json
+node_modules/
+supabase/
+
+# ── Editor / Sistema ──
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ── Versiones viejas / backups ──
+OLD/
+**/OLD/
+*.bak
+*.old
+*.tmp
+
+# ── Basura suelta creada por error en la consola ──
+texto.txt
+TEXTO.txt
+**/TEXTO.txt
+x.modulo
