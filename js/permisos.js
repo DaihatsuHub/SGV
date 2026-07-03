@@ -105,20 +105,38 @@ function aplicarPermisos() {
   _setBtn('ddi-usua',       puedeh('usuarios','ver'));
   _setBtn('btn-permisos',   usuarioActual.nivel >= 88 || usuarioActual.codigo === 'RGRDELTA');
 
-  // ── Menús completos ───────────────────────────────────
-  _setBtn('tnav-art', puedeh('art','ver'));
-  _setBtn('tnav-cli', puedeh('cli','ver'));
-  _setBtn('ddi-ficha', puedeh('cli','ver'));
+  // ── Menús completos (grupos) ──────────────────────────
+  _setBtn('tnav-art', puedeh('art','ver') || puedeh('tablas','ver'));
+  _setBtn('tnav-cli', puedeh('cli','ver') || puedeh('tablas','ver'));
   _setBtn('tnav-cmp', puedeh('desp','ver') || puedeh('oc','ver'));
   _setBtn('tnav-ven', puedeh('fac','ver') || puedeh('ctip','ver'));
   _setBtn('tnav-cob', puedeh('reci','ver') || puedeh('talo','ver') || puedeh('rete','ver') || puedeh('cart','ver'));
 
-  // ── Subitems Ventas ───────────────────────────────────
-  _setBtn('ddi-fac',  puedeh('fac','ver'));
-  _setBtn('ddi-vmes', puedeh('fac','ver'));
-  _setBtn('ddi-ctip', puedeh('ctip','ver'));
-  _setBtn('ddi-desp', puedeh('desp','ver'));
+  // ── Subitems Artículos ────────────────────────────────
+  _setBtn('ddi-art',  puedeh('art','ver'));
+  _setBtn('ddi-marc', puedeh('tablas','ver'));
+  _setBtn('ddi-rubr', puedeh('tablas','ver'));
+  _setBtn('ddi-prov', puedeh('tablas','ver'));
+  _setBtn('ddi-mone', puedeh('tablas','ver'));
+
+  // ── Subitems Clientes ─────────────────────────────────
+  _setBtn('ddi-cli',   puedeh('cli','ver'));
+  _setBtn('ddi-ficha', puedeh('cli','ver'));
+  _setBtn('ddi-cpag',  puedeh('tablas','ver'));
+  _setBtn('ddi-vend',  puedeh('tablas','ver'));
+  _setBtn('ddi-cate',  puedeh('tablas','ver'));
+  _setBtn('ddi-grup',  puedeh('tablas','ver'));
+
+  // ── Subitems Compras ──────────────────────────────────
   _setBtn('ddi-oc',   puedeh('oc','ver'));
+  _setBtn('ddi-desp', puedeh('desp','ver'));
+
+  // ── Subitems Ventas ───────────────────────────────────
+  _setBtn('ddi-fac',     puedeh('fac','ver'));
+  _setBtn('ddi-vmes',    puedeh('fac','ver'));
+  _setBtn('ddi-histart', puedeh('fac','ver'));
+  _setBtn('ddi-saldo',   puedeh('fac','ver'));
+  _setBtn('ddi-ctip',    puedeh('ctip','ver'));
 
   // ── Subitems Cobranzas ────────────────────────────────
   _setBtn('ddi-reci', puedeh('reci','ver'));
