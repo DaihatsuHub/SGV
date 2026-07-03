@@ -11,6 +11,21 @@ const _resOpen = {};         // estado de colapso por clave de nodo (true = abie
 function _resFmtN(n)  { return (Math.round(n)||0).toLocaleString('es-AR'); }
 function _resFmtN2(n) { return (Math.round((n||0)*100)/100).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
+// ── Traductor código→descripción (usa las tablas ya cargadas en el front) ──
+const _resMap = { CCOS:{}, MARC:{}, RUBR:{} };
+function _resBuildMaps(){
+  ['CCOS','MARC','RUBR'].forEach(k=>{
+    const m = {};
+    ((typeof TABLAS!=='undefined' && TABLAS[k]) || []).forEach(x=>{ m[x.CODIGO] = x.DETALLE || x.CODIGO; });
+    _resMap[k] = m;
+  });
+}
+// Devuelve la descripción; si no la encuentra, muestra el código tal cual.
+function _resLbl(kind, code){
+  if(code==null || code==='') return code||'';
+  return (_resMap[kind] && _resMap[kind][code]) ? _resMap[kind][code] : code;
+}
+
 // ── Abrir el reporte ──────────────────────────────────────
 async function abrirResumen(){
   const ov = document.getElementById('ov-resumen');
@@ -70,6 +85,7 @@ function _resBuildTree(rows){
 function renderResumen(){
   const body = document.getElementById('res-body');
   if(!body) return;
+  _resBuildMaps();
   if(!_resRows || !_resRows.length){
     body.innerHTML = '<div class="empty" style="margin-top:40px">Sin artículos con stock.</div>';
     return;
@@ -92,18 +108,18 @@ function renderResumen(){
 
   for(const c of tree){
     const cOpen = _resOpen[c.key] === true;   // todo arranca contraído
-    html += row(0, [`<b>${c.ccos}</b>`,'','','','','', `<b>${_resFmtN(c.totU)}</b>`, '', `<b>${_resFmtN2(c.totT)}</b>`], 'res-c', c.key, true, cOpen);
+    html += row(0, [`<b>${_resLbl('CCOS',c.ccos)}</b>`,'','','','','', `<b>${_resFmtN(c.totU)}</b>`, '', `<b>${_resFmtN2(c.totT)}</b>`], 'res-c', c.key, true, cOpen);
     if(!cOpen) continue;
     for(const m of c.marcas){
       const mOpen = _resOpen[m.key] === true;
-      html += row(1, ['', `<b>${m.marca}</b>`, '','','','', _resFmtN(m.totU), '', _resFmtN2(m.totT)], 'res-m', m.key, true, mOpen);
+      html += row(1, ['', `<b>${_resLbl('MARC',m.marca)}</b>`, '','','','', _resFmtN(m.totU), '', _resFmtN2(m.totT)], 'res-m', m.key, true, mOpen);
       if(!mOpen) continue;
       for(const r of m.rubros){
         const rOpen = _resOpen[r.key] === true;
-        html += row(2, ['', '', r.rubro, '','','', _resFmtN(r.totU), '', _resFmtN2(r.totT)], 'res-r', r.key, true, rOpen);
+        html += row(2, ['', '', _resLbl('RUBR',r.rubro), '','','', _resFmtN(r.totU), '', _resFmtN2(r.totT)], 'res-r', r.key, true, rOpen);
         if(!rOpen) continue;
         for(const a of r.arts){
-          html += row(3, ['', a.marca, a.rubro, a.srub, a.art, a.des, _resFmtN(a.unid), _resFmtN2(a.costo), _resFmtN2(a.total)], 'res-det', a.art, false, false);
+          html += row(3, ['', _resLbl('MARC',a.marca), _resLbl('RUBR',a.rubro), a.srub, a.art, a.des, _resFmtN(a.unid), _resFmtN2(a.costo), _resFmtN2(a.total)], 'res-det', a.art, false, false);
         }
       }
     }
@@ -140,18 +156,19 @@ function resContraerTodo(){
 // ── Impresión ─────────────────────────────────────────────
 function imprimirResumen(){
   if(!_resRows || !_resRows.length){ toast('Nada para imprimir','err'); return; }
+  _resBuildMaps();
   const tree = _resBuildTree(_resRows);
   let gU=0, gT=0; tree.forEach(c=>{ gU+=c.totU; gT+=c.totT; });
   const fecha = new Date().toLocaleDateString('es-AR');
   let rows = '';
   for(const c of tree){
-    rows += `<tr class="c"><td colspan="6"><b>${c.ccos}</b></td><td class="n"><b>${_resFmtN(c.totU)}</b></td><td></td><td class="n"><b>${_resFmtN2(c.totT)}</b></td></tr>`;
+    rows += `<tr class="c"><td colspan="6"><b>${_resLbl('CCOS',c.ccos)}</b></td><td class="n"><b>${_resFmtN(c.totU)}</b></td><td></td><td class="n"><b>${_resFmtN2(c.totT)}</b></td></tr>`;
     for(const m of c.marcas){
-      rows += `<tr class="m"><td></td><td colspan="5"><b>${m.marca}</b></td><td class="n"><b>${_resFmtN(m.totU)}</b></td><td></td><td class="n"><b>${_resFmtN2(m.totT)}</b></td></tr>`;
+      rows += `<tr class="m"><td></td><td colspan="5"><b>${_resLbl('MARC',m.marca)}</b></td><td class="n"><b>${_resFmtN(m.totU)}</b></td><td></td><td class="n"><b>${_resFmtN2(m.totT)}</b></td></tr>`;
       for(const r of m.rubros){
-        rows += `<tr class="r"><td></td><td></td><td colspan="4"><b>${r.rubro}</b></td><td class="n">${_resFmtN(r.totU)}</td><td></td><td class="n">${_resFmtN2(r.totT)}</td></tr>`;
+        rows += `<tr class="r"><td></td><td></td><td colspan="4"><b>${_resLbl('RUBR',r.rubro)}</b></td><td class="n">${_resFmtN(r.totU)}</td><td></td><td class="n">${_resFmtN2(r.totT)}</td></tr>`;
         for(const a of r.arts){
-          rows += `<tr><td></td><td>${a.marca}</td><td>${a.rubro}</td><td>${a.srub||''}</td><td>${a.art}</td><td>${a.des||''}</td><td class="n">${_resFmtN(a.unid)}</td><td class="n">${_resFmtN2(a.costo)}</td><td class="n">${_resFmtN2(a.total)}</td></tr>`;
+          rows += `<tr><td></td><td>${_resLbl('MARC',a.marca)}</td><td>${_resLbl('RUBR',a.rubro)}</td><td>${a.srub||''}</td><td>${a.art}</td><td>${a.des||''}</td><td class="n">${_resFmtN(a.unid)}</td><td class="n">${_resFmtN2(a.costo)}</td><td class="n">${_resFmtN2(a.total)}</td></tr>`;
         }
       }
     }
@@ -194,6 +211,7 @@ function _resLoadExcelJS(){
 
 async function excelResumen(){
   if(!_resRows || !_resRows.length){ toast('Nada para exportar','err'); return; }
+  _resBuildMaps();
   let ExcelJS;
   try{ ExcelJS = await _resLoadExcelJS(); }
   catch(e){ toast('No se pudo cargar Excel','err'); return; }
@@ -228,20 +246,20 @@ async function excelResumen(){
   for(const c of tree){
     gU+=c.totU; gT+=c.totT;
     // línea negra separadora en cambio de Centro de Costos
-    const cr = ws.addRow([c.ccos,'','','','','', c.totU, null, c.totT]);
+    const cr = ws.addRow([_resLbl('CCOS',c.ccos),'','','','','', c.totU, null, c.totT]);
     cr.font = { bold:true };
     cr.eachCell(cell=>{ cell.border = { top:{style:'medium'} }; });
     setNums(cr);
     for(const m of c.marcas){
-      const mr = ws.addRow(['', m.marca, '','','','', m.totU, null, m.totT]);
+      const mr = ws.addRow(['', _resLbl('MARC',m.marca), '','','','', m.totU, null, m.totT]);
       mr.font = { bold:true, color:{argb:'FF444444'} };
       setNums(mr);
       for(const r of m.rubros){
-        const rr = ws.addRow(['', '', r.rubro,'','','', r.totU, null, r.totT]);
+        const rr = ws.addRow(['', '', _resLbl('RUBR',r.rubro),'','','', r.totU, null, r.totT]);
         rr.font = { italic:true };
         setNums(rr);
         for(const a of r.arts){
-          const ar = ws.addRow(['', a.marca, a.rubro, a.srub||'', a.art, a.des||'', a.unid, a.costo, a.total]);
+          const ar = ws.addRow(['', _resLbl('MARC',a.marca), _resLbl('RUBR',a.rubro), a.srub||'', a.art, a.des||'', a.unid, a.costo, a.total]);
           setNums(ar);
         }
       }
