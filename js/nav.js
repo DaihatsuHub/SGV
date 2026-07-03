@@ -3,6 +3,10 @@
 // ═══════════════════════════════════════════════════════════
 
 function showPage(pg, el){
+  if (typeof accesoSubPermitido==='function' && !accesoSubPermitido(pg)) {
+    if (typeof toast==='function') toast('🔒 Sin acceso a esta pantalla','err');
+    return;
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tnav').forEach(t=>t.classList.remove('active'));
   const pageEl = document.getElementById('page-'+pg);
@@ -13,6 +17,10 @@ function showPage(pg, el){
 }
 
 function showSubPage(menu, sub) {
+  if (typeof accesoSubPermitido==='function' && !accesoSubPermitido(sub)) {
+    if (typeof toast==='function') toast('🔒 Sin acceso a esta pantalla','err');
+    return;
+  }
   document.querySelectorAll('.dd-menu').forEach(m=>m.classList.remove('open'));
   document.querySelectorAll('.dd-arrow').forEach(a=>a.classList.remove('open'));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));

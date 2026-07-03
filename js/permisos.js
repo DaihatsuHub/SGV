@@ -164,6 +164,18 @@ const MENU_DEF = [
 
 // Módulos del panel de permisos, DERIVADOS del menú (mismo orden).
 const MODULOS_PERM = MENU_DEF.flatMap(g => g.items.map(it => ({ key:it.mod, label:it.label })));
+
+// Mapa pantalla→módulo (derivado de MENU_DEF: id 'ddi-<sub>' → mod).
+const SUB_MODULO = {};
+MENU_DEF.forEach(g => g.items.forEach(it => { SUB_MODULO[it.id.replace(/^ddi-/, '')] = it.mod; }));
+
+// ¿El usuario puede VER esta pantalla? Lo usa la navegación (nav.js) para no
+// abrir una pantalla sin permiso, aunque se fuerce el menú. (Sin módulo → permitida.)
+function accesoSubPermitido(sub){
+  const mod = SUB_MODULO[sub];
+  if (!mod) return true;
+  return puedeh(mod, 'ver');
+}
 const ACCIONES_PERM = [
   { key:'ver',      label:'Ver' },
   { key:'alta',     label:'Alta' },
