@@ -16,10 +16,12 @@ async function abrirResumen(){
   const ov = document.getElementById('ov-resumen');
   if(!ov) return;
   ov.classList.add('open');
+  // Siempre arranca contraído: limpiar el estado de colapso previo
+  Object.keys(_resOpen).forEach(k=>delete _resOpen[k]);
   const body = document.getElementById('res-body');
   body.innerHTML = '<div class="empty" style="margin-top:40px">⏳ Cargando resumen…</div>';
   try{
-    const r = await apiGet('/articulos/resumen-stock');
+    const r = await apiGet('/articulos/resumen-stock');   // recalcula cada vez
     _resRows = (r && r.rows) ? r.rows : [];
     renderResumen();
   }catch(e){
@@ -89,15 +91,15 @@ function renderResumen(){
     <span>C.Costo</span><span>Marca</span><span>Rubro</span><span>SubR</span><span>Artículo</span><span>Descripción</span><span style="text-align:right">Unid</span><span style="text-align:right">Costo</span><span style="text-align:right">Total</span></div>`;
 
   for(const c of tree){
-    const cOpen = _resOpen[c.key] !== false;   // nivel 1 (C.Costo): abierto por defecto
+    const cOpen = _resOpen[c.key] === true;   // todo arranca contraído
     html += row(0, [`<b>${c.ccos}</b>`,'','','','','', `<b>${_resFmtN(c.totU)}</b>`, '', `<b>${_resFmtN2(c.totT)}</b>`], 'res-c', c.key, true, cOpen);
     if(!cOpen) continue;
     for(const m of c.marcas){
-      const mOpen = _resOpen[m.key] !== false;   // nivel 2 (Marca): abierto por defecto
+      const mOpen = _resOpen[m.key] === true;
       html += row(1, ['', `<b>${m.marca}</b>`, '','','','', _resFmtN(m.totU), '', _resFmtN2(m.totT)], 'res-m', m.key, true, mOpen);
       if(!mOpen) continue;
       for(const r of m.rubros){
-        const rOpen = _resOpen[r.key] === true;   // nivel 3 (Rubro): cerrado por defecto (detalle oculto)
+        const rOpen = _resOpen[r.key] === true;
         html += row(2, ['', '', r.rubro, '','','', _resFmtN(r.totU), '', _resFmtN2(r.totT)], 'res-r', r.key, true, rOpen);
         if(!rOpen) continue;
         for(const a of r.arts){
@@ -115,10 +117,8 @@ function renderResumen(){
 }
 
 function toggleResNode(key){
-  // default: C.Costo y Marca abiertos; Rubro (nivel más profundo, con '|r|') cerrado.
-  const isRubro = key.includes('|r|');
-  const cur = isRubro ? (_resOpen[key]===true) : (_resOpen[key]!==false);
-  _resOpen[key] = !cur;
+  // Todos los niveles arrancan cerrados; el toggle simplemente invierte.
+  _resOpen[key] = !(_resOpen[key]===true);
   renderResumen();
 }
 
