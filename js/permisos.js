@@ -171,6 +171,7 @@ const MENU_DEF = [
     { id:'ddi-talo', mod:'talo', label:'📓 Talonarios' },
     { id:'ddi-rete', mod:'rete', label:'🧮 Tipo de Retenciones' },
     { id:'ddi-cart', mod:'cart', label:'💼 Cartera de Valores' },
+    { id:'ddi-listcob', mod:'listcob', label:'📋 Listado de Cobranzas' },
   ]},
   { grupo:'🔧 Utilidades', tnav:'tnav-util', items:[
     { id:'ddi-backup',   mod:'backup',   label:'🗄️ Backup' },
