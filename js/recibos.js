@@ -48,6 +48,8 @@ function monedaCotiz(cod){
 // ── Utils numéricos ────────────────────────────────────────
 function round2(n){ return Math.round((Number(n)||0)*100)/100; }
 function reciFmt(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+// Fecha DD/MM/AA (año 2 dígitos)
+function _reciFecha(f){ if(!f) return ''; const p=String(f).substring(0,10).split('-'); return p.length<3?String(f):(p[2]+'/'+p[1]+'/'+p[0].slice(-2)); }
 function reciParseNum(s){
   if (typeof s==='number') return s;
   s = String(s||'').trim().replace(/\./g,'').replace(',','.');
@@ -98,7 +100,7 @@ function getReciRows(){
       return s.asc?r:-r;
     });
   } else {
-    rows=rows.slice().sort((a,b)=>(b.rec.fecha||'').localeCompare(a.rec.fecha||'') || (b.rec.numero||0)-(a.rec.numero||0));
+    rows=rows.slice().sort((a,b)=>(a.rec.fecha||'').localeCompare(b.rec.fecha||'') || (Number(a.rec.numero)||0)-(Number(b.rec.numero)||0));
   }
   return rows;
 }
@@ -120,14 +122,14 @@ function renderReci(){
     const {it,rec}=row;
     const sel=reciSelIdx===i?'sel':'';
     const cli=CLIS.find(c=>(c.CLI_CODIGO||'').trim()===(rec.cliente||'').trim());
-    const fec=rec.fecha?rec.fecha.substring(0,10).split('-').reverse().join('/'):'—';
+    const fec=_reciFecha(rec.fecha)||'—';
     const key=reciMonKey(it.moneda);
     const mone=(TABLAS['MONE']||[]).find(m=>(m.CODIGO||'')===(it.moneda||''));
     const monLabel=mone?(mone.DETALLE||mone.CODIGO):(it.moneda||'');
     const pesos = key==='pesos'  ? reciFmt(it.abona||0)      : '';
     const casio = key==='casio'  ? reciFmt(it.abona_orig||0) : '';
     const tressa= key==='tressa' ? reciFmt(it.abona_orig||0) : '';
-    return `<div class="tr-art ${sel}" data-idx="${i}" style="grid-template-columns:${gridTpl}" onclick="selReci(${i})" ondblclick="reciModif()">`+
+    return `<div class="tr-art ${sel}" data-idx="${i}" style="grid-template-columns:${gridTpl};gap:6px" onclick="selReci(${i})" ondblclick="reciModif()">`+
       cols.map(c=>{
         if(c.field==='REC_FEC')   return `<span class="col-sm" style="color:var(--t2)">${fec}</span>`;
         if(c.field==='REC_CLI')   return `<span class="col-des">${esc(rec.cliente||'')}${cli?' — '+esc(cli.CLI_RAZON):''}</span>`;
@@ -141,8 +143,37 @@ function renderReci(){
       }).join('')+
     `</div>`;
   }).join('');
-  body.querySelector('.tr-art.sel')?.scrollIntoView({block:'nearest'});
+  // Posicionar en el PRIMER comprobante de la ÚLTIMA fecha cargada (si no hay selección)
+  if(reciSelIdx===null && list.length){
+    const maxFec = list.reduce((m,r)=>{ const f=(r.rec.fecha||'').substring(0,10); return f>m?f:m; }, '');
+    const idx = list.findIndex(r=>(r.rec.fecha||'').substring(0,10)===maxFec);
+    if(idx>=0) body.querySelector(`[data-idx="${idx}"]`)?.scrollIntoView({block:'nearest'});
+  } else {
+    body.querySelector('.tr-art.sel')?.scrollIntoView({block:'nearest'});
+  }
   reciInstallNav();
+  reciFit();
+}
+
+// ─── Escalar la grilla para que entre completa en cualquier pantalla ───
+let _reciFitBound = false;
+function reciFit(){
+  const wrap = document.querySelector('#page-reci .tbl-wrap');
+  if(!wrap) return;
+  const cols = (typeof getActiveCols==='function') ? getActiveCols('reci') : [];
+  let sum = 0, ok = true;
+  cols.forEach(c=>{ const m=/^(\d+(?:\.\d+)?)px$/.exec(c.width||''); if(m) sum+=parseFloat(m[1]); else ok=false; });
+  if(!ok){ wrap.style.zoom=''; wrap.style.width=''; return; }
+  const tracks  = cols.length;
+  const PAD     = 24;
+  const natural = sum + (tracks-1)*6 + PAD;
+  const parent  = wrap.parentElement;
+  const avail   = parent ? parent.clientWidth : natural;
+  if(natural>0 && avail>0){ wrap.style.width = natural+'px'; wrap.style.zoom = (avail/natural).toFixed(4); }
+  if(!_reciFitBound){
+    window.addEventListener('resize', ()=>{ if(document.getElementById('reci-thead')) reciFit(); });
+    _reciFitBound = true;
+  }
 }
 
 // Navegación por teclado (flechas + RePág/AvPág + Inicio/Fin), instalada una sola vez.
@@ -380,7 +411,7 @@ function renderReciDeud(){
   const body=document.getElementById('rf-deud-body'); if(!body) return;
   if(!_reciDeud.length){ body.innerHTML='<div class="empty" style="padding:14px">Sin comprobantes deudores</div>'; }
   else body.innerHTML=_reciDeud.map((d,i)=>{
-    const fec=d.fac_fec?d.fac_fec.substring(0,10).split('-').reverse().join('/'):'';
+    const fec=_reciFecha(d.fac_fec);
     const esPeso=(RECI_MON_COTIZ[d.fac_moneda]||'')==='pesos';
     const cotizCell = esPeso
       ? `<span style="text-align:right;color:var(--t3)">1,00</span>`
@@ -611,3 +642,12 @@ async function saveReci(){
     toast(_reciMode==='A'?'Recibo dado de alta':'Recibo modificado','scs');
   }catch(e){ console.error('saveReci:',e); syncErr(); toast('Error: '+e.message,'err'); }
 }
+
+// ─── Alineación encabezado↔datos de la grilla de Recibos ───
+(function(){
+  if(document.getElementById('reci-align-style')) return;
+  const s=document.createElement('style');
+  s.id='reci-align-style';
+  s.textContent='#reci-thead>*,#reci-body .tr-art>*{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}';
+  document.head.appendChild(s);
+})();

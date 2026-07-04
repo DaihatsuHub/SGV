@@ -65,7 +65,7 @@ const COL_DEFS = {
   ],
   reci: [
     {field:'REC_FEC',    label:'Fecha recibo', width:'100px', active:true},
-    {field:'REC_CLI',    label:'Cliente',      width:'1fr',   active:true},
+    {field:'REC_CLI',    label:'Cliente',      chars:34,      active:true},
     {field:'REC_COMP',   label:'Comprobante',  width:'130px', active:true},
     {field:'REC_MON',    label:'Moneda',       width:'95px',  active:true},
     {field:'REC_PESOS',  label:'Pesos',        width:'115px', align:'right', active:true},
