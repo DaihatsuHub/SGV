@@ -24,6 +24,10 @@ const CART_SEL_W = '64px';   // ancho de la columna de selección
 async function sbLoadCheques(){
   try { CHEQUES = await sbGetAll('cheques','fecha'); CHEQUES.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')); }
   catch(e){ console.error('sbLoadCheques:', e); CHEQUES=[]; }
+  // Asegurar recibos cargados para mostrar el talonario en la columna Recibo-Cheque
+  if(typeof RECIS!=='undefined' && (!RECIS || !RECIS.length) && typeof sbLoadRecis==='function'){
+    try{ await sbLoadRecis(); }catch(e){ console.error('sbLoadRecis desde cartera:', e); }
+  }
 }
 
 function cheqEstadoLabel(e){ return CHEQ_ESTADOS[e] || e || 'En cartera'; }
@@ -120,14 +124,14 @@ function renderCart(){
     const cell=f=>{
       switch(f){
         case 'CHQ_FEC':  return `<span class="col-sm" style="color:var(--t2)">${fec}</span>`;
-        case 'CHQ_NUM':  return `<span class="col-cod" style="font-family:var(--mono)">${esc(c.numero||'')}</span>`;
-        case 'CHQ_IMP':  return `<span class="col-num" style="text-align:right;font-family:var(--mono)">${reciFmt(c.importe||0)}</span>`;
-        case 'CHQ_CLI':  return `<span class="col-des">${esc(c.cliente||'')}${cli?' — '+esc(cli.CLI_RAZON):''}</span>`;
+        case 'CHQ_NUM':  return `<span class="col-cod" style="font-family:var(--mono)">${esc(_cartCheque(c))}</span>`;
+        case 'CHQ_IMP':  return `<span class="col-num" style="text-align:right;font-family:var(--mono);font-size:14px;font-weight:600">${reciFmt(c.importe||0)}</span>`;
+        case 'CHQ_CLI':  return `<span class="col-des" style="font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.cliente||'')}${cli?' — '+esc(cli.CLI_RAZON):''}</span>`;
         case 'CHQ_EMP':  return `<span class="col-sm">${esc(emp)}</span>`;
         case 'CHQ_FIS':  return `<span class="col-sm" style="color:${c.fisico?'var(--txt)':'var(--acc)'}">${cheqFisLabel(c)}</span>`;
         case 'CHQ_PROP': return `<span class="col-sm">${c.propio?'Propio':'Terceros'}</span>`;
-        case 'CHQ_REC':  return `<span class="col-sm">${c.recibo_numero?esc(c.empresa||'')+' '+esc(String(c.recibo_numero)):''}</span>`;
-        case 'CHQ_EST':  return `<span class="col-sm" style="color:${cheqEstadoColor(c.estado)};font-weight:600">${esc(cheqEstadoLabel(c.estado))}</span>`;
+        case 'CHQ_REC':  return `<span class="col-sm" style="font-family:var(--mono)">${esc(_cartRecibo(c))}</span>`;
+        case 'CHQ_EST':  return `<span class="col-sm" style="color:${cheqEstadoColor(c.estado)};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cheqEstadoShort(c.estado))}</span>`;
         case 'CHQ_FSAL': return `<span class="col-sm">${fsal}</span>`;
         case 'CHQ_OBS':  return `<span class="col-des" style="color:var(--t3)">${esc(c.observaciones||'')}</span>`;
         default: return `<span></span>`;
@@ -271,6 +275,21 @@ function _cartFecha(f){
   const p=String(f).substring(0,10).split('-');   // [yyyy, mm, dd]
   return p.length<3 ? String(f) : (p[2]+'/'+p[1]+'/'+p[0].slice(-2));
 }
+// Recibo: empresa+talonario+numero(6 díg). Talonario del recibo real (coincide con el recibo).
+function _cartRecibo(c){
+  if(!c||!c.recibo_numero) return '';
+  let emp=c.empresa||'', talo='';
+  if(typeof RECIS!=='undefined' && Array.isArray(RECIS)){
+    const r=RECIS.find(x=>x.id===c.recibo_id);
+    if(r){ emp=r.empresa||emp; talo=r.talonario||''; }
+  }
+  return emp+talo+String(c.recibo_numero).padStart(6,'0');
+}
+// Número de cheque a 4 dígitos
+function _cartCheque(c){ return (c && c.numero) ? String(c.numero).padStart(4,'0') : ''; }
+// Estado corto (para que entre en la columna sin ensancharla)
+const CHEQ_ESTADOS_SHORT = { 'cartera':'En cartera','depositado':'Depositado','entregado':'Entregado','rechazado':'Rechazado','devuelto':'Devuelto' };
+function cheqEstadoShort(e){ return CHEQ_ESTADOS_SHORT[e] || cheqEstadoLabel(e); }
 
 // Filas visibles (respeta filtros y orden actuales), resueltas para exportar
 function _cartRowsExport(){
@@ -278,14 +297,14 @@ function _cartRowsExport(){
     const cli=(typeof CLIS!=='undefined') ? CLIS.find(k=>(k.CLI_CODIGO||'').trim()===(c.cliente||'').trim()) : null;
     return {
       fecha: _cartFecha(c.fecha),
-      numero: c.numero||'',
+      numero: _cartCheque(c),
       cliente: cli ? (cli.CLI_RAZON||c.cliente||'') : (c.cliente||''),
       empresa: c.empresa||'',
       tipo: c.fisico ? 'Cheque' : 'ECheq',
       propio: c.propio ? 'Sí' : '',
       estado: cheqEstadoLabel(c.estado),
       fsal: _cartFecha(c.fecha_salida),
-      recibo: c.recibo_numero||'',
+      recibo: _cartRecibo(c),
       obs: c.observaciones||'',
       importe: Number(c.importe)||0
     };
