@@ -109,7 +109,7 @@ function renderCart(){
   const thead=document.getElementById('cart-thead');
   if(thead){
     thead.style.gridTemplateColumns=gridTpl;
-    thead.innerHTML=cols.map(c=>`<span class="th-sortable" onclick="toggleSort('cart','${c.field}')" style="${c.align?'text-align:'+c.align:''}">${c.label}${(typeof sortArrow==='function')?sortArrow('cart',c.field):''}</span>`).join('')
+    thead.innerHTML=cols.map(c=>`<span class="th-sortable" onclick="toggleSort('cart','${c.field}')" style="${c.align?'text-align:'+c.align:''}${c.field==='CHQ_IMP'?';padding-right:16px':''}">${c.label}${(typeof sortArrow==='function')?sortArrow('cart',c.field):''}</span>`).join('')
       + `<span style="text-align:center"><input type="checkbox" id="cart-selall" ${allSel?'checked':''} onclick="cheqToggleAll(this.checked)" title="Seleccionar todos" style="accent-color:var(--acc);cursor:pointer"></span>`;
   }
 
@@ -125,8 +125,8 @@ function renderCart(){
       switch(f){
         case 'CHQ_FEC':  return `<span class="col-sm" style="color:var(--t2)">${fec}</span>`;
         case 'CHQ_NUM':  return `<span class="col-cod" style="font-family:var(--mono)">${esc(_cartCheque(c))}</span>`;
-        case 'CHQ_IMP':  return `<span class="col-num" style="text-align:right;font-family:var(--mono);font-size:14px;font-weight:600">${reciFmt(c.importe||0)}</span>`;
-        case 'CHQ_CLI':  return `<span class="col-des" style="font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.cliente||'')}${cli?' — '+esc(cli.CLI_RAZON):''}</span>`;
+        case 'CHQ_IMP':  return `<span class="col-num" style="text-align:right;font-family:var(--mono);font-size:14px;font-weight:600;padding-right:16px">${reciFmt(c.importe||0)}</span>`;
+        case 'CHQ_CLI':  return `<span class="col-des" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.cliente||'')}${cli?' — '+esc(cli.CLI_RAZON):''}</span>`;
         case 'CHQ_EMP':  return `<span class="col-sm">${esc(emp)}</span>`;
         case 'CHQ_FIS':  return `<span class="col-sm" style="color:${c.fisico?'var(--txt)':'var(--acc)'}">${cheqFisLabel(c)}</span>`;
         case 'CHQ_PROP': return `<span class="col-sm">${c.propio?'Propio':'Terceros'}</span>`;
@@ -137,7 +137,7 @@ function renderCart(){
         default: return `<span></span>`;
       }
     };
-    return `<div class="tr-art ${sel}" data-idx="${i}" style="grid-template-columns:${gridTpl}" onclick="selCheq(${i})" ondblclick="cheqEdit()">`
+    return `<div class="tr-art ${sel}" data-idx="${i}" style="grid-template-columns:${gridTpl};gap:6px" onclick="selCheq(${i})" ondblclick="cheqEdit()">`
       + cols.map(co=>cell(co.field)).join('')
       + `<span style="text-align:center"><input type="checkbox" ${checked} onclick="event.stopPropagation();cheqToggleSel(${c.id},this.checked)" style="accent-color:var(--acc);cursor:pointer"></span>`
       + `</div>`;
@@ -378,3 +378,14 @@ function cartPrint(){
   </body></html>`);
   win.document.close(); win.focus(); setTimeout(()=>win.print(),300);
 }
+
+// ─── Alineación encabezado↔datos ───────────────────────────
+// Fuerza que cada celda (título y dato) respete el ancho de su columna y
+// recorte con "…" si no entra, para que nunca se solape con la siguiente.
+(function(){
+  if(document.getElementById('cart-align-style')) return;
+  const s=document.createElement('style');
+  s.id='cart-align-style';
+  s.textContent='#cart-thead>*,#cart-body .tr-art>*{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}';
+  document.head.appendChild(s);
+})();
