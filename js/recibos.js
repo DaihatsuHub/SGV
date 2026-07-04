@@ -12,6 +12,7 @@ let _reciMode = 'A';
 let _reciOrig = null;
 let _reciHdr  = {};
 let _reciDeud   = [];
+let _reciACuenta= [];
 let _reciTransf = [];
 let _reciCheques= [];
 let _reciRetenc = [];
@@ -178,7 +179,7 @@ function reciAlta(){
   ensureFacturas();  // arranca la carga de facturas (la necesita reciLoadDeudores al elegir cliente)
   const _wrapCre=document.getElementById('rf-creado-wrap'); if(_wrapCre) _wrapCre.hidden=true;  // recibo nuevo: sin creador aún
   _reciMode='A'; _reciOrig=null; reciResetEnabled();
-  _reciDeud=[]; _reciTransf=[]; _reciCheques=[]; _reciRetenc=[];
+  _reciDeud=[]; _reciACuenta=[]; _reciTransf=[]; _reciCheques=[]; _reciRetenc=[];
   const emp='H';
   _reciHdr={ empresa:emp, talonario:'', numero:'', fecha:new Date().toISOString().substring(0,10),
     cliente:'', cotCasio:monedaCotiz('C'), cotTressa:monedaCotiz('T') };
@@ -197,7 +198,7 @@ function reciAlta(){
   document.getElementById('rf-efectivo').value='0,00';
   document.getElementById('rf-ajuste').value='0,00';
   reciFillClienteList();
-  renderReciDeud(); renderReciTransf(); renderReciCheques(); renderReciRetenc(); reciReconcile();
+  renderReciDeud(); renderReciACuenta(); renderReciTransf(); renderReciCheques(); renderReciRetenc(); reciReconcile();
   document.getElementById('reci-mtit').textContent='Nuevo Recibo';
   setMtag('reci-mtag','ALTA','tag-a');
   document.getElementById('ov-reci').classList.add('open');
@@ -244,9 +245,12 @@ async function _reciOpenEditor(){
   document.getElementById('rf-ajuste').value='0,00';
   try{
     const items=await sbGet('recibo_items',`recibo_id=eq.${rc.id}&order=id.asc`);
-    _reciDeud=items.map(it=>({ fac_nro:it.comprobante, fac_fec:it.fecha, fac_moneda:it.moneda,
+    const esAC = it => (it.a_cuenta===true) || ((it.comprobante||'')==='A/CUENTA');
+    _reciDeud=items.filter(it=>!esAC(it)).map(it=>({ fac_nro:it.comprobante, fac_fec:it.fecha, fac_moneda:it.moneda,
       simbolo:reciMonInfo(it.moneda,_reciHdr).simbolo, saldo_orig:it.saldo_orig||0,
       cotizacion:it.cotizacion||1, saldo:it.saldo||0, abona:it.abona||0, abona_orig:it.abona_orig||0 }));
+    _reciACuenta=items.filter(esAC).map(it=>({ moneda:it.moneda||'', cotizacion:it.cotizacion||1,
+      importe:it.abona_orig||0, abona:it.abona||0, simbolo:reciMonInfo(it.moneda,_reciHdr).simbolo }));
     const pagos=await sbGet('recibo_pagos',`recibo_id=eq.${rc.id}`);
     _reciTransf=pagos.filter(p=>p.tipo==='transferencia').map(p=>({fecha:p.fecha,importe:p.importe||0}));
     _reciRetenc=pagos.filter(p=>p.tipo==='retencion').map(p=>({codigo:p.ret_codigo,importe:p.importe||0}));
@@ -254,8 +258,8 @@ async function _reciOpenEditor(){
     const aju=pagos.find(p=>p.tipo==='ajuste');   document.getElementById('rf-ajuste').value=reciFmt(aju?aju.importe:0);
     const chs=await sbGet('cheques',`recibo_id=eq.${rc.id}`);
     _reciCheques=chs.map(c=>({fecha:c.fecha,numero:c.numero,importe:c.importe||0,fisico:!!c.fisico,propio:!!c.propio}));
-  }catch(e){ console.error('reciModif load:',e); _reciDeud=[];_reciTransf=[];_reciCheques=[];_reciRetenc=[]; }
-  renderReciDeud(); renderReciTransf(); renderReciCheques(); renderReciRetenc(); reciReconcile();
+  }catch(e){ console.error('reciModif load:',e); _reciDeud=[];_reciACuenta=[];_reciTransf=[];_reciCheques=[];_reciRetenc=[]; }
+  renderReciDeud(); renderReciACuenta(); renderReciTransf(); renderReciCheques(); renderReciRetenc(); reciReconcile();
   document.getElementById('reci-mtit').textContent=`${_reciReadonly?'Ver':'Modificar'} Recibo ${rc.empresa}${rc.talonario} ${rc.numero}`;
   // Auditoría: quién creó el recibo, en la fila de totales (Abonado / Saldo)
   const _wrapCre=document.getElementById('rf-creado-wrap'), _elCre=document.getElementById('rf-creado');
@@ -398,7 +402,7 @@ function reciAbonaInput(i,val){
   const d=_reciDeud[i]; if(!d) return;
   let a=reciParseNum(val); if(a<0)a=0;
   // tope = menor entre el saldo del comprobante y lo que falta para llegar al total de instrumentos
-  const disponible=Math.max(0, round2(reciTotInstrumentos() - (reciTotAbonado() - (d.abona||0))));
+  const disponible=Math.max(0, round2(reciTotInstrumentos() - (reciTotAplicado() - (d.abona||0))));
   const tope=Math.min(d.saldo, disponible);
   if(a>tope) a=tope;
   d.abona=round2(a); d.abona_orig=d.cotizacion>0?round2(d.abona/d.cotizacion):0;
@@ -408,7 +412,7 @@ function reciAbonaInput(i,val){
 function reciAplicarFila(i){
   if(_reciReadonly) return;
   const d=_reciDeud[i]; if(!d) return;
-  const disponible=Math.max(0, round2(reciTotInstrumentos() - (reciTotAbonado() - (d.abona||0))));
+  const disponible=Math.max(0, round2(reciTotInstrumentos() - (reciTotAplicado() - (d.abona||0))));
   d.abona=round2(Math.min(d.saldo, disponible));
   d.abona_orig=d.cotizacion>0?round2(d.abona/d.cotizacion):0;
   renderReciDeud(); reciReconcile();
@@ -419,6 +423,63 @@ function reciCotizInput(i,val){
   d.saldo=round2(d.saldo_orig*c); if(d.abona>d.saldo)d.abona=d.saldo;
   d.abona_orig=round2(d.abona/c);
   renderReciDeud(); reciReconcile();
+}
+
+// ════════════════ A/Cuenta ════════════════
+// Líneas de plata recibida que NO se aplican a ninguna factura (queda a cuenta).
+function renderReciACuenta(){
+  const body=document.getElementById('rf-acta-body'); if(!body) return;
+  if(!_reciACuenta.length){ body.innerHTML='<div class="empty" style="padding:8px;font-size:11px">Sin A/Cuenta</div>'; }
+  else body.innerHTML=_reciACuenta.map((a,i)=>`
+    <div style="display:grid;grid-template-columns:1fr 84px 120px 110px 30px;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--b1);font-size:12px;font-family:var(--mono);color:var(--wrn,#c8860a)">
+      <span>A/CUENTA · ${esc(a.moneda||'')}</span>
+      <span style="text-align:right">${reciFmt(a.cotizacion)}</span>
+      <span style="text-align:right">${esc(a.simbolo||'')} ${reciFmt(a.importe)}</span>
+      <span style="text-align:right">$ ${reciFmt(a.abona)}</span>
+      <button onclick="reciDelACuenta(${i})" title="Quitar" ${_reciReadonly?'disabled':''} style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px">✕</button>
+    </div>`).join('');
+  const t=document.getElementById('rf-tot-acta'); if(t) t.textContent='$ '+reciFmt(reciTotACuenta());
+}
+function reciDelACuenta(i){
+  if(_reciReadonly) return;
+  _reciACuenta.splice(i,1);
+  renderReciACuenta(); reciReconcile();
+}
+// Diálogo: agregar una línea A/Cuenta (moneda + cotización + importe)
+function reciAddACuenta(){
+  if(_reciReadonly) return;
+  const monedas=(TABLAS['MONE']||[]);
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:10000';
+  const box=document.createElement('div');
+  box.style.cssText='background:var(--s2,#fff);color:var(--t1,#111);border:1px solid var(--b1,#ccc);border-radius:10px;padding:20px;min-width:320px;box-shadow:0 10px 40px rgba(0,0,0,.35);font-family:sans-serif';
+  const opts=monedas.map(m=>`<option value="${m.CODIGO}">${m.CODIGO} — ${m.DETALLE||''}</option>`).join('');
+  box.innerHTML='<div style="font-size:15px;font-weight:700;margin-bottom:12px">➕ A/Cuenta</div>'
+    +'<label style="font-size:12px;color:var(--t2)">Moneda</label>'
+    +`<select id="ac-mon" style="width:100%;margin:3px 0 10px;padding:7px">${opts}</select>`
+    +'<label style="font-size:12px;color:var(--t2)">Cotización</label>'
+    +'<input id="ac-cot" type="text" style="width:100%;margin:3px 0 10px;padding:7px;text-align:right;font-family:monospace">'
+    +'<label style="font-size:12px;color:var(--t2)">Importe (en esa moneda)</label>'
+    +'<input id="ac-imp" type="text" value="0,00" style="width:100%;margin:3px 0 12px;padding:7px;text-align:right;font-family:monospace">'
+    +'<div id="ac-pesos" style="font-size:12px;color:var(--t2);margin-bottom:14px">En pesos: $ 0,00</div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end"><button id="ac-cancel" class="btn">Cancelar</button><button id="ac-ok" class="btn pri">Agregar</button></div>';
+  ov.appendChild(box); document.body.appendChild(ov);
+  const selMon=box.querySelector('#ac-mon'), inpCot=box.querySelector('#ac-cot'), inpImp=box.querySelector('#ac-imp'), lblPesos=box.querySelector('#ac-pesos');
+  const recalc=()=>{ const c=reciParseNum(inpCot.value), im=reciParseNum(inpImp.value); lblPesos.textContent='En pesos: $ '+reciFmt(round2(im*c)); };
+  const setCot=()=>{ inpCot.value=reciFmt(reciMonInfo(selMon.value,_reciHdr).cotiz); recalc(); };
+  selMon.onchange=setCot; inpCot.oninput=recalc; inpImp.oninput=recalc; inpImp.onfocus=function(){this.select()};
+  setCot();
+  const cerrar=()=>{ if(ov.parentNode) document.body.removeChild(ov); };
+  box.querySelector('#ac-cancel').onclick=cerrar;
+  ov.onclick=(e)=>{ if(e.target===ov) cerrar(); };
+  box.querySelector('#ac-ok').onclick=()=>{
+    const moneda=selMon.value;
+    const cotizacion=Math.max(1, reciParseNum(inpCot.value));
+    const importe=round2(reciParseNum(inpImp.value));
+    if(importe<=0){ toast('Ingresá un importe','err'); return; }
+    _reciACuenta.push({ moneda, cotizacion, importe, abona:round2(importe*cotizacion), simbolo:reciMonInfo(moneda,_reciHdr).simbolo });
+    cerrar(); renderReciACuenta(); reciReconcile();
+  };
 }
 
 // ════════════════ EDITOR — instrumentos ════════════════
@@ -475,6 +536,9 @@ function renderReciRetenc(){
 
 // ════════════════ Reconciliación ════════════════
 function reciTotAbonado(){ return round2(_reciDeud.reduce((s,d)=>s+(d.abona||0),0)); }
+function reciTotACuenta(){ return round2(_reciACuenta.reduce((s,a)=>s+(a.abona||0),0)); }
+// Lo aplicado total = repartido en facturas + A/Cuenta (ambos consumen instrumentos)
+function reciTotAplicado(){ return round2(reciTotAbonado()+reciTotACuenta()); }
 function reciTotInstrumentos(){
   const efe=reciParseNum(document.getElementById('rf-efectivo')?.value||'0');
   const aju=reciParseNum(document.getElementById('rf-ajuste')?.value||'0');
@@ -485,7 +549,7 @@ function reciTotInstrumentos(){
 }
 function reciReconcile(){
   const abonado = reciTotInstrumentos();   // total del recibo = instrumentos
-  const aplicado = reciTotAbonado();        // lo repartido en los comprobantes
+  const aplicado = reciTotAplicado();       // repartido en comprobantes + A/Cuenta
   const saldoAplicar = round2(abonado - aplicado);
   const elAb=document.getElementById('rf-abonado'); if(elAb) elAb.textContent=reciFmt(abonado);
   const elSa=document.getElementById('rf-saldo-aplicar');
@@ -504,9 +568,10 @@ async function saveReci(){
   if(!hdr.cliente){ toast('Seleccioná un cliente','err'); return; }
   if(!hdr.talonario||!hdr.numero){ toast('Falta talonario / número','err'); return; }
   const items=_reciDeud.filter(d=>(d.abona||0)>0);
-  const totAbonado=round2(items.reduce((s,d)=>s+(d.abona||0),0));
-  if(totAbonado<=0){ toast('Cargá al menos un importe a abonar','err'); return; }
-  if(Math.abs(reciTotInstrumentos()-totAbonado)>0.01){ toast('Los instrumentos no coinciden con lo abonado','err'); return; }
+  const aCta=_reciACuenta.filter(a=>(a.abona||0)>0);
+  const totAplicado=round2(items.reduce((s,d)=>s+(d.abona||0),0)+aCta.reduce((s,a)=>s+(a.abona||0),0));
+  if(totAplicado<=0){ toast('Cargá al menos un importe a abonar o una A/Cuenta','err'); return; }
+  if(Math.abs(reciTotInstrumentos()-totAplicado)>0.01){ toast('Los instrumentos no coinciden con lo abonado','err'); return; }
   const efe=reciParseNum(document.getElementById('rf-efectivo')?.value||'0');
   const aju=reciParseNum(document.getElementById('rf-ajuste')?.value||'0');
   const payload={
@@ -517,6 +582,8 @@ async function saveReci(){
     items:items.map(d=>({ fac_nro:d.fac_nro, fac_fec:d.fac_fec||null, fac_moneda:d.fac_moneda||null,
           saldo_orig:round2(d.saldo_orig), cotizacion:Math.max(1,d.cotizacion),
           saldo:round2(d.saldo), abona:round2(d.abona), abona_orig:round2(d.abona_orig) })),
+    aCuenta:aCta.map(a=>({ moneda:a.moneda||null, cotizacion:Math.max(1,a.cotizacion),
+          importe:round2(a.importe), abona:round2(a.abona) })),
     pagos:{ efectivo:round2(efe), ajuste:round2(aju),
           transferencias:_reciTransf.filter(t=>(t.importe||0)>0).map(t=>({fecha:t.fecha||null,importe:round2(t.importe)})),
           retenciones:_reciRetenc.filter(r=>(r.importe||0)>0).map(r=>({codigo:r.codigo||null,importe:round2(r.importe)})) },
