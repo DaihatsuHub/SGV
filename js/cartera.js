@@ -145,6 +145,35 @@ function renderCart(){
   body.querySelector('.tr-art.sel')?.scrollIntoView({block:'nearest'});
   cheqUpdateSel();
   cheqInstallNav();
+  cartFit();
+}
+
+// ─── Escalar la tabla para que entre completa en cualquier pantalla (Opción A) ───
+// Mantiene los anchos/proporciones exactos y hace "zoom" del contenedor para que
+// llene el ancho disponible (achica si no entra, agranda si sobra).
+let _cartFitBound = false;
+function cartFit(){
+  const wrap = document.querySelector('#page-cart .tbl-wrap');
+  if(!wrap) return;
+  const cols = (typeof getActiveCols==='function') ? getActiveCols('cart') : [];
+  // Ancho natural = suma de columnas fijas (px) + selección + gaps + padding del thead.
+  let sum = 0, ok = true;
+  cols.forEach(c=>{ const m=/^(\d+(?:\.\d+)?)px$/.exec(c.width||''); if(m) sum+=parseFloat(m[1]); else ok=false; });
+  if(!ok){ wrap.style.zoom=''; wrap.style.width=''; return; }   // si hay 1fr/otra unidad, no escala
+  const selW    = parseFloat(CART_SEL_W) || 64;
+  const tracks  = cols.length + 1;              // + columna de selección
+  const PAD     = 24;                            // padding horizontal del thead (12+12)
+  const natural = sum + selW + (tracks-1)*6 + PAD;
+  const parent  = wrap.parentElement;
+  const avail   = parent ? parent.clientWidth : natural;
+  if(natural>0 && avail>0){
+    wrap.style.width = natural + 'px';
+    wrap.style.zoom  = (avail / natural).toFixed(4);
+  }
+  if(!_cartFitBound){
+    window.addEventListener('resize', ()=>{ if(document.getElementById('cart-thead')) cartFit(); });
+    _cartFitBound = true;
+  }
 }
 
 function selCheq(i){ cheqSelIdx=i; renderCart(); }

@@ -84,7 +84,7 @@ const COL_DEFS = {
     {field:'CHQ_REC',  label:'Recibo',       chars:11, active:true},
     {field:'CHQ_EST',  label:'Estado',       chars:13, active:true},
     {field:'CHQ_FSAL', label:'Fec.salida',   chars:11, active:true},
-    {field:'CHQ_OBS',  label:'Observaciones',width:'1fr', active:true},
+    {field:'CHQ_OBS',  label:'Observaciones',chars:40, active:true},
   ],
   oc: [
     {field:'OC_PED',  label:'Pedido',     width:'80px',  active:true},
