@@ -113,8 +113,8 @@ function renderCart(){
   body.innerHTML=list.map((c,i)=>{
     const sel=cheqSelIdx===i?'sel':'';
     const cli=CLIS.find(k=>(k.CLI_CODIGO||'').trim()===(c.cliente||'').trim());
-    const fec=c.fecha?c.fecha.substring(0,10).split('-').reverse().join('/'):'—';
-    const fsal=c.fecha_salida?c.fecha_salida.substring(0,10).split('-').reverse().join('/'):'';
+    const fec=c.fecha?_cartFecha(c.fecha):'—';
+    const fsal=_cartFecha(c.fecha_salida);
     const emp=c.empresa==='H'?'Hatsu':(c.empresa==='T'?'Tressa':(c.empresa||''));
     const checked=selectedCheqIds.has(c.id)?'checked':'';
     const cell=f=>{
@@ -176,7 +176,7 @@ function cheqEdit(){
   _cheqOrig=c;
   const cli=CLIS.find(k=>(k.CLI_CODIGO||'').trim()===(c.cliente||'').trim());
   document.getElementById('cf-info').textContent =
-    `Nº ${c.numero||''} · ${reciFmt(c.importe||0)} · ${cheqFisLabel(c)} · ${(c.fecha||'').substring(0,10).split('-').reverse().join('/')} · ${cli?cli.CLI_RAZON:(c.cliente||'')}`;
+    `Nº ${c.numero||''} · ${reciFmt(c.importe||0)} · ${cheqFisLabel(c)} · ${_cartFecha(c.fecha)} · ${cli?cli.CLI_RAZON:(c.cliente||'')}`;
   document.getElementById('cf-estado').innerHTML =
     Object.keys(CHEQ_ESTADOS).map(k=>`<option value="${k}"${(c.estado||'cartera')===k?' selected':''}>${CHEQ_ESTADOS[k]}</option>`).join('');
   document.getElementById('cf-fsalida').value=(c.fecha_salida||'').substring(0,10);
@@ -266,7 +266,11 @@ function cheqClearFechas(){
 
 // ════════════════ Exportar / Imprimir ════════════════
 function _cartFmt(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function _cartFecha(f){ return f ? String(f).substring(0,10).split('-').reverse().join('/') : ''; }
+function _cartFecha(f){
+  if(!f) return '';
+  const p=String(f).substring(0,10).split('-');   // [yyyy, mm, dd]
+  return p.length<3 ? String(f) : (p[2]+'/'+p[1]+'/'+p[0].slice(-2));
+}
 
 // Filas visibles (respeta filtros y orden actuales), resueltas para exportar
 function _cartRowsExport(){
