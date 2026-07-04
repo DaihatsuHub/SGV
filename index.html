@@ -654,6 +654,15 @@
       <button class="btn fbtn" data-fis="fisico" onclick="cheqSetFiltFisico('fisico')">Cheques</button>
       <button class="btn fbtn" data-fis="echeq"  onclick="cheqSetFiltFisico('echeq')">ECheq</button>
     </div>
+    <div style="display:flex;gap:4px;align-items:center;margin-left:8px;border-left:1px solid var(--b1);padding-left:8px;font-size:12px;color:var(--t3)">
+      <span>Desde</span>
+      <input type="date" id="cart-desde" onchange="cheqSetFiltDesde(this.value)" style="font-size:12px;padding:2px 4px">
+      <span>Hasta</span>
+      <input type="date" id="cart-hasta" onchange="cheqSetFiltHasta(this.value)" style="font-size:12px;padding:2px 4px">
+      <button class="srch-clr" onclick="cheqClearFechas()" title="Limpiar fechas">✕</button>
+    </div>
+    <button class="btn" onclick="cartPrint()" style="margin-left:8px">🖨 Imprimir</button>
+    <button class="btn" onclick="cartExcel()">📥 Excel</button>
     <div class="spacer"></div>
     <span style="font-size:12px;color:var(--t3);margin-right:10px">Sel: <b id="cart-selcount2" style="color:var(--acc)">0</b> · <b id="cart-seltotal" style="color:var(--acc);font-family:var(--mono)">0,00</b> &nbsp;|&nbsp; Cheques: <b id="cart-count" style="color:var(--txt)">0</b> · Total: <b id="cart-total" style="color:var(--txt);font-family:var(--mono)">0,00</b></span>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
@@ -1110,6 +1119,20 @@
         <div id="rf-deud-body"></div>
         <div style="display:grid;grid-template-columns:92px 64px 100px 92px 78px 104px 100px;gap:6px;padding:7px 8px;border-top:1px solid var(--b1);font-size:12px;font-family:var(--mono);font-weight:600">
           <span style="color:var(--t3)">Totales</span><span></span><span></span><span></span><span></span><span style="text-align:right" id="rf-tot-saldo">$ 0,00</span><span style="text-align:right;color:var(--acc)" id="rf-tot-abona">$ 0,00</span>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 6px">
+        <span style="font-size:12px;color:var(--t2)">A/Cuenta <span style="color:var(--t3)">(no descuenta facturas)</span></span>
+        <button class="btn" id="rf-add-acta" onclick="reciAddACuenta()" style="font-size:12px;padding:3px 10px">＋ A/Cuenta</button>
+      </div>
+      <div style="border:1px solid var(--b1);border-radius:8px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:1fr 84px 120px 110px 30px;gap:6px;padding:6px 8px;background:var(--s2);font-size:11px;color:var(--t3)">
+          <span>Concepto</span><span style="text-align:right">Cotiz.</span><span style="text-align:right">Importe</span><span style="text-align:right">En pesos</span><span></span>
+        </div>
+        <div id="rf-acta-body"></div>
+        <div style="display:grid;grid-template-columns:1fr 84px 120px 110px 30px;gap:6px;padding:7px 8px;border-top:1px solid var(--b1);font-size:12px;font-family:var(--mono);font-weight:600">
+          <span style="color:var(--t3)">Total A/Cuenta</span><span></span><span></span><span style="text-align:right;color:var(--wrn,#c8860a)" id="rf-tot-acta">$ 0,00</span><span></span>
         </div>
       </div>
 

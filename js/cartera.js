@@ -6,6 +6,8 @@ let CHEQUES = [];
 let cheqSelIdx = null;
 let cheqFiltEstado = 'todos';
 let cheqFiltFisico = 'todos';     // todos | fisico | echeq
+let cheqFiltDesde = '';           // filtro rango de fechas (fecha del cheque)
+let cheqFiltHasta = '';
 let selectedCheqIds = new Set();
 let _cheqOrig = null;
 
@@ -45,6 +47,8 @@ function getCheqRows(){
   if(cheqFiltEstado!=='todos') list=list.filter(c=>(c.estado||'cartera')===cheqFiltEstado);
   if(cheqFiltFisico==='fisico') list=list.filter(c=>!!c.fisico);
   else if(cheqFiltFisico==='echeq') list=list.filter(c=>!c.fisico);
+  if(cheqFiltDesde) list=list.filter(c=>(c.fecha||'').substring(0,10) >= cheqFiltDesde);
+  if(cheqFiltHasta) list=list.filter(c=>(c.fecha||'').substring(0,10) <= cheqFiltHasta);
   if(q) list=list.filter(c=>{
     const cli=CLIS.find(k=>(k.CLI_CODIGO||'').trim()===(c.cliente||'').trim());
     return String(c.numero||'').includes(q) ||
@@ -248,4 +252,106 @@ function cheqInstallNav(){
     selCheq(next);
     document.getElementById('cart-body')?.querySelector(`[data-idx="${next}"]`)?.scrollIntoView({block:'nearest'});
   });
+}
+
+// ════════════════ Filtro por fechas ════════════════
+function cheqSetFiltDesde(v){ cheqFiltDesde=v||''; cheqSelIdx=null; renderCart(); }
+function cheqSetFiltHasta(v){ cheqFiltHasta=v||''; cheqSelIdx=null; renderCart(); }
+function cheqClearFechas(){
+  cheqFiltDesde=''; cheqFiltHasta='';
+  const d=document.getElementById('cart-desde'); if(d) d.value='';
+  const h=document.getElementById('cart-hasta'); if(h) h.value='';
+  cheqSelIdx=null; renderCart();
+}
+
+// ════════════════ Exportar / Imprimir ════════════════
+function _cartFmt(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function _cartFecha(f){ return f ? String(f).substring(0,10).split('-').reverse().join('/') : ''; }
+
+// Filas visibles (respeta filtros y orden actuales), resueltas para exportar
+function _cartRowsExport(){
+  return getCheqRows().map(c=>{
+    const cli=(typeof CLIS!=='undefined') ? CLIS.find(k=>(k.CLI_CODIGO||'').trim()===(c.cliente||'').trim()) : null;
+    return {
+      fecha: _cartFecha(c.fecha),
+      numero: c.numero||'',
+      cliente: cli ? (cli.CLI_RAZON||c.cliente||'') : (c.cliente||''),
+      empresa: c.empresa||'',
+      tipo: c.fisico ? 'Cheque' : 'ECheq',
+      propio: c.propio ? 'Sí' : '',
+      estado: cheqEstadoLabel(c.estado),
+      fsal: _cartFecha(c.fecha_salida),
+      recibo: c.recibo_numero||'',
+      obs: c.observaciones||'',
+      importe: Number(c.importe)||0
+    };
+  });
+}
+
+function _cartLoadExcelJS(){
+  return new Promise((resolve,reject)=>{
+    if(window.ExcelJS) return resolve(window.ExcelJS);
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+    s.onload=()=>resolve(window.ExcelJS); s.onerror=()=>reject(new Error('ExcelJS'));
+    document.head.appendChild(s);
+  });
+}
+
+async function cartExcel(){
+  const rows=_cartRowsExport();
+  if(!rows.length){ toast('Nada para exportar','err'); return; }
+  let ExcelJS;
+  try{ ExcelJS=await _cartLoadExcelJS(); }catch(e){ toast('No se pudo cargar Excel','err'); return; }
+  const wb=new ExcelJS.Workbook(); const ws=wb.addWorksheet('Cartera');
+  ws.mergeCells('A1:K1');
+  const t=ws.getCell('A1'); t.value='Cartera de Valores — '+new Date().toLocaleDateString('es-AR');
+  t.font={bold:true,size:14}; t.alignment={horizontal:'center'};
+  const head=['Fecha','Número','Cliente','Empresa','Tipo','Propio','Estado','Fecha salida','Recibo','Observaciones','Importe'];
+  const hr=ws.addRow(head); hr.font={bold:true}; hr.eachCell(c=>{c.border={bottom:{style:'medium'}};});
+  let tot=0;
+  for(const r of rows){
+    tot+=r.importe;
+    const row=ws.addRow([r.fecha,r.numero,r.cliente,r.empresa,r.tipo,r.propio,r.estado,r.fsal,r.recibo,r.obs,r.importe]);
+    row.getCell(11).numFmt='#,##0.00';
+  }
+  const tr=ws.addRow(['','','','','','','','','','TOTAL',tot]);
+  tr.font={bold:true}; tr.getCell(11).numFmt='#,##0.00'; tr.eachCell(c=>{c.border={top:{style:'double'}};});
+  ws.columns=[{width:11},{width:12},{width:28},{width:9},{width:8},{width:7},{width:20},{width:12},{width:9},{width:26},{width:13}];
+  const buf=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download='Cartera_'+new Date().toISOString().slice(0,10)+'.xlsx';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+
+function cartPrint(){
+  const rows=_cartRowsExport();
+  if(!rows.length){ toast('Nada para imprimir','err'); return; }
+  const _e=(typeof esc==='function')?esc:(s=>String(s==null?'':s));
+  let tot=0, body='';
+  for(const r of rows){
+    tot+=r.importe;
+    body+=`<tr><td>${r.fecha}</td><td>${_e(r.numero)}</td><td>${_e(r.cliente)}</td><td>${_e(r.empresa)}</td><td>${r.tipo}</td><td style="text-align:center">${r.propio}</td><td>${_e(r.estado)}</td><td>${r.fsal}</td><td>${_e(r.recibo)}</td><td>${_e(r.obs)}</td><td class="n">${_cartFmt(r.importe)}</td></tr>`;
+  }
+  const fecha=new Date().toLocaleDateString('es-AR');
+  const win=window.open('','_blank');
+  win.document.write(`<html><head><title>Cartera de Valores</title><meta charset="utf-8">
+  <style>
+    body{font-family:Arial,sans-serif;font-size:11px;margin:18px}
+    h2{margin:0 0 2px} .sub{color:#666;font-size:11px;margin-bottom:12px}
+    table{width:100%;border-collapse:collapse} td,th{padding:3px 6px;border-bottom:1px solid #eee;text-align:left}
+    th{background:#333;color:#fff} .n{text-align:right;font-family:monospace;white-space:nowrap}
+    tr.tot td{font-weight:bold;border-top:2px solid #000}
+  </style></head><body>
+  <h2>Cartera de Valores</h2>
+  <div class="sub">Daihatsu Electronics — ${fecha} · ${rows.length} cheque(s)</div>
+  <table>
+    <tr><th>Fecha</th><th>Número</th><th>Cliente</th><th>Empresa</th><th>Tipo</th><th>Propio</th><th>Estado</th><th>Fecha salida</th><th>Recibo</th><th>Observaciones</th><th class="n">Importe</th></tr>
+    ${body}
+    <tr class="tot"><td colspan="10">TOTAL</td><td class="n">${_cartFmt(tot)}</td></tr>
+  </table>
+  </body></html>`);
+  win.document.close(); win.focus(); setTimeout(()=>win.print(),300);
 }
