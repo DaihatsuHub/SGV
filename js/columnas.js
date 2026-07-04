@@ -74,17 +74,17 @@ const COL_DEFS = {
     {field:'REC_NRO',    label:'Recibo',       width:'110px', active:false},
   ],
   cart: [
-    {field:'CHQ_FEC',  label:'Fecha',        width:'90px',  active:true},
-    {field:'CHQ_NUM',  label:'Número',       width:'80px',  active:true},
-    {field:'CHQ_IMP',  label:'Importe',      width:'125px', align:'right', active:true},
-    {field:'CHQ_CLI',  label:'Cliente',      chars:30,      active:true},
-    {field:'CHQ_EMP',  label:'Empresa',      width:'75px',  active:true},
-    {field:'CHQ_FIS',  label:'Tipo cheque',  width:'85px',  active:true},
-    {field:'CHQ_PROP', label:'Origen',       width:'85px',  active:false},
-    {field:'CHQ_REC',  label:'Recibo',       width:'95px',  active:true},
-    {field:'CHQ_EST',  label:'Estado',       width:'95px',  active:true},
-    {field:'CHQ_FSAL', label:'Fec.salida',   width:'95px',  active:true},
-    {field:'CHQ_OBS',  label:'Observaciones',width:'1fr',   active:true},
+    {field:'CHQ_FEC',  label:'Fecha',        chars:10, active:true},
+    {field:'CHQ_NUM',  label:'Número',       chars:9,  active:true},
+    {field:'CHQ_IMP',  label:'Importe',      chars:14, align:'right', active:true},
+    {field:'CHQ_CLI',  label:'Cliente',      chars:32, active:true},
+    {field:'CHQ_EMP',  label:'Empresa',      chars:9,  active:true},
+    {field:'CHQ_FIS',  label:'Tipo cheque',  chars:12, active:true},
+    {field:'CHQ_PROP', label:'Origen',       chars:10, active:false},
+    {field:'CHQ_REC',  label:'Recibo',       chars:11, active:true},
+    {field:'CHQ_EST',  label:'Estado',       chars:13, active:true},
+    {field:'CHQ_FSAL', label:'Fec.salida',   chars:11, active:true},
+    {field:'CHQ_OBS',  label:'Observaciones',width:'1fr', active:true},
   ],
   oc: [
     {field:'OC_PED',  label:'Pedido',     width:'80px',  active:true},
@@ -107,8 +107,9 @@ const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true}, desp:{col
 function getActiveCols(grid) {
   const cfg  = getConfigUI(grid);
   const defs = COL_DEFS[grid];
-  // Si una columna define 'chars', ese es su ancho MÍNIMO en caracteres (puede crecer si sobra espacio).
-  const norm = c => c.chars ? { ...c, width: 'minmax(' + c.chars + 'ch, 1fr)' } : c;
+  // Si una columna define 'chars', ese es su ancho FIJO en caracteres (unidad ch).
+  // Para que una columna absorba el espacio sobrante, usar width:'1fr' en su lugar.
+  const norm = c => c.chars ? { ...c, width: c.chars + 'ch' } : c;
   if (!cfg || !cfg.activas || cfg.activas.length === 0) return defs.filter(c => c.active).map(norm);
   let ordered = (cfg.orden || []).map(f => defs.find(d => d.field === f)).filter(Boolean);
   defs.forEach(d => { if (!ordered.find(o => o.field === d.field)) ordered.push(d); });
