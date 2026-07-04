@@ -38,13 +38,60 @@ function _bkDownload(blob, name){
   setTimeout(()=>URL.revokeObjectURL(url), 5000);
 }
 
-async function hacerBackup(){
-  if(typeof toast==='function') toast('⏳ Generando backup…');
+// Diálogo: pregunta qué formato descargar. Resuelve 'json' | 'csv' | 'both' | null (cancelar).
+function _bkAskFormato(){
+  return new Promise(resolve=>{
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9999';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--s2,#fff);color:var(--t1,#111);border:1px solid var(--b1,#ccc);border-radius:10px;padding:22px;min-width:300px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,.35);font-family:sans-serif';
+    box.innerHTML = '<div style="font-size:16px;font-weight:700;margin-bottom:4px">🗄️ Backup</div>'
+      + '<div style="font-size:13px;color:var(--t2,#777);margin-bottom:16px">¿Qué formato querés descargar?</div>';
+    const cierra = (val)=>{ if(ov.parentNode) document.body.removeChild(ov); resolve(val); };
+    const mk = (label, val, cls)=>{
+      const b = document.createElement('button');
+      b.textContent = label; b.className = 'btn ' + (cls||'');
+      b.style.cssText = 'display:block;width:100%;margin:6px 0;padding:9px;border-radius:7px;cursor:pointer;font-size:14px';
+      b.onclick = ()=> cierra(val);
+      return b;
+    };
+    box.appendChild(mk('📄 JSON (fiel, para restaurar)', 'json', 'pri'));
+    box.appendChild(mk('📊 CSV (se abre en Excel)',      'csv',  'pri'));
+    box.appendChild(mk('📦 Los dos (JSON + CSV)',        'both', 'pri'));
+    box.appendChild(mk('✕ Cancelar', null, ''));
+    ov.appendChild(box);
+    ov.onclick = (e)=>{ if(e.target===ov) cierra(null); };   // click afuera = cancelar
+    document.body.appendChild(ov);
+  });
+}
 
+// Genera y descarga el ZIP de JSON
+async function _bkZipJson(JSZip, data, tablas, fecha){
+  const z = new JSZip();
+  for(const t of tablas) z.file(t + '.json', JSON.stringify(data[t] || [], null, 1));
+  const blob = await z.generateAsync({ type:'blob', compression:'DEFLATE' });
+  _bkDownload(blob, 'SGV_backup_JSON_' + fecha + '.zip');
+}
+// Genera y descarga el ZIP de CSV
+async function _bkZipCsv(JSZip, data, tablas, fecha){
+  const z = new JSZip();
+  for(const t of tablas) z.file(t + '.csv', '\uFEFF' + _bkToCSV(data[t] || []));
+  const blob = await z.generateAsync({ type:'blob', compression:'DEFLATE' });
+  _bkDownload(blob, 'SGV_backup_CSV_' + fecha + '.zip');
+}
+
+async function hacerBackup(){
+  // 1) Preguntar el formato ANTES de traer nada
+  const fmt = await _bkAskFormato();
+  if(!fmt) return;   // canceló
+
+  // 2) Cargar el compresor
   let JSZip;
   try{ JSZip = await _bkLoadJSZip(); }
   catch(e){ if(typeof toast==='function') toast('No se pudo cargar el compresor','err'); return; }
 
+  // 3) Traer los datos
+  if(typeof toast==='function') toast('⏳ Generando backup…');
   let data;
   try{
     const r = await apiGet('/backup/data');
@@ -59,24 +106,16 @@ async function hacerBackup(){
   const fecha  = new Date().toISOString().slice(0,10);
   const tablas = Object.keys(data);
 
-  // ── ZIP 1: JSON ──
-  try{
-    const z = new JSZip();
-    for(const t of tablas) z.file(t + '.json', JSON.stringify(data[t] || [], null, 1));
-    const blob = await z.generateAsync({ type:'blob', compression:'DEFLATE' });
-    _bkDownload(blob, 'SGV_backup_JSON_' + fecha + '.zip');
-  }catch(e){ console.error('zip json:', e); if(typeof toast==='function') toast('Error armando el ZIP JSON','err'); }
-
-  // pequeña pausa para que el navegador no bloquee la 2ª descarga
-  await new Promise(res=>setTimeout(res, 600));
-
-  // ── ZIP 2: CSV ──
-  try{
-    const z = new JSZip();
-    for(const t of tablas) z.file(t + '.csv', '\uFEFF' + _bkToCSV(data[t] || []));
-    const blob = await z.generateAsync({ type:'blob', compression:'DEFLATE' });
-    _bkDownload(blob, 'SGV_backup_CSV_' + fecha + '.zip');
-  }catch(e){ console.error('zip csv:', e); if(typeof toast==='function') toast('Error armando el ZIP CSV','err'); }
+  // 4) Generar solo el/los ZIP elegidos
+  if(fmt==='json' || fmt==='both'){
+    try{ await _bkZipJson(JSZip, data, tablas, fecha); }
+    catch(e){ console.error('zip json:', e); if(typeof toast==='function') toast('Error armando el ZIP JSON','err'); }
+  }
+  if(fmt==='both') await new Promise(res=>setTimeout(res, 600));   // pausa entre 2 descargas
+  if(fmt==='csv' || fmt==='both'){
+    try{ await _bkZipCsv(JSZip, data, tablas, fecha); }
+    catch(e){ console.error('zip csv:', e); if(typeof toast==='function') toast('Error armando el ZIP CSV','err'); }
+  }
 
   if(typeof toast==='function') toast('✅ Backup descargado (' + tablas.length + ' tablas)');
 }
