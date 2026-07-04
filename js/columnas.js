@@ -104,12 +104,16 @@ const COL_DEFS = {
 
 const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true}, desp:{col:null,asc:true}, reci:{col:null,asc:true}, cart:{col:null,asc:true}, oc:{col:null,asc:true} };
 
+// Ancho de referencia por carácter (px). Se usa para convertir 'chars' → px FIJO,
+// así una columna mide igual en el encabezado y en las filas aunque usen fuentes
+// distintas (la unidad CSS 'ch' variaría según la fuente y desalinearía).
+const CHAR_PX = 8;
+
 function getActiveCols(grid) {
   const cfg  = getConfigUI(grid);
   const defs = COL_DEFS[grid];
-  // Si una columna define 'chars', ese es su ancho FIJO en caracteres (unidad ch).
-  // Para que una columna absorba el espacio sobrante, usar width:'1fr' en su lugar.
-  const norm = c => c.chars ? { ...c, width: c.chars + 'ch' } : c;
+  // Si una columna define 'chars', su ancho FIJO = chars × CHAR_PX (en px, no en 'ch').
+  const norm = c => c.chars ? { ...c, width: (c.chars * CHAR_PX) + 'px' } : c;
   if (!cfg || !cfg.activas || cfg.activas.length === 0) return defs.filter(c => c.active).map(norm);
   let ordered = (cfg.orden || []).map(f => defs.find(d => d.field === f)).filter(Boolean);
   defs.forEach(d => { if (!ordered.find(o => o.field === d.field)) ordered.push(d); });
