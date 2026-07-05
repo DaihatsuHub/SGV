@@ -7,6 +7,7 @@
 let RECIS = [];
 let RECI_ITEMS = [];
 let reciSelIdx = null;
+let reciSelId = null;
 let _reciReadonly = false;
 let _reciMode = 'A';
 let _reciOrig = null;
@@ -203,7 +204,7 @@ function reciInstallNav(){
     document.getElementById('reci-body')?.querySelector(`[data-idx="${next}"]`)?.scrollIntoView({block:'nearest'});
   });
 }
-function selReci(i){ reciSelIdx=i; renderReci(); }
+function selReci(i){ reciSelIdx=i; reciSelId=getReciRows()[i]?.rec?.id ?? null; renderReci(); }
 
 // ════════════════ EDITOR — apertura ════════════════
 function reciAlta(){
@@ -251,7 +252,8 @@ function reciModif(){ _reciReadonly=false; return _reciOpenEditor(); }
 function reciVer(){ _reciReadonly=true; return _reciOpenEditor(); }
 async function _reciOpenEditor(){
   if(reciSelIdx===null){ toast('Seleccioná un recibo','err'); return; }
-  const sel=getReciRows()[reciSelIdx]; if(!sel){ toast('Seleccioná un recibo','err'); return; }
+  const sel = (reciSelId!=null ? getReciRows().find(r=>r.rec.id===reciSelId) : null) || getReciRows()[reciSelIdx];
+  if(!sel){ toast('Seleccioná un recibo','err'); return; }
   const rc=sel.rec;
   reciResetEnabled();
   _reciMode='M'; _reciOrig=rc;
@@ -304,7 +306,8 @@ async function _reciOpenEditor(){
 
 function reciBaja(){
   if(reciSelIdx===null){ toast('Seleccioná un recibo','err'); return; }
-  const sel=getReciRows()[reciSelIdx]; if(!sel){ toast('Seleccioná un recibo','err'); return; }
+  const sel = (reciSelId!=null ? getReciRows().find(r=>r.rec.id===reciSelId) : null) || getReciRows()[reciSelIdx];
+  if(!sel){ toast('Seleccioná un recibo','err'); return; }
   const rc=sel.rec;
   confirm2(`¿Anular el recibo ${rc.empresa}${rc.talonario} ${rc.numero}?`,'Se revertirán los saldos de las facturas imputadas.',async()=>{
     syncSaving();
@@ -314,7 +317,7 @@ function reciBaja(){
       const idx=RECIS.findIndex(x=>x.id===rc.id); if(idx>=0) RECIS.splice(idx,1);
       await sbLoadReciItems();
       if(typeof sbLoadCheques==='function'){ await sbLoadCheques(); if(typeof renderCart==='function') renderCart(); }
-      reciSelIdx=null; renderReci(); syncOk(); toast('Recibo anulado','scs');
+      reciSelIdx=null; reciSelId=null; renderReci(); syncOk(); toast('Recibo anulado','scs');
     }catch(e){ console.error(e); syncErr(); toast('Error al anular: '+e.message,'err'); }
   });
 }
@@ -639,7 +642,7 @@ async function saveReci(){
     // bump del número de talonario (alta) — sigue del lado cliente por ahora
     if(_reciMode==='A' && res.talo){ const t=taloFind(res.talo.empresa,res.talo.tipo); if(t && (Number(res.talo.ultimo_nro)||0)>(Number(t.ultimo_nro)||0)) t.ultimo_nro=res.talo.ultimo_nro; }
     closeOv('ov-reci');
-    await sbLoadRecis(); await sbLoadReciItems(); if(typeof sbLoadCheques==='function'){ await sbLoadCheques(); if(typeof renderCart==='function') renderCart(); } reciSelIdx=null; renderReci();
+    await sbLoadRecis(); await sbLoadReciItems(); if(typeof sbLoadCheques==='function'){ await sbLoadCheques(); if(typeof renderCart==='function') renderCart(); } reciSelIdx=null; reciSelId=null; renderReci();
     syncOk();
     toast(_reciMode==='A'?'Recibo dado de alta':'Recibo modificado','scs');
   }catch(e){ console.error('saveReci:',e); syncErr(); toast('Error: '+e.message,'err'); }
