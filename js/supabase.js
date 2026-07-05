@@ -138,20 +138,20 @@ function cliToDb(c) {
 }
 
 // ── Carga inicial ─────────────────────────────────────────
+let _artsLoaded = false;
 async function sbLoad() {
   syncStatus('☁️ Cargando...');
   try {
-    const [resArts, resClis, resTabs] = await Promise.all([
-      apiGet('/articulos'),                 // ← artículos desde TU server Fastify
+    const [resClis, resTabs] = await Promise.all([
       apiGet('/clientes'),                  // ← clientes desde TU server Fastify
       apiGet('/tablas'),                    // ← tablas auxiliares desde TU server Fastify
     ]);
-    ARTS = resArts.articulos;   // ya vienen mapeados (ART_*) desde el server
     CLIS = resClis.clientes;    // ya vienen mapeados (CLI_*) desde el server
     TABLAS = resTabs.tablas;    // tablas auxiliares ya mapeadas desde el server
-    // (Órdenes de Compra se cargan en paralelo con el resto en iniciarApp,
-    //  no acá en fila, para no demorar el arranque.)
-    syncStatus(`☁️ ${ARTS.length} art · ${CLIS.length} cli`, '#4ade80');
+    // ARTÍCULOS: ya NO se cargan en el login (7726 filas). Se cargan diferidos
+    // la primera vez que se abre un módulo que los usa (ensureArts()).
+    ARTS = [];
+    syncStatus(`☁️ ${CLIS.length} cli`, '#4ade80');
     setTimeout(()=>syncStatus('☁️ Conectado', '#93b4d8'), 3000);
     return true;
   } catch(e) {
@@ -159,6 +159,17 @@ async function sbLoad() {
     console.warn('Supabase load error:', e);
     return false;
   }
+}
+
+// Carga diferida de artículos: trae ARTS una sola vez, la primera vez que
+// un módulo que los usa (artículos, despachos, facturación, histart, OC) los necesita.
+async function ensureArts() {
+  if (_artsLoaded) return;
+  try {
+    const r = await apiGet('/articulos');
+    ARTS = r.articulos || [];
+    _artsLoaded = true;
+  } catch(e) { console.error('ensureArts:', e); }
 }
 
 async function sbSaveArt(art) {

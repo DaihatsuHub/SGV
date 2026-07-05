@@ -1581,7 +1581,8 @@ async function iniciarApp() {
   // Se cargan al abrir el módulo (carga diferida, ver renderOC en oc.js).
   await Promise.all(cargas);
   aplicarPermisos();
-  renderArts();
+  // renderArts() ya NO se llama en el login: artículos se cargan diferidos al
+  // abrir el módulo (ensureArts + auto-guarda en renderArts).
   renderClis();
   renderTab && renderTab();
   renderUsua && renderUsua();

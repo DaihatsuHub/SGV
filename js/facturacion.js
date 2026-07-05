@@ -274,7 +274,7 @@ function renderFac() {
   // Carga diferida: facturas no se cargan al login; se traen al abrir el módulo
   if(!window._facsLoaded){
     if(body) body.innerHTML='<div class="empty">⏳ Cargando facturas…</div>';
-    ensureFacturas().then(()=>renderFac()).catch(()=>{ if(body) body.innerHTML='<div class="empty">⚠️ Error al cargar facturas</div>'; });
+    Promise.all([ ensureFacturas(), (typeof ensureArts==='function'?ensureArts():Promise.resolve()) ]).then(()=>renderFac()).catch(()=>{ if(body) body.innerHTML='<div class="empty">⚠️ Error al cargar facturas</div>'; });
     return;
   }
   const list=filtFacs();

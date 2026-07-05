@@ -46,7 +46,10 @@ function renderDesp() {
     if(!window._despLoading){
       window._despLoading=true;
       if(body) body.innerHTML='<div class="empty">⏳ Cargando despachos…</div>';
-      (typeof sbLoadDesps==='function'?sbLoadDesps():Promise.resolve())
+      Promise.all([
+        (typeof sbLoadDesps==='function'?sbLoadDesps():Promise.resolve()),
+        (typeof ensureArts==='function'?ensureArts():Promise.resolve())
+      ])
         .then(()=>{ window._despLoaded=true; window._despLoading=false; renderDesp(); })
         .catch(e=>{ window._despLoading=false; console.error('carga despachos:',e); if(body) body.innerHTML='<div class="empty">⚠️ Error al cargar despachos</div>'; });
     }

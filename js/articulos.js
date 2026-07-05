@@ -30,6 +30,7 @@ function filtArts(){
 }
 
 function renderArts(){
+  if (typeof _artsLoaded !== 'undefined' && !_artsLoaded) { ensureArts().then(renderArts); return; }
   const list = filtArts();
   const body = document.getElementById('art-body');
   const cols  = getActiveCols('art');
