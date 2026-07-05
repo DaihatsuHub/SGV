@@ -94,21 +94,25 @@ function renderResumen(){
   let gU=0, gT=0;
   tree.forEach(c=>{ gU+=c.totU; gT+=c.totT; });
 
-  const row = (lvl, cols, cls, key, hasChild, open) => {
+  const row = (lvl, cols, cls, key, hasChild, open, bg) => {
     const pad = 8 + lvl*20;
     const arrow = hasChild ? `<span class="res-arrow" style="cursor:pointer;display:inline-block;width:14px">${open?'▼':'▶'}</span>` : '<span style="display:inline-block;width:14px"></span>';
     const onclick = hasChild ? ` onclick="toggleResNode('${key}')"` : '';
-    return `<div class="res-row ${cls}"${onclick} style="display:grid;grid-template-columns:2fr 1.4fr 1.4fr 1fr 1.3fr 2.4fr 0.8fr 1fr 1.1fr;gap:6px;padding:5px 8px 5px ${pad}px;border-bottom:1px solid var(--b1);${hasChild?'cursor:pointer;':''}align-items:center">${cols.map((v,i)=>`<span style="${i>=6?'text-align:right;font-family:var(--mono);':''}${cls==='res-det'?'font-size:12px;color:var(--t2)':''}">${i===0?arrow+' ':''}${v}</span>`).join('')}</div>`;
+    return `<div class="res-row ${cls}"${onclick} style="display:grid;grid-template-columns:2fr 1.4fr 1.4fr 1fr 1.3fr 2.4fr 0.8fr 1fr 1.1fr;gap:6px;padding:5px 8px 5px ${pad}px;border-bottom:1px solid var(--b1);${bg?'background:'+bg+';':''}${hasChild?'cursor:pointer;':''}align-items:center">${cols.map((v,i)=>`<span style="${i>=6?'text-align:right;font-family:var(--mono);':''}${cls==='res-det'?'font-size:12px;color:var(--t2)':''}">${i===0?arrow+' ':''}${v}</span>`).join('')}</div>`;
   };
+  // Paleta de colores para sombrear cada Centro de Costos (suaves, sirven en claro/oscuro)
+  const RES_CCOS_COLORS = ['rgba(59,130,246,.13)','rgba(16,185,129,.13)','rgba(245,158,11,.14)','rgba(139,92,246,.13)','rgba(236,72,153,.13)','rgba(20,184,166,.13)','rgba(239,68,68,.12)','rgba(132,204,22,.14)','rgba(6,182,212,.13)','rgba(168,85,247,.13)'];
 
   let html = '';
   // encabezado de columnas
   html += `<div style="display:grid;grid-template-columns:2fr 1.4fr 1.4fr 1fr 1.3fr 2.4fr 0.8fr 1fr 1.1fr;gap:6px;padding:8px;background:var(--s3);position:sticky;top:0;font-family:var(--mono);font-size:11px;color:var(--t2);text-transform:uppercase;border-bottom:2px solid var(--b1)">
     <span>C.Costo</span><span>Marca</span><span>Rubro</span><span>SubR</span><span>Artículo</span><span>Descripción</span><span style="text-align:right">Unid</span><span style="text-align:right">Costo</span><span style="text-align:right">Total</span></div>`;
 
+  let _ci = 0;
   for(const c of tree){
     const cOpen = _resOpen[c.key] === true;   // todo arranca contraído
-    html += row(0, [`<b>${_resLbl('CCOS',c.ccos)}</b>`,'','','','','', `<b>${_resFmtN(c.totU)}</b>`, '', `<b>${_resFmtN2(c.totT)}</b>`], 'res-c', c.key, true, cOpen);
+    const cBg = RES_CCOS_COLORS[_ci % RES_CCOS_COLORS.length]; _ci++;
+    html += row(0, [`<b>${_resLbl('CCOS',c.ccos)}</b>`,'','','','','', `<b>${_resFmtN(c.totU)}</b>`, '', `<b>${_resFmtN2(c.totT)}</b>`], 'res-c', c.key, true, cOpen, cBg);
     if(!cOpen) continue;
     for(const m of c.marcas){
       const mOpen = _resOpen[m.key] === true;
