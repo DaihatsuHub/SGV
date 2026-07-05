@@ -231,6 +231,7 @@ function reciAlta(){
   reciFillClienteList();
   renderReciDeud(); renderReciACuenta(); renderReciTransf(); renderReciCheques(); renderReciRetenc(); reciReconcile();
   document.getElementById('reci-mtit').textContent='Nuevo Recibo';
+  { const _t=document.getElementById('rf-comp-titulo'); if(_t) _t.textContent='Comprobantes deudores'; }
   setMtag('reci-mtag','ALTA','tag-a');
   document.getElementById('ov-reci').classList.add('open');
 }
@@ -292,6 +293,7 @@ async function _reciOpenEditor(){
   }catch(e){ console.error('reciModif load:',e); _reciDeud=[];_reciACuenta=[];_reciTransf=[];_reciCheques=[];_reciRetenc=[]; }
   renderReciDeud(); renderReciACuenta(); renderReciTransf(); renderReciCheques(); renderReciRetenc(); reciReconcile();
   document.getElementById('reci-mtit').textContent=`${_reciReadonly?'Ver':'Modificar'} Recibo ${rc.empresa}${rc.talonario} ${rc.numero}`;
+  { const _t=document.getElementById('rf-comp-titulo'); if(_t) _t.textContent='Comprobantes aplicados'; }
   // Auditoría: quién creó el recibo, en la fila de totales (Abonado / Saldo)
   const _wrapCre=document.getElementById('rf-creado-wrap'), _elCre=document.getElementById('rf-creado');
   if(_wrapCre){ if(rc.usuario_alta){ if(_elCre) _elCre.textContent=rc.usuario_alta; _wrapCre.hidden=false; } else { _wrapCre.hidden=true; } }
