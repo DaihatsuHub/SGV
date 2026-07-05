@@ -172,6 +172,22 @@ async function ensureArts() {
   } catch(e) { console.error('ensureArts:', e); }
 }
 
+// Carga diferida de recibos + cheques: trae RECIS, RECI_ITEMS y CHEQUES una sola
+// vez, la primera vez que se abre un módulo que los usa (Recibos, Cartera, Ficha,
+// Listado de Cobranzas). Antes se cargaban en el login (más lento).
+let _recisLoaded = false;
+async function ensureRecibos() {
+  if (_recisLoaded) return;
+  try {
+    await Promise.all([
+      (typeof sbLoadRecis==='function'     ? sbLoadRecis()     : Promise.resolve()),
+      (typeof sbLoadReciItems==='function' ? sbLoadReciItems() : Promise.resolve()),
+      (typeof sbLoadCheques==='function'   ? sbLoadCheques()   : Promise.resolve()),
+    ]);
+    _recisLoaded = true;
+  } catch(e) { console.error('ensureRecibos:', e); }
+}
+
 async function sbSaveArt(art) {
   syncSaving();
   try { await apiPost('/articulos/guardar', { articulo: art }); syncOk(); }

@@ -22,7 +22,8 @@ function _lcobCliRazon(cod){
 function _lcobCli(cod){ const rz=_lcobCliRazon(cod); return rz ? ((cod||'')+' — '+rz) : (cod||''); }
 
 async function _lcobEnsureData(){
-  if(typeof RECIS!=='undefined' && (!RECIS||!RECIS.length) && typeof sbLoadRecis==='function'){
+  if(typeof ensureRecibos==='function') { try{ await ensureRecibos(); }catch(e){ console.error('listcob/recibos:',e); } }
+  else if(typeof RECIS!=='undefined' && (!RECIS||!RECIS.length) && typeof sbLoadRecis==='function'){
     try{ await sbLoadRecis(); }catch(e){ console.error('listcob/recibos:',e); }
   }
   if(!_lcobPagos){ try{ _lcobPagos = await sbGetAll('recibo_pagos','id'); }catch(e){ _lcobPagos=[]; } }

@@ -106,7 +106,13 @@ function getReciRows(){
   return rows;
 }
 function renderReci(){
-  const list=getReciRows(); const body=document.getElementById('reci-body'); if(!body) return;
+  const body=document.getElementById('reci-body'); if(!body) return;
+  if (typeof _recisLoaded !== 'undefined' && !_recisLoaded) {
+    body.innerHTML='<div class="empty">⏳ Cargando recibos…</div>';
+    if (typeof ensureRecibos==='function') ensureRecibos().then(renderReci);
+    return;
+  }
+  const list=getReciRows();
   const cols=(typeof getActiveCols==='function')?getActiveCols('reci'):[
     {field:'REC_FEC',label:'Fecha recibo',width:'100px'},{field:'REC_CLI',label:'Cliente',width:'1fr'},
     {field:'REC_COMP',label:'Comprobante',width:'130px'},{field:'REC_MON',label:'Moneda',width:'95px'},

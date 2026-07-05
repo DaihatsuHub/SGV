@@ -1573,10 +1573,9 @@ async function iniciarApp() {
     sbLoadCtips(),
     sbLoadTalos(),
     sbLoadRetes(),
-    sbLoadRecis(),
-    sbLoadReciItems(),
-    sbLoadCheques(),
   ];
+  // Recibos + cheques: YA NO se cargan al login. Se cargan diferidos al abrir
+  // Recibos/Cartera/Ficha/Listado (ensureRecibos()).
   // Órdenes de compra: YA NO se cargan al login.
   // Se cargan al abrir el módulo (carga diferida, ver renderOC en oc.js).
   await Promise.all(cargas);
@@ -1588,9 +1587,8 @@ async function iniciarApp() {
   renderUsua && renderUsua();
   renderTalo && renderTalo();
   renderRete && renderRete();
-  renderReci && renderReci();
-  renderCart && renderCart();
-  renderFicha && renderFicha();
+  // renderReci/renderCart/renderFicha ya NO se llaman en el login: recibos y
+  // cheques se cargan diferidos al abrir esos módulos (ensureRecibos + auto-guarda).
   vmesRenderMarcas && vmesRenderMarcas();
   const ddiUsua = document.getElementById('ddi-usua');
   if (ddiUsua && usuarioActual) ddiUsua.style.display = usuarioActual.nivel > 80 ? 'block' : 'none';
