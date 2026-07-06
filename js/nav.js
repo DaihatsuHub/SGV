@@ -59,6 +59,10 @@ function showSubPage(menu, sub) {
   else if (sub==='grup') renderTabGral('GRUP');
   else if (sub==='usua') renderUsua();
   else if (sub==='fac')  renderFac();
+  else if (sub==='reci') renderReci();
+  else if (sub==='cart') renderCart();
+  else if (sub==='ficha') renderFicha();
+  else if (sub==='listcob') { /* se renderiza al consultar */ }
   else if (sub==='histart') { if(typeof ensureArts==='function') ensureArts(); /* se renderiza al consultar */ }
   else if (sub==='ctip') renderCtip();
   else if (sub==='mone') renderTabGral('MONE');
