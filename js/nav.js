@@ -62,6 +62,7 @@ function showSubPage(menu, sub) {
   else if (sub==='reci') renderReci();
   else if (sub==='cart') renderCart();
   else if (sub==='ficha') renderFicha();
+  else if (sub==='ctacte') { if(typeof ctacteFillClientes==='function') ctacteFillClientes(); /* se renderiza al Consultar */ }
   else if (sub==='listcob') { /* se renderiza al consultar */ }
   else if (sub==='histart') { if(typeof ensureArts==='function') ensureArts(); /* se renderiza al consultar */ }
   else if (sub==='ctip') renderCtip();

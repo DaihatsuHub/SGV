@@ -150,6 +150,7 @@ const MENU_DEF = [
   { grupo:'👥 Clientes', tnav:'tnav-cli', items:[
     { id:'ddi-cli',   mod:'cli',   label:'📋 Maestro de Clientes' },
     { id:'ddi-ficha', mod:'ficha', label:'🪪 Ficha del Cliente' },
+    { id:'ddi-ctacte', mod:'ctacte', label:'📄 Cuenta Corriente' },
     { id:'ddi-cpag',  mod:'cpag',  label:'💳 Condiciones de Pago', tabla:true },
     { id:'ddi-vend',  mod:'vend',  label:'👤 Vendedores',          tabla:true },
     { id:'ddi-cate',  mod:'cate',  label:'🏷️ Categorías',          tabla:true },
