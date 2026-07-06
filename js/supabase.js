@@ -151,6 +151,15 @@ async function sbLoad() {
     // ARTÍCULOS: ya NO se cargan en el login (7726 filas). Se cargan diferidos
     // la primera vez que se abre un módulo que los usa (ensureArts()).
     ARTS = [];
+    // Resetear TODOS los flags de carga diferida: cada login arranca limpio, así
+    // los ensure*() vuelven a traer datos frescos (si no, quedan en 0 tras re-login).
+    _artsLoaded = false;
+    _recisLoaded = false;
+    window._facsLoaded = false;
+    window._despLoaded = false; window._despLoading = false;
+    window._ocLoaded = false;   window._ocLoading = false;
+    if (typeof _lcobPagos !== 'undefined') _lcobPagos = null;
+    if (typeof _lcobCheq  !== 'undefined') _lcobCheq  = null;
     syncStatus(`☁️ ${CLIS.length} cli`, '#4ade80');
     setTimeout(()=>syncStatus('☁️ Conectado', '#93b4d8'), 3000);
     return true;
