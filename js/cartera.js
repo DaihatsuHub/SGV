@@ -90,7 +90,7 @@ function renderCart(){
   const body=document.getElementById('cart-body'); if(!body) return;
   if (typeof _recisLoaded !== 'undefined' && !_recisLoaded) {
     body.innerHTML='<div class="empty">⏳ Cargando cartera…</div>';
-    if (typeof ensureRecibos==='function') ensureRecibos().then(renderCart);
+    if (!_recisLoading && typeof ensureRecibos==='function') ensureRecibos().then(renderCart);
     return;
   }
   const list=getCheqRows();
