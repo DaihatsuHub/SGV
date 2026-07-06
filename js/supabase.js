@@ -153,8 +153,8 @@ async function sbLoad() {
     ARTS = [];
     // Resetear TODOS los flags de carga diferida: cada login arranca limpio, así
     // los ensure*() vuelven a traer datos frescos (si no, quedan en 0 tras re-login).
-    _artsLoaded = false; _artsLoading = false;
-    _recisLoaded = false; _recisLoading = false;
+    _artsLoaded = false; _artsLoading = false; _artsPromise = null;
+    _recisLoaded = false; _recisLoading = false; _recisPromise = null;
     window._facsLoaded = false;
     window._despLoaded = false; window._despLoading = false;
     window._ocLoaded = false;   window._ocLoading = false;
@@ -172,32 +172,36 @@ async function sbLoad() {
 
 // Carga diferida de artículos: trae ARTS una sola vez, la primera vez que
 // un módulo que los usa (artículos, despachos, facturación, histart, OC) los necesita.
-let _artsLoading = false;
-async function ensureArts() {
-  if (_artsLoaded || _artsLoading) return;
-  _artsLoading = true;
-  try {
-    const r = await apiGet('/articulos');
-    ARTS = r.articulos || [];
-  } catch(e) { console.error('ensureArts:', e); }
-  _artsLoaded = true;   // marcar SIEMPRE para no entrar en loop de reintentos
-  _artsLoading = false;
+let _artsLoading = false, _artsPromise = null;
+function ensureArts() {
+  if (_artsLoaded) return Promise.resolve();
+  if (_artsPromise) return _artsPromise;
+  _artsPromise = (async () => {
+    try {
+      const r = await apiGet('/articulos');
+      ARTS = r.articulos || [];
+    } catch(e) { console.error('ensureArts:', e); }
+    _artsLoaded = true;
+  })();
+  return _artsPromise;
 }
 
 // Carga diferida de recibos + cheques: trae RECIS, RECI_ITEMS y CHEQUES una sola
 // vez, la primera vez que se abre un módulo que los usa (Recibos, Cartera, Ficha,
 // Listado de Cobranzas). Antes se cargaban en el login (más lento).
-let _recisLoaded = false, _recisLoading = false;
-async function ensureRecibos() {
-  if (_recisLoaded || _recisLoading) return;
-  _recisLoading = true;
-  try {
-    if (typeof sbLoadRecis==='function')     await sbLoadRecis();
-    if (typeof sbLoadReciItems==='function') await sbLoadReciItems();
-    if (typeof sbLoadCheques==='function')   await sbLoadCheques();
-  } catch(e) { console.error('ensureRecibos:', e); }
-  _recisLoaded = true;   // marcar SIEMPRE (aunque falle) para no entrar en loop de reintentos
-  _recisLoading = false;
+let _recisLoaded = false, _recisLoading = false, _recisPromise = null;
+function ensureRecibos() {
+  if (_recisLoaded) return Promise.resolve();
+  if (_recisPromise) return _recisPromise;
+  _recisPromise = (async () => {
+    try {
+      if (typeof sbLoadRecis==='function')     await sbLoadRecis();
+      if (typeof sbLoadReciItems==='function') await sbLoadReciItems();
+      if (typeof sbLoadCheques==='function')   await sbLoadCheques();
+    } catch(e) { console.error('ensureRecibos:', e); }
+    _recisLoaded = true;
+  })();
+  return _recisPromise;
 }
 
 async function sbSaveArt(art) {

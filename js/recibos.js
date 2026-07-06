@@ -109,7 +109,7 @@ function renderReci(){
   const body=document.getElementById('reci-body'); if(!body) return;
   if (typeof _recisLoaded !== 'undefined' && !_recisLoaded) {
     body.innerHTML='<div class="empty">⏳ Cargando recibos…</div>';
-    if (!_recisLoading && typeof ensureRecibos==='function') ensureRecibos().then(renderReci);
+    if (typeof ensureRecibos==='function') ensureRecibos().then(renderReci);
     return;
   }
   const list=getReciRows();
