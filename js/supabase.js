@@ -231,7 +231,7 @@ const TAB_MAP = {
   RUBR:'rubros', SRUB:'subrubros', MARC:'marcas', PROV:'proveedores',
   VEND:'vendedores', CPAG:'condpago', PCIA:'provincias',
   GRUP:'grupos', CATE:'categorias', EXPR:'expresos', MONE:'monedas',
-  CCOS:'centros_costos'
+  CCOS:'centros_costos', PERC:'percepciones'
 };
 
 async function saveTabRow(row) {

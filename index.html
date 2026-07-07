@@ -120,6 +120,7 @@
         <button class="dd-item" id="ddi-vend" onclick="showSubPage('cli','vend')">👤 Tabla de Vendedores</button>
         <button class="dd-item" id="ddi-cate" onclick="showSubPage('cli','cate')">🏷️ Tabla de Categorías</button>
         <button class="dd-item" id="ddi-grup" onclick="showSubPage('cli','grup')">📂 Tabla de Grupos</button>
+        <button class="dd-item" id="ddi-perc" onclick="showSubPage('cli','perc')">🧾 Tabla de Percepciones</button>
       </div>
     </div>
     <div class="dd-wrap">
@@ -416,6 +417,23 @@
   <div class="tbl-wrap">
     <div class="th-tab"><span>Código</span><span>Descripción</span><span>Info</span><span></span></div>
     <div class="tbl-body" id="grup-body"></div>
+  </div>
+</div>
+
+<div class="page" id="page-perc">
+  <div class="toolbar">
+    <button class="btn pri" id="btn-perc-alta" onclick="tabAlta('PERC')">＋ Alta</button>
+    <button class="btn" id="btn-perc-modif" onclick="tabModif('PERC')">✏️ Modificar</button>
+    <button class="btn dng" id="btn-perc-baja" onclick="tabBaja('PERC')">✕ Baja</button>
+    <div class="spacer"></div>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="perc-q" placeholder="Buscar..." oninput="renderTabGral('PERC')">
+      <button class="srch-clr" onclick="clrSrch('perc-q',function(){renderTabGral('PERC')})" title="Limpiar">✕</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <div class="th-tab"><span>Código</span><span>Descripción</span><span>Porcentaje</span><span></span></div>
+    <div class="tbl-body" id="perc-body"></div>
   </div>
 </div>
 

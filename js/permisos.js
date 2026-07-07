@@ -155,6 +155,7 @@ const MENU_DEF = [
     { id:'ddi-vend',  mod:'vend',  label:'👤 Vendedores',          tabla:true },
     { id:'ddi-cate',  mod:'cate',  label:'🏷️ Categorías',          tabla:true },
     { id:'ddi-grup',  mod:'grup',  label:'📂 Grupos',              tabla:true },
+    { id:'ddi-perc',  mod:'perc',  label:'🧾 Tabla de Percepciones', tabla:true },
   ]},
   { grupo:'🛒 Compras', tnav:'tnav-cmp', items:[
     { id:'ddi-oc',   mod:'oc',   label:'📋 Ordenes de Compra' },

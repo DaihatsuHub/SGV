@@ -16,6 +16,7 @@ const TAB_CONFIG = {
   CATE: { label:'Categorías',       lbl1:'Info',       lbl2:'' },
   MONE: { label:'Monedas',           lbl1:'Signo',      lbl2:'',           lblNum:'Cotización' },
   PCIA: { label:'Provincias',         lbl1:'Alícuota IB', lbl2:'' },
+  PERC: { label:'Percepciones',       lbl1:'Porcentaje', lbl2:'' },
 };
 
 
@@ -97,7 +98,7 @@ function setTabLabels() {
 }
 function saveTab() {
   // Si viene de subtabla (MARC/RUBR), usar _tabEditTipo
-  if (_tabEditTipo && ['MARC','RUBR','CCOS','PROV','VEND','CPAG','PCIA','GRUP','CATE','EXPR','SRUB','MONE'].includes(_tabEditTipo)) {
+  if (_tabEditTipo && ['MARC','RUBR','CCOS','PROV','VEND','CPAG','PCIA','GRUP','CATE','EXPR','SRUB','MONE','PERC'].includes(_tabEditTipo)) {
     const cod = document.getElementById('tf-cod').value.trim().toUpperCase();
     const det = document.getElementById('tf-det').value.trim().toUpperCase();
     if (!cod||!det) { toast('Código y detalle son obligatorios','err'); return; }
@@ -212,7 +213,7 @@ function tabAlta(tipo) {
   document.getElementById('tf-lbl1').textContent = cfgT.lbl1||'Dato 1';
   document.getElementById('tf-lbl2').textContent = cfgT.lbl2||'';
   document.getElementById('tf-s2').type = 'text';
-  document.getElementById('tf-s2').closest('.fgrp').style.display = (tipo==='RUBR'||tipo==='MONE')?'none':'flex';
+  document.getElementById('tf-s2').closest('.fgrp').style.display = (tipo==='RUBR'||tipo==='MONE'||tipo==='PERC')?'none':'flex';
   // Campo numérico
   const numGrp = document.getElementById('tf-num-grp');
   const cfgNum = TAB_CONFIG[tipo]||{};
@@ -242,7 +243,7 @@ function tabModif(tipo) {
   const cfgM = TAB_CONFIG[tipo]||{};
   document.getElementById('tf-lbl1').textContent = cfgM.lbl1||'Dato 1';
   document.getElementById('tf-lbl2').textContent = cfgM.lbl2||'';
-  document.getElementById('tf-s2').closest('.fgrp').style.display = (tipo==='RUBR'||tipo==='MONE')?'none':'flex';
+  document.getElementById('tf-s2').closest('.fgrp').style.display = (tipo==='RUBR'||tipo==='MONE'||tipo==='PERC')?'none':'flex';
   // Campo numérico
   const numGrpM = document.getElementById('tf-num-grp');
   const cfgNumM = TAB_CONFIG[tipo]||{};
