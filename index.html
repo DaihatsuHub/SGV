@@ -1034,7 +1034,13 @@
           </select>
         </div>
         <div class="fgrp"><label class="flbl2">Cond. de Pago</label><select class="finp" id="cf-conpag"><option value="">— Sin —</option></select></div>
-        <div class="fgrp"><label class="flbl2">Dto %</label><input class="finp" id="cf-dto" type="number" min="0" value="0"></div>
+        <div class="fgrp full"><label class="flbl2">Percepciones</label>
+          <div style="display:flex;gap:6px;margin-bottom:6px">
+            <select class="finp" id="cf-percep-sel" style="flex:1"></select>
+            <button type="button" class="btn" onclick="cliPercepAdd()">＋ Agregar</button>
+          </div>
+          <div id="cf-percep-list"></div>
+        </div>
         <div class="fgrp"><label class="flbl2">Nro. Ing. Brutos</label><input class="finp" id="cf-nroib" maxlength="10"></div>
         <div class="fgrp"><label class="flbl2">Tipo IB</label>
           <select class="finp" id="cf-tipoib"><option value="0">0 - Otros</option><option value="1">1 - Cap. Federal</option><option value="2">2 - Convenio</option></select>

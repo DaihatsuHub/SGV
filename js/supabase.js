@@ -120,6 +120,7 @@ function dbToCli(r) {
     CLI_TELEF:r.cli_telef, CLI_VEND:r.cli_vend, CLI_EXPRE:r.cli_expre, CLI_CUIT:r.cli_cuit,
     CLI_IVA:r.cli_iva, CLI_NROIB:r.cli_nroib, CLI_TIPOIB:r.cli_tipoib, CLI_PERCIB:r.cli_percib,
     CLI_CONPAG:r.cli_conpag, CLI_DTO:r.cli_dto, CLI_OBS:r.cli_obs, CLI_UFEC:r.cli_ufec,
+    CLI_PERCEP:r.cli_percep||[],
     CLI_INCOB:r.cli_incob, CLI_NODAR:r.cli_nodar, CLI_PREINC:r.cli_preinc,
     CLI_ABC:r.cli_abc, CLI_ICRED:r.cli_icred, CLI_FCRED:r.cli_fcred,
     CLI_ESTADO:r.cli_estado, CLI_EMAIL:r.cli_email, CLI_CATE:r.cli_cate };
@@ -132,6 +133,7 @@ function cliToDb(c) {
     cli_cuit:c.CLI_CUIT||null, cli_iva:c.CLI_IVA||null, cli_nroib:c.CLI_NROIB||null,
     cli_tipoib:c.CLI_TIPOIB||null, cli_percib:c.CLI_PERCIB||null, cli_conpag:c.CLI_CONPAG||null,
     cli_dto:c.CLI_DTO||0, cli_obs:c.CLI_OBS||null, cli_ufec:c.CLI_UFEC||null,
+    cli_percep: Array.isArray(c.CLI_PERCEP)?c.CLI_PERCEP:[],
     cli_incob:!!c.CLI_INCOB, cli_nodar:!!c.CLI_NODAR, cli_preinc:!!c.CLI_PREINC,
     cli_abc:c.CLI_ABC||null, cli_icred:c.CLI_ICRED||0, cli_fcred:c.CLI_FCRED||null,
     cli_estado:c.CLI_ESTADO||null, cli_email:c.CLI_EMAIL||null, cli_cate:c.CLI_CATE||null };

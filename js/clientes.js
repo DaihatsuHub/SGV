@@ -111,6 +111,46 @@ function cliDetail(idx){
 }
 
 
+// ── Percepciones del cliente (editor) ──────────────────────
+let _cliPercep = [];   // [{cod, pct}] durante la edición
+
+function fillCliPercepSelect(){
+  const sel = document.getElementById('cf-percep-sel');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">— Elegí una percepción —</option>' +
+    (TABLAS['PERC']||[]).map(p=>`<option value="${p.CODIGO}">${esc(p.CODIGO)} — ${esc(p.DETALLE)}</option>`).join('');
+}
+function _percTablaPct(cod){
+  const p = (TABLAS['PERC']||[]).find(x=>x.CODIGO===cod);
+  return p ? (parseFloat(p.STRING1)||0) : 0;   // % por defecto de la tabla
+}
+function _percTablaDesc(cod){
+  const p = (TABLAS['PERC']||[]).find(x=>x.CODIGO===cod);
+  return p ? p.DETALLE : cod;
+}
+function renderCliPercep(){
+  const box = document.getElementById('cf-percep-list');
+  if(!box) return;
+  if(!_cliPercep.length){ box.innerHTML='<div style="font-size:12px;color:var(--t3);padding:4px 0">Sin percepciones asignadas</div>'; return; }
+  box.innerHTML = _cliPercep.map((p,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--b1)">
+      <span style="flex:1;font-size:13px">${esc(_percTablaDesc(p.cod))} <span style="font-family:var(--mono);color:var(--t3);font-size:11px">(${esc(p.cod)})</span></span>
+      <input type="number" min="0" step="0.01" value="${p.pct}" style="width:80px;text-align:right;font-family:var(--mono);background:var(--s2);border:1px solid var(--b1);border-radius:4px;padding:3px 6px;color:var(--txt)" onchange="cliPercepPct(${i},this.value)"><span style="font-size:12px;color:var(--t2)">%</span>
+      <button type="button" class="btn dng" style="padding:2px 8px" onclick="cliPercepDel(${i})" title="Quitar">✕</button>
+    </div>`).join('');
+}
+function cliPercepAdd(){
+  const sel = document.getElementById('cf-percep-sel');
+  const cod = sel ? sel.value : '';
+  if(!cod){ toast('Elegí una percepción','err'); return; }
+  if(_cliPercep.find(p=>p.cod===cod)){ toast('Esa percepción ya está agregada','err'); return; }
+  _cliPercep.push({ cod, pct: _percTablaPct(cod) });
+  if(sel) sel.value='';
+  renderCliPercep();
+}
+function cliPercepDel(i){ _cliPercep.splice(i,1); renderCliPercep(); }
+function cliPercepPct(i,val){ if(_cliPercep[i]) _cliPercep[i].pct = parseFloat(val)||0; }
+
 function fillCliSelects() {
   const vendEl = document.getElementById('cf-vend');
   const exprEl = document.getElementById('cf-expre');
@@ -133,6 +173,7 @@ function fillCliSelects() {
       (TABLAS['CPAG']||[]).map(p=>`<option value="${p.CODIGO}">${p.CODIGO} — ${p.DETALLE}</option>`).join('');
     if(cur) cpagEl.value = cur;
   }
+  fillCliPercepSelect();
 }
 
 function cAlta(){
@@ -163,12 +204,13 @@ function cBaja(){
 }
 function clrCliForm(){
   ['cf-cod','cf-razon','cf-domic','cf-local','cf-cp','cf-tel','cf-email','cf-vend','cf-expre','cf-cuit','cf-conpag','cf-nroib','cf-obs'].forEach(i=>document.getElementById(i).value='');
-  ['cf-dto','cf-icred'].forEach(i=>document.getElementById(i).value=0);
+  ['cf-icred'].forEach(i=>document.getElementById(i).value=0);
   document.getElementById('cf-fcred').value='';
   ['cf-abc','cf-prov','cf-cate'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('cf-iva').value='I';
   document.getElementById('cf-tipoib').value='0';
   ['ctog-inc','ctog-preinc','ctog-nodar','ctog-perc'].forEach(t=>setTog(t,t.replace('ctog-','cf-'),false));
+  _cliPercep=[]; renderCliPercep();
 }
 function fillCliForm(c){
   document.getElementById('cf-cod').value=c.CLI_CODIGO;
@@ -187,7 +229,6 @@ function fillCliForm(c){
   document.getElementById('cf-iva').value=c.CLI_IVA||'I';
   const cpagSel=document.getElementById('cf-conpag');
   if(cpagSel) cpagSel.value=c.CLI_CONPAG||'';
-  document.getElementById('cf-dto').value=c.CLI_DTO||0;
   document.getElementById('cf-nroib').value=c.CLI_NROIB||'';
   document.getElementById('cf-tipoib').value=c.CLI_TIPOIB||'0';
   document.getElementById('cf-obs').value=c.CLI_OBS||'';
@@ -198,6 +239,8 @@ function fillCliForm(c){
   setTog('ctog-preinc','cf-preinc',!!c.CLI_PREINC);
   setTog('ctog-nodar','cf-nodar',!!c.CLI_NODAR);
   setTog('ctog-perc','cf-perc',c.CLI_PERCIB==='S');
+  _cliPercep = Array.isArray(c.CLI_PERCEP) ? JSON.parse(JSON.stringify(c.CLI_PERCEP)) : [];
+  renderCliPercep();
 }
 function saveCli(){
   const cod=document.getElementById('cf-cod').value.trim();
@@ -216,7 +259,8 @@ function saveCli(){
     CLI_CUIT:document.getElementById('cf-cuit').value.trim(),
     CLI_IVA:document.getElementById('cf-iva').value,
     CLI_CONPAG:document.getElementById('cf-conpag').value,
-    CLI_DTO:parseFloat(document.getElementById('cf-dto').value)||0,
+    CLI_DTO:(window._ce==='M' && CLIS[cliSelIdx] ? (CLIS[cliSelIdx].CLI_DTO||0) : 0),
+    CLI_PERCEP:_cliPercep.slice(),
     CLI_NROIB:document.getElementById('cf-nroib').value.trim(),
     CLI_TIPOIB:document.getElementById('cf-tipoib').value,
     CLI_PERCIB:document.getElementById('cf-perc').value==='1'?'S':'N',
