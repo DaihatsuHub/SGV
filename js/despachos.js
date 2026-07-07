@@ -169,6 +169,7 @@ function clrDespForm() {
   document.getElementById('df-gas2').value = 0;
   const monEl=document.getElementById('df-moneda'); if(monEl) monEl.value='';
   const depEntEl=document.getElementById('df-depent'); if(depEntEl) depEntEl.value=0;
+  ['df-coent','df-cosal','df-costk'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=0;});
 }
 
 function fillDespForm(d) {
@@ -182,6 +183,9 @@ function fillDespForm(d) {
   document.getElementById('df-ent').value   = d.dep_ent||0;
   const monEl=document.getElementById('df-moneda'); if(monEl) monEl.value=d.dep_moneda||'';
   const depEntEl=document.getElementById('df-depent'); if(depEntEl) depEntEl.value=d.dep_depent||0;
+  { const e1=document.getElementById('df-coent'); if(e1)e1.value=d.dep_coent||0;
+    const e2=document.getElementById('df-cosal'); if(e2)e2.value=d.dep_cosal||0;
+    const e3=document.getElementById('df-costk'); if(e3)e3.value=d.dep_costk||0; }
   fillDespArtSelect(d.dep_art||'');
 }
 
@@ -224,6 +228,9 @@ async function saveDesp() {
   const mone  = document.getElementById('df-moneda').value;
   const depEntEl = document.getElementById('df-depent');
   const depent = depEntEl ? (parseInt(depEntEl.value)||ent) : ent;
+  const coent = parseInt(document.getElementById('df-coent')?.value)||0;
+  const cosal = parseInt(document.getElementById('df-cosal')?.value)||0;
+  const costk = parseInt(document.getElementById('df-costk')?.value)||0;
 
   if(!desp){ toast('Ingresá el número de despacho','err'); return; }
   if(!art){  toast('Seleccioná un artículo','err'); return; }
@@ -239,7 +246,7 @@ async function saveDesp() {
   syncSaving();
   try {
     const res = await apiPost('/despachos/guardar', {
-      modo: window._de, desp, sub, fec, art, ent, fob, gas2, adua, proc, mone, depent
+      modo: window._de, desp, sub, fec, art, ent, fob, gas2, adua, proc, mone, depent, coent, cosal, costk
     });
     aplicarStockMemoria(res.stock);
     if(window._de==='A') {

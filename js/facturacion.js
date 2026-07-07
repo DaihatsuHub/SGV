@@ -147,6 +147,8 @@ function ctipAlta() {
   document.getElementById('ctip-tipo').value='F';
   document.getElementById('ctip-ultimo').value=0;
   setTog('ctip-tog-cont','ctip-contable',true);
+  setTog('ctip-tog-stk','ctip-stk',false);
+  setTog('ctip-tog-conta','ctip-conta',false);
   document.getElementById('ctip-mtit').textContent='Nuevo Tipo de Comprobante';
   setMtag('ctip-mtag','ALTA','tag-a');
   document.getElementById('ov-ctip').classList.add('open');
@@ -160,6 +162,8 @@ function ctipModif() {
   document.getElementById('ctip-tipo').value=c.tipo;
   document.getElementById('ctip-ultimo').value=c.ultimo_nro||0;
   setTog('ctip-tog-cont','ctip-contable',!!c.contable);
+  setTog('ctip-tog-stk','ctip-stk',!!c.tab_stk);
+  setTog('ctip-tog-conta','ctip-conta',!!c.tab_conta);
   document.getElementById('ctip-mtit').textContent=`Modificar: ${c.empresa}${c.prefijo} ${TIPO_LABEL[c.tipo]||c.tipo}`;
   setMtag('ctip-mtag','MODIFICACIÓN','tag-m');
   document.getElementById('ov-ctip').classList.add('open');
@@ -184,12 +188,14 @@ async function saveCtip() {
   const tipo=document.getElementById('ctip-tipo').value;
   const ultimo=parseInt(document.getElementById('ctip-ultimo').value)||0;
   const contable=document.getElementById('ctip-contable').value==='1';
+  const tabStk=document.getElementById('ctip-stk').value==='1';
+  const tabConta=document.getElementById('ctip-conta').value==='1';
   if(!prefijo||prefijo.length!==3){toast('El prefijo debe tener exactamente 3 caracteres','err');return;}
   const data={empresa,prefijo,tipo,ultimo_nro:ultimo,contable};
   const id = window._ctipe==='A' ? null : (filtCtip()[ctipSelIdx]?.id);
   syncSaving();
   try {
-    const res=await apiPost('/comp_tipos/guardar',{ id, empresa, prefijo, tipo, ultimo_nro:ultimo, contable });
+    const res=await apiPost('/comp_tipos/guardar',{ id, empresa, prefijo, tipo, ultimo_nro:ultimo, contable, tab_stk:tabStk, tab_conta:tabConta });
     if(!res.ok){ syncErr(); toast(res.error||'No se pudo guardar','err'); return; }
     await sbLoadCtips(); closeOv('ov-ctip'); ctipSelIdx=null; renderCtip();
     syncOk();
