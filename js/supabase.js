@@ -287,9 +287,11 @@ async function loadAllConfigUI() {
 
 function getConfigUI(pantalla) { return _configUICache[pantalla] || null; }
 
-async function saveConfigUI(pantalla, orden, activas, labels) {
-  await sbUpsertOnConflict('config_ui', { pantalla, orden, activas, labels }, 'pantalla');
-  _configUICache[pantalla] = { orden, activas, labels };
+async function saveConfigUI(pantalla, orden, activas, labels, chars) {
+  const fila = { pantalla, orden, activas, labels };
+  if (chars !== undefined) fila.chars = chars;
+  await sbUpsertOnConflict('config_ui', fila, 'pantalla');
+  _configUICache[pantalla] = { orden, activas, labels, chars: chars || {} };
 }
 
 function save() {}

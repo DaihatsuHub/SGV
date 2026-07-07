@@ -112,8 +112,12 @@ const CHAR_PX = 8;
 function getActiveCols(grid) {
   const cfg  = getConfigUI(grid);
   const defs = COL_DEFS[grid];
-  // Si una columna define 'chars', su ancho FIJO = chars × CHAR_PX (en px, no en 'ch').
-  const norm = c => c.chars ? { ...c, width: (c.chars * CHAR_PX) + 'px' } : c;
+  const userChars = (cfg && cfg.chars) || {};
+  // Ancho FIJO por caracteres = chars × CHAR_PX (px). Prioridad: config del usuario > def.
+  const norm = c => {
+    const ch = (userChars[c.field] != null) ? userChars[c.field] : c.chars;
+    return ch ? { ...c, width: (ch * CHAR_PX) + 'px' } : c;
+  };
   if (!cfg || !cfg.activas || cfg.activas.length === 0) return defs.filter(c => c.active).map(norm);
   let ordered = (cfg.orden || []).map(f => defs.find(d => d.field === f)).filter(Boolean);
   defs.forEach(d => { if (!ordered.find(o => o.field === d.field)) ordered.push(d); });
@@ -155,6 +159,7 @@ function openColCfg(grid) {
   body.innerHTML = ordered.map(c => {
     const isActive    = cfg ? (cfg.activas || []).includes(c.field) : c.active;
     const customLabel = cfg && cfg.labels && cfg.labels[c.field] ? cfg.labels[c.field] : c.label;
+    const charsVal    = (cfg && cfg.chars && cfg.chars[c.field] != null) ? cfg.chars[c.field] : (c.chars || '');
     return `<div class="col-cfg-row" data-field="${c.field}" draggable="true"
       style="display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px solid var(--b1);border-radius:4px;transition:background .1s;cursor:default">
       <span style="color:var(--t3);font-size:14px;cursor:grab;padding:0 4px" title="Arrastrar">☰</span>
@@ -163,6 +168,10 @@ function openColCfg(grid) {
         style="flex:1;background:var(--s2);border:1px solid var(--b1);border-radius:4px;padding:3px 7px;font-size:13px;font-family:var(--sans);color:var(--txt);outline:none;min-width:0"
         onfocus="this.style.borderColor='var(--acc)'" onblur="this.style.borderColor='var(--b1)'"
         placeholder="${c.label}">
+      <input type="number" min="0" max="200" class="col-chars-inp" data-field="${c.field}" value="${charsVal}"
+        title="Ancho en caracteres (vacío = automático)" placeholder="auto"
+        style="width:58px;background:var(--s2);border:1px solid var(--b1);border-radius:4px;padding:3px 6px;font-size:12px;font-family:var(--mono);color:var(--txt);outline:none;text-align:center;flex-shrink:0"
+        onfocus="this.style.borderColor='var(--acc)';this.select()" onblur="this.style.borderColor='var(--b1)'">
       <span style="font-family:var(--mono);font-size:10px;color:var(--t4);flex-shrink:0">${c.field}</span>
     </div>`;
   }).join('');
@@ -219,8 +228,13 @@ async function saveColCfg() {
     const val = inp.value.trim();
     if (val && val !== (def ? def.label : '')) labels[inp.dataset.field] = val;
   });
+  const chars = {};
+  document.querySelectorAll('#col-cfg-body .col-chars-inp').forEach(inp => {
+    const v = parseInt(inp.value, 10);
+    if (v > 0) chars[inp.dataset.field] = v;
+  });
   try {
-    await saveConfigUI(grid, orden, activas, labels);
+    await saveConfigUI(grid, orden, activas, labels, chars);
     document.getElementById('ov-col-cfg').classList.remove('open');
     if (grid==='art') renderArts();
     else if (grid==='cli') renderClis();
