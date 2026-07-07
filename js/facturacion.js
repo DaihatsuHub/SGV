@@ -50,7 +50,7 @@ function nfEsNC() {
 }
 function nfEsFacturaA() {
   const val  = document.getElementById('nf-ctip')?.value||'';
-  const tiva = document.getElementById('nf-tiva')?.value||'';
+  const tiva = document.getElementById('nf-tiva-cod')?.value||'';
   if (!val) return false;
   return val.split('|')[1]==='F' && tiva==='I';
 }
@@ -444,7 +444,7 @@ async function renderFacDetalle(f) {
             <span style="color:var(--t2)">${esc(desArt)}</span>
             <span style="font-family:var(--mono);font-size:10px;color:var(--t3)">${esc(it.ite_desp||'')}</span>
             <span style="text-align:right;font-family:var(--mono)">${it.ite_can||0}</span>
-            <span style="text-align:right;font-family:var(--mono)">${mon}${fmt(it.ite_uni)}</span>
+            <span style="text-align:right;font-family:var(--mono)">${mon}${fmt(it.ite_uni)}${(()=>{const o=Number(it.ite_preori)||0,u=Number(it.ite_uni)||0; if(o>0&&u<o){const d=Math.round((1-u/o)*100); if(d>=1) return ` <span style="color:var(--wrn,#f59e0b);font-size:10px" title="Original: ${mon}${fmt(o)}">-${d}%</span>`;} return '';})()}</span>
             <span style="text-align:right;font-family:var(--mono);color:var(--grn)">${mon}${fmt(it.ite_imp)}</span>
           </div>`;
         }).join(''):'<div style="padding:12px;text-align:center;color:var(--t3);font-size:12px">Sin ítems</div>'}
@@ -921,7 +921,7 @@ function renderFacModal(fecha, empresa, cliCod) {
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
               <div>
                 <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">IVA</label>
-                <input class="finp" id="nf-tiva" readonly style="color:var(--t2);background:var(--s3);width:100%" placeholder="—">
+                <input class="finp" id="nf-tiva" readonly style="color:var(--t2);background:var(--s3);width:100%" placeholder="—"><input type="hidden" id="nf-tiva-cod">
               </div>
               <div>
                 <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Cond. Pago</label>
@@ -1101,7 +1101,7 @@ function renderFacForm(fecha, empresa, cliCod) {
           </div>
           <div>
             <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">IVA</label>
-            <input class="finp" id="nf-tiva" readonly style="color:var(--t2);background:var(--s3);width:100%" placeholder="—">
+            <input class="finp" id="nf-tiva" readonly style="color:var(--t2);background:var(--s3);width:100%" placeholder="—"><input type="hidden" id="nf-tiva-cod">
           </div>
           <div>
             <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Cond. de Pago</label>
@@ -1270,7 +1270,7 @@ function nfSelArtPopup(cod) {
     if(input) input.value=cod;
     nfItemArtChange(_nfArtPopupIdx, cod);
   } else {
-    FAC_ITEMS_NUEVA.push({ite_art:'',ite_desp_art:'',ite_disp:0,ite_desp_nro:'',ite_desp_fec:'',ite_can:1,ite_uni:0,ite_iva_porc:21,ite_imp:0,ite_iva_imp:0,_desps:null,_desp_id:null});
+    FAC_ITEMS_NUEVA.push({ite_art:'',ite_desp_art:'',ite_disp:0,ite_desp_nro:'',ite_desp_fec:'',ite_can:1,ite_uni:0,ite_preori:0,ite_iva_porc:21,ite_imp:0,ite_iva_imp:0,_desps:null,_desp_id:null});
     const idx=FAC_ITEMS_NUEVA.length-1;
     nfRenderItems();
     nfItemArtChange(idx, cod);
@@ -1334,23 +1334,27 @@ async function nfCargarGrupo() {
     const precio=nfAplicarDtos(precioBase, d1, d2, d3, d4);
     const ivaPct=a.ART_IVA!==null&&a.ART_IVA!==undefined?Number(a.ART_IVA):21;
     // Buscar despacho automático
-    let despNro='', despFec='', despDisp=disp, despId=null, despsArr=null;
+    let despNro='', despFec='', despId=null, despsArr=null, depStk=null, depCostk=null;
     try {
       const desps=await sbGet('despachos',`dep_art=eq.${encodeURIComponent(a.ART_COD)}&order=dep_fec.desc`);
-      const despsFilt=desps.filter(d=>(d.dep_ent||0)-(d.dep_sal||0)>0);
+      const despsFilt=desps.filter(d=>((d.dep_stk!=null?d.dep_stk:(d.dep_ent||0)-(d.dep_sal||0)))>0);
       despsArr=despsFilt;
       if(despsFilt.length===1){
         const d=despsFilt[0];
         despNro=d.dep_desp+(d.dep_sub||'');
         despFec=d.dep_fec||'';
-        despDisp=(d.dep_ent||0)-(d.dep_sal||0);
+        depStk=(d.dep_stk!=null)?d.dep_stk:((d.dep_ent||0)-(d.dep_sal||0));
+        depCostk=(d.dep_costk!=null)?d.dep_costk:depStk;
         despId=d.dep_id;
       }
     } catch(e){ console.error('nfCargarGrupo desps:',e); }
+    const artReal=empresa==='T'?(a.ART_STKT||0):(a.ART_STK||0);
+    const artPfac=empresa==='T'?(a.ART_DEPT||0):(a.ART_DEPH||0);
     FAC_ITEMS_NUEVA.push({
-      ite_art:a.ART_COD, ite_desp_art:a.ART_DES||'', ite_disp:despDisp,
+      ite_art:a.ART_COD, ite_desp_art:a.ART_DES||'',
       ite_desp_nro:despNro, ite_desp_fec:despFec, ite_can:0,
-      ite_uni:precio, ite_iva_porc:ivaPct, ite_imp:0, ite_iva_imp:0,
+      ite_uni:precio, ite_preori:precioBase, ite_iva_porc:ivaPct, ite_imp:0, ite_iva_imp:0,
+      _artReal:artReal, _artPfac:artPfac, _depStk:depStk, _depCostk:depCostk,
       _desps:despsArr, _desp_id:despId
     });
   }
@@ -1400,6 +1404,13 @@ async function nfOnCtipChange() {
   if(!val){if(el)el.value='';return;}
   const [prefijo,tipo]=val.split('|');
   const emp=document.getElementById('nf-empresa').value;
+  // Punto 1: si el 2º carácter del prefijo es "X" permito elegir moneda; si no, fijo Pesos
+  (function(){
+    const monEl=document.getElementById('nf-moneda'); if(!monEl) return;
+    const permite = (prefijo||'').charAt(1).toUpperCase()==='X';
+    if(permite){ monEl.disabled=false; }
+    else { monEl.value='P'; monEl.disabled=true; if(typeof nfCalcTotales==='function') nfCalcTotales(); }
+  })();
   const ct=CTIPS.find(c=>c.empresa===emp&&c.prefijo===prefijo&&c.tipo===tipo);
   if(!ct){if(el)el.value='';return;}
   // Bloqueo atómico en el server (lee estado fresco + bloquea si está libre o es mío)
@@ -1427,7 +1438,7 @@ async function nfOnCtipChange() {
 function nfOnCliCodInput() {
   // Limpia razón social y datos mientras escribe el código
   const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
-  s('nf-cli-busq',''); s('nf-razon',''); s('nf-tiva','');
+  s('nf-cli-busq',''); s('nf-razon',''); s('nf-tiva',''); s('nf-tiva-cod','');
   s('nf-conpag',''); s('nf-vend',''); s('nf-transp','');
 }
 function nfOnCliCodChange() {
@@ -1485,7 +1496,8 @@ function nfSetCliente(cli) {
   s('nf-cli-cod',  (cli.CLI_CODIGO||'').trim());
   s('nf-cli-busq', cli.CLI_RAZON||'');
   s('nf-razon',    cli.CLI_RAZON||'');
-  s('nf-tiva',     cli.CLI_IVA||'');
+  s('nf-tiva',     facIvaDesc(cli.CLI_IVA));
+  s('nf-tiva-cod', cli.CLI_IVA||'');
   s('nf-dto',      cli.CLI_DTO||0);
   s('nf-conpag',   (cli.CLI_CONPAG||'').trim());
   s('nf-vend',     (cli.CLI_VEND||'').trim());
@@ -1496,7 +1508,7 @@ function nfSetCliente(cli) {
 function nfLimpiarCliente() {
   const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
   s('nf-cli-cod',''); s('nf-cli-busq',''); s('nf-razon','');
-  s('nf-tiva',''); s('nf-dto',0);
+  s('nf-tiva',''); s('nf-tiva-cod',''); s('nf-dto',0);
   s('nf-conpag',''); s('nf-vend',''); s('nf-transp','');
 }
 
@@ -1520,6 +1532,8 @@ async function nfItemArtChange(idx,cod) {
   FAC_ITEMS_NUEVA[idx].ite_art=codUp;
   FAC_ITEMS_NUEVA[idx].ite_desp_art='';
   FAC_ITEMS_NUEVA[idx].ite_disp=0;
+  FAC_ITEMS_NUEVA[idx]._artReal=0; FAC_ITEMS_NUEVA[idx]._artPfac=0;
+  FAC_ITEMS_NUEVA[idx]._depStk=null; FAC_ITEMS_NUEVA[idx]._depCostk=null;
   FAC_ITEMS_NUEVA[idx].ite_desp_nro='';
   FAC_ITEMS_NUEVA[idx]._desps=null;
   FAC_ITEMS_NUEVA[idx]._desp_id=null;
@@ -1534,7 +1548,8 @@ async function nfItemArtChange(idx,cod) {
   const monFac=document.getElementById('nf-moneda')?.value||'P';
   const monArt=art.ART_MONEDA||'P';
   FAC_ITEMS_NUEVA[idx].ite_desp_art=art.ART_DES||'';
-  FAC_ITEMS_NUEVA[idx].ite_disp=empresa==='T'?(art.ART_STKT||0):(art.ART_STK||0);
+  FAC_ITEMS_NUEVA[idx]._artReal=empresa==='T'?(art.ART_STKT||0):(art.ART_STK||0);
+  FAC_ITEMS_NUEVA[idx]._artPfac=empresa==='T'?(art.ART_DEPT||0):(art.ART_DEPH||0);
   // Convertir precio según moneda
   let precio=art.ART_PRE||0;
   if(monFac!==monArt) {
@@ -1548,6 +1563,7 @@ async function nfItemArtChange(idx,cod) {
     }
   }
   FAC_ITEMS_NUEVA[idx].ite_uni=precio;
+  FAC_ITEMS_NUEVA[idx].ite_preori=precio;
   FAC_ITEMS_NUEVA[idx].ite_iva_porc=art.ART_IVA!==null&&art.ART_IVA!==undefined?Number(art.ART_IVA):21;
   try {
     const esNC=nfEsNC();
@@ -1558,12 +1574,45 @@ async function nfItemArtChange(idx,cod) {
       const d=despsFilt[0];
       FAC_ITEMS_NUEVA[idx].ite_desp_nro=d.dep_desp+(d.dep_sub||'');
       FAC_ITEMS_NUEVA[idx].ite_desp_fec=d.dep_fec||'';
-      FAC_ITEMS_NUEVA[idx].ite_disp=esNC?null:(d.dep_ent||0)-(d.dep_sal||0);
+      const dStk=(d.dep_stk!=null)?d.dep_stk:((d.dep_ent||0)-(d.dep_sal||0));
+      FAC_ITEMS_NUEVA[idx]._depStk=dStk;
+      FAC_ITEMS_NUEVA[idx]._depCostk=(d.dep_costk!=null)?d.dep_costk:dStk;
+      FAC_ITEMS_NUEVA[idx].ite_disp=esNC?null:dStk;
       FAC_ITEMS_NUEVA[idx]._desp_id=d.dep_id;
     }
   } catch(e){console.error('nfItemArtChange desps:',e);}
   nfRenderItems();
   nfCalcTotales();
+}
+
+// ── Punto 5: comprobante seleccionado y máximo disponible según flags ──
+function nfCtipActual(){
+  const val=document.getElementById('nf-ctip')?.value||'';
+  const emp=document.getElementById('nf-empresa')?.value||'';
+  if(!val) return null;
+  const [prefijo,tipo]=val.split('|');
+  return CTIPS.find(c=>c.empresa===emp&&c.prefijo===prefijo&&c.tipo===tipo)||null;
+}
+// Máximo permitido para la cantidad. null = sin control (NC o sin despacho todavía).
+function nfItemMax(it){
+  if(nfEsNC()) return null;                 // Notas de crédito: no controla stock
+  const ct=nfCtipActual();
+  const ms=!!(ct&&ct.tab_stk), pf=!!(ct&&ct.tab_fact);
+  if(!ms&&!pf) return 0;                     // sin flags: no se puede facturar
+  // Contra DEP_COStk solo en "p/Facturar puro" (p/Facturar ✓ y Mueve Stock ✗)
+  const usarContable = pf && !ms;
+  const v = usarContable ? it._depCostk : it._depStk;
+  return (v===null||v===undefined) ? null : v;
+}
+// Texto de "disponible" según flags (campos del artículo).
+function nfItemDispTxt(it){
+  if(nfEsNC()) return '—';
+  const ct=nfCtipActual();
+  const ms=!!(ct&&ct.tab_stk), pf=!!(ct&&ct.tab_fact);
+  const n=v=>(v===null||v===undefined)?0:v;
+  if(ms) return `${n(it._artReal)} / ${n(it._artPfac)}`;  // Mueve Stock (con o sin p/Facturar)
+  if(pf) return `${n(it._artPfac)}`;                       // solo p/Facturar
+  return '—';                                              // sin flags
 }
 
 function nfItemDespChange(idx,depId) {
@@ -1573,7 +1622,11 @@ function nfItemDespChange(idx,depId) {
   const esNC=nfEsNC();
   FAC_ITEMS_NUEVA[idx].ite_desp_nro=d.dep_desp+(d.dep_sub||'');
   FAC_ITEMS_NUEVA[idx].ite_desp_fec=d.dep_fec||'';
-  FAC_ITEMS_NUEVA[idx].ite_disp=esNC?null:(d.dep_ent||0)-(d.dep_sal||0);
+  const dStk=(d.dep_stk!=null)?d.dep_stk:((d.dep_ent||0)-(d.dep_sal||0));
+  const dCoStk=(d.dep_costk!=null)?d.dep_costk:dStk;
+  FAC_ITEMS_NUEVA[idx]._depStk=dStk;
+  FAC_ITEMS_NUEVA[idx]._depCostk=dCoStk;
+  FAC_ITEMS_NUEVA[idx].ite_disp=esNC?null:dStk;
   FAC_ITEMS_NUEVA[idx]._desp_id=depId;
   nfRenderItems();
   nfCalcTotales();
@@ -1582,9 +1635,10 @@ function nfItemDespChange(idx,depId) {
 function nfItemChange(idx,campo,valor) {
   FAC_ITEMS_NUEVA[idx][campo]=valor;
   const it=FAC_ITEMS_NUEVA[idx];
-  if(campo==='ite_can'&&!nfEsNC()&&it.ite_disp!==null&&valor>it.ite_disp){
-    FAC_ITEMS_NUEVA[idx].ite_can=it.ite_disp;
-    toast(`Máximo disponible: ${it.ite_disp}`,'err');
+  const _max=nfItemMax(it);
+  if(campo==='ite_can'&&_max!==null&&valor>_max){
+    FAC_ITEMS_NUEVA[idx].ite_can=_max;
+    toast(`Máximo disponible: ${_max}`,'err');
   }
   const esA=nfEsFacturaA();
   const div=1+(it.ite_iva_porc||0)/100;
@@ -1670,8 +1724,10 @@ function nfRenderItems() {
     const neto=esA?precioConIva/divIva:precioConIva;
     const cant=it.ite_can||0;
     const imp=neto*cant;
-    const dispTxt=it.ite_disp===null?'—':(it.ite_disp||0);
-    const dispColor=(!nfEsNC()&&(it.ite_disp||0)===0&&it.ite_art)?'color:var(--red)':'color:var(--grn)';
+    const dispTxt=nfItemDispTxt(it);
+    const dispColor=(!nfEsNC()&&it.ite_art&&(it._artReal||0)===0&&(it._artPfac||0)===0)?'color:var(--red)':'color:var(--grn)';
+    const _max=nfItemMax(it);
+    const _cap=(_max===null||_max===undefined)?99999:_max;
     const esInexistente=it.ite_art&&!ARTS.find(a=>(a.ART_COD||'').trim()===it.ite_art);
     const des30=(it.ite_desp_art||'').substring(0,30);
     const desps=it._desps||[];
@@ -1693,14 +1749,14 @@ function nfRenderItems() {
       <span style="font-size:11px;color:${esInexistente?'var(--red)':'var(--t2)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(it.ite_desp_art||'')}">${esc(des30)}</span>
       <span style="text-align:right;font-family:var(--mono);font-size:11px;${dispColor}">${dispTxt}</span>
       <div>${despHtml}</div>
-      ${(!nfEsNC()&&it.ite_art&&(it.ite_disp||0)===0&&!it._desp_id)?
-        `<span style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--red);width:100%;display:block">0</span>`:
+      ${(_max===0)?
+        `<span style="text-align:right;font-family:var(--mono);font-size:12px;color:var(--red);width:100%;display:block" title="Sin disponible">0</span>`:
         `<input class="finp" type="number" min="0" step="1" value="${cant}"
-          max="${it.ite_disp!==null&&it.ite_disp!==undefined?(it.ite_disp||0):99999}"
+          max="${_cap}"
           style="text-align:right;font-size:12px;width:100%;${cant===0?'color:var(--t3)':''}"
           onclick="this.select()"
-          onchange="nfItemChange(${i},'ite_can',Math.min(parseFloat(this.value)||0,${it.ite_disp!==null&&it.ite_disp!==undefined?(it.ite_disp||0):99999}))"
-          oninput="nfItemChange(${i},'ite_can',Math.min(parseFloat(this.value)||0,${it.ite_disp!==null&&it.ite_disp!==undefined?(it.ite_disp||0):99999}))">`
+          onchange="nfItemChange(${i},'ite_can',Math.min(parseFloat(this.value)||0,${_cap}))"
+          oninput="nfItemChange(${i},'ite_can',Math.min(parseFloat(this.value)||0,${_cap}))">`
       }
       <span style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--t2)">${fmtN(precioConIva,2)}</span>
       <span style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--t3)">${ivaPct}%</span>
@@ -1756,7 +1812,7 @@ async function nfGuardar() {
   const cliCod=(document.getElementById('nf-cli-cod')?.value||'').trim().toUpperCase();
   const fecha=document.getElementById('nf-fecha')?.value||'';
   const moneda=document.getElementById('nf-moneda')?.value||'P';
-  const tiva=document.getElementById('nf-tiva')?.value||'';
+  const tiva=document.getElementById('nf-tiva-cod')?.value||'';
   if(!empresa){toast('Seleccioná una empresa','err');return;}
   if(!ctipVal){toast('Seleccioná un tipo de comprobante','err');return;}
   if(!cliCod){toast('Ingresá un código de cliente','err');return;}
@@ -1798,6 +1854,7 @@ async function nfGuardar() {
       ite_art:it.ite_art||'',
       ite_desp:it.ite_desp_nro||'',
       ite_can:it.ite_can,ite_uni:it.ite_uni,
+      ite_preori:it.ite_preori||0,
       ite_imp:neto*(it.ite_can||1),
       ite_iva_porc:esA?(it.ite_iva_porc||21):0,
       ite_iva_imp:esA?(it.ite_uni-neto)*(it.ite_can||1):0,
