@@ -85,12 +85,14 @@ function renderCtaCte(){
     }).join('');
 
     html+=`<div class="cc-moneda">
-      <div class="cc-mon-tit">${_ccMonLabel(m)} <span style="opacity:.6">(${sim})</span></div>
-      <div class="cc-grid">
+      <div class="cc-stickyhead">
+        <div class="cc-mon-tit">${_ccMonLabel(m)} <span style="opacity:.6">(${sim})</span></div>
         <div class="cc-head">
           <span>Fecha</span><span>Comprobante</span>
           <span class="cc-num">Debe</span><span class="cc-num">Haber</span><span class="cc-num">Saldo</span>
         </div>
+      </div>
+      <div class="cc-grid">
         <div class="cc-row cc-ant">
           <span></span><span class="cc-comp"><i>Saldo anterior</i></span>
           <span class="cc-num"></span><span class="cc-num"></span>
@@ -114,12 +116,14 @@ function _ccInjectStyle(){
   if(document.getElementById('cc-style')) return;
   const st=document.createElement('style'); st.id='cc-style';
   st.textContent=`
-    .cc-moneda{margin:0 0 22px}
-    .cc-mon-tit{font-size:14px;font-weight:700;color:var(--acc);padding:6px 4px;border-bottom:2px solid var(--acc);margin-bottom:0}
+    #ctacte-body{padding:0 0 12px}
+    .cc-moneda{margin:12px 12px 22px}
+    .cc-stickyhead{position:sticky;top:0;z-index:5}
+    .cc-mon-tit{font-size:14px;font-weight:700;color:var(--acc);padding:6px 10px;background:var(--s2);border-bottom:2px solid var(--acc)}
     .cc-grid{border:1px solid var(--b1);border-top:none}
     .cc-head,.cc-row{display:grid;grid-template-columns:90px minmax(220px,1fr) 130px 130px 150px;gap:6px;padding:5px 10px;align-items:center}
     .cc-head{background:var(--s2);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1)}
-    .cc-row{font-size:13px;border-bottom:1px solid var(--b1)}
+    .cc-row{font-size:13px;border-bottom:1px solid var(--b1);background:var(--bg)}
     .cc-row:hover{background:var(--s2)}
     .cc-num{text-align:right;font-family:var(--mono)}
     .cc-comp{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
