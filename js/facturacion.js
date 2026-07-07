@@ -120,23 +120,57 @@ const EMP_DATA = {
 
 function filtCtip() {
   const q = (document.getElementById('ctip-q')?.value||'').toLowerCase();
-  return CTIPS.filter(c => !q || c.prefijo.toLowerCase().includes(q) ||
+  let list = CTIPS.filter(c => !q || c.prefijo.toLowerCase().includes(q) ||
     c.empresa.toLowerCase().includes(q) || (TIPO_LABEL[c.tipo]||'').toLowerCase().includes(q));
+  const s = SORT_STATE['ctip'];
+  if(s && s.col){
+    list = list.slice().sort((a,b)=>{
+      let va, vb;
+      if(s.col==='desc'){ va=a.empresa==='H'?'Hatsu':'Tressa'; vb=b.empresa==='H'?'Hatsu':'Tressa'; }
+      else if(s.col==='tipo'){ va=TIPO_LABEL[a.tipo]||a.tipo; vb=TIPO_LABEL[b.tipo]||b.tipo; }
+      else { va=a[s.col]; vb=b[s.col]; }
+      if(va==null) va=''; if(vb==null) vb='';
+      let r;
+      if(typeof va==='boolean'||typeof vb==='boolean') r=(va===vb?0:va?1:-1);
+      else if(typeof va==='number'&&typeof vb==='number') r=va-vb;
+      else r=String(va).localeCompare(String(vb));
+      return s.asc?r:-r;
+    });
+  }
+  return list;
 }
 function renderCtip() {
   const list = filtCtip();
   const body = document.getElementById('ctip-body');
+  const cols = getActiveCols('ctip');
+  const gridTpl = cols.map(c=>c.width||'1fr').join(' ');
+
+  // Encabezado dinámico
+  const th = document.querySelector('.th-ctip');
+  if(th){
+    th.style.gridTemplateColumns = gridTpl;
+    th.innerHTML = cols.map(c=>
+      `<span class="th-sortable" onclick="toggleSort('ctip','${c.field}')" style="${c.align?'text-align:'+c.align:''}">${c.label}${sortArrow('ctip',c.field)}</span>`
+    ).join('');
+  }
+
   if (!list.length) { body.innerHTML='<div class="empty">🔍 Sin resultados</div>'; return; }
+  const pill = v => `<span style="text-align:center"><span class="pill ${v?'ps':'pn'}">${v?'Sí':'No'}</span></span>`;
   body.innerHTML = list.map((c,i) => {
     const sel = ctipSelIdx===i ? 'sel' : '';
-    return `<div class="tr-tab ${sel}" style="display:grid;grid-template-columns:60px 80px 80px 1fr 80px 80px;gap:8px;padding:11px 16px;font-size:13px;cursor:pointer" onclick="selCtip(${i})">
-      <span class="col-cod">${esc(c.empresa)}</span>
-      <span class="col-cod">${esc(c.prefijo)}</span>
-      <span class="col-sm">${esc(TIPO_LABEL[c.tipo]||c.tipo)}</span>
-      <span style="color:var(--t2);font-size:12px">${c.empresa==='H'?'Hatsu Electronics SA':'Tressa Argentina SA'}</span>
-      <span style="text-align:right;font-family:var(--mono)">${c.ultimo_nro||0}</span>
-      <span style="text-align:center"><span class="pill ${c.contable?'ps':'pn'}">${c.contable?'Sí':'No'}</span></span>
-    </div>`;
+    return `<div class="tr-tab ${sel}" style="display:grid;grid-template-columns:${gridTpl};gap:8px;padding:11px 16px;font-size:13px;cursor:pointer" onclick="selCtip(${i})">` +
+      cols.map(col=>{
+        if(col.field==='empresa')    return `<span class="col-cod">${esc(c.empresa)}</span>`;
+        if(col.field==='prefijo')    return `<span class="col-cod">${esc(c.prefijo)}</span>`;
+        if(col.field==='tipo')       return `<span class="col-sm">${esc(TIPO_LABEL[c.tipo]||c.tipo)}</span>`;
+        if(col.field==='desc')       return `<span style="color:var(--t2);font-size:12px">${c.empresa==='H'?'Hatsu Electronics SA':'Tressa Argentina SA'}</span>`;
+        if(col.field==='ultimo_nro') return `<span style="text-align:right;font-family:var(--mono)">${c.ultimo_nro||0}</span>`;
+        if(col.field==='contable')   return pill(c.contable);
+        if(col.field==='tab_stk')    return pill(c.tab_stk);
+        if(col.field==='tab_fact')   return pill(c.tab_fact);
+        return `<span class="col-sm">${esc(String(c[col.field]||''))}</span>`;
+      }).join('') +
+    `</div>`;
   }).join('');
 }
 function selCtip(i) { ctipSelIdx=i; renderCtip(); }

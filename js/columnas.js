@@ -99,10 +99,20 @@ const COL_DEFS = {
     {field:'OC_SAL',  label:'Saldo',      width:'105px', align:'right', active:false},
     {field:'OC_DER',  label:'Derecho',    width:'105px', align:'right', active:false},
     {field:'OC_PEND', label:'Pendiente',  width:'110px', align:'right', active:true},
+  ],
+  ctip: [
+    {field:'empresa',    label:'Empresa',       width:'70px',  active:true},
+    {field:'prefijo',    label:'Prefijo',       width:'80px',  active:true},
+    {field:'tipo',       label:'Tipo',          width:'120px', active:true},
+    {field:'desc',       label:'Descripción',   width:'1fr',   active:true},
+    {field:'ultimo_nro', label:'Último Nro',    width:'90px',  align:'right',  active:true},
+    {field:'contable',   label:'Contable',      width:'80px',  align:'center', active:true},
+    {field:'tab_stk',    label:'Mueve Stock',   width:'100px', align:'center', active:true},
+    {field:'tab_fact',   label:'P/Facturar',    width:'100px', align:'center', active:true},
   ]
 };
 
-const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true}, desp:{col:null,asc:true}, reci:{col:null,asc:true}, cart:{col:null,asc:true}, oc:{col:null,asc:true} };
+const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true}, desp:{col:null,asc:true}, reci:{col:null,asc:true}, cart:{col:null,asc:true}, oc:{col:null,asc:true}, ctip:{col:null,asc:true} };
 
 // Ancho de referencia por carácter (px). Se usa para convertir 'chars' → px FIJO,
 // así una columna mide igual en el encabezado y en las filas aunque usen fuentes
@@ -136,6 +146,7 @@ function toggleSort(grid, field) {
   else if (grid==='reci') renderReci();
   else if (grid==='cart') renderCart();
   else if (grid==='oc') renderOC();
+  else if (grid==='ctip') renderCtip();
 }
 
 function sortArrow(grid, field) {
@@ -153,7 +164,7 @@ function openColCfg(grid) {
   } else {
     ordered = [...defs];
   }
-  const titles = {art:'Artículos', cli:'Clientes', desp:'Despachos', reci:'Recibos', cart:'Cartera de Valores', oc:'Ordenes de Compra'};
+  const titles = {art:'Artículos', cli:'Clientes', desp:'Despachos', reci:'Recibos', cart:'Cartera de Valores', oc:'Ordenes de Compra', ctip:'Tipos de Comprobante'};
   document.getElementById('col-cfg-title').textContent = 'Columnas — ' + (titles[grid]||grid);
   const body = document.getElementById('col-cfg-body');
   body.innerHTML = ordered.map(c => {

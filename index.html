@@ -533,6 +533,7 @@
     <button class="btn pri" id="btn-ctip-alta" onclick="ctipAlta()">＋ Alta</button>
     <button class="btn" id="btn-ctip-modif" onclick="ctipModif()">✏️ Modificar</button>
     <button class="btn dng" id="btn-ctip-baja" onclick="ctipBaja()">✕ Baja</button>
+    <button class="btn" id="btn-cfg-ctip" onclick="openColCfg('ctip')" title="Configurar columnas">⚙️ Columnas</button>
     <div class="spacer"></div>
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
@@ -541,10 +542,10 @@
     </div>
   </div>
   <div class="tbl-wrap">
-    <div style="display:grid;grid-template-columns:60px 80px 80px 1fr 80px 80px;gap:8px;padding:11px 16px;background:#1e3a6e;border-bottom:1px solid #152d57;font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#93b4d8;font-weight:600">
-      <span>Empresa</span><span>Prefijo</span><span>Tipo</span><span>Descripción</span><span style="text-align:right">Último Nro</span><span style="text-align:center">Contable</span>
+    <div class="tbl-body" id="ctip-scroll">
+      <div class="th-ctip" style="display:grid;grid-template-columns:60px 80px 80px 1fr 80px 80px;gap:8px;padding:11px 16px;background:#1e3a6e;border-bottom:1px solid #152d57;font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#93b4d8;font-weight:600;position:sticky;top:0;z-index:2"></div>
+      <div id="ctip-body"></div>
     </div>
-    <div class="tbl-body" id="ctip-body"></div>
   </div>
 </div>
 
