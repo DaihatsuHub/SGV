@@ -126,6 +126,14 @@ function renderFicha(){
     + `<div style="display:grid;grid-template-columns:${RGRID};gap:6px;font-size:12px;font-weight:700;font-family:var(--mono);border-top:1px solid var(--b1);padding-top:4px;margin-top:4px">
       <span></span><span>Total</span><span style="text-align:right">${reciFmt(totFis)}</span><span style="text-align:right">${reciFmt(totEch)}</span><span></span></div>`;
 
+  // ── Crédito otorgado + vencimiento (debajo del cuadro de cheques) ──
+  const _icred = c.CLI_ICRED || 0;
+  const _fcred = c.CLI_FCRED ? c.CLI_FCRED.substring(0,10).split('-').reverse().join('/') : '—';
+  der.innerHTML += `<div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--b1);display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:12px">
+      <span style="color:var(--t2)">💳 Crédito otorgado: <b style="color:var(--txt);font-family:var(--mono)">$ ${reciFmt(_icred)}</b></span>
+      <span style="color:var(--t2)">📅 Vto: <b style="color:var(--txt)">${_fcred}</b></span>
+    </div>`;
+
   // ── PIE: última compra / último pago ──
   const facsCli=(FACS||[]).filter(f=>(f.fac_cli||'').trim()===fichaCliCod);
   const ultFac=facsCli.filter(f=>(f.fac_nro||'').slice(-1).toUpperCase()==='F').map(f=>f.fac_fec).filter(Boolean).sort().pop();
