@@ -173,7 +173,7 @@ function cartFit(){
   const avail   = parent ? parent.clientWidth : natural;
   if(natural>0 && avail>0){
     wrap.style.width = natural + 'px';
-    wrap.style.zoom  = (avail / natural).toFixed(4);
+    wrap.style.zoom  = Math.min(1, avail / natural).toFixed(4);   // nunca AGRANDA; solo achica si no entra
   }
   if(!_cartFitBound){
     window.addEventListener('resize', ()=>{ if(document.getElementById('cart-thead')) cartFit(); });

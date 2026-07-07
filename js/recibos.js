@@ -176,7 +176,11 @@ function reciFit(){
   const natural = sum + (tracks-1)*6 + PAD;
   const parent  = wrap.parentElement;
   const avail   = parent ? parent.clientWidth : natural;
-  if(natural>0 && avail>0){ wrap.style.width = natural+'px'; wrap.style.zoom = (avail/natural).toFixed(4); }
+  if(natural>0 && avail>0){
+    const z = Math.min(1, avail/natural);   // nunca AGRANDA (letra normal); solo achica si no entra
+    wrap.style.width = natural+'px';
+    wrap.style.zoom = z.toFixed(4);
+  }
   if(!_reciFitBound){
     window.addEventListener('resize', ()=>{ if(document.getElementById('reci-thead')) reciFit(); });
     _reciFitBound = true;
