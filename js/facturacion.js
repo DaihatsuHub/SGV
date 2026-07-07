@@ -1900,6 +1900,12 @@ async function nfGuardar() {
     if(_numEl){ const n=parseInt((String(_numEl.value||'').split('-').pop()||'').trim(),10); if(n>0) numeroManual=n; }
     const res=await apiPost('/facturas/guardar',{ ctId:ct.id, prefijo, tipo, empresa, numero:numeroManual, facData, items:itemsAGrabar });
     if(!res.ok){ syncErr(); toast(res.error||'No se pudo guardar','err'); return; }
+    // DIAGNÓSTICO TEMPORAL de movimiento de stock
+    if(res.stockDebug){
+      console.log('CT:',res.ct); console.table(res.stockDebug);
+      const lin=res.stockDebug.map(d=>`${d.art}: ${d.ok?'✓ movido':'✗ '+(d.motivo||'?')}`).join('\n');
+      alert('Movimiento de stock:\n\nComprobante: '+JSON.stringify(res.ct)+'\n\n'+lin.trim());
+    }
     const facNro=res.facNro;
     ct.ultimo_nro=res.nuevoUltimo; ct.bloqueado=false; ct.bloqueado_por=null;
     _nfCtipBloqueadoId=null;
