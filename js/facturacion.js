@@ -69,6 +69,15 @@ function fmtN(v, dec=2) {
   if(v===null||v===undefined||isNaN(v)) return '0,' + '0'.repeat(dec);
   return Number(v).toLocaleString('es-AR', {minimumFractionDigits:dec, maximumFractionDigits:dec});
 }
+// Símbolo/prefijo de una moneda (STRING1 de la tabla MONE)
+function nfMonSimbolo(cod){
+  const m=(TABLAS['MONE']||[]).find(x=>x.CODIGO===(cod||'P'));
+  return (m && m.STRING1) ? m.STRING1 : '$';
+}
+// Parseo de número en formato es-AR ("1.234,56" -> 1234.56)
+function nfParseNum(s){
+  return parseFloat(String(s||'').trim().replace(/\./g,'').replace(',','.'))||0;
+}
 
 const TIPO_LABEL = { F:'Factura', C:'Nota de Crédito', D:'Nota de Débito', R:'Cheque Rechazado' };
 
@@ -432,20 +441,21 @@ async function renderFacDetalle(f) {
       </div>
       <div style="font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:4px;letter-spacing:1px">ÍTEMS (${items.length})</div>
       <div style="background:var(--s2);border-radius:6px;overflow:hidden;margin-bottom:12px">
-        <div style="display:grid;grid-template-columns:100px 1fr 110px 60px 85px 85px;gap:4px;padding:6px 10px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase">
-          <span>Código</span><span>Descripción</span><span>Despacho</span><span style="text-align:right">Cant</span><span style="text-align:right">Precio</span><span style="text-align:right">Subtotal</span>
+        <div style="display:grid;grid-template-columns:100px 1fr 90px 55px 85px 85px 55px;gap:4px;padding:6px 10px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase">
+          <span>Código</span><span>Descripción</span><span>Despacho</span><span style="text-align:right">Cant</span><span style="text-align:right">Precio</span><span style="text-align:right">Subtotal</span><span style="text-align:right">Dto</span>
         </div>
         <div style="max-height:220px;overflow-y:auto">
         ${items.length?items.map(it=>{
           const art=ARTS.find(a=>(a.ART_COD||'').trim()===(it.ite_art||'').trim());
           const desArt=art?art.ART_DES:(it.ite_desp||'');
-          return `<div style="display:grid;grid-template-columns:100px 1fr 110px 60px 85px 85px;gap:4px;padding:6px 10px;border-bottom:1px solid var(--b1);font-size:12px;align-items:center">
+          return `<div style="display:grid;grid-template-columns:100px 1fr 90px 55px 85px 85px 55px;gap:4px;padding:6px 10px;border-bottom:1px solid var(--b1);font-size:12px;align-items:center">
             <span style="font-family:var(--mono);color:var(--acc)">${esc(it.ite_art||'')}</span>
             <span style="color:var(--t2)">${esc(desArt)}</span>
-            <span style="font-family:var(--mono);font-size:10px;color:var(--t3)">${esc(it.ite_desp||'')}</span>
+            <span style="font-family:var(--mono);font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(it.ite_desp||'')}">${esc(it.ite_desp||'')}</span>
             <span style="text-align:right;font-family:var(--mono)">${it.ite_can||0}</span>
-            <span style="text-align:right;font-family:var(--mono)">${mon}${fmt(it.ite_uni)}${(()=>{const o=Number(it.ite_preori)||0,u=Number(it.ite_uni)||0; if(o>0&&u<o){const d=Math.round((1-u/o)*100); if(d>=1) return ` <span style="color:var(--wrn,#f59e0b);font-size:10px" title="Original: ${mon}${fmt(o)}">-${d}%</span>`;} return '';})()}</span>
+            <span style="text-align:right;font-family:var(--mono)">${mon}${fmt(it.ite_uni)}</span>
             <span style="text-align:right;font-family:var(--mono);color:var(--grn)">${mon}${fmt(it.ite_imp)}</span>
+            <span style="text-align:right;font-family:var(--mono);font-size:11px">${(()=>{const o=Number(it.ite_preori)||0,u=Number(it.ite_uni)||0; if(o>0&&u<o){const d=Math.round((1-u/o)*100); if(d>=1) return `<span style="color:var(--wrn,#f59e0b)" title="Original: ${mon}${fmt(o)}">-${d}%</span>`;} return '<span style="color:var(--t3)">—</span>';})()}</span>
           </div>`;
         }).join(''):'<div style="padding:12px;text-align:center;color:var(--t3);font-size:12px">Sin ítems</div>'}
         </div>
@@ -1270,7 +1280,7 @@ function nfSelArtPopup(cod) {
     if(input) input.value=cod;
     nfItemArtChange(_nfArtPopupIdx, cod);
   } else {
-    FAC_ITEMS_NUEVA.push({ite_art:'',ite_desp_art:'',ite_disp:0,ite_desp_nro:'',ite_desp_fec:'',ite_can:1,ite_uni:0,ite_preori:0,ite_iva_porc:21,ite_imp:0,ite_iva_imp:0,_desps:null,_desp_id:null});
+    FAC_ITEMS_NUEVA.push({ite_art:'',ite_desp_art:'',ite_disp:0,ite_desp_nro:'',ite_desp_fec:'',ite_can:1,ite_uni:0,ite_preori:0,ite_moneda:'P',ite_cotiz:1,ite_iva_porc:21,ite_imp:0,ite_iva_imp:0,_desps:null,_desp_id:null});
     const idx=FAC_ITEMS_NUEVA.length-1;
     nfRenderItems();
     nfItemArtChange(idx, cod);
@@ -1327,8 +1337,10 @@ async function nfCargarGrupo() {
     const disp=empresa==='T'?(a.ART_STKT||0):(a.ART_STK||0);
     let precioBase=a.ART_PRE||0;
     const monArtGrupo=a.ART_MONEDA||'P';
+    let cotizItem=1;
     if(monFacGrupo==='P' && monArtGrupo!=='P') {
       const cotizG=nfGetCotiz(monArtGrupo);
+      cotizItem=cotizG;
       precioBase=precioBase*cotizG;
     }
     const precio=nfAplicarDtos(precioBase, d1, d2, d3, d4);
@@ -1353,7 +1365,7 @@ async function nfCargarGrupo() {
     FAC_ITEMS_NUEVA.push({
       ite_art:a.ART_COD, ite_desp_art:a.ART_DES||'',
       ite_desp_nro:despNro, ite_desp_fec:despFec, ite_can:0,
-      ite_uni:precio, ite_preori:precioBase, ite_iva_porc:ivaPct, ite_imp:0, ite_iva_imp:0,
+      ite_uni:precio, ite_preori:precioBase, ite_moneda:monArtGrupo, ite_cotiz:cotizItem, ite_iva_porc:ivaPct, ite_imp:0, ite_iva_imp:0,
       _artReal:artReal, _artPfac:artPfac, _depStk:depStk, _depCostk:depCostk,
       _desps:despsArr, _desp_id:despId
     });
@@ -1552,10 +1564,12 @@ async function nfItemArtChange(idx,cod) {
   FAC_ITEMS_NUEVA[idx]._artPfac=empresa==='T'?(art.ART_DEPT||0):(art.ART_DEPH||0);
   // Convertir precio según moneda
   let precio=art.ART_PRE||0;
+  let cotizItem=1;
   if(monFac!==monArt) {
     if(monFac==='P' && monArt!=='P') {
       // Factura en pesos, art en otra moneda → multiplico por cotización
       const cotiz=nfGetCotiz(monArt);
+      cotizItem=cotiz;
       precio=precio*cotiz;
       toast(`Precio convertido a pesos (cotiz x${cotiz})`, 'scs');
     } else {
@@ -1564,6 +1578,8 @@ async function nfItemArtChange(idx,cod) {
   }
   FAC_ITEMS_NUEVA[idx].ite_uni=precio;
   FAC_ITEMS_NUEVA[idx].ite_preori=precio;
+  FAC_ITEMS_NUEVA[idx].ite_moneda=monArt;
+  FAC_ITEMS_NUEVA[idx].ite_cotiz=cotizItem;
   FAC_ITEMS_NUEVA[idx].ite_iva_porc=art.ART_IVA!==null&&art.ART_IVA!==undefined?Number(art.ART_IVA):21;
   try {
     const esNC=nfEsNC();
@@ -1608,11 +1624,11 @@ function nfItemMax(it){
 function nfItemDispTxt(it){
   if(nfEsNC()) return '—';
   const ct=nfCtipActual();
-  const ms=!!(ct&&ct.tab_stk), pf=!!(ct&&ct.tab_fact);
+  const pf=!!(ct&&ct.tab_fact);
   const n=v=>(v===null||v===undefined)?0:v;
-  if(ms) return `${n(it._artReal)} / ${n(it._artPfac)}`;  // Mueve Stock (con o sin p/Facturar)
-  if(pf) return `${n(it._artPfac)}`;                       // solo p/Facturar
-  return '—';                                              // sin flags
+  if(!pf) return `${n(it._artReal)}`;                    // p/Facturar false → solo real
+  // p/Facturar true → real arriba, p-Facturar abajo (apilado, sin barra)
+  return `${n(it._artReal)}<br><span style="color:var(--t3);font-size:9px">${n(it._artPfac)}</span>`;
 }
 
 function nfItemDespChange(idx,depId) {
@@ -1721,6 +1737,8 @@ function nfRenderItems() {
     body.innerHTML=`<div style="text-align:center;color:var(--t3);font-size:12px;padding:16px">Sin ítems — usá <strong>＋ Agregar</strong></div>`;
     return;
   }
+  const _monFac=document.getElementById('nf-moneda')?.value||'P';
+  const _simb=nfMonSimbolo(_monFac);
   body.innerHTML=FAC_ITEMS_NUEVA.map((it,i)=>{
     const ivaPct=it.ite_iva_porc||21;
     const divIva=1+ivaPct/100;
@@ -1761,10 +1779,13 @@ function nfRenderItems() {
           onclick="this.select()"
           onchange="nfItemChange(${i},'ite_can',parseFloat(this.value)||0)">`
       }
-      <input class="finp" type="number" min="0" step="0.01" value="${precioConIva}"
-        style="text-align:right;font-family:var(--mono);font-size:11px;width:100%"
-        onclick="this.select()"
-        onchange="nfItemChange(${i},'ite_uni',parseFloat(this.value)||0)">
+      <div style="display:flex;align-items:center;gap:2px;justify-content:flex-end">
+        <span style="font-size:9px;color:var(--t3)">${_simb}</span>
+        <input class="finp" type="text" value="${fmtN(precioConIva,2)}"
+          style="text-align:right;font-family:var(--mono);font-size:11px;width:100%"
+          onclick="this.select()"
+          onchange="nfItemChange(${i},'ite_uni',nfParseNum(this.value))">
+      </div>
       <span style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--t3)">${ivaPct}%</span>
       <span style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--grn)">${fmtN(neto,2)}</span>
       <span class="nf-imp" style="text-align:right;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--txt)">${fmtN(imp,2)}</span>
@@ -1851,6 +1872,7 @@ async function nfGuardar() {
     fac_total:tot.total||0,fac_saldo:tot.total||0,fac_percib:0,
     fac_transp:transp,fac_remito:remito,fac_vcomi:conpag,fac_monpor:dto,
     fac_vend:vend,
+    fac_tab_stk:!!ct.tab_stk, fac_tab_fact:!!ct.tab_fact,
     fac_afip_st:'pendiente',fac_cae:null,fac_cae_vto:null
   };
   const itemsAGrabar=FAC_ITEMS_NUEVA.filter(it=>(it.ite_can||0)>0&&(it.ite_imp||0)>0).map(it=>{
@@ -1861,10 +1883,13 @@ async function nfGuardar() {
       ite_desp:it.ite_desp_nro||'',
       ite_can:it.ite_can,ite_uni:it.ite_uni,
       ite_preori:it.ite_preori||0,
+      ite_moneda:it.ite_moneda||'P',
+      ite_cotiz:it.ite_cotiz||1,
       ite_imp:neto*(it.ite_can||1),
       ite_iva_porc:esA?(it.ite_iva_porc||21):0,
       ite_iva_imp:esA?(it.ite_uni-neto)*(it.ite_can||1):0,
-      ite_impu:0,ite_costo:it.ite_uni
+      ite_impu:0,ite_costo:it.ite_uni,
+      _dep_id:it._desp_id||null
     };
   });
   syncSaving();
