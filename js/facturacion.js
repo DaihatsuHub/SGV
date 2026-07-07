@@ -1633,13 +1633,17 @@ function nfItemDespChange(idx,depId) {
 }
 
 function nfItemChange(idx,campo,valor) {
-  FAC_ITEMS_NUEVA[idx][campo]=valor;
   const it=FAC_ITEMS_NUEVA[idx];
-  const _max=nfItemMax(it);
-  if(campo==='ite_can'&&_max!==null&&valor>_max){
-    FAC_ITEMS_NUEVA[idx].ite_can=_max;
-    toast(`Máximo disponible: ${_max}`,'err');
+  if(campo==='ite_can'){
+    const _max=nfItemMax(it);
+    if(_max!==null&&valor>_max){
+      FAC_ITEMS_NUEVA[idx].ite_can=0;
+      toast(`Cantidad máxima para ese despacho: ${_max}. La dejé en 0.`,'err');
+      nfRenderItems(); nfCalcTotales();
+      return;
+    }
   }
+  FAC_ITEMS_NUEVA[idx][campo]=valor;
   const esA=nfEsFacturaA();
   const div=1+(it.ite_iva_porc||0)/100;
   const neto=esA?it.ite_uni/div:it.ite_uni;
@@ -1755,10 +1759,12 @@ function nfRenderItems() {
           max="${_cap}"
           style="text-align:right;font-size:12px;width:100%;${cant===0?'color:var(--t3)':''}"
           onclick="this.select()"
-          onchange="nfItemChange(${i},'ite_can',Math.min(parseFloat(this.value)||0,${_cap}))"
-          oninput="nfItemChange(${i},'ite_can',Math.min(parseFloat(this.value)||0,${_cap}))">`
+          onchange="nfItemChange(${i},'ite_can',parseFloat(this.value)||0)">`
       }
-      <span style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--t2)">${fmtN(precioConIva,2)}</span>
+      <input class="finp" type="number" min="0" step="0.01" value="${precioConIva}"
+        style="text-align:right;font-family:var(--mono);font-size:11px;width:100%"
+        onclick="this.select()"
+        onchange="nfItemChange(${i},'ite_uni',parseFloat(this.value)||0)">
       <span style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--t3)">${ivaPct}%</span>
       <span style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--grn)">${fmtN(neto,2)}</span>
       <span class="nf-imp" style="text-align:right;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--txt)">${fmtN(imp,2)}</span>
