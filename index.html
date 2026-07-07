@@ -923,16 +923,6 @@
           <span class="tog-lbl">Contable</span>
           <input type="hidden" id="ctip-contable" value="1">
         </div>
-        <div class="tog-wrap">
-          <button class="tog" id="ctip-tog-stk" onclick="togBtn('ctip-tog-stk','ctip-stk')"></button>
-          <span class="tog-lbl">Mueve Stock</span>
-          <input type="hidden" id="ctip-stk" value="0">
-        </div>
-        <div class="tog-wrap">
-          <button class="tog" id="ctip-tog-conta" onclick="togBtn('ctip-tog-conta','ctip-conta')"></button>
-          <span class="tog-lbl">Mueve Stock Contable</span>
-          <input type="hidden" id="ctip-conta" value="0">
-        </div>
       </div>
     </div>
     <div class="mft">
@@ -1130,14 +1120,25 @@
         <div class="fgrp"><label class="flbl2">Artículo *</label>
           <select class="finp" id="df-art" style="min-width:300px"><option value="">— Seleccionar —</option></select>
         </div>
-        <div class="fgrp"><label class="flbl2">Ingreso (unid.) *</label><input class="finp" id="df-ent" type="number" min="1" value="0" oninput="dfEntChange()"></div>
         <div class="fgrp"><label class="flbl2">Ingreso Depósito</label><input class="finp" id="df-depent" type="number" min="0" value="0"></div>
       </div>
-      <div class="fsec">Contable</div>
-      <div class="fg3">
-        <div class="fgrp"><label class="flbl2">Ingreso Contable</label><input class="finp" id="df-coent" type="number" step="1" value="0"></div>
-        <div class="fgrp"><label class="flbl2">Salida Contable</label><input class="finp" id="df-cosal" type="number" step="1" value="0"></div>
-        <div class="fgrp"><label class="flbl2">Stock Contable</label><input class="finp" id="df-costk" type="number" step="1" value="0"></div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin:4px 0">
+        <div style="flex:1;min-width:220px;border:1px solid var(--b1);border-radius:8px;padding:10px 12px;background:var(--s2)">
+          <div style="font-size:11px;font-weight:700;color:var(--acc);margin-bottom:8px">📦 Stock real</div>
+          <div class="fg3">
+            <div class="fgrp"><label class="flbl2">Ingreso *</label><input class="finp" id="df-ent" type="number" min="0" value="0" oninput="dfEntChange()"></div>
+            <div class="fgrp"><label class="flbl2">Salida</label><input class="finp" id="df-sal" type="number" step="1" value="0"></div>
+            <div class="fgrp"><label class="flbl2">Stock</label><input class="finp" id="df-stk" type="number" step="1" value="0"></div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:220px;border:1px solid var(--b1);border-radius:8px;padding:10px 12px;background:var(--s2)">
+          <div style="font-size:11px;font-weight:700;color:var(--acc);margin-bottom:8px">🧾 Stock contable</div>
+          <div class="fg3">
+            <div class="fgrp"><label class="flbl2">Ingreso</label><input class="finp" id="df-coent" type="number" step="1" value="0"></div>
+            <div class="fgrp"><label class="flbl2">Salida</label><input class="finp" id="df-cosal" type="number" step="1" value="0"></div>
+            <div class="fgrp"><label class="flbl2">Stock</label><input class="finp" id="df-costk" type="number" step="1" value="0"></div>
+          </div>
+        </div>
       </div>
       <div class="fsec">Costos</div>
       <div class="fg3">
