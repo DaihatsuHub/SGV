@@ -189,6 +189,7 @@
     <button class="btn scs" onclick="abrirResumen()">📊 Resumen</button>
     <button class="btn" id="btn-cfg-art" style="display:none" onclick="openColCfg('art')" title="Configurar columnas">⚙️ Columnas</button>
     <button class="chip" id="af-stock" onclick="togArtStock()" style="margin-left:4px">📦 Con Stock</button>
+    <button class="chip" id="af-fact" onclick="togArtFact()" style="margin-left:4px">🧾 Con Stock p/Facturar</button>
     <div class="spacer"></div>
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
@@ -967,10 +968,22 @@
             <option value="0">Exento</option>
           </select>
         </div>
-        <div class="fgrp"><label class="flbl2">Stock Hatsu</label><input class="finp" id="af-stk" type="number" value="0"></div>
-        <div class="fgrp"><label class="flbl2">Stock Tressa</label><input class="finp" id="af-stkt" type="number" value="0"></div>
-        <div class="fgrp"><label class="flbl2">Dep. Hatsu</label><input class="finp" id="af-deph" type="number" value="0"></div>
-        <div class="fgrp"><label class="flbl2">Dep. Tressa</label><input class="finp" id="af-dept" type="number" value="0"></div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin:4px 0">
+        <div style="flex:1;min-width:220px;border:1px solid var(--b1);border-radius:8px;padding:10px 12px;background:var(--s2)">
+          <div style="font-size:11px;font-weight:700;color:var(--acc);margin-bottom:8px">🔵 Hatsu</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="fgrp"><label class="flbl2">Stock Hatsu</label><input class="finp" id="af-stk" type="number" value="0"></div>
+            <div class="fgrp"><label class="flbl2">P/Facturar</label><input class="finp" id="af-deph" type="number" value="0"></div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:220px;border:1px solid var(--b1);border-radius:8px;padding:10px 12px;background:var(--s2)">
+          <div style="font-size:11px;font-weight:700;color:var(--acc);margin-bottom:8px">🟢 Tressa</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="fgrp"><label class="flbl2">Stock Tressa</label><input class="finp" id="af-stkt" type="number" value="0"></div>
+            <div class="fgrp"><label class="flbl2">P/Facturar</label><input class="finp" id="af-dept" type="number" value="0"></div>
+          </div>
+        </div>
       </div>
       <div class="fsec">Estado</div>
       <div class="tog-row">

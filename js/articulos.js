@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 
 let artSoloStock = false;
+let artSoloFact = false;
 
 // Colores para diferenciar Stock vs Depósito en grilla
 const STK_BG  = 'background:rgba(30,58,110,0.12)';   // azul — Stock
@@ -13,8 +14,9 @@ function filtArts(){
   const q = document.getElementById('art-q').value.toLowerCase();
   let list = ARTS.filter(a => {
     const mq = !q || a.ART_COD.toLowerCase().includes(q) || a.ART_DES.toLowerCase().includes(q);
-    const ms = !artSoloStock || ((a.ART_STK||0) + (a.ART_STKT||0) + (a.ART_DEPT||0) + (a.ART_DEPH||0)) > 0;
-    return mq && ms;
+    const ms = !artSoloStock || ((a.ART_STK||0) + (a.ART_STKT||0)) !== 0;
+    const mf = !artSoloFact  || ((a.ART_DEPH||0) + (a.ART_DEPT||0)) !== 0;
+    return mq && ms && mf;
   });
   const s = SORT_STATE['art'];
   if (s && s.col) {
@@ -88,6 +90,13 @@ function togArtStock() {
   const btn = document.getElementById('af-stock');
   btn.classList.toggle('on', artSoloStock);
   btn.textContent = artSoloStock ? '📦 Todos' : '📦 Con Stock';
+  renderArts();
+}
+function togArtFact() {
+  artSoloFact = !artSoloFact;
+  const btn = document.getElementById('af-fact');
+  btn.classList.toggle('on', artSoloFact);
+  btn.textContent = artSoloFact ? '🧾 Todos' : '🧾 Con Stock p/Facturar';
   renderArts();
 }
 
