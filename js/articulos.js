@@ -85,28 +85,20 @@ function renderArts(){
   const bArt = document.getElementById('b-art'); if(bArt) bArt.textContent = ARTS.length + ' artículos';
 }
 
-// ── IVA: opción "Otro…" (el usuario tipea el %) ──
-let _afIvaPrev = '21';
-function afIvaEnsure(val){
-  const sel=document.getElementById('af-iva'); if(!sel) return '21';
-  const v=String(val);
-  if(![...sel.options].some(o=>o.value===v)){
-    const otro=[...sel.options].find(o=>o.value==='__otro');
-    const opt=document.createElement('option');
-    opt.value=v; opt.textContent=(parseFloat(v)||0)+'%';
-    if(otro) sel.insertBefore(opt, otro); else sel.appendChild(opt);
-  }
-  return v;
-}
+// ── IVA: opción "Otro…" muestra un campo al lado para tipear el % ──
 function afIvaChange(){
-  const sel=document.getElementById('af-iva'); if(!sel) return;
-  if(sel.value==='__otro'){
-    const inp=prompt('Ingresá el % de IVA (ej. 27 o 5.5):','');
-    const n=parseFloat((inp||'').replace(',','.'));
-    if(isNaN(n)||n<0){ sel.value=_afIvaPrev; return; }
-    afIvaEnsure(n); sel.value=String(n);
+  const sel=document.getElementById('af-iva');
+  const inp=document.getElementById('af-iva-otro');
+  if(!sel||!inp) return;
+  if(sel.value==='__otro'){ inp.style.display=''; inp.focus(); inp.select(); }
+  else { inp.style.display='none'; }
+}
+function afIvaVal(){
+  const sel=document.getElementById('af-iva');
+  if(sel && sel.value==='__otro'){
+    return parseFloat((document.getElementById('af-iva-otro')?.value||'').replace(',','.'))||0;
   }
-  _afIvaPrev=sel.value;
+  return parseFloat(sel?.value||21)||21;
 }
 
 function togArtStock() {
@@ -197,7 +189,8 @@ function fillArtSelects(selMarc, selRub, selSrub, selProv, selMone='P', selCcos=
 function clrArtForm(){
   ['af-cod','af-des','af-grup','af-sex','af-estu','af-codcasio'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
   ['af-pre','af-stk','af-stkt','af-deph','af-dept'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=0; });
-  const ivaEl=document.getElementById('af-iva'); if(ivaEl){ ivaEl.value='21'; _afIvaPrev='21'; }
+  const ivaEl=document.getElementById('af-iva'); if(ivaEl) ivaEl.value='21';
+  const ivaInp=document.getElementById('af-iva-otro'); if(ivaInp){ ivaInp.value=''; ivaInp.style.display='none'; }
   const act = document.getElementById('af-act'); if(act) act.value='S';
   fillArtSelects('','','','','P');
   const tog = document.getElementById('atog-act'); if(tog) tog.classList.add('on');
@@ -222,7 +215,13 @@ function fillArtForm(a){
   if(actTog) actTog.classList.toggle('on', actVal==='S');
   fillArtSelects(a.ART_MARCA, a.ART_RUB, a.ART_SRUB, a.ART_PROV, a.ART_MONEDA||'P', a.ART_CCOS||'');
   const ivaEl=document.getElementById('af-iva');
-  if(ivaEl){ const v=afIvaEnsure(a.ART_IVA!==null&&a.ART_IVA!==undefined?a.ART_IVA:21); ivaEl.value=v; _afIvaPrev=v; }
+  const ivaInp=document.getElementById('af-iva-otro');
+  if(ivaEl){
+    const v=(a.ART_IVA!==null&&a.ART_IVA!==undefined)?String(a.ART_IVA):'21';
+    const esFija=[...ivaEl.options].some(o=>o.value===v && o.value!=='__otro');
+    if(esFija){ ivaEl.value=v; if(ivaInp){ ivaInp.value=''; ivaInp.style.display='none'; } }
+    else { ivaEl.value='__otro'; if(ivaInp){ ivaInp.value=v; ivaInp.style.display=''; } }
+  }
 }
 
 function saveArt(){
@@ -247,7 +246,7 @@ function saveArt(){
     ART_SEX:   document.getElementById('af-sex').value.trim().toUpperCase(),
     ART_PROV:  document.getElementById('af-prov').value,
     ART_MONEDA:document.getElementById('af-moneda')?.value||'P',
-    ART_IVA:   parseFloat(document.getElementById('af-iva')?.value||21)||21,
+    ART_IVA:   afIvaVal(),
     CODCASIO:  document.getElementById('af-codcasio')?.value.trim()||null,
   };
   if(window._ae==='A'){
