@@ -1842,6 +1842,9 @@ function nfCalcTotales() {
   setFlex('nf-fila-neto', esA);
   setFlex('nf-fila-iva21', esA&&iva21>0);
   setFlex('nf-fila-iva105',esA&&iva105>0);
+  // Panel con fila única de IVA (el que arma renderFacForm)
+  set('nf-tot-iva', `${mon} ${fmtN(iva,2)}`);
+  setFlex('nf-fila-iva', esA&&iva>0);
   setFlex('nf-fila-dto', dto>0);
   window._nfTotales={neto,iva21,iva105,iva,subtotal,dtoImp,total};
 }
