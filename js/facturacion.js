@@ -1573,7 +1573,18 @@ async function nfItemArtChange(idx,cod) {
       precio=precio*cotiz;
       toast(`Precio convertido a pesos (cotiz x${cotiz})`, 'scs');
     } else {
-      toast(`⚠️ Artículo en moneda ${monArt}, factura en ${monFac}`, 'err');
+      // Factura NO en pesos: solo se pueden facturar artículos de esa misma moneda
+      toast(`Con factura en ${monFac} solo podés facturar artículos en ${monFac} (este es ${monArt}).`,'err');
+      FAC_ITEMS_NUEVA[idx].ite_art='';
+      FAC_ITEMS_NUEVA[idx].ite_desp_art='';
+      FAC_ITEMS_NUEVA[idx]._artReal=0; FAC_ITEMS_NUEVA[idx]._artPfac=0;
+      FAC_ITEMS_NUEVA[idx]._depStk=null; FAC_ITEMS_NUEVA[idx]._depCostk=null;
+      FAC_ITEMS_NUEVA[idx].ite_uni=0; FAC_ITEMS_NUEVA[idx].ite_preori=0;
+      FAC_ITEMS_NUEVA[idx].ite_moneda='P'; FAC_ITEMS_NUEVA[idx].ite_cotiz=1;
+      FAC_ITEMS_NUEVA[idx]._desps=null; FAC_ITEMS_NUEVA[idx]._desp_id=null;
+      FAC_ITEMS_NUEVA[idx].ite_desp_nro='';
+      nfRenderItems(); nfCalcTotales();
+      return;
     }
   }
   FAC_ITEMS_NUEVA[idx].ite_uni=precio;
@@ -1900,11 +1911,23 @@ async function nfGuardar() {
     if(_numEl){ const n=parseInt((String(_numEl.value||'').split('-').pop()||'').trim(),10); if(n>0) numeroManual=n; }
     const res=await apiPost('/facturas/guardar',{ ctId:ct.id, prefijo, tipo, empresa, numero:numeroManual, facData, items:itemsAGrabar });
     if(!res.ok){ syncErr(); toast(res.error||'No se pudo guardar','err'); return; }
-    // DIAGNÓSTICO TEMPORAL de movimiento de stock
+    // Aplicar el movimiento de stock a los datos en memoria (para verlo al instante)
     if(res.stockDebug){
-      console.log('CT:',res.ct); console.table(res.stockDebug);
-      const lin=res.stockDebug.map(d=>`${d.art}: ${d.ok?'✓ movido':'✗ '+(d.motivo||'?')}`).join('\n');
-      alert('Movimiento de stock:\n\nComprobante: '+JSON.stringify(res.ct)+'\n\n'+lin.trim());
+      res.stockDebug.forEach(d=>{
+        if(d.updArt){
+          const a=ARTS.find(x=>(x.ART_COD||'').trim()===(d.art||'').trim());
+          if(a){
+            if('art_stk'  in d.updArt) a.ART_STK =d.updArt.art_stk;
+            if('art_stkt' in d.updArt) a.ART_STKT=d.updArt.art_stkt;
+            if('art_deph' in d.updArt) a.ART_DEPH=d.updArt.art_deph;
+            if('art_dept' in d.updArt) a.ART_DEPT=d.updArt.art_dept;
+          }
+        }
+        if(d.updDep && d.dep && typeof DESPS!=='undefined' && Array.isArray(DESPS)){
+          const dp=DESPS.find(x=>x.dep_id===d.dep);
+          if(dp) Object.assign(dp, d.updDep);
+        }
+      });
     }
     const facNro=res.facNro;
     ct.ultimo_nro=res.nuevoUltimo; ct.bloqueado=false; ct.bloqueado_por=null;
