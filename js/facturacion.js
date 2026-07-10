@@ -52,7 +52,9 @@ function nfEsFacturaA() {
   const val  = document.getElementById('nf-ctip')?.value||'';
   const tiva = document.getElementById('nf-tiva-cod')?.value||'';
   if (!val) return false;
-  return val.split('|')[1]==='F' && tiva==='I';
+  const tipo = val.split('|')[1];
+  // Letra A (discrimina IVA) para Factura, Nota de Crédito y Nota de Débito a un Inscripto
+  return (tipo==='F'||tipo==='C'||tipo==='D') && tiva==='I';
 }
 function facEmpresaLabel(emp) {
   if (emp==='H') return 'HATSU ELECTRONICS S.A.';
@@ -1928,6 +1930,12 @@ async function nfGuardar() {
           if(dp) Object.assign(dp, d.updDep);
         }
       });
+      // Diagnóstico: avisar solo si algún ítem NO movió stock
+      const fallidos=res.stockDebug.filter(d=>!d.ok);
+      if(fallidos.length){
+        console.warn('Stock no movido:',fallidos,'| Comprobante:',res.ct);
+        alert('⚠️ No se movió stock en:\n\n'+fallidos.map(d=>`• ${d.art}: ${d.motivo||'?'}`).join('\n')+'\n\nComprobante: '+JSON.stringify(res.ct));
+      }
     }
     const facNro=res.facNro;
     ct.ultimo_nro=res.nuevoUltimo; ct.bloqueado=false; ct.bloqueado_por=null;
