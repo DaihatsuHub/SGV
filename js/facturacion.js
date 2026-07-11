@@ -53,8 +53,10 @@ function nfEsFacturaA() {
   const tiva = document.getElementById('nf-tiva-cod')?.value||'';
   if (!val) return false;
   const tipo = val.split('|')[1];
-  // Letra A (discrimina IVA) para Factura, Nota de Crédito y Nota de Débito a un Inscripto
-  return (tipo==='F'||tipo==='C'||tipo==='D') && tiva==='I';
+  const ct = nfCtipActual();
+  const paraFacturar = !!(ct && ct.tab_fact);   // p/Facturar off = mercadería → sin IVA
+  // Letra A (discrimina IVA): sólo si es "para facturar", F/C/D y cliente Inscripto
+  return paraFacturar && (tipo==='F'||tipo==='C'||tipo==='D') && tiva==='I';
 }
 function facEmpresaLabel(emp) {
   if (emp==='H') return 'HATSU ELECTRONICS S.A.';
@@ -470,6 +472,7 @@ async function renderFacDetalle(f) {
         ${(f.fac_percib||0)>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Percepción IIBB</span><span>${mon} ${fmt(f.fac_percib)}</span></div>`:''}
         <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--txt);padding:8px 0 3px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL</span><span>${mon} ${fmt(f.fac_total)}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span style="color:var(--t3)">Saldo</span><span style="color:${(f.fac_saldo||0)>0?'var(--red)':'var(--grn)'}">${mon} ${fmt(f.fac_saldo)}</span></div>
+        ${tipoChar==='C'&&(f.fac_saldo||0)>0?`<button onclick="ncAbrirAplicar('${f.fac_nro}')" class="btn" style="margin-top:10px;width:100%;padding:7px;font-size:12px">📌 Aplicar saldo a comprobantes</button>`:''}
       </div>
     </div>`;
 }
@@ -2013,4 +2016,64 @@ async function calcTop10() {
         </tr>`;
       }).join('')}</tbody></table>`;
   } catch(e){console.error(e);body.innerHTML='<div style="text-align:center;color:var(--red);padding:20px">Error al calcular</div>';}
+}
+
+// ══════════ APLICACIÓN DE SALDO DE NOTAS DE CRÉDITO ══════════
+async function ncAbrirAplicar(ncNro){
+  let data;
+  try { data = await apiGet('/nc/deudores/'+encodeURIComponent(ncNro)); }
+  catch(e){ toast('No se pudieron traer los comprobantes','err'); return; }
+  if(!data || !data.ok){ toast((data&&data.error)||'Error','err'); return; }
+  const nc=data.nc, deudores=data.deudores||[];
+  const mon=nc.fac_moneda==='P'?'$':'u$s';
+  const filas = deudores.length ? deudores.map((c,i)=>{
+    const sug=Math.min(Number(nc.fac_saldo)||0, Number(c.fac_saldo)||0);
+    const fec=c.fac_fec?c.fac_fec.substring(0,10).split('-').reverse().join('/'):'—';
+    return `<div style="display:grid;grid-template-columns:1fr 70px 90px 90px 150px;gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid var(--b1);font-size:12px">
+      <span style="font-family:var(--mono);color:var(--acc)">${esc(c.fac_nro)}</span>
+      <span style="color:var(--t3);font-size:11px">${fec}</span>
+      <span style="text-align:right;color:var(--t2)">${mon} ${fmtN(c.fac_total,2)}</span>
+      <span style="text-align:right;color:var(--red)">${mon} ${fmtN(c.fac_saldo,2)}</span>
+      <span style="display:flex;gap:4px;align-items:center;justify-content:flex-end">
+        <input id="ncimp-${i}" class="finp" type="text" value="${fmtN(sug,2)}" style="width:80px;text-align:right;font-size:11px" onclick="this.select()">
+        <button class="btn scs" style="padding:3px 8px;font-size:11px" onclick="ncAplicarComp('${ncNro}','${c.fac_nro}','ncimp-${i}')">Aplicar</button>
+      </span>
+    </div>`;
+  }).join('') : '<div style="padding:20px;text-align:center;color:var(--t3);font-size:12px">No hay comprobantes deudores (misma empresa y moneda) con saldo pendiente.</div>';
+
+  let ov=document.getElementById('ov-ncap');
+  if(!ov){ ov=document.createElement('div'); ov.id='ov-ncap'; ov.className='ov'; document.body.appendChild(ov); }
+  ov.innerHTML=`<div class="modal" style="max-width:680px;width:94%">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <strong style="font-size:14px">📌 Aplicar saldo · NC ${esc(ncNro)}</strong>
+      <button class="btn" onclick="document.getElementById('ov-ncap').classList.remove('open')" style="padding:3px 9px">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:10px">
+      Saldo disponible de la NC: <strong style="color:var(--grn)">${mon} ${fmtN(nc.fac_saldo,2)}</strong>
+      &nbsp;·&nbsp; Empresa <strong>${esc(nc.fac_empresa||'')}</strong> &nbsp;·&nbsp; Moneda <strong>${nc.fac_moneda==='P'?'Pesos':nc.fac_moneda}</strong>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 70px 90px 90px 150px;gap:8px;padding:5px 8px;font-size:10px;color:var(--t3);text-transform:uppercase;border-bottom:1px solid var(--b1);letter-spacing:1px">
+      <span>Comprobante</span><span>Fecha</span><span style="text-align:right">Total</span><span style="text-align:right">Saldo</span><span style="text-align:right">Importe a aplicar</span>
+    </div>
+    <div style="max-height:360px;overflow:auto">${filas}</div>
+  </div>`;
+  ov.classList.add('open');
+}
+
+async function ncAplicarComp(ncNro, compNro, inpId){
+  const imp=nfParseNum(document.getElementById(inpId)?.value||'0');
+  if(imp<=0){ toast('Ingresá un importe válido','err'); return; }
+  let res;
+  try { res=await apiPost('/nc/aplicar',{ nc_nro:ncNro, comp_nro:compNro, importe:imp }); }
+  catch(e){ toast('Error al aplicar','err'); return; }
+  if(!res || !res.ok){ toast((res&&res.error)||'No se pudo aplicar','err'); return; }
+  toast('Saldo aplicado','scs');
+  // Actualizar saldos en memoria
+  const upd=(nro,saldo)=>{ const f=FACS.find(x=>x.fac_nro===nro); if(f) f.fac_saldo=saldo; };
+  upd(ncNro,res.ncSaldo); upd(compNro,res.compSaldo);
+  // Si a la NC no le queda saldo, cierro; si no, refresco la lista
+  if((res.ncSaldo||0)<=0){ document.getElementById('ov-ncap')?.classList.remove('open'); }
+  else { ncAbrirAplicar(ncNro); }
+  // Refrescar el detalle si está viendo esta NC
+  const f=FACS.find(x=>x.fac_nro===ncNro); if(f) renderFacDetalle(f);
 }
