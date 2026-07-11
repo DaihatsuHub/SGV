@@ -9,6 +9,7 @@ let ctipSelIdx = null;
 let facSort = { col: 'fac_fec', asc: true };
 let facFechaBusq = '';
 let FAC_ITEMS_NUEVA = [];
+let NF_PERCEP = [];   // [{cod, detalle, pct, importe}] percepciones IIBB de la factura actual
 let FAC_MODO = null;
 
 async function sbLoadFacs() {
@@ -181,6 +182,7 @@ function renderCtip() {
         if(col.field==='contable')   return pill(c.contable);
         if(col.field==='tab_stk')    return pill(c.tab_stk);
         if(col.field==='tab_fact')   return pill(c.tab_fact);
+        if(col.field==='tab_percib') return pill(c.tab_percib);
         return `<span class="col-sm">${esc(String(c[col.field]||''))}</span>`;
       }).join('') +
     `</div>`;
@@ -196,6 +198,7 @@ function ctipAlta() {
   setTog('ctip-tog-cont','ctip-contable',true);
   setTog('ctip-tog-stk','ctip-stk',false);
   setTog('ctip-tog-fact','ctip-fact',false);
+  setTog('ctip-tog-percib','ctip-percib',false);
   document.getElementById('ctip-mtit').textContent='Nuevo Tipo de Comprobante';
   setMtag('ctip-mtag','ALTA','tag-a');
   document.getElementById('ov-ctip').classList.add('open');
@@ -211,6 +214,7 @@ function ctipModif() {
   setTog('ctip-tog-cont','ctip-contable',!!c.contable);
   setTog('ctip-tog-stk','ctip-stk',!!c.tab_stk);
   setTog('ctip-tog-fact','ctip-fact',!!c.tab_fact);
+  setTog('ctip-tog-percib','ctip-percib',!!c.tab_percib);
   document.getElementById('ctip-mtit').textContent=`Modificar: ${c.empresa}${c.prefijo} ${TIPO_LABEL[c.tipo]||c.tipo}`;
   setMtag('ctip-mtag','MODIFICACIÓN','tag-m');
   document.getElementById('ov-ctip').classList.add('open');
@@ -237,12 +241,13 @@ async function saveCtip() {
   const contable=document.getElementById('ctip-contable').value==='1';
   const tabStk=document.getElementById('ctip-stk').value==='1';
   const tabFact=document.getElementById('ctip-fact').value==='1';
+  const tabPercib=document.getElementById('ctip-percib').value==='1';
   if(!prefijo||prefijo.length!==3){toast('El prefijo debe tener exactamente 3 caracteres','err');return;}
   const data={empresa,prefijo,tipo,ultimo_nro:ultimo,contable};
   const id = window._ctipe==='A' ? null : (filtCtip()[ctipSelIdx]?.id);
   syncSaving();
   try {
-    const res=await apiPost('/comp_tipos/guardar',{ id, empresa, prefijo, tipo, ultimo_nro:ultimo, contable, tab_stk:tabStk, tab_fact:tabFact });
+    const res=await apiPost('/comp_tipos/guardar',{ id, empresa, prefijo, tipo, ultimo_nro:ultimo, contable, tab_stk:tabStk, tab_fact:tabFact, tab_percib:tabPercib });
     if(!res.ok){ syncErr(); toast(res.error||'No se pudo guardar','err'); return; }
     await sbLoadCtips(); closeOv('ov-ctip'); ctipSelIdx=null; renderCtip();
     syncOk();
@@ -470,7 +475,9 @@ async function renderFacDetalle(f) {
           <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Subtotal neto</span><span>${mon} ${fmt((f.fac_sub||0)-(f.fac_iva||0))}</span></div>
           <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>IVA 21%</span><span>${mon} ${fmt(f.fac_iva)}</span></div>`:''}
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Subtotal</span><span>${mon} ${fmt(f.fac_sub)}</span></div>
-        ${(f.fac_percib||0)>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Percepción IIBB</span><span>${mon} ${fmt(f.fac_percib)}</span></div>`:''}
+        ${(Array.isArray(f.fac_percep_det)&&f.fac_percep_det.length)
+          ? f.fac_percep_det.map(p=>`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>${esc(p.detalle||'Percepción')} (${fmt(p.pct)}%)</span><span>${mon} ${fmt(p.importe)}</span></div>`).join('')
+          : ((f.fac_percib||0)>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Percepción IIBB</span><span>${mon} ${fmt(f.fac_percib)}</span></div>`:'')}
         <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--txt);padding:8px 0 3px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL</span><span>${mon} ${fmt(f.fac_total)}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span style="color:var(--t3)">Saldo</span><span style="color:${(f.fac_saldo||0)>0?'var(--red)':'var(--grn)'}">${mon} ${fmt(f.fac_saldo)}</span></div>
       </div>
@@ -832,7 +839,7 @@ function facNavegar(fn) {
 }
 
 function facAlta() {
-  FAC_ITEMS_NUEVA=[];
+  FAC_ITEMS_NUEVA=[]; NF_PERCEP=[];
   FAC_MODO='A';
   renderFacModal(new Date().toISOString().substring(0,10),'H','');
 }
@@ -1152,6 +1159,7 @@ function renderFacForm(fecha, empresa, cliCod) {
           <div id="nf-fila-iva"  style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>IVA</span><span id="nf-tot-iva">$ 0,00</span></div>
           <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Subtotal</span><span id="nf-tot-sub">$ 0,00</span></div>
           <div id="nf-fila-dto"  style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Descuento</span><span id="nf-tot-dto">—</span></div>
+          <div id="nf-percep-cont"></div>
           <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:var(--txt);padding:6px 0 2px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL</span><span id="nf-tot-total">$ 0,00</span></div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
@@ -1450,6 +1458,7 @@ async function nfOnCtipChange() {
     return;
   }
   if(el) el.value=`${prefijo}-${String((ct.ultimo_nro||0)+1).padStart(6,'0')}${tipo}`;
+  nfPercepSync();
   nfRenderItems();
   nfCalcTotales();
 }
@@ -1520,11 +1529,14 @@ function nfSetCliente(cli) {
   s('nf-conpag',   (cli.CLI_CONPAG||'').trim());
   s('nf-vend',     (cli.CLI_VEND||'').trim());
   s('nf-transp',   (cli.CLI_EXPRE||'').trim());
+  window._nfCliActual=cli;
+  nfPercepSync(cli);
   nfCalcTotales();
   nfRenderItems();
 }
 function nfLimpiarCliente() {
   const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
+  window._nfCliActual=null; NF_PERCEP=[];
   s('nf-cli-cod',''); s('nf-cli-busq',''); s('nf-razon','');
   s('nf-tiva',''); s('nf-tiva-cod',''); s('nf-dto',0);
   s('nf-conpag',''); s('nf-vend',''); s('nf-transp','');
@@ -1811,6 +1823,31 @@ function nfRenderItems() {
   }).join('');
 }
 
+// ── Percepciones IIBB en facturación ──
+function nfPercDetalle(cod){
+  const p=(TABLAS['PERC']||[]).find(x=>x.CODIGO===cod);
+  return p ? (p.DETALLE||cod) : cod;
+}
+function nfCtipTienePercib(){
+  const ct=nfCtipActual();
+  return !!(ct && ct.tab_percib);
+}
+// Poblar NF_PERCEP según el cliente actual + flag del comprobante
+function nfPercepSync(cli){
+  if(!nfCtipTienePercib()){ NF_PERCEP=[]; return; }
+  const c = cli || window._nfCliActual;
+  const arr = (c && Array.isArray(c.CLI_PERCEP)) ? c.CLI_PERCEP : [];
+  // Conservar % ya editado si el código sigue estando
+  const prev = {}; NF_PERCEP.forEach(p=>{ prev[p.cod]=p.pct; });
+  NF_PERCEP = arr.map(p=>({
+    cod:p.cod, detalle:nfPercDetalle(p.cod),
+    pct:(prev[p.cod]!==undefined?prev[p.cod]:(Number(p.pct)||0)), importe:0
+  }));
+}
+function nfPercepPct(i,val){
+  if(NF_PERCEP[i]){ NF_PERCEP[i].pct=parseFloat(String(val).replace(',','.'))||0; nfCalcTotales(); }
+}
+
 function nfCalcTotales() {
   const esA=nfEsFacturaA();
   const dto=parseFloat(document.getElementById('nf-dto')?.value||0)||0;
@@ -1831,7 +1868,10 @@ function nfCalcTotales() {
   const iva=iva21+iva105+ivaOtro;
   const subtotal=neto+iva;
   const dtoImp=subtotal*dto/100;
-  const total=subtotal-dtoImp;
+  // Percepciones IIBB: se calculan sobre el NETO (sin IVA)
+  let totalPercep=0;
+  NF_PERCEP.forEach(p=>{ p.importe=Math.round(neto*(Number(p.pct)||0)/100*100)/100; totalPercep+=p.importe; });
+  const total=subtotal-dtoImp+totalPercep;
   const monSel=document.getElementById('nf-moneda')?.value||'P';
   const monObj=(TABLAS['MONE']||[]).find(m=>m.CODIGO===monSel);
   const mon=monObj?monObj.STRING1:'$';
@@ -1850,7 +1890,18 @@ function nfCalcTotales() {
   set('nf-tot-iva', `${mon} ${fmtN(iva,2)}`);
   setFlex('nf-fila-iva', esA&&iva>0);
   setFlex('nf-fila-dto', dto>0);
-  window._nfTotales={neto,iva21,iva105,iva,subtotal,dtoImp,total};
+  // Filas de percepciones (detalle + % editable + importe)
+  const contEl=document.getElementById('nf-percep-cont');
+  if(contEl){
+    contEl.innerHTML = NF_PERCEP.map((p,i)=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--t2);padding:2px 0">
+        <span style="display:flex;align-items:center;gap:4px">${esc(p.detalle)}
+          <input class="finp" type="text" value="${fmtN(p.pct,2)}" onclick="this.select()" onchange="nfPercepPct(${i},this.value)" style="width:54px;text-align:right;font-size:11px;padding:1px 4px">%
+        </span>
+        <span>${mon} ${fmtN(p.importe,2)}</span>
+      </div>`).join('');
+  }
+  window._nfTotales={neto,iva21,iva105,iva,subtotal,dtoImp,totalPercep,total};
 }
 
 async function nfGuardar() {
@@ -1889,7 +1940,8 @@ async function nfGuardar() {
     fac_fec:fecha,fac_cli:cliCod,
     fac_empresa:empresa,fac_ctip:prefijo,fac_tiva:tiva,fac_moneda:moneda,
     fac_sub:tot.subtotal||0,fac_iva:esA?(tot.iva||0):0,
-    fac_total:tot.total||0,fac_saldo:tot.total||0,fac_percib:0,
+    fac_total:tot.total||0,fac_saldo:tot.total||0,fac_percib:tot.totalPercep||0,
+    fac_percep_det:NF_PERCEP.map(p=>({cod:p.cod,detalle:p.detalle,pct:p.pct,importe:p.importe})),
     fac_transp:transp,fac_remito:remito,fac_vcomi:conpag,fac_monpor:dto,
     fac_vend:vend,
     fac_tab_stk:!!ct.tab_stk, fac_tab_fact:!!ct.tab_fact,

@@ -109,6 +109,7 @@ const COL_DEFS = {
     {field:'contable',   label:'Contable',      width:'80px',  align:'center', active:true},
     {field:'tab_stk',    label:'Mueve Stock',   width:'100px', align:'center', active:true},
     {field:'tab_fact',   label:'P/Facturar',    width:'100px', align:'center', active:true},
+    {field:'tab_percib', label:'Perc. IIBB',   width:'100px', align:'center', active:true},
   ]
 };
 
