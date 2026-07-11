@@ -1922,7 +1922,9 @@ function nfCalcTotales() {
   const contEl=document.getElementById('nf-percep-cont');
   if(contEl){
     if(NF_PERCEP.length){
-      contEl.innerHTML = NF_PERCEP.map((p,i)=>`
+      contEl.innerHTML =
+        `<div style="font-size:10px;color:var(--acc);text-transform:uppercase;letter-spacing:1px;margin:4px 0 2px;border-top:1px dashed var(--b1);padding-top:4px">Percepciones IIBB (% editable)</div>` +
+        NF_PERCEP.map((p,i)=>`
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--t2);padding:2px 0">
           <span style="display:flex;align-items:center;gap:4px">${esc(p.detalle)}
             <input class="finp" type="text" value="${fmtN(p.pct,2)}" onclick="this.select()" onchange="nfPercepPct(${i},this.value)" style="width:54px;text-align:right;font-size:11px;padding:1px 4px">%
