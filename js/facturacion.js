@@ -1630,7 +1630,7 @@ function nfItemMax(it){
   if(nfEsNC()) return null;                 // Notas de crédito: no controla stock
   const ct=nfCtipActual();
   const ms=!!(ct&&ct.tab_stk), pf=!!(ct&&ct.tab_fact);
-  if(!ms&&!pf) return 0;                     // sin flags: no se puede facturar
+  if(!ms&&!pf) return null;                  // sin flags: no controla stock, pero se puede facturar
   // Contra DEP_COStk solo en "p/Facturar puro" (p/Facturar ✓ y Mueve Stock ✗)
   const usarContable = pf && !ms;
   const v = usarContable ? it._depCostk : it._depStk;
