@@ -421,6 +421,7 @@ async function renderFacDetalle(f) {
         <div>
           <div style="font-size:18px;font-weight:700;color:var(--txt);letter-spacing:1px">${esc(empLabel)}</div>
           <div style="font-size:11px;color:var(--t3);margin-top:2px">I.V.A Responsable Inscripto</div>
+          ${tipoChar==='C'&&(f.fac_saldo||0)>0?`<button onclick="ncAbrirAplicar('${f.fac_nro}')" class="btn pri" style="margin-top:8px;padding:5px 12px;font-size:12px">📌 Aplicar saldo de NC</button>`:''}
         </div>
         <div style="text-align:right">
           <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:${contColor2}">${esc(f.fac_nro||'')}</div>
@@ -472,7 +473,6 @@ async function renderFacDetalle(f) {
         ${(f.fac_percib||0)>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Percepción IIBB</span><span>${mon} ${fmt(f.fac_percib)}</span></div>`:''}
         <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--txt);padding:8px 0 3px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL</span><span>${mon} ${fmt(f.fac_total)}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span style="color:var(--t3)">Saldo</span><span style="color:${(f.fac_saldo||0)>0?'var(--red)':'var(--grn)'}">${mon} ${fmt(f.fac_saldo)}</span></div>
-        ${tipoChar==='C'&&(f.fac_saldo||0)>0?`<button onclick="ncAbrirAplicar('${f.fac_nro}')" class="btn" style="margin-top:10px;width:100%;padding:7px;font-size:12px">📌 Aplicar saldo a comprobantes</button>`:''}
       </div>
     </div>`;
 }
@@ -1401,11 +1401,12 @@ function nfOnEmpresaChange() {
   nfRenderItems();
 }
 let _nfCtipBloqueadoId = null;
+const _sessionId = 'S' + Math.random().toString(36).slice(2) + Date.now().toString(36);
 
 async function nfDesbloquearCtip() {
   if(_nfCtipBloqueadoId) {
     try {
-      await apiPost('/comp_tipos/desbloquear', { id: _nfCtipBloqueadoId });
+      await apiPost('/comp_tipos/desbloquear', { id: _nfCtipBloqueadoId, sid: _sessionId });
       const ct=CTIPS.find(x=>x.id===_nfCtipBloqueadoId);
       if(ct){ct.bloqueado=false;ct.bloqueado_por=null;}
     } catch(e){console.error('nfDesbloquearCtip:',e);}
@@ -1433,7 +1434,7 @@ async function nfOnCtipChange() {
   // Bloqueo atómico en el server (lee estado fresco + bloquea si está libre o es mío)
   const miUsuario=usuarioActual?.codigo||'?';
   try {
-    const res=await apiPost('/comp_tipos/bloquear', { id: ct.id, por: miUsuario });
+    const res=await apiPost('/comp_tipos/bloquear', { id: ct.id, por: miUsuario, sid: _sessionId });
     if(!res.locked) {
       toast(`⚠️ ${res.bloqueado_por} está facturando con este tipo. Esperá un momento.`,'err');
       document.getElementById('nf-ctip').value='';
@@ -2020,8 +2021,11 @@ async function calcTop10() {
 
 // ══════════ APLICACIÓN DE SALDO DE NOTAS DE CRÉDITO ══════════
 async function ncAbrirAplicar(ncNro){
-  let data;
-  try { data = await apiGet('/nc/deudores/'+encodeURIComponent(ncNro)); }
+  let data, aplic={aplicaciones:[]};
+  try {
+    data = await apiGet('/nc/deudores/'+encodeURIComponent(ncNro));
+    aplic = await apiGet('/nc/aplicaciones/'+encodeURIComponent(ncNro));
+  }
   catch(e){ toast('No se pudieron traer los comprobantes','err'); return; }
   if(!data || !data.ok){ toast((data&&data.error)||'Error','err'); return; }
   const nc=data.nc, deudores=data.deudores||[];
@@ -2039,7 +2043,22 @@ async function ncAbrirAplicar(ncNro){
         <button class="btn scs" style="padding:3px 8px;font-size:11px" onclick="ncAplicarComp('${ncNro}','${c.fac_nro}','ncimp-${i}')">Aplicar</button>
       </span>
     </div>`;
-  }).join('') : '<div style="padding:20px;text-align:center;color:var(--t3);font-size:12px">No hay comprobantes deudores (misma empresa y moneda) con saldo pendiente.</div>';
+  }).join('') : '<div style="padding:20px;text-align:center;color:var(--t3);font-size:12px">No hay comprobantes deudores (misma empresa, moneda y condición) con saldo pendiente.</div>';
+
+  const aps=aplic&&aplic.aplicaciones||[];
+  const bloqueAplic = aps.length ? `
+    <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin:14px 0 4px">Aplicaciones realizadas (${aps.length})</div>
+    <div style="border:1px solid var(--b1);border-radius:6px;overflow:hidden">
+      ${aps.map(a=>{
+        const fec=a.fecha?String(a.fecha).substring(0,10).split('-').reverse().join('/'):'—';
+        return `<div style="display:grid;grid-template-columns:1fr 90px 90px 90px;gap:8px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--b1);font-size:12px">
+          <span style="font-family:var(--mono)">${esc(a.comp_nro)}</span>
+          <span style="color:var(--t3);font-size:11px">${fec}</span>
+          <span style="text-align:right;color:var(--grn)">${mon} ${fmtN(a.importe,2)}</span>
+          <span style="text-align:right"><button class="btn dng" style="padding:2px 8px;font-size:11px" onclick="ncCancelarAplic(${a.id},'${ncNro}')">Cancelar</button></span>
+        </div>`;
+      }).join('')}
+    </div>` : '';
 
   let ov=document.getElementById('ov-ncap');
   if(!ov){ ov=document.createElement('div'); ov.id='ov-ncap'; ov.className='ov'; document.body.appendChild(ov); }
@@ -2055,9 +2074,23 @@ async function ncAbrirAplicar(ncNro){
     <div style="display:grid;grid-template-columns:1fr 70px 90px 90px 150px;gap:8px;padding:5px 8px;font-size:10px;color:var(--t3);text-transform:uppercase;border-bottom:1px solid var(--b1);letter-spacing:1px">
       <span>Comprobante</span><span>Fecha</span><span style="text-align:right">Total</span><span style="text-align:right">Saldo</span><span style="text-align:right">Importe a aplicar</span>
     </div>
-    <div style="max-height:360px;overflow:auto">${filas}</div>
+    <div style="max-height:280px;overflow:auto">${filas}</div>
+    ${bloqueAplic}
   </div>`;
   ov.classList.add('open');
+}
+
+async function ncCancelarAplic(id, ncNro){
+  if(!confirm('¿Cancelar esta aplicación? El importe vuelve al saldo de la NC y del comprobante.')) return;
+  let res;
+  try { res=await apiPost('/nc/cancelar-aplic',{ id }); }
+  catch(e){ toast('Error al cancelar','err'); return; }
+  if(!res || !res.ok){ toast((res&&res.error)||'No se pudo cancelar','err'); return; }
+  toast('Aplicación cancelada','scs');
+  const upd=(nro,saldo)=>{ if(saldo!=null){ const f=FACS.find(x=>x.fac_nro===nro); if(f) f.fac_saldo=saldo; } };
+  upd(res.nc_nro,res.ncSaldo); upd(res.comp_nro,res.compSaldo);
+  ncAbrirAplicar(ncNro);
+  const f=FACS.find(x=>x.fac_nro===ncNro); if(f) renderFacDetalle(f);
 }
 
 async function ncAplicarComp(ncNro, compNro, inpId){
