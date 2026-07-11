@@ -966,6 +966,7 @@ function renderFacModal(fecha, empresa, cliCod) {
             <div id="nf-fila-iva105" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>IVA 10.5%</span><span id="nf-tot-iva105">$ 0,00</span></div>
             <div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>Subtotal</span><span id="nf-tot-sub">$ 0,00</span></div>
             <div id="nf-fila-dto" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>Descuento</span><span id="nf-tot-dto">—</span></div>
+            <div class="nf-percep-cont"></div>
             <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:#fff;padding:6px 0 2px;border-top:1px solid rgba(255,255,255,0.15);margin-top:4px"><span>TOTAL</span><span id="nf-tot-total">$ 0,00</span></div>
           </div>
           <!-- Botones -->
@@ -1159,7 +1160,7 @@ function renderFacForm(fecha, empresa, cliCod) {
           <div id="nf-fila-iva"  style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>IVA</span><span id="nf-tot-iva">$ 0,00</span></div>
           <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Subtotal</span><span id="nf-tot-sub">$ 0,00</span></div>
           <div id="nf-fila-dto"  style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Descuento</span><span id="nf-tot-dto">—</span></div>
-          <div id="nf-percep-cont"></div>
+          <div id="nf-percep-cont" class="nf-percep-cont"></div>
           <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:var(--txt);padding:6px 0 2px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL</span><span id="nf-tot-total">$ 0,00</span></div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
@@ -1919,23 +1920,22 @@ function nfCalcTotales() {
   setFlex('nf-fila-iva', esA&&iva>0);
   setFlex('nf-fila-dto', dto>0);
   // Filas de percepciones (detalle + % editable + importe)
-  const contEl=document.getElementById('nf-percep-cont');
-  if(contEl){
+  const contList=document.querySelectorAll('.nf-percep-cont');
+  if(contList.length){
+    let html='';
     if(NF_PERCEP.length){
-      contEl.innerHTML =
-        `<div style="font-size:10px;color:var(--acc);text-transform:uppercase;letter-spacing:1px;margin:4px 0 2px;border-top:1px dashed var(--b1);padding-top:4px">Percepciones IIBB (% editable)</div>` +
+      html = `<div style="font-size:10px;color:var(--acc);text-transform:uppercase;letter-spacing:1px;margin:4px 0 2px;border-top:1px dashed rgba(128,128,128,.4);padding-top:4px">Percepciones IIBB (% editable)</div>` +
         NF_PERCEP.map((p,i)=>`
-        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--t2);padding:2px 0">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:inherit;opacity:.85;padding:2px 0">
           <span style="display:flex;align-items:center;gap:4px">${esc(p.detalle)}
             <input class="finp" type="text" value="${fmtN(p.pct,2)}" onclick="this.select()" onchange="nfPercepPct(${i},this.value)" style="width:54px;text-align:right;font-size:11px;padding:1px 4px">%
           </span>
           <span>${mon} ${fmtN(p.importe,2)}</span>
         </div>`).join('');
     } else if(nfCtipTienePercib()){
-      contEl.innerHTML = `<div style="font-size:11px;color:var(--wrn,#f59e0b);padding:3px 0;font-style:italic">⚠️ Este comprobante calcula Perc. IIBB, pero el cliente no tiene percepciones asignadas en su ficha.</div>`;
-    } else {
-      contEl.innerHTML = '';
+      html = `<div style="font-size:11px;color:var(--wrn,#f59e0b);padding:3px 0;font-style:italic">⚠️ Este comprobante calcula Perc. IIBB, pero el cliente no tiene percepciones asignadas en su ficha.</div>`;
     }
+    contList.forEach(el=>{ el.innerHTML=html; });
   }
   window._nfTotales={neto,iva21,iva105,iva,subtotal,dtoImp,totalPercep,total};
 }
