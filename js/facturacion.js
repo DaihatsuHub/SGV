@@ -914,7 +914,7 @@ function renderFacModal(fecha, empresa, cliCod) {
             </div>
             <div>
               <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Moneda</label>
-              <select class="finp" id="nf-moneda" onchange="nfCalcTotales()" style="width:100%">${monesOpts}</select>
+              <select class="finp" id="nf-moneda" onchange="nfOnMonedaChange()" style="width:100%">${monesOpts}</select>
             </div>
             <div>
               <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Descuento %</label>
@@ -1091,7 +1091,7 @@ function renderFacForm(fecha, empresa, cliCod) {
         </div>
         <div>
           <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Moneda</label>
-          <select class="finp" id="nf-moneda" onchange="nfCalcTotales()" style="width:100%">${monesOpts}</select>
+          <select class="finp" id="nf-moneda" onchange="nfOnMonedaChange()" style="width:100%">${monesOpts}</select>
         </div>
         <div>
           <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Descuento %</label>
@@ -1848,6 +1848,34 @@ function nfPercepPct(i,val){
   if(NF_PERCEP[i]){ NF_PERCEP[i].pct=parseFloat(String(val).replace(',','.'))||0; nfCalcTotales(); }
 }
 
+// Recalcular precios de los ítems según la moneda actual + regla de monedas
+function nfRecalcularItems(){
+  const monFac=document.getElementById('nf-moneda')?.value||'P';
+  const removidos=[];
+  FAC_ITEMS_NUEVA = FAC_ITEMS_NUEVA.filter(it=>{
+    if(!it.ite_art) return true;               // ítem vacío, lo dejo
+    const a=(typeof ARTS!=='undefined'?ARTS:[]).find(x=>(x.ART_COD||'').trim()===(it.ite_art||'').trim());
+    if(!a) return true;
+    const monArt=a.ART_MONEDA||'P';
+    // Regla de monedas: si la factura no es en pesos, sólo artículos de esa misma moneda
+    if(monFac!=='P' && monArt!==monFac){ removidos.push(it.ite_art); return false; }
+    let precio=a.ART_PRE||0, cotiz=1;
+    if(monFac==='P' && monArt!=='P'){ cotiz=nfGetCotiz(monArt); precio=precio*cotiz; }
+    it.ite_uni=precio; it.ite_preori=precio; it.ite_moneda=monArt; it.ite_cotiz=cotiz;
+    return true;
+  });
+  if(removidos.length) toast(`Quitados por moneda (${monFac}): ${removidos.join(', ')}`,'err');
+  nfPercepSync();
+  nfRenderItems();
+  nfCalcTotales();
+}
+// Handler del selector de moneda: si hay ítems cargados, recalcula
+function nfOnMonedaChange(){
+  const hayItems=FAC_ITEMS_NUEVA.some(it=>it.ite_art);
+  if(hayItems) nfRecalcularItems();
+  else { nfPercepSync(); nfCalcTotales(); }
+}
+
 function nfCalcTotales() {
   const esA=nfEsFacturaA();
   const dto=parseFloat(document.getElementById('nf-dto')?.value||0)||0;
@@ -1893,13 +1921,19 @@ function nfCalcTotales() {
   // Filas de percepciones (detalle + % editable + importe)
   const contEl=document.getElementById('nf-percep-cont');
   if(contEl){
-    contEl.innerHTML = NF_PERCEP.map((p,i)=>`
-      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--t2);padding:2px 0">
-        <span style="display:flex;align-items:center;gap:4px">${esc(p.detalle)}
-          <input class="finp" type="text" value="${fmtN(p.pct,2)}" onclick="this.select()" onchange="nfPercepPct(${i},this.value)" style="width:54px;text-align:right;font-size:11px;padding:1px 4px">%
-        </span>
-        <span>${mon} ${fmtN(p.importe,2)}</span>
-      </div>`).join('');
+    if(NF_PERCEP.length){
+      contEl.innerHTML = NF_PERCEP.map((p,i)=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--t2);padding:2px 0">
+          <span style="display:flex;align-items:center;gap:4px">${esc(p.detalle)}
+            <input class="finp" type="text" value="${fmtN(p.pct,2)}" onclick="this.select()" onchange="nfPercepPct(${i},this.value)" style="width:54px;text-align:right;font-size:11px;padding:1px 4px">%
+          </span>
+          <span>${mon} ${fmtN(p.importe,2)}</span>
+        </div>`).join('');
+    } else if(nfCtipTienePercib()){
+      contEl.innerHTML = `<div style="font-size:11px;color:var(--wrn,#f59e0b);padding:3px 0;font-style:italic">⚠️ Este comprobante calcula Perc. IIBB, pero el cliente no tiene percepciones asignadas en su ficha.</div>`;
+    } else {
+      contEl.innerHTML = '';
+    }
   }
   window._nfTotales={neto,iva21,iva105,iva,subtotal,dtoImp,totalPercep,total};
 }
