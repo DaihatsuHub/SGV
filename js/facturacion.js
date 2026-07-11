@@ -794,7 +794,9 @@ async function facImprimir() {
         <div class="tot-row"><span class="tot-lbl">Subtotal neto</span><span class="tot-val">${mon} ${fmt(subtotalNeto)}</span></div>
         <div class="tot-row"><span class="tot-lbl">IVA 21%</span><span class="tot-val">${mon} ${fmt(f.fac_iva)}</span></div>
       `:''}
-      ${(f.fac_percib||0)>0?`<div class="tot-row"><span class="tot-lbl">Perc. IIBB</span><span class="tot-val">${mon} ${fmt(f.fac_percib)}</span></div>`:''}
+      ${(Array.isArray(f.fac_percep_det)&&f.fac_percep_det.length)
+        ? f.fac_percep_det.map(p=>`<div class="tot-row"><span class="tot-lbl">${esc(p.detalle||'Perc. IIBB')} (${fmt(p.pct)}%)</span><span class="tot-val">${mon} ${fmt(p.importe)}</span></div>`).join('')
+        : ((f.fac_percib||0)>0?`<div class="tot-row"><span class="tot-lbl">Perc. IIBB</span><span class="tot-val">${mon} ${fmt(f.fac_percib)}</span></div>`:'')}
       <div class="tot-row"><span class="tot-lbl">TOTAL</span><span class="tot-val">${mon} ${fmt(f.fac_total)}</span></div>
     </div>
   </div>
@@ -966,7 +968,7 @@ function renderFacModal(fecha, empresa, cliCod) {
             <div id="nf-fila-iva105" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>IVA 10.5%</span><span id="nf-tot-iva105">$ 0,00</span></div>
             <div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>Subtotal</span><span id="nf-tot-sub">$ 0,00</span></div>
             <div id="nf-fila-dto" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>Descuento</span><span id="nf-tot-dto">—</span></div>
-            <div class="nf-percep-cont"></div>
+            <div class="nf-percep-cont" style="color:rgba(255,255,255,0.8)"></div>
             <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:#fff;padding:6px 0 2px;border-top:1px solid rgba(255,255,255,0.15);margin-top:4px"><span>TOTAL</span><span id="nf-tot-total">$ 0,00</span></div>
           </div>
           <!-- Botones -->
@@ -1160,7 +1162,7 @@ function renderFacForm(fecha, empresa, cliCod) {
           <div id="nf-fila-iva"  style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>IVA</span><span id="nf-tot-iva">$ 0,00</span></div>
           <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Subtotal</span><span id="nf-tot-sub">$ 0,00</span></div>
           <div id="nf-fila-dto"  style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Descuento</span><span id="nf-tot-dto">—</span></div>
-          <div id="nf-percep-cont" class="nf-percep-cont"></div>
+          <div id="nf-percep-cont" class="nf-percep-cont" style="color:var(--t2)"></div>
           <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:var(--txt);padding:6px 0 2px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL</span><span id="nf-tot-total">$ 0,00</span></div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
