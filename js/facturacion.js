@@ -970,6 +970,7 @@ function renderFacModal(fecha, empresa, cliCod) {
             <div id="nf-fila-dto" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>Descuento</span><span id="nf-tot-dto">—</span></div>
             <div class="nf-percep-cont" style="color:rgba(255,255,255,0.8)"></div>
             <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:#fff;padding:6px 0 2px;border-top:1px solid rgba(255,255,255,0.15);margin-top:4px"><span>TOTAL</span><span id="nf-tot-total">$ 0,00</span></div>
+            <div class="nf-fila-afip" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.75);padding:3px 0;font-style:italic"><span class="nf-afip-lbl">Declarado AFIP</span><span class="nf-tot-afip">—</span></div>
           </div>
           <!-- Botones -->
           <div style="display:flex;flex-direction:column;gap:6px">
@@ -1164,6 +1165,7 @@ function renderFacForm(fecha, empresa, cliCod) {
           <div id="nf-fila-dto"  style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Descuento</span><span id="nf-tot-dto">—</span></div>
           <div id="nf-percep-cont" class="nf-percep-cont" style="color:var(--t2)"></div>
           <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:var(--txt);padding:6px 0 2px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL</span><span id="nf-tot-total">$ 0,00</span></div>
+          <div class="nf-fila-afip" style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0;font-style:italic"><span class="nf-afip-lbl">Declarado AFIP</span><span class="nf-tot-afip">—</span></div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
           <button class="btn pri" onclick="nfGuardar()" style="padding:8px 18px;font-size:13px">💾 Guardar borrador</button>
@@ -1902,7 +1904,16 @@ function nfCalcTotales() {
   // Percepciones IIBB: se calculan sobre el NETO (sin IVA)
   let totalPercep=0;
   NF_PERCEP.forEach(p=>{ p.importe=Math.round(neto*(Number(p.pct)||0)/100*100)/100; totalPercep+=p.importe; });
-  const total=subtotal-dtoImp+totalPercep;
+  // ── SUBFACTURACIÓN: dos juegos de totales ──
+  // REAL = base (deuda del cliente, sin el descuento). DECLARADO (AFIP) = real × (1 − dto%).
+  const r2 = x => Math.round(x*100)/100;
+  const factor = 1 - dto/100;
+  const totalReal = r2(subtotal + totalPercep);        // fac_total = REAL
+  const netoAfip  = r2(neto*factor);
+  const ivaAfip   = r2(iva*factor);
+  const percepAfip= r2(totalPercep*factor);
+  const totalAfip = r2(netoAfip + ivaAfip + percepAfip); // fac_total_afip = DECLARADO
+  const total = totalReal;                              // el TOTAL mostrado = real (deuda)
   const monSel=document.getElementById('nf-moneda')?.value||'P';
   const monObj=(TABLAS['MONE']||[]).find(m=>m.CODIGO===monSel);
   const mon=monObj?monObj.STRING1:'$';
@@ -1914,13 +1925,18 @@ function nfCalcTotales() {
   set('nf-tot-sub',  `${mon} ${fmtN(subtotal,2)}`);
   set('nf-tot-dto',  dto>0?`- ${mon} ${fmtN(dtoImp,2)}`:'—');
   set('nf-tot-total',`${mon} ${fmtN(total,2)}`);
+  // Línea de subfacturación: total declarado (AFIP) cuando hay descuento
+  document.querySelectorAll('.nf-tot-afip').forEach(e=>{ e.textContent=`${mon} ${fmtN(totalAfip,2)}`; });
+  const afipLbls=document.querySelectorAll('.nf-afip-lbl'); afipLbls.forEach(e=>{ e.textContent = dto>0?`Declarado AFIP (−${fmtN(dto,2)}%)`:'Declarado AFIP'; });
   setFlex('nf-fila-neto', esA);
   setFlex('nf-fila-iva21', esA&&iva21>0);
   setFlex('nf-fila-iva105',esA&&iva105>0);
   // Panel con fila única de IVA (el que arma renderFacForm)
   set('nf-tot-iva', `${mon} ${fmtN(iva,2)}`);
   setFlex('nf-fila-iva', esA&&iva>0);
-  setFlex('nf-fila-dto', dto>0);
+  setFlex('nf-fila-dto', false);                 // el descuento ya no reduce el total real
+  const setFlexAll=(cls,show)=>document.querySelectorAll(cls).forEach(e=>e.style.display=show?'flex':'none');
+  setFlexAll('.nf-fila-afip', dto>0);            // muestro el declarado solo si subfacturás
   // Filas de percepciones (detalle + % editable + importe)
   const contList=document.querySelectorAll('.nf-percep-cont');
   if(contList.length){
@@ -1939,7 +1955,7 @@ function nfCalcTotales() {
     }
     contList.forEach(el=>{ el.innerHTML=html; });
   }
-  window._nfTotales={neto,iva21,iva105,iva,subtotal,dtoImp,totalPercep,total};
+  window._nfTotales={neto,iva21,iva105,iva,subtotal,dtoImp,totalPercep,total,totalReal,netoAfip,ivaAfip,percepAfip,totalAfip,factor,dto};
 }
 
 async function nfGuardar() {
@@ -1978,7 +1994,8 @@ async function nfGuardar() {
     fac_fec:fecha,fac_cli:cliCod,
     fac_empresa:empresa,fac_ctip:prefijo,fac_tiva:tiva,fac_moneda:moneda,
     fac_sub:tot.subtotal||0,fac_iva:esA?(tot.iva||0):0,
-    fac_total:tot.total||0,fac_saldo:tot.total||0,fac_percib:tot.totalPercep||0,
+    fac_total:tot.totalReal||0,fac_saldo:tot.totalReal||0,fac_percib:tot.totalPercep||0,
+    fac_neto_afip:tot.netoAfip||0, fac_iva_afip:esA?(tot.ivaAfip||0):0, fac_percep_afip:tot.percepAfip||0, fac_total_afip:tot.totalAfip||0,
     fac_percep_det:NF_PERCEP.map(p=>({cod:p.cod,detalle:p.detalle,pct:p.pct,importe:p.importe})),
     fac_transp:transp,fac_remito:remito,fac_vcomi:conpag,fac_monpor:dto,
     fac_vend:vend,
