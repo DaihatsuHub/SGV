@@ -411,7 +411,8 @@ async function renderFacDetalle(f) {
   const caeInfo=f.fac_cae
     ?`<div style="background:#1a3a1a;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:#4ade80;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
         <span>✅ CAE: ${f.fac_cae} &nbsp;·&nbsp; Vto: ${f.fac_cae_vto||'—'}</span>
-        <button onclick="facImprimir()" class="btn scs" style="padding:3px 10px;font-size:11px">🖨 Imprimir</button>
+        <button onclick="facImprimir('real')" class="btn scs" style="padding:3px 10px;font-size:11px">🖨 Imprimir interna</button>
+        ${(Number(f.fac_monpor)||0)!==0?`<button onclick="facImprimir('afip')" class="btn" style="padding:3px 10px;font-size:11px;background:#1a56db;color:#fff">📄 Ver factura AFIP</button>`:''}
       </div>`
     :esBorrador
       ?`<div style="background:#2a2a1a;border-radius:6px;padding:8px 12px;font-size:11px;color:#facc15;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
@@ -614,7 +615,8 @@ async function facAutorizarAfip(facNro) {
 }
 
 // IMPRESIÓN DE FACTURA CON QR AFIP
-async function facImprimir() {
+async function facImprimir(modo) {
+  modo = (modo==='afip')?'afip':'real';
   if(facSelIdx===null){toast('Seleccioná una factura','err');return;}
   const f = filtFacs()[facSelIdx];
   if(!f){toast('Factura no encontrada','err');return;}
@@ -657,6 +659,12 @@ async function facImprimir() {
   }
   const subtotalNeto = (f.fac_sub||0)-(f.fac_iva||0);
   const tieneIva = (f.fac_iva||0)>0;
+  // ── Modo de impresión: 'afip' (declarado) o 'real' (interna) ──
+  const _esAfip = modo==='afip';
+  const _factor = _esAfip ? (1-(Number(f.fac_monpor)||0)/100) : 1;
+  const _vNeto   = _esAfip ? (Number(f.fac_neto_afip)>0 ? Number(f.fac_neto_afip) : subtotalNeto*_factor) : subtotalNeto;
+  const _vIva    = _esAfip ? (Number(f.fac_iva_afip)>0  ? Number(f.fac_iva_afip)  : (f.fac_iva||0)*_factor) : (f.fac_iva||0);
+  const _vTotal  = _esAfip ? (Number(f.fac_total_afip)>0? Number(f.fac_total_afip): (f.fac_total||0)*_factor) : (f.fac_total||0);
   const codComp = letra==='A'?'01':letra==='B'?'06':'11';
 
   const html = `<!DOCTYPE html>
@@ -723,6 +731,7 @@ async function facImprimir() {
     <div class="h-center">
       <div class="letra-box">${letra}</div>
       <div style="font-size:8px;text-align:center">COD. ${codComp}</div>
+      ${!_esAfip&&(Number(f.fac_monpor)||0)!==0?`<div style="font-size:8px;text-align:center;color:#b45309;font-weight:700;margin-top:2px">COPIA INTERNA · VALOR REAL</div>`:''}
     </div>
     <div class="h-right">
       <div class="comp-titulo">${esc(tipoLabel)}</div>
@@ -780,8 +789,8 @@ async function facImprimir() {
           <td class="des" title="${esc(desArt)}">${esc(desArt)}</td>
           <td class="cod">${esc(it.ite_desp||'')}</td>
           <td class="r">${it.ite_can||0}</td>
-          <td class="r">${(()=>{const d=1+(it.ite_iva_porc||21)/100;const n=it.ite_uni/d;return mon+' '+fmtN(n,2);})()}</td>
-          <td class="r">${mon} ${fmtN(it.ite_imp||0,2)}</td>
+          <td class="r">${(()=>{const d=1+(it.ite_iva_porc||21)/100;const n=(it.ite_uni*_factor)/d;return mon+' '+fmtN(n,2);})()}</td>
+          <td class="r">${mon} ${fmtN((it.ite_imp||0)*_factor,2)}</td>
         </tr>`;
       }).join('')}
       ${items.length<8?Array(8-items.length).fill('<tr><td colspan="6" style="height:6mm">&nbsp;</td></tr>').join(''):''}
@@ -791,13 +800,13 @@ async function facImprimir() {
     <div></div>
     <div class="totales">
       ${tieneIva?`
-        <div class="tot-row"><span class="tot-lbl">Subtotal neto</span><span class="tot-val">${mon} ${fmt(subtotalNeto)}</span></div>
-        <div class="tot-row"><span class="tot-lbl">IVA 21%</span><span class="tot-val">${mon} ${fmt(f.fac_iva)}</span></div>
+        <div class="tot-row"><span class="tot-lbl">Subtotal neto</span><span class="tot-val">${mon} ${fmt(_vNeto)}</span></div>
+        <div class="tot-row"><span class="tot-lbl">IVA 21%</span><span class="tot-val">${mon} ${fmt(_vIva)}</span></div>
       `:''}
       ${(Array.isArray(f.fac_percep_det)&&f.fac_percep_det.length)
-        ? f.fac_percep_det.map(p=>`<div class="tot-row"><span class="tot-lbl">${esc(p.detalle||'Perc. IIBB')} (${fmt(p.pct)}%)</span><span class="tot-val">${mon} ${fmt(p.importe)}</span></div>`).join('')
-        : ((f.fac_percib||0)>0?`<div class="tot-row"><span class="tot-lbl">Perc. IIBB</span><span class="tot-val">${mon} ${fmt(f.fac_percib)}</span></div>`:'')}
-      <div class="tot-row"><span class="tot-lbl">TOTAL</span><span class="tot-val">${mon} ${fmt(f.fac_total)}</span></div>
+        ? f.fac_percep_det.map(p=>`<div class="tot-row"><span class="tot-lbl">${esc(p.detalle||'Perc. IIBB')} (${fmt(p.pct)}%)</span><span class="tot-val">${mon} ${fmt((Number(p.importe)||0)*_factor)}</span></div>`).join('')
+        : ((f.fac_percib||0)>0?`<div class="tot-row"><span class="tot-lbl">Perc. IIBB</span><span class="tot-val">${mon} ${fmt((f.fac_percib||0)*_factor)}</span></div>`:'')}
+      <div class="tot-row"><span class="tot-lbl">TOTAL</span><span class="tot-val">${mon} ${fmt(_vTotal)}</span></div>
     </div>
   </div>
   ${f.fac_cae?`
@@ -974,7 +983,7 @@ function renderFacModal(fecha, empresa, cliCod) {
           </div>
           <!-- Botones -->
           <div style="display:flex;flex-direction:column;gap:6px">
-            <button class="btn pri" onclick="nfGuardar()" style="padding:10px;font-size:13px;width:100%">💾 Guardar borrador</button>
+            <button class="btn pri nf-grabar-btn" onclick="nfGuardar()" style="padding:10px;font-size:13px;width:100%">💾 Guardar borrador</button>
             <button class="btn" onclick="facCancelar()" style="padding:8px;font-size:12px;width:100%">Cancelar</button>
           </div>
         </div>
@@ -1168,7 +1177,7 @@ function renderFacForm(fecha, empresa, cliCod) {
           <div class="nf-fila-afip" style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0;font-style:italic"><span class="nf-afip-lbl">Declarado AFIP</span><span class="nf-tot-afip">—</span></div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
-          <button class="btn pri" onclick="nfGuardar()" style="padding:8px 18px;font-size:13px">💾 Guardar borrador</button>
+          <button class="btn pri nf-grabar-btn" onclick="nfGuardar()" style="padding:8px 18px;font-size:13px">💾 Guardar borrador</button>
           <button class="btn" onclick="facCancelar()" style="padding:8px 18px;font-size:13px">Cancelar</button>
         </div>
       </div>
@@ -1958,6 +1967,18 @@ function nfCalcTotales() {
   window._nfTotales={neto,iva21,iva105,iva,subtotal,dtoImp,totalPercep,total,totalReal,netoAfip,ivaAfip,percepAfip,totalAfip,factor,dto};
 }
 
+function nfGrabarEstado(saving){
+  document.querySelectorAll('.nf-grabar-btn').forEach(b=>{
+    if(saving){
+      b.disabled=true; if(b._txt===undefined) b._txt=b.innerHTML;
+      b.innerHTML='⏳ Guardando… esperá'; b.style.opacity='0.75'; b.style.cursor='wait';
+      b.style.background='var(--wrn,#f59e0b)';
+    } else {
+      b.disabled=false; if(b._txt!==undefined){ b.innerHTML=b._txt; b._txt=undefined; }
+      b.style.opacity=''; b.style.cursor=''; b.style.background='';
+    }
+  });
+}
 async function nfGuardar() {
   const empresa=document.getElementById('nf-empresa')?.value||'';
   const ctipVal=document.getElementById('nf-ctip')?.value||'';
@@ -2025,8 +2046,9 @@ async function nfGuardar() {
     let numeroManual=null;
     const _numEl=document.getElementById('nf-num');
     if(_numEl){ const n=parseInt((String(_numEl.value||'').split('-').pop()||'').trim(),10); if(n>0) numeroManual=n; }
+    nfGrabarEstado(true);
     const res=await apiPost('/facturas/guardar',{ ctId:ct.id, prefijo, tipo, empresa, numero:numeroManual, facData, items:itemsAGrabar });
-    if(!res.ok){ syncErr(); toast(res.error||'No se pudo guardar','err'); return; }
+    if(!res.ok){ syncErr(); nfGrabarEstado(false); toast(res.error||'No se pudo guardar','err'); return; }
     // Aplicar el movimiento de stock a los datos en memoria (para verlo al instante)
     if(res.stockDebug){
       res.stockDebug.forEach(d=>{
@@ -2064,7 +2086,7 @@ async function nfGuardar() {
     toast(`✓ Factura ${facNro} guardada como borrador`,'scs');
     const idx=filtFacs().findIndex(f=>f.fac_nro===facNro);
     if(idx>=0) selFac(idx);
-  } catch(e){console.error('nfGuardar:',e); syncErr(); toast('Error al guardar: '+e.message,'err');}
+  } catch(e){console.error('nfGuardar:',e); syncErr(); nfGrabarEstado(false); toast('Error al guardar: '+e.message,'err');}
 }
 
 async function openTop10() {
