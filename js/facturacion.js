@@ -406,13 +406,14 @@ async function renderFacDetalle(f) {
   const ctip2=CTIPS.find(c=>c.prefijo===prefijo2);
   const contColor2=ctip2?(ctip2.contable?'var(--acc)':'var(--red)'):'var(--acc)';
   const esBorrador=f.fac_afip_st==='pendiente'&&!f.fac_cae;
+  const esContable = ctip2 ? !!ctip2.contable : true;
+  const tieneDto = (Number(f.fac_monpor)||0)!==0;
   const empLabel=facEmpresaLabel(f.fac_empresa||(f.fac_nro||'').substring(0,1));
 
   const caeInfo=f.fac_cae
     ?`<div style="background:#1a3a1a;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:#4ade80;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
         <span>✅ CAE: ${f.fac_cae} &nbsp;·&nbsp; Vto: ${f.fac_cae_vto||'—'}</span>
-        <button onclick="facImprimir('real')" class="btn scs" style="padding:3px 10px;font-size:11px">🖨 Imprimir interna</button>
-        ${(Number(f.fac_monpor)||0)!==0?`<button onclick="facImprimir('afip')" class="btn" style="padding:3px 10px;font-size:11px;background:#1a56db;color:#fff">📄 Ver factura AFIP</button>`:''}
+        <button onclick="facImprimir('afip')" class="btn scs" style="padding:3px 10px;font-size:11px">🖨 Imprimir</button>
       </div>`
     :esBorrador
       ?`<div style="background:#2a2a1a;border-radius:6px;padding:8px 12px;font-size:11px;color:#facc15;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
@@ -428,6 +429,7 @@ async function renderFacDetalle(f) {
           <div style="font-size:18px;font-weight:700;color:var(--txt);letter-spacing:1px">${esc(empLabel)}</div>
           <div style="font-size:11px;color:var(--t3);margin-top:2px">I.V.A Responsable Inscripto</div>
           ${tipoChar==='C'&&(f.fac_saldo||0)>0?`<button onclick="ncAbrirAplicar('${f.fac_nro}')" class="btn pri" style="margin-top:8px;padding:5px 12px;font-size:12px">📌 Aplicar saldo de NC</button>`:''}
+          ${(tieneDto||!esContable)?`<button onclick="facImprimirBorrador()" class="btn" style="margin-top:8px;margin-left:6px;padding:5px 12px;font-size:12px;background:var(--acc);color:#fff">🖨 Imprimir Borrador</button>`:''}
         </div>
         <div style="text-align:right">
           <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:${contColor2}">${esc(f.fac_nro||'')}</div>
@@ -832,6 +834,82 @@ async function facImprimir(modo) {
 </body>
 </html>`;
 
+  const win = window.open('','_blank','width=900,height=700');
+  if(win){ win.document.write(html); win.document.close(); }
+  else { toast('Activá ventanas emergentes en el navegador','err'); }
+}
+
+// ── Impresión BORRADOR (interna / valor REAL, layout simple) ──
+async function facImprimirBorrador() {
+  if(facSelIdx===null){toast('Seleccioná una factura','err');return;}
+  const f = filtFacs()[facSelIdx];
+  if(!f){toast('Factura no encontrada','err');return;}
+  const cli = facFindCli(f.fac_cli);
+  const mon = f.fac_moneda==='P'?'$':'u$s';
+  const fec = f.fac_fec?f.fac_fec.substring(0,10).split('-').reverse().join('/'):'—';
+  const items = await sbLoadItemsFac(f.fac_nro);
+  const esPesos = f.fac_moneda==='P';
+  const filas = items.map((it,i)=>{
+    const art=ARTS.find(a=>(a.ART_COD||'').trim()===(it.ite_art||'').trim());
+    const desArt=art?art.ART_DES:(it.ite_desp||'');
+    const punit=Number(it.ite_uni)||0;                 // precio c/IVA (real)
+    const imp=punit*(Number(it.ite_can)||0);
+    const zebra = i%2===1 ? 'background:#f3f4f6' : '';
+    return `<tr style="${zebra}">
+      <td class="cod">${esc(it.ite_art||'')}</td>
+      <td class="des">${esc(desArt)}</td>
+      <td class="r">${it.ite_can||0}</td>
+      <td class="r">${mon} ${fmtN(punit,2)}</td>
+      <td class="r">${mon} ${fmtN(imp,2)}</td>
+    </tr>`;
+  }).join('');
+  const percepFilas = (esPesos && Array.isArray(f.fac_percep_det) && f.fac_percep_det.length)
+    ? f.fac_percep_det.map(p=>`<tr class="tt"><td class="tl">${esc(p.detalle||'Perc. IIBB')} (${fmtN(p.pct,2)}%)</td><td class="tr">${mon} ${fmtN(p.importe,2)}</td></tr>`).join('')
+    : '';
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(f.fac_nro)}</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Arial,sans-serif;font-size:12px;color:#000;background:#fff;margin:0;padding:10mm}
+  .top{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid #000;padding-bottom:3mm;margin-bottom:2mm}
+  .nro{font-size:18px;font-weight:700;font-family:monospace}
+  .fec{font-size:12px}
+  .cli{font-size:12px;margin:2mm 0 4mm}
+  table.it{width:100%;border-collapse:collapse}
+  table.it thead th{text-align:left;font-size:11px;border-bottom:1.5px solid #000;padding:2mm 2mm;background:#e5e7eb}
+  table.it thead th.r{text-align:right}
+  table.it tbody td{padding:1.6mm 2mm;font-size:11px;border-bottom:1px solid #f0f0f0}
+  table.it td.r{text-align:right;font-family:monospace}
+  table.it td.cod{font-family:monospace;font-size:10px;white-space:nowrap}
+  table.it td.des{font-size:11px}
+  .tot-wrap{display:flex;justify-content:flex-end;margin-top:4mm}
+  table.tot{border-collapse:collapse;min-width:70mm}
+  table.tot td{padding:1.4mm 2mm;font-size:12px}
+  table.tot td.tl{text-align:left;color:#333}
+  table.tot td.tr{text-align:right;font-family:monospace}
+  table.tot tr.tt td{border-bottom:1px solid #eee}
+  table.tot tr.sep td{border-top:1.5px solid #000;padding-top:0}
+  table.tot tr.total td{font-size:14px;font-weight:700;padding-top:2mm}
+  .noprint{margin-bottom:6mm}
+  @media print{.noprint{display:none}body{padding:0}}
+</style></head><body>
+  <div class="noprint"><button onclick="window.print()" style="padding:6px 16px;background:#1a56db;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px">🖨 Imprimir</button></div>
+  <div class="top"><span class="nro">${esc(f.fac_nro)}</span><span class="fec">Fecha: ${fec}</span></div>
+  <div class="cli"><strong>Cliente:</strong> ${esc((f.fac_cli||'').trim())} — ${esc(cli?cli.CLI_RAZON:'')}</div>
+  <table class="it">
+    <thead><tr>
+      <th>Cód</th><th>Descripción</th><th class="r">Cant</th><th class="r">P.Unit</th><th class="r">Importe</th>
+    </tr></thead>
+    <tbody>${filas}</tbody>
+  </table>
+  <div class="tot-wrap">
+    <table class="tot">
+      <tr class="tt"><td class="tl">Subtotal</td><td class="tr">${mon} ${fmtN(f.fac_sub||0,2)}</td></tr>
+      ${percepFilas}
+      <tr class="sep"><td colspan="2"></td></tr>
+      <tr class="total"><td class="tl">TOTAL</td><td class="tr">${mon} ${fmtN(f.fac_total||0,2)}</td></tr>
+    </table>
+  </div>
+</body></html>`;
   const win = window.open('','_blank','width=900,height=700');
   if(win){ win.document.write(html); win.document.close(); }
   else { toast('Activá ventanas emergentes en el navegador','err'); }
