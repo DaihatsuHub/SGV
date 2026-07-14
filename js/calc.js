@@ -24,13 +24,10 @@
   function fmtNum(n){
     if(n===null||n===undefined||!isFinite(n)) return 'Error';
     const neg=n<0; let v=Math.abs(n);
-    v=Math.round(v*1e8)/1e8;
-    let s=v.toString();
-    if(s.indexOf('e')>=0) s=v.toFixed(8);
-    let [ent,dec='']=s.split('.');
-    dec=dec.replace(/0+$/,'');
+    v=Math.round(v*100)/100;
+    let [ent,dec]=v.toFixed(2).split('.');
     ent=ent.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
-    return (neg?'-':'')+ent+(dec?(','+dec):'');
+    return (neg?'-':'')+ent+','+dec;
   }
   // formatea la entrada que se está tipeando (agrega miles al entero)
   function fmtCur(s){
@@ -44,7 +41,11 @@
   // ── Lógica ──────────────────────────────────────────────
   function setDisplay(){
     const d=document.getElementById('calc-lcd');
-    if(d) d.textContent=fmtCur(cur);
+    if(d){
+      // Si cur es un resultado (no se está tipeando) → 2 decimales; si se tipea → tal cual
+      if(fresh && cur!=='Error') d.textContent=fmtNum(toNum(cur));
+      else d.textContent=fmtCur(cur);
+    }
     const m=document.getElementById('calc-mem');
     if(m) m.style.visibility = (mem!==0)?'visible':'hidden';
   }
