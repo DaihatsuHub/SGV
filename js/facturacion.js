@@ -1543,7 +1543,7 @@ function nfLimpiarCliente() {
   const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
   window._nfCliActual=null; NF_PERCEP=[];
   s('nf-cli-cod',''); s('nf-cli-busq',''); s('nf-razon','');
-  s('nf-tiva',''); s('nf-tiva-cod',''); s('nf-dto',0);
+  s('nf-tiva',''); s('nf-tiva-cod','');
   s('nf-conpag',''); s('nf-vend',''); s('nf-transp','');
 }
 
