@@ -483,10 +483,10 @@ async function renderFacDetalle(f, vista) {
         ${(Array.isArray(f.fac_percep_det)&&f.fac_percep_det.length)
           ? f.fac_percep_det.map(p=>`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>${esc(p.detalle||'Percepción')} (${fmt(p.pct)}%)</span><span>${mon} ${fmt((Number(p.importe)||0)*_fac)}</span></div>`).join('')
           : ((f.fac_percib||0)>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Percepción IIBB</span><span>${mon} ${fmt((f.fac_percib||0)*_fac)}</span></div>`:'')}
-        <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--txt);padding:8px 0 3px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL${vista==='afip'?' <span style="font-size:10px;font-weight:400;color:var(--acc)">(declarado AFIP)</span>':''}</span><span>${mon} ${fmt((f.fac_total||0)*_fac)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--txt);padding:8px 0 3px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL</span><span>${mon} ${fmt((f.fac_total||0)*_fac)}</span></div>
         ${tieneDto?`<div style="display:flex;gap:6px;margin-top:6px">
-          <button onclick="renderFacDetalle(FACS.find(x=>x.fac_nro==='${f.fac_nro}'),'real')" class="btn ${vista==='real'?'pri':''}" style="flex:1;padding:5px;font-size:11px">Ver Borrador (real)</button>
-          <button onclick="renderFacDetalle(FACS.find(x=>x.fac_nro==='${f.fac_nro}'),'afip')" class="btn ${vista==='afip'?'pri':''}" style="flex:1;padding:5px;font-size:11px">Ver Factura (AFIP)</button>
+          <button onclick="renderFacDetalle(FACS.find(x=>x.fac_nro==='${f.fac_nro}'),'real')" class="btn ${vista==='real'?'pri':''}" style="flex:1;padding:5px;font-size:11px">Ver Borrador</button>
+          <button onclick="renderFacDetalle(FACS.find(x=>x.fac_nro==='${f.fac_nro}'),'afip')" class="btn ${vista==='afip'?'pri':''}" style="flex:1;padding:5px;font-size:11px">Ver Factura</button>
         </div>`:''}
         <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span style="color:var(--t3)">Saldo</span><span style="color:${(f.fac_saldo||0)>0?'var(--red)':'var(--grn)'}">${mon} ${fmt(f.fac_saldo)}</span></div>
       </div>
