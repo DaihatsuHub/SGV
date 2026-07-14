@@ -395,7 +395,9 @@ async function selFac(i) {
   if(f) await renderFacDetalle(f);
 }
 
-async function renderFacDetalle(f) {
+async function renderFacDetalle(f, vista) {
+  vista = (vista==='afip')?'afip':'real';
+  const _fac = vista==='afip' ? (1-(Number(f.fac_monpor)||0)/100) : 1;
   const det=document.getElementById('fac-detalle');
   const fec=f.fac_fec?f.fac_fec.substring(0,10).split('-').reverse().join('/'):'—';
   const cli=facFindCli(f.fac_cli);
@@ -466,8 +468,8 @@ async function renderFacDetalle(f) {
             <span style="color:var(--t2)">${esc(desArt)}</span>
             <span style="font-family:var(--mono);font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(it.ite_desp||'')}">${esc(it.ite_desp||'')}</span>
             <span style="text-align:right;font-family:var(--mono)">${it.ite_can||0}</span>
-            <span style="text-align:right;font-family:var(--mono)">${mon}${fmt(it.ite_uni)}</span>
-            <span style="text-align:right;font-family:var(--mono);color:var(--grn)">${mon}${fmt(it.ite_imp)}</span>
+            <span style="text-align:right;font-family:var(--mono)">${mon}${fmt((it.ite_uni||0)*_fac)}</span>
+            <span style="text-align:right;font-family:var(--mono);color:var(--grn)">${mon}${fmt((it.ite_imp||0)*_fac)}</span>
             <span style="text-align:right;font-family:var(--mono);font-size:11px">${(()=>{const o=Number(it.ite_preori)||0,u=Number(it.ite_uni)||0; if(o>0&&u<o){const d=Math.round((1-u/o)*100); if(d>=1) return `<span style="color:var(--wrn,#f59e0b)" title="Original: ${mon}${fmt(o)}">-${d}%</span>`;} return '<span style="color:var(--t3)">—</span>';})()}</span>
           </div>`;
         }).join(''):'<div style="padding:12px;text-align:center;color:var(--t3);font-size:12px">Sin ítems</div>'}
@@ -475,13 +477,17 @@ async function renderFacDetalle(f) {
       </div>
       <div style="background:var(--s2);border-radius:6px;padding:10px 14px">
         ${(f.fac_iva||0)>0?`
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Subtotal neto</span><span>${mon} ${fmt((f.fac_sub||0)-(f.fac_iva||0))}</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>IVA 21%</span><span>${mon} ${fmt(f.fac_iva)}</span></div>`:''}
-        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Subtotal</span><span>${mon} ${fmt(f.fac_sub)}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Subtotal neto</span><span>${mon} ${fmt(((f.fac_sub||0)-(f.fac_iva||0))*_fac)}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>IVA 21%</span><span>${mon} ${fmt((f.fac_iva||0)*_fac)}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Subtotal</span><span>${mon} ${fmt((f.fac_sub||0)*_fac)}</span></div>
         ${(Array.isArray(f.fac_percep_det)&&f.fac_percep_det.length)
-          ? f.fac_percep_det.map(p=>`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>${esc(p.detalle||'Percepción')} (${fmt(p.pct)}%)</span><span>${mon} ${fmt(p.importe)}</span></div>`).join('')
-          : ((f.fac_percib||0)>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Percepción IIBB</span><span>${mon} ${fmt(f.fac_percib)}</span></div>`:'')}
-        <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--txt);padding:8px 0 3px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL</span><span>${mon} ${fmt(f.fac_total)}</span></div>
+          ? f.fac_percep_det.map(p=>`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>${esc(p.detalle||'Percepción')} (${fmt(p.pct)}%)</span><span>${mon} ${fmt((Number(p.importe)||0)*_fac)}</span></div>`).join('')
+          : ((f.fac_percib||0)>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Percepción IIBB</span><span>${mon} ${fmt((f.fac_percib||0)*_fac)}</span></div>`:'')}
+        <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--txt);padding:8px 0 3px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL${vista==='afip'?' <span style="font-size:10px;font-weight:400;color:var(--acc)">(declarado AFIP)</span>':''}</span><span>${mon} ${fmt((f.fac_total||0)*_fac)}</span></div>
+        ${tieneDto?`<div style="display:flex;gap:6px;margin-top:6px">
+          <button onclick="renderFacDetalle(FACS.find(x=>x.fac_nro==='${f.fac_nro}'),'real')" class="btn ${vista==='real'?'pri':''}" style="flex:1;padding:5px;font-size:11px">Ver Borrador (real)</button>
+          <button onclick="renderFacDetalle(FACS.find(x=>x.fac_nro==='${f.fac_nro}'),'afip')" class="btn ${vista==='afip'?'pri':''}" style="flex:1;padding:5px;font-size:11px">Ver Factura (AFIP)</button>
+        </div>`:''}
         <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span style="color:var(--t3)">Saldo</span><span style="color:${(f.fac_saldo||0)>0?'var(--red)':'var(--grn)'}">${mon} ${fmt(f.fac_saldo)}</span></div>
       </div>
     </div>`;
@@ -573,8 +579,10 @@ async function facAutorizarAfip(facNro) {
     const docNro  = cli?.CLI_CUIT ? parseInt((cli.CLI_CUIT||'').replace(/\D/g,'')) : 0;
     const condIvaMap = { I:1, M:4, C:5, E:6, N:5, L:5 };
     const condIvaReceptor = condIvaMap[tiva] || 5;
-    const impTotal = f.fac_total || 0;
-    const impIva   = f.fac_iva   || 0;
+    // AFIP recibe SIEMPRE los importes DECLARADOS (con descuento aplicado).
+    // Fallback al real para facturas viejas sin el juego _afip.
+    const impTotal = Number(f.fac_total_afip)>0 ? Number(f.fac_total_afip) : (f.fac_total||0);
+    const impIva   = Number(f.fac_iva_afip)>0   ? Number(f.fac_iva_afip)   : (f.fac_iva||0);
     const impNeto  = impTotal - impIva;
     const ivas = impIva > 0 ? [{ id:5, baseImp: impNeto, importe: impIva }] : [];
     const esC = cbteTipo===11||cbteTipo===13||cbteTipo===12;
