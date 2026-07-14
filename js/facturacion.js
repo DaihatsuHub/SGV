@@ -920,7 +920,7 @@ function renderFacModal(fecha, empresa, cliCod) {
             </div>
             <div>
               <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Descuento %</label>
-              <input class="finp" id="nf-dto" type="number" min="0" max="100" step="0.1" value="0" oninput="nfCalcTotales()" style="width:100%">
+              <input class="finp" id="nf-dto" type="number" min="0" max="100" step="0.1" value="0" oninput="nfCalcTotales()" onclick="this.select()" style="width:100%">
             </div>
           </div>
           <!-- Cliente -->
@@ -1099,7 +1099,7 @@ function renderFacForm(fecha, empresa, cliCod) {
         </div>
         <div>
           <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Descuento %</label>
-          <input class="finp" id="nf-dto" type="number" min="0" max="100" step="0.1" value="0" oninput="nfCalcTotales()" style="width:100%">
+          <input class="finp" id="nf-dto" type="number" min="0" max="100" step="0.1" value="0" oninput="nfCalcTotales()" onclick="this.select()" style="width:100%">
         </div>
       </div>
       <div style="background:var(--s2);border-radius:6px;padding:10px 12px">
@@ -1530,7 +1530,7 @@ function nfSetCliente(cli) {
   s('nf-razon',    cli.CLI_RAZON||'');
   s('nf-tiva',     facIvaDesc(cli.CLI_IVA));
   s('nf-tiva-cod', cli.CLI_IVA||'');
-  s('nf-dto',      cli.CLI_DTO||0);
+  // OJO: nf-dto (descuento/subfacturación) NO se toca al cargar el cliente — es manual por factura
   s('nf-conpag',   (cli.CLI_CONPAG||'').trim());
   s('nf-vend',     (cli.CLI_VEND||'').trim());
   s('nf-transp',   (cli.CLI_EXPRE||'').trim());
