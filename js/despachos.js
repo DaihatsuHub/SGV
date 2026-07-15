@@ -287,3 +287,174 @@ async function despRecalcularCostos() {
     } catch(e){ console.error(e); syncErr(); toast('Error al recalcular: '+e.message,'err'); }
   });
 }
+
+// ═══════════════════════════════════════════════════════════
+//  IMPORTAR DESPACHO DESDE EXCEL
+//  Excel: fila 1 = títulos (CODIGO=Cód.Casio / CANTIDAD / PRECIO unit.)
+// ═══════════════════════════════════════════════════════════
+function despLoadXLSX(){
+  return new Promise((resolve,reject)=>{
+    if(window.XLSX) return resolve(window.XLSX);
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=()=>resolve(window.XLSX);
+    s.onerror=()=>reject(new Error('No se pudo cargar la librería de Excel'));
+    document.head.appendChild(s);
+  });
+}
+// Parseo tolerante de números (acepta 1234.56, 1.234,56, número nativo de Excel)
+function despNum(v){
+  if(typeof v==='number') return v;
+  const s=String(v==null?'':v).trim();
+  if(!s) return 0;
+  if(s.indexOf(',')>=0) return parseFloat(s.replace(/\./g,'').replace(',','.'))||0;
+  return parseFloat(s)||0;
+}
+
+function despImportarExcel(){
+  let inp=document.getElementById('desp-xlsx-input');
+  if(!inp){
+    inp=document.createElement('input');
+    inp.type='file'; inp.id='desp-xlsx-input'; inp.accept='.xlsx,.xls';
+    inp.style.display='none';
+    inp.addEventListener('change', despXlsxSelected);
+    document.body.appendChild(inp);
+  }
+  inp.value='';
+  inp.click();
+}
+
+async function despXlsxSelected(ev){
+  const file=ev.target.files&&ev.target.files[0];
+  if(!file) return;
+  let XLSX;
+  try { XLSX=await despLoadXLSX(); }
+  catch(e){ toast('No se pudo cargar la librería de Excel','err'); return; }
+  try {
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    const datos=rows.slice(1).filter(r=>r.some(c=>String(c).trim()!==''));  // saltea encabezado
+    if(!datos.length){ toast('El Excel no tiene datos','err'); return; }
+    const items=[], faltantes=[];
+    datos.forEach((r,i)=>{
+      const codcasio=String(r[0]==null?'':r[0]).trim();
+      if(!codcasio) return;
+      const cant=Math.round(despNum(r[1]));
+      const fob=despNum(r[2]);
+      const art=ARTS.find(a=>(a.CODCASIO||'').trim().toUpperCase()===codcasio.toUpperCase());
+      if(!art){ faltantes.push({fila:i+2, codcasio}); return; }
+      items.push({ codcasio, art:art.ART_COD, desc:art.ART_DES, cant, fob, importe: cant*fob });
+    });
+    if(faltantes.length){ despImportError(faltantes); return; }
+    if(!items.length){ toast('No se reconoció ningún artículo en el Excel','err'); return; }
+    window._despImport=items;
+    despImportModal(items);
+  } catch(e){ console.error(e); toast('Error leyendo el Excel: '+e.message,'err'); }
+}
+
+// Cartel grande: hay códigos que no existen → suspende todo
+function despImportError(faltantes){
+  let ov=document.getElementById('ov-desp-imperr');
+  if(!ov){ ov=document.createElement('div'); ov.id='ov-desp-imperr'; ov.className='ov'; document.body.appendChild(ov); }
+  ov.innerHTML=`<div class="modal" style="max-width:560px;width:94%;border:2px solid var(--red)">
+    <div style="text-align:center;padding:10px">
+      <div style="font-size:42px">⚠️</div>
+      <div style="font-size:19px;font-weight:700;color:var(--red);margin:6px 0">Importación suspendida</div>
+      <div style="font-size:13px;color:var(--t2);margin-bottom:12px">Estos códigos del Excel <strong>no existen</strong> en el maestro de artículos (Cód.Casio). Corregí el Excel o dá de alta esos artículos, y volvé a importar. <strong>No se cargó nada.</strong></div>
+      <div style="max-height:240px;overflow:auto;text-align:left;border:1px solid var(--b1);border-radius:6px">
+        ${faltantes.map(f=>`<div style="display:flex;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--b1);font-size:12px"><span style="color:var(--t3)">Fila ${f.fila}</span><span style="font-family:var(--mono);color:var(--red);font-weight:700">${esc(f.codcasio)}</span></div>`).join('')}
+      </div>
+      <button class="btn pri" style="margin-top:14px;padding:8px 24px" onclick="document.getElementById('ov-desp-imperr').classList.remove('open')">Entendido</button>
+    </div>
+  </div>`;
+  ov.classList.add('open');
+}
+
+// Modal con cabecera + grilla + totales + confirmar/cancelar
+function despImportModal(items){
+  const totUnid=items.reduce((s,it)=>s+it.cant,0);
+  const totMonto=items.reduce((s,it)=>s+it.importe,0);
+  const hoy=new Date().toISOString().substring(0,10);
+  let ov=document.getElementById('ov-desp-imp');
+  if(!ov){ ov=document.createElement('div'); ov.id='ov-desp-imp'; ov.className='ov'; document.body.appendChild(ov); }
+  ov.innerHTML=`<div class="modal" style="max-width:840px;width:96%">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <strong style="font-size:15px">📥 Importar despacho desde Excel</strong>
+      <button class="btn" onclick="document.getElementById('ov-desp-imp').classList.remove('open')" style="padding:3px 9px">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px">
+      <div class="fgrp"><label class="flbl2">N° Despacho *</label><input id="di-desp" class="finp" onclick="this.select()" style="width:100%;text-transform:uppercase"></div>
+      <div class="fgrp"><label class="flbl2">Fecha *</label><input id="di-fec" type="date" class="finp" value="${hoy}" style="width:100%"></div>
+      <div class="fgrp"><label class="flbl2">Moneda</label><select id="di-mone" class="finp" style="width:100%"><option value="">—</option><option value="$">$ Pesos</option><option value="U">u$s Dólar</option></select></div>
+      <div class="fgrp"><label class="flbl2">Procedencia</label><input id="di-proc" class="finp" onclick="this.select()" style="width:100%;text-transform:uppercase"></div>
+      <div class="fgrp"><label class="flbl2">Aduana</label><input id="di-adua" class="finp" onclick="this.select()" style="width:100%;text-transform:uppercase"></div>
+    </div>
+    <div style="max-height:320px;overflow:auto;border:1px solid var(--b1);border-radius:6px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="position:sticky;top:0;background:var(--bg2,#1a1a2e)">
+          <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--b1)">Casio</th>
+          <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--b1)">ART_Cod</th>
+          <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--b1)">Descripción</th>
+          <th style="text-align:right;padding:6px 8px;border-bottom:1px solid var(--b1)">Cant</th>
+          <th style="text-align:right;padding:6px 8px;border-bottom:1px solid var(--b1)">FOB unit.</th>
+          <th style="text-align:right;padding:6px 8px;border-bottom:1px solid var(--b1)">Importe</th>
+        </tr></thead>
+        <tbody>
+          ${items.map((it,i)=>`<tr style="${i%2?'background:rgba(128,128,128,.06)':''}">
+            <td style="padding:5px 8px;font-family:var(--mono)">${esc(it.codcasio)}</td>
+            <td style="padding:5px 8px;font-family:var(--mono);color:var(--acc)">${esc(it.art)}</td>
+            <td style="padding:5px 8px">${esc(it.desc||'')}</td>
+            <td style="padding:5px 8px;text-align:right">${it.cant}</td>
+            <td style="padding:5px 8px;text-align:right">${fmtN(it.fob,2)}</td>
+            <td style="padding:5px 8px;text-align:right">${fmtN(it.importe,2)}</td>
+          </tr>`).join('')}
+        </tbody>
+        <tfoot><tr style="font-weight:700;border-top:2px solid var(--b1)">
+          <td colspan="3" style="padding:8px;text-align:right">TOTALES:</td>
+          <td style="padding:8px;text-align:right">${totUnid}</td>
+          <td></td>
+          <td style="padding:8px;text-align:right">${fmtN(totMonto,2)}</td>
+        </tr></tfoot>
+      </table>
+    </div>
+    <div style="font-size:12px;color:var(--t2);margin-top:8px">${items.length} artículos · ${totUnid} unidades · monto ${fmtN(totMonto,2)}</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn" onclick="document.getElementById('ov-desp-imp').classList.remove('open')" style="padding:8px 18px">Cancelar</button>
+      <button class="btn pri" id="di-confirmar" onclick="despImportConfirmar()" style="padding:8px 24px">✓ Confirmar e importar</button>
+    </div>
+  </div>`;
+  ov.classList.add('open');
+}
+
+async function despImportConfirmar(){
+  const items=window._despImport||[];
+  if(!items.length){ toast('No hay ítems para importar','err'); return; }
+  const desp=document.getElementById('di-desp').value.trim().toUpperCase();
+  const fec =document.getElementById('di-fec').value;
+  const mone=document.getElementById('di-mone').value;
+  const proc=document.getElementById('di-proc').value.trim().toUpperCase();
+  const adua=document.getElementById('di-adua').value.trim().toUpperCase();
+  if(!desp){ toast('Ingresá el N° de despacho','err'); return; }
+  if(!fec){  toast('Ingresá la fecha','err'); return; }
+  const btn=document.getElementById('di-confirmar');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Importando…'; }
+  syncSaving();
+  try {
+    const res=await apiPost('/despachos/importar',{
+      desp, fec, mone, proc, adua,
+      items: items.map(it=>({ art:it.art, ent:it.cant, fob:it.fob }))
+    });
+    if(!res.ok){ syncErr(); toast(res.error||'Error al importar','err'); if(btn){btn.disabled=false;btn.textContent='✓ Confirmar e importar';} return; }
+    (res.stock||[]).forEach(s=>aplicarStockMemoria(s));
+    (res.guardadas||[]).forEach(d=>DESPS.push(d));
+    syncOk();
+    document.getElementById('ov-desp-imp').classList.remove('open');
+    despSelIdx=null;
+    renderDesp();
+    const nErr=(res.errores||[]).length;
+    if(nErr) toast(`Importados ${res.guardadas.length}. ${nErr} con problema: ${res.errores.slice(0,3).join('; ')}`,'err');
+    else toast(`✓ ${res.guardadas.length} artículos importados en ${desp}`,'scs');
+  } catch(e){ console.error(e); syncErr(); toast('Error: '+e.message,'err'); if(btn){btn.disabled=false;btn.textContent='✓ Confirmar e importar';} }
+}
