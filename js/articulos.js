@@ -172,6 +172,20 @@ function aBaja(){
     ARTS.splice(artSelIdx,1); artSelIdx=null; deleteArt(cod); renderArts(); toast('Artículo eliminado','scs');
   });
 }
+function aDuplicar(){
+  if(artSelIdx===null){ toast('Seleccioná un artículo a duplicar','err'); return; }
+  const orig = ARTS[artSelIdx];
+  fillArtForm(orig);                                   // trae TODOS los datos del artículo
+  document.getElementById('af-cod').value = '';        // menos el código
+  document.getElementById('af-cod').disabled = false;
+  const cc = document.getElementById('af-codcasio'); if(cc) cc.value='';  // y el Cód.Casio (debe ser único)
+  ['af-stk','af-stkt','af-deph','af-dept'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=0; }); // stocks en 0
+  document.getElementById('art-mtit').textContent = 'Duplicar de: ' + orig.ART_COD;
+  setMtag('art-mtag','DUPLICAR','tag-a');
+  document.getElementById('ov-art').classList.add('open');
+  window._ae = 'A';                                    // modo alta → valida código y da de alta
+  const codEl=document.getElementById('af-cod'); if(codEl) codEl.focus();
+}
 
 function fillArtSelects(selMarc, selRub, selSrub, selProv, selMone='P', selCcos='') {
   const opts = (tab, sel) => '<option value="">— Sin —</option>' +
