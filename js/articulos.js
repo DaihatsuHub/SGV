@@ -238,7 +238,7 @@ function fillArtForm(a){
   }
 }
 
-function saveArt(){
+async function saveArt(){
   const cod = document.getElementById('af-cod').value.trim().toUpperCase();
   const des = document.getElementById('af-des').value.trim().toUpperCase();
   if(!cod||!des){ toast('Código y descripción son obligatorios','err'); return; }
@@ -263,13 +263,20 @@ function saveArt(){
     ART_IVA:   afIvaVal(),
     CODCASIO:  document.getElementById('af-codcasio')?.value.trim()||null,
   };
+  if(window._ae==='A' && ARTS.find(a=>a.ART_COD===cod)){ toast('Código ya existe','err'); return; }
+  // El SERVER es la verdad: espero su OK antes de tocar memoria/cerrar.
+  try {
+    await sbSaveArt(d, window._ae);
+  } catch(e){
+    toast(e.message||'No se pudo guardar','err');
+    return;   // rechazado (ej. duplicado en otra sesión) → no actualizo memoria ni cierro
+  }
   if(window._ae==='A'){
-    if(ARTS.find(a=>a.ART_COD===cod)){ toast('Código ya existe','err'); return; }
     ARTS.unshift(d); artSelIdx=0; toast('Artículo dado de alta','scs');
   } else {
     ARTS[artSelIdx]=d; toast('Artículo modificado','scs');
   }
-  sbSaveArt(d); closeOv('ov-art'); renderArts();
+  closeOv('ov-art'); renderArts();
 }
 
 function printArt(){

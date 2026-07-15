@@ -213,10 +213,10 @@ function ensureRecibos() {
   return _recisPromise;
 }
 
-async function sbSaveArt(art) {
+async function sbSaveArt(art, modo) {
   syncSaving();
-  try { await apiPost('/articulos/guardar', { articulo: art }); syncOk(); }
-  catch(e) { console.error('sbSaveArt:', e); syncErr(); }
+  try { const r = await apiPost('/articulos/guardar', { articulo: art, modo }); syncOk(); return r; }
+  catch(e) { syncErr(); throw e; }
 }
 
 async function sbSaveCli(cli) {
