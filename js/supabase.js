@@ -188,6 +188,13 @@ function ensureArts() {
   return _artsPromise;
 }
 
+// Fuerza recargar los artículos frescos del server (ignora el cache _artsLoaded).
+// Útil cuando pudo haber altas en otra sesión (ej. antes de importar despachos).
+function reloadArts() {
+  _artsLoaded = false; _artsPromise = null;
+  return ensureArts();
+}
+
 // Carga diferida de recibos + cheques: trae RECIS, RECI_ITEMS y CHEQUES una sola
 // vez, la primera vez que se abre un módulo que los usa (Recibos, Cartera, Ficha,
 // Listado de Cobranzas). Antes se cargaban en el login (más lento).

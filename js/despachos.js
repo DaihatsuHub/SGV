@@ -330,6 +330,9 @@ async function despXlsxSelected(ev){
   let XLSX;
   try { XLSX=await despLoadXLSX(); }
   catch(e){ toast('No se pudo cargar la librería de Excel','err'); return; }
+  // Traer artículos FRESCOS del server (por si se cargaron en otra sesión)
+  try { if(typeof reloadArts==='function'){ syncSaving(); await reloadArts(); syncOk(); } }
+  catch(e){ console.error('reloadArts:',e); }
   try {
     const buf=await file.arrayBuffer();
     const wb=XLSX.read(buf,{type:'array'});
