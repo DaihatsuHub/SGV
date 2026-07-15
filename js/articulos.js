@@ -155,15 +155,32 @@ function aAlta(){
   document.getElementById('ov-art').classList.add('open');
   window._ae = 'A';
 }
-function aModif(){
+async function aModif(){
   if(artSelIdx===null){ toast('Seleccioná un artículo','err'); return; }
-  fillArtForm(ARTS[artSelIdx]);
+  const a = ARTS[artSelIdx];
+  // Aviso INFORMATIVO (no bloquea): ¿otra sesión lo abrió hace poco?
+  try {
+    const sid = (typeof _sessionId!=='undefined')?_sessionId:'?';
+    const por = (typeof usuarioActual!=='undefined' && usuarioActual?.codigo) ? usuarioActual.codigo : '?';
+    const r = await apiPost('/articulos/editando', { cod:a.ART_COD, por, sid });
+    if(r && r.otro) toast('⚠️ '+r.otro+' podría estar editando este artículo ahora','err');
+  } catch(e){ /* si falla el aviso, abrimos igual */ }
+  fillArtForm(a);
   document.getElementById('af-cod').disabled = true;
-  document.getElementById('art-mtit').textContent = 'Modificar: ' + ARTS[artSelIdx].ART_COD;
+  document.getElementById('art-mtit').textContent = 'Modificar: ' + a.ART_COD;
   setMtag('art-mtag','MODIFICACIÓN','tag-m');
   document.getElementById('ov-art').classList.add('open');
   window._ae = 'M';
-  window._artVerEdit = ARTS[artSelIdx].ART_UPDATED || null;   // versión que estoy editando
+  window._artVerEdit = a.ART_UPDATED || null;   // versión que estoy editando
+  window._artEditCod = a.ART_COD;               // para liberar la presencia al cerrar
+}
+// Libera mi presencia informativa (al guardar o cancelar)
+function aSalirEdicion(){
+  if(window._artEditCod){
+    const sid = (typeof _sessionId!=='undefined')?_sessionId:'?';
+    apiPost('/articulos/editando/salir', { cod:window._artEditCod, sid }).catch(()=>{});
+    window._artEditCod=null;
+  }
 }
 function aBaja(){
   if(artSelIdx===null){ toast('Seleccioná un artículo','err'); return; }
@@ -280,6 +297,7 @@ async function saveArt(){
   } else {
     ARTS[artSelIdx]=d; toast('Artículo modificado','scs');
   }
+  aSalirEdicion();
   closeOv('ov-art'); renderArts();
 }
 
