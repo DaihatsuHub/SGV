@@ -194,12 +194,12 @@
     <div class="spacer"></div>
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" onclick="this.select()" id="art-q" placeholder="Filtrar (achica la lista)…" oninput="artOnFiltro()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="art-q" placeholder="Filtrar" oninput="artOnFiltro()">
       <button class="srch-clr" id="art-q-clr" onclick="clrSrch('art-q',renderArts)" title="Limpiar filtro">✕</button>
     </div>
     <div class="srch-wrap">
       <span class="srch-ico">🎯</span>
-      <input class="srch" onfocus="this.select()" onclick="this.select()" id="art-qb" placeholder="Ir a… (posiciona, no achica)" oninput="artOnBusq()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="art-qb" placeholder="Buscar (Enter)" onkeydown="if(event.key==='Enter')artOnBusq()">
       <button class="srch-clr" id="art-qb-clr" onclick="clrSrch('art-qb',renderArts)" title="Limpiar búsqueda">✕</button>
     </div>
   </div>
