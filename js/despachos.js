@@ -98,7 +98,7 @@ function renderDesp() {
         if(c.field==='DEP_FOB')    {const f=(v=>v===0||v===null||v===undefined?'0,00':Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}))(d.dep_fob||0); return `<span class="col-num" style="font-weight:700">${f}</span>`;};
         if(c.field==='DEP_GAS')    return `<span class="col-num">${d.dep_gas||0}</span>`;
         if(c.field==='DEP_GAS2')   {const f=(v=>v===0||v===null||v===undefined?'0,00':Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}))(d.dep_gas2||0); return `<span class="col-num">${f}</span>`;};
-        if(c.field==='DEP_MONEDA') return `<span class="col-sm">${esc(d.dep_moneda||'$')}</span>`;
+        if(c.field==='DEP_MONEDA') { const mm=(TABLAS['MONE']||[]).find(m=>m.CODIGO===(d.dep_moneda||'P')); return `<span class="col-sm">${esc(mm?(mm.STRING1||mm.CODIGO):(d.dep_moneda||'$'))}</span>`; }
         if(c.field==='DEP_COSTO')  {const f=(v=>v===0||v===null||v===undefined?'0,00':Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}))(d.dep_costo||0); return `<span class="col-num">${f}</span>`;};
         return `<span>${esc(String(d[c.field.toLowerCase()]||''))}</span>`;
       }).join('') +
@@ -167,9 +167,16 @@ function clrDespForm() {
   document.getElementById('df-ent').value = 0;
   document.getElementById('df-fob').value = 0;
   document.getElementById('df-gas2').value = 0;
-  const monEl=document.getElementById('df-moneda'); if(monEl) monEl.value='';
+  const monEl=document.getElementById('df-moneda'); if(monEl) fillDespMoneda('P');
   const depEntEl=document.getElementById('df-depent'); if(depEntEl) depEntEl.value=0;
   ['df-sal','df-stk','df-coent','df-cosal','df-costk'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=0;});
+}
+
+// Poblar el combo de moneda del despacho desde la tabla MONE (unificado con Artículos/import)
+function fillDespMoneda(sel){
+  const el=document.getElementById('df-moneda'); if(!el) return;
+  const s = (sel===''||sel==null) ? 'P' : sel;   // legacy '' = pesos
+  el.innerHTML = (TABLAS['MONE']||[]).map(m=>`<option value="${m.CODIGO}"${m.CODIGO===s?' selected':''}>${(m.STRING1||'')} ${(m.DETALLE||'')}</option>`).join('');
 }
 
 function fillDespForm(d) {
@@ -181,7 +188,7 @@ function fillDespForm(d) {
   document.getElementById('df-fob').value   = d.dep_fob||0;
   document.getElementById('df-gas2').value  = d.dep_gas2||0;
   document.getElementById('df-ent').value   = d.dep_ent||0;
-  const monEl=document.getElementById('df-moneda'); if(monEl) monEl.value=d.dep_moneda||'';
+  fillDespMoneda(d.dep_moneda);
   const depEntEl=document.getElementById('df-depent'); if(depEntEl) depEntEl.value=d.dep_depent||0;
   { const es=document.getElementById('df-sal'); if(es)es.value=d.dep_sal||0;
     const ek=document.getElementById('df-stk'); if(ek)ek.value=d.dep_stk||0;
