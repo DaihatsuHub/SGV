@@ -282,17 +282,95 @@ async function saveDesp() {
 }
 
 // ── Recalcular costo de todos los despachos ───────────────
-async function despRecalcularCostos() {
-  confirm2('¿Recalcular costos?', 'Se actualizará dep_costo = FOB × (1 + Gastos%/100) en todos los despachos.', async () => {
-    syncSaving();
-    try {
-      const res = await apiPost('/despachos/recalcular-costos', {});
-      await sbLoadDesps();          // recargar con los costos nuevos
-      renderDesp();
-      syncOk();
-      toast(`Costos actualizados: ${res.actualizados} registros`, 'scs');
-    } catch(e){ console.error(e); syncErr(); toast('Error al recalcular: '+e.message,'err'); }
-  });
+// ── % GASTO: aplicar % a todos los artículos del despacho seleccionado ──
+async function despAplicarGasto(){
+  if(despSelIdx===null){ toast('Seleccioná un despacho','err'); return; }
+  const d = filtDesps()[despSelIdx];
+  const desp = d.dep_desp;
+  procesandoOn('Cargando despacho…');
+  let res;
+  try { res = await apiGet('/despachos/items/'+encodeURIComponent(desp)); }
+  catch(e){ procesandoOff(); toast('No se pudo traer el despacho','err'); return; }
+  procesandoOff();
+  if(!res.ok || !res.items || !res.items.length){ toast('El despacho no tiene artículos','err'); return; }
+  despGastoModal(desp, res.items);
+}
+
+function despGastoModal(desp, items){
+  const totUnid = items.reduce((s,it)=>s+(Number(it.dep_ent)||0),0);
+  const totFob  = items.reduce((s,it)=>s+((Number(it.dep_fob)||0)*(Number(it.dep_ent)||0)),0);
+  const gasActual = Number(items[0]?.dep_gas2)||0;
+  const monCod = items[0]?.dep_moneda || 'P';
+  const mm=(TABLAS['MONE']||[]).find(m=>m.CODIGO===monCod);
+  const mon = mm?(mm.STRING1||mm.CODIGO):'$';
+  let ov=document.getElementById('ov-desp-gasto');
+  if(!ov){ ov=document.createElement('div'); ov.id='ov-desp-gasto'; ov.className='ov'; document.body.appendChild(ov); }
+  ov.innerHTML=`<div class="modal" style="max-width:760px;width:96%">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <strong style="font-size:15px">％ Aplicar % de Gasto · Despacho ${esc(desp)}</strong>
+      <button class="btn" onclick="document.getElementById('ov-desp-gasto').classList.remove('open')" style="padding:3px 9px">✕</button>
+    </div>
+    <div style="display:flex;gap:14px;align-items:flex-end;margin-bottom:12px">
+      <div class="fgrp" style="max-width:180px"><label class="flbl2">% de Gasto a aplicar</label>
+        <input id="di-gasto" class="finp" type="text" value="${fmtN(gasActual,2)}" onclick="this.select()" style="width:100%;text-align:right;font-size:15px;font-weight:700">
+      </div>
+      <div style="font-size:12px;color:var(--t2);padding-bottom:6px">Se recalcula <strong>Costo = FOB × (1 + %/100)</strong> en los ${items.length} artículos del despacho.</div>
+    </div>
+    <div style="max-height:300px;overflow:auto;border:1px solid var(--b1);border-radius:6px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="position:sticky;top:0;background:var(--bg2,#1a1a2e)">
+          <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--b1)">Artículo</th>
+          <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--b1)">Descripción</th>
+          <th style="text-align:right;padding:6px 8px;border-bottom:1px solid var(--b1)">Cant</th>
+          <th style="text-align:right;padding:6px 8px;border-bottom:1px solid var(--b1)">FOB unit.</th>
+          <th style="text-align:right;padding:6px 8px;border-bottom:1px solid var(--b1)">FOB total</th>
+        </tr></thead>
+        <tbody>
+          ${items.map((it,i)=>{
+            const art=ARTS.find(a=>(a.ART_COD||'').trim()===(it.dep_art||'').trim());
+            const fobTot=(Number(it.dep_fob)||0)*(Number(it.dep_ent)||0);
+            return `<tr style="${i%2?'background:rgba(128,128,128,.06)':''}">
+              <td style="padding:5px 8px;font-family:var(--mono);color:var(--acc)">${esc(it.dep_art||'')}</td>
+              <td style="padding:5px 8px">${esc(art?art.ART_DES:'')}</td>
+              <td style="padding:5px 8px;text-align:right">${it.dep_ent||0}</td>
+              <td style="padding:5px 8px;text-align:right">${mon} ${fmtN(it.dep_fob,2)}</td>
+              <td style="padding:5px 8px;text-align:right">${mon} ${fmtN(fobTot,2)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot><tr style="font-weight:700;border-top:2px solid var(--b1)">
+          <td colspan="2" style="padding:8px;text-align:right">TOTALES:</td>
+          <td style="padding:8px;text-align:right">${totUnid}</td>
+          <td></td>
+          <td style="padding:8px;text-align:right">${mon} ${fmtN(totFob,2)}</td>
+        </tr></tfoot>
+      </table>
+    </div>
+    <div style="font-size:12px;color:var(--t2);margin-top:8px">${items.length} artículos · ${totUnid} unidades · FOB total ${mon} ${fmtN(totFob,2)}</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn" onclick="document.getElementById('ov-desp-gasto').classList.remove('open')" style="padding:8px 18px">Cancelar</button>
+      <button class="btn pri" id="di-gasto-conf" onclick="despGastoConfirmar('${desp}')" style="padding:8px 24px">✓ Aplicar</button>
+    </div>
+  </div>`;
+  ov.classList.add('open');
+}
+
+async function despGastoConfirmar(desp){
+  const pct = parseFloat(String(document.getElementById('di-gasto').value||'').replace(',','.'))||0;
+  const btn=document.getElementById('di-gasto-conf');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Aplicando…'; }
+  procesandoOn('Aplicando % de gasto…');
+  syncSaving();
+  try {
+    const res = await apiPost('/despachos/aplicar-gasto', { desp, pct });
+    if(!res.ok){ syncErr(); procesandoOff(); toast(res.error||'Error','err'); if(btn){btn.disabled=false;btn.textContent='✓ Aplicar';} return; }
+    // actualizar DESPS en memoria
+    DESPS.forEach(d=>{ if(d.dep_desp===desp){ d.dep_gas2=res.pct; d.dep_costo=Math.round((Number(d.dep_fob)||0)*(1+res.pct/100)*100)/100; } });
+    syncOk(); procesandoOff();
+    document.getElementById('ov-desp-gasto').classList.remove('open');
+    renderDesp();
+    toast(`✓ % de gasto (${fmtN(res.pct,2)}%) aplicado a ${res.actualizados} artículos`,'scs');
+  } catch(e){ console.error(e); syncErr(); procesandoOff(); toast('Error: '+e.message,'err'); if(btn){btn.disabled=false;btn.textContent='✓ Aplicar';} }
 }
 
 // ═══════════════════════════════════════════════════════════
