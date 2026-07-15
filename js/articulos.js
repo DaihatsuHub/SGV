@@ -10,20 +10,20 @@ const STK_BG  = 'background:rgba(30,58,110,0.12)';   // azul — Stock
 const DEP_BG  = 'background:rgba(26,58,42,0.12)';    // verde — Depósito
 const SEP_STY = 'width:4px;background:rgba(74,127,193,0.4);padding:0;flex-shrink:0'; // separador
 
-let artModoBusqueda = false;   // false = Filtro (achica), true = Búsqueda (posiciona)
-function artToggleModo(){
-  artModoBusqueda = !artModoBusqueda;
-  const b=document.getElementById('art-modo-btn');
-  if(b) b.textContent = artModoBusqueda ? '🎯 Búsqueda' : '🔎 Filtro';
-  const q=document.getElementById('art-q');
-  if(q) q.placeholder = artModoBusqueda ? 'Ir a código o descripción…' : 'Filtrar código o descripción...';
+// Filtro (achica) y Búsqueda (posiciona) son EXCLUYENTES: escribir en uno limpia el otro
+function artOnFiltro(){
+  const qb=document.getElementById('art-qb'); if(qb) qb.value='';
+  renderArts();
+}
+function artOnBusq(){
+  const q=document.getElementById('art-q'); if(q) q.value='';
   renderArts();
 }
 
 function filtArts(){
   const q = document.getElementById('art-q').value.toLowerCase();
   let list = ARTS.filter(a => {
-    const mq = artModoBusqueda || !q || a.ART_COD.toLowerCase().includes(q) || a.ART_DES.toLowerCase().includes(q);
+    const mq = !q || a.ART_COD.toLowerCase().includes(q) || a.ART_DES.toLowerCase().includes(q);
     const ms = !artSoloStock || ((a.ART_STK||0) + (a.ART_STKT||0)) !== 0;
     const mf = !artSoloFact  || ((a.ART_DEPH||0) + (a.ART_DEPT||0)) !== 0;
     return mq && ms && mf;
@@ -50,8 +50,8 @@ function renderArts(){
 
   // BÚSQUEDA (seek): posiciona en la coincidencia sin achicar la lista
   let seekListIdx = -1;
-  const qBusq = (document.getElementById('art-q')?.value||'').trim();
-  if (artModoBusqueda && qBusq) {
+  const qBusq = (document.getElementById('art-qb')?.value||'').trim();
+  if (qBusq) {
     const qU = qBusq.toUpperCase(), qL = qBusq.toLowerCase();
     // 1) intento por CÓDIGO (prefijo). Si no, por DESCRIPCIÓN (contiene).
     let t = list.findIndex(a => (a.ART_COD||'').toUpperCase().startsWith(qU));

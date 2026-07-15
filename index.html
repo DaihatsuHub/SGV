@@ -194,9 +194,13 @@
     <div class="spacer"></div>
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" onclick="this.select()" id="art-q" placeholder="Filtrar código o descripción..." oninput="renderArts()">
-      <button class="btn" id="art-modo-btn" onclick="artToggleModo()" title="Alternar entre Filtro (achica la lista) y Búsqueda (posiciona sin achicar)" style="white-space:nowrap">🔎 Filtro</button>
-      <button class="srch-clr" id="art-q-clr" onclick="clrSrch('art-q',renderArts)" title="Limpiar">✕</button>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="art-q" placeholder="Filtrar (achica la lista)…" oninput="artOnFiltro()">
+      <button class="srch-clr" id="art-q-clr" onclick="clrSrch('art-q',renderArts)" title="Limpiar filtro">✕</button>
+    </div>
+    <div class="srch-wrap">
+      <span class="srch-ico">🎯</span>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="art-qb" placeholder="Ir a… (posiciona, no achica)" oninput="artOnBusq()">
+      <button class="srch-clr" id="art-qb-clr" onclick="clrSrch('art-qb',renderArts)" title="Limpiar búsqueda">✕</button>
     </div>
   </div>
   <div class="dpanel" id="art-dp">
