@@ -324,15 +324,36 @@ function despImportarExcel(){
   inp.click();
 }
 
+// Overlay "Procesando…" titilante, reutilizable en cualquier acción lenta
+function procesandoOn(txt){
+  let el=document.getElementById('proc-overlay');
+  if(!el){
+    el=document.createElement('div'); el.id='proc-overlay';
+    el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:99999';
+    el.innerHTML='<div style="background:#1e293b;color:#fff;padding:22px 44px;border-radius:12px;font-size:16px;font-weight:600;box-shadow:0 10px 40px rgba(0,0,0,.5)"><span id="proc-txt">Procesando…</span></div>';
+    document.body.appendChild(el);
+    if(!document.getElementById('proc-style')){
+      const st=document.createElement('style'); st.id='proc-style';
+      st.textContent='@keyframes procBlink{0%,100%{opacity:1}50%{opacity:.3}} #proc-overlay #proc-txt{animation:procBlink 1s ease-in-out infinite}';
+      document.head.appendChild(st);
+    }
+  }
+  document.getElementById('proc-txt').textContent=txt||'Procesando…';
+  el.style.display='flex';
+}
+function procesandoOff(){ const el=document.getElementById('proc-overlay'); if(el) el.style.display='none'; }
+
 async function despXlsxSelected(ev){
   const file=ev.target.files&&ev.target.files[0];
   if(!file) return;
   let XLSX;
+  procesandoOn('Leyendo Excel…');
   try { XLSX=await despLoadXLSX(); }
-  catch(e){ toast('No se pudo cargar la librería de Excel','err'); return; }
+  catch(e){ procesandoOff(); toast('No se pudo cargar la librería de Excel','err'); return; }
   // Traer artículos FRESCOS del server (por si se cargaron en otra sesión)
-  try { if(typeof reloadArts==='function'){ syncSaving(); await reloadArts(); syncOk(); } }
+  try { if(typeof reloadArts==='function'){ procesandoOn('Actualizando artículos…'); await reloadArts(); } }
   catch(e){ console.error('reloadArts:',e); }
+  procesandoOn('Procesando importación…');
   try {
     const buf=await file.arrayBuffer();
     const wb=XLSX.read(buf,{type:'array'});
@@ -348,13 +369,14 @@ async function despXlsxSelected(ev){
       const fob=despNum(r[2]);
       const art=ARTS.find(a=>(a.CODCASIO||'').trim().toUpperCase()===codcasio.toUpperCase());
       if(!art){ faltantes.push({fila:i+2, codcasio}); return; }
-      items.push({ codcasio, art:art.ART_COD, desc:art.ART_DES, cant, fob, importe: cant*fob });
+      items.push({ codcasio, art:art.ART_COD, desc:art.ART_DES, moneda:(art.ART_MONEDA||''), cant, fob, importe: cant*fob });
     });
     if(faltantes.length){ despImportError(faltantes); return; }
     if(!items.length){ toast('No se reconoció ningún artículo en el Excel','err'); return; }
     window._despImport=items;
     despImportModal(items);
   } catch(e){ console.error(e); toast('Error leyendo el Excel: '+e.message,'err'); }
+  finally { procesandoOff(); }
 }
 
 // Cartel grande: hay códigos que no existen → suspende todo
@@ -380,6 +402,11 @@ function despImportModal(items){
   const totUnid=items.reduce((s,it)=>s+it.cant,0);
   const totMonto=items.reduce((s,it)=>s+it.importe,0);
   const hoy=new Date().toISOString().substring(0,10);
+  // Moneda común de los artículos (si todos comparten una, la preselecciono)
+  const monedas=[...new Set(items.map(it=>(it.moneda||'').trim()).filter(Boolean))];
+  const monComun = monedas.length===1 ? monedas[0] : '';
+  const monOpts = '<option value="">— Elegí —</option>' +
+    (TABLAS['MONE']||[]).map(m=>`<option value="${m.CODIGO}"${m.CODIGO===monComun?' selected':''}>${esc(m.STRING1||'')} ${esc(m.DETALLE||'')}</option>`).join('');
   let ov=document.getElementById('ov-desp-imp');
   if(!ov){ ov=document.createElement('div'); ov.id='ov-desp-imp'; ov.className='ov'; document.body.appendChild(ov); }
   ov.innerHTML=`<div class="modal" style="max-width:840px;width:96%">
@@ -390,7 +417,7 @@ function despImportModal(items){
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px">
       <div class="fgrp"><label class="flbl2">N° Despacho *</label><input id="di-desp" class="finp" onclick="this.select()" style="width:100%;text-transform:uppercase"></div>
       <div class="fgrp"><label class="flbl2">Fecha *</label><input id="di-fec" type="date" class="finp" value="${hoy}" style="width:100%"></div>
-      <div class="fgrp"><label class="flbl2">Moneda</label><select id="di-mone" class="finp" style="width:100%"><option value="">—</option><option value="$">$ Pesos</option><option value="U">u$s Dólar</option></select></div>
+      <div class="fgrp"><label class="flbl2">Moneda *</label><select id="di-mone" class="finp" style="width:100%">${monOpts}</select></div>
       <div class="fgrp"><label class="flbl2">Procedencia</label><input id="di-proc" class="finp" onclick="this.select()" style="width:100%;text-transform:uppercase"></div>
       <div class="fgrp"><label class="flbl2">Aduana</label><input id="di-adua" class="finp" onclick="this.select()" style="width:100%;text-transform:uppercase"></div>
     </div>
@@ -441,23 +468,49 @@ async function despImportConfirmar(){
   const adua=document.getElementById('di-adua').value.trim().toUpperCase();
   if(!desp){ toast('Ingresá el N° de despacho','err'); return; }
   if(!fec){  toast('Ingresá la fecha','err'); return; }
+  if(!mone){ toast('Elegí la moneda del despacho','err'); return; }
+  // Coherencia: TODOS los artículos deben ser de la moneda elegida
+  const distintos=items.filter(it=>(it.moneda||'').trim()!==mone);
+  if(distintos.length){ despImportMonError(distintos, mone); return; }
   const btn=document.getElementById('di-confirmar');
   if(btn){ btn.disabled=true; btn.textContent='⏳ Importando…'; }
+  procesandoOn('Importando despacho…');
   syncSaving();
   try {
     const res=await apiPost('/despachos/importar',{
       desp, fec, mone, proc, adua,
       items: items.map(it=>({ art:it.art, ent:it.cant, fob:it.fob }))
     });
-    if(!res.ok){ syncErr(); toast(res.error||'Error al importar','err'); if(btn){btn.disabled=false;btn.textContent='✓ Confirmar e importar';} return; }
+    if(!res.ok){ syncErr(); procesandoOff(); toast(res.error||'Error al importar','err'); if(btn){btn.disabled=false;btn.textContent='✓ Confirmar e importar';} return; }
     (res.stock||[]).forEach(s=>aplicarStockMemoria(s));
     (res.guardadas||[]).forEach(d=>DESPS.push(d));
-    syncOk();
+    syncOk(); procesandoOff();
     document.getElementById('ov-desp-imp').classList.remove('open');
     despSelIdx=null;
     renderDesp();
     const nErr=(res.errores||[]).length;
     if(nErr) toast(`Importados ${res.guardadas.length}. ${nErr} con problema: ${res.errores.slice(0,3).join('; ')}`,'err');
     else toast(`✓ ${res.guardadas.length} artículos importados en ${desp}`,'scs');
-  } catch(e){ console.error(e); syncErr(); toast('Error: '+e.message,'err'); if(btn){btn.disabled=false;btn.textContent='✓ Confirmar e importar';} }
+  } catch(e){ console.error(e); syncErr(); procesandoOff(); toast('Error: '+e.message,'err'); if(btn){btn.disabled=false;btn.textContent='✓ Confirmar e importar';} }
+}
+
+// Cartel grande: hay artículos cuya moneda no coincide con la del despacho → suspende
+function despImportMonError(distintos, mone){
+  const monLbl=(TABLAS['MONE']||[]).find(m=>m.CODIGO===mone);
+  const monTxt=monLbl?`${monLbl.STRING1||''} ${monLbl.DETALLE||''}`.trim():mone;
+  let ov=document.getElementById('ov-desp-monerr');
+  if(!ov){ ov=document.createElement('div'); ov.id='ov-desp-monerr'; ov.className='ov'; document.body.appendChild(ov); }
+  ov.innerHTML=`<div class="modal" style="max-width:600px;width:94%;border:2px solid var(--red)">
+    <div style="text-align:center;padding:10px">
+      <div style="font-size:42px">⚠️</div>
+      <div style="font-size:19px;font-weight:700;color:var(--red);margin:6px 0">Monedas que no coinciden</div>
+      <div style="font-size:13px;color:var(--t2);margin-bottom:12px">Elegiste el despacho en <strong>${esc(monTxt)}</strong>, pero estos artículos están en <strong>otra moneda</strong>. Un despacho no puede mezclar monedas. Corregí la moneda del artículo o la del despacho. <strong>No se importó nada.</strong></div>
+      <div style="max-height:240px;overflow:auto;text-align:left;border:1px solid var(--b1);border-radius:6px">
+        <div style="display:flex;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--b1);font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px"><span>Artículo</span><span>Su moneda</span></div>
+        ${distintos.map(it=>{const ml=(TABLAS['MONE']||[]).find(m=>m.CODIGO===(it.moneda||'').trim());const mt=ml?`${ml.STRING1||''} ${ml.DETALLE||''}`.trim():(it.moneda||'—');return `<div style="display:flex;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--b1);font-size:12px"><span style="font-family:var(--mono)">${esc(it.art)} <span style="color:var(--t3)">${esc(it.desc||'')}</span></span><span style="color:var(--red);font-weight:700">${esc(mt)}</span></div>`;}).join('')}
+      </div>
+      <button class="btn pri" style="margin-top:14px;padding:8px 24px" onclick="document.getElementById('ov-desp-monerr').classList.remove('open')">Entendido</button>
+    </div>
+  </div>`;
+  ov.classList.add('open');
 }
