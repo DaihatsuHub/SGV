@@ -213,9 +213,9 @@ function ensureRecibos() {
   return _recisPromise;
 }
 
-async function sbSaveArt(art, modo) {
+async function sbSaveArt(art, modo, ver) {
   syncSaving();
-  try { const r = await apiPost('/articulos/guardar', { articulo: art, modo }); syncOk(); return r; }
+  try { const r = await apiPost('/articulos/guardar', { articulo: art, modo, ver }); syncOk(); return r; }
   catch(e) { syncErr(); throw e; }
 }
 

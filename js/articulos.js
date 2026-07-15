@@ -163,6 +163,7 @@ function aModif(){
   setMtag('art-mtag','MODIFICACIÓN','tag-m');
   document.getElementById('ov-art').classList.add('open');
   window._ae = 'M';
+  window._artVerEdit = ARTS[artSelIdx].ART_UPDATED || null;   // versión que estoy editando
 }
 function aBaja(){
   if(artSelIdx===null){ toast('Seleccioná un artículo','err'); return; }
@@ -265,12 +266,15 @@ async function saveArt(){
   };
   if(window._ae==='A' && ARTS.find(a=>a.ART_COD===cod)){ toast('Código ya existe','err'); return; }
   // El SERVER es la verdad: espero su OK antes de tocar memoria/cerrar.
+  let res;
   try {
-    await sbSaveArt(d, window._ae);
+    res = await sbSaveArt(d, window._ae, window._ae==='M' ? (window._artVerEdit||null) : null);
   } catch(e){
+    // Conflicto de edición concurrente u otro rechazo → NO piso memoria ni cierro
     toast(e.message||'No se pudo guardar','err');
-    return;   // rechazado (ej. duplicado en otra sesión) → no actualizo memoria ni cierro
+    return;
   }
+  if(res && res.art_updated) d.ART_UPDATED = res.art_updated;   // guardo la versión nueva
   if(window._ae==='A'){
     ARTS.unshift(d); artSelIdx=0; toast('Artículo dado de alta','scs');
   } else {
