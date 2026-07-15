@@ -10,10 +10,20 @@ const STK_BG  = 'background:rgba(30,58,110,0.12)';   // azul — Stock
 const DEP_BG  = 'background:rgba(26,58,42,0.12)';    // verde — Depósito
 const SEP_STY = 'width:4px;background:rgba(74,127,193,0.4);padding:0;flex-shrink:0'; // separador
 
+let artModoBusqueda = false;   // false = Filtro (achica), true = Búsqueda (posiciona)
+function artToggleModo(){
+  artModoBusqueda = !artModoBusqueda;
+  const b=document.getElementById('art-modo-btn');
+  if(b) b.textContent = artModoBusqueda ? '🎯 Búsqueda' : '🔎 Filtro';
+  const q=document.getElementById('art-q');
+  if(q) q.placeholder = artModoBusqueda ? 'Ir a código o descripción…' : 'Filtrar código o descripción...';
+  renderArts();
+}
+
 function filtArts(){
   const q = document.getElementById('art-q').value.toLowerCase();
   let list = ARTS.filter(a => {
-    const mq = !q || a.ART_COD.toLowerCase().includes(q) || a.ART_DES.toLowerCase().includes(q);
+    const mq = artModoBusqueda || !q || a.ART_COD.toLowerCase().includes(q) || a.ART_DES.toLowerCase().includes(q);
     const ms = !artSoloStock || ((a.ART_STK||0) + (a.ART_STKT||0)) !== 0;
     const mf = !artSoloFact  || ((a.ART_DEPH||0) + (a.ART_DEPT||0)) !== 0;
     return mq && ms && mf;
@@ -37,6 +47,18 @@ function renderArts(){
   const body = document.getElementById('art-body');
   const cols  = getActiveCols('art');
   const gridTpl = cols.map(c => c.width||'1fr').join(' ');
+
+  // BÚSQUEDA (seek): posiciona en la coincidencia sin achicar la lista
+  let seekListIdx = -1;
+  const qBusq = (document.getElementById('art-q')?.value||'').trim();
+  if (artModoBusqueda && qBusq) {
+    const qU = qBusq.toUpperCase(), qL = qBusq.toLowerCase();
+    // 1) intento por CÓDIGO (prefijo). Si no, por DESCRIPCIÓN (contiene).
+    let t = list.findIndex(a => (a.ART_COD||'').toUpperCase().startsWith(qU));
+    if (t < 0) t = list.findIndex(a => (a.ART_DES||'').toLowerCase().includes(qL));
+    if (t < 0) t = list.findIndex(a => (a.ART_COD||'').toUpperCase().includes(qU)); // último recurso
+    if (t >= 0) { seekListIdx = t; artSelIdx = ARTS.indexOf(list[t]); }
+  }
 
   const thArt = document.querySelector('.th-art');
   if (thArt) {
@@ -83,6 +105,10 @@ function renderArts(){
     `</div>`;
   }).join('');
   const bArt = document.getElementById('b-art'); if(bArt) bArt.textContent = ARTS.length + ' artículos';
+  if (seekListIdx >= 0) {
+    const row = body.children[seekListIdx];
+    if (row) row.scrollIntoView({ block:'center' });
+  }
 }
 
 // ── IVA: opción "Otro…" muestra un campo al lado para tipear el % ──
