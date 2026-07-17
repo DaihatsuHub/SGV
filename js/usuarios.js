@@ -16,6 +16,8 @@ async function doLogin() {
   if (!cod) { errEl.textContent = 'Ingresá un usuario'; return; }
   if (!pass) { errEl.textContent = 'Ingresá la contraseña'; return; }
 
+  const btn = document.querySelector('.login-btn');
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.style.cursor = 'wait'; }
   errEl.textContent = '⏳ Verificando...';
 
   try {
@@ -25,6 +27,7 @@ async function doLogin() {
     if (error) {
       errEl.textContent = 'Usuario o contraseña incorrectos';
       document.getElementById('l-pass').value = '';
+      if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }
       return;
     }
 
@@ -44,6 +47,7 @@ async function doLogin() {
   } catch(e) {
     console.error('doLogin:', e);
     errEl.textContent = 'Error al conectar';
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }
   }
 }
 

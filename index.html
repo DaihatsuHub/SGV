@@ -1671,34 +1671,32 @@ document.addEventListener('click', function(e) {
 // El arranque ya NO corre solo: se llama desde loginOk() (en usuarios.js),
 // recién cuando hay sesión de Supabase Auth (token disponible para el server).
 async function iniciarApp() {
-  const ok = await sbLoad();
-  if (!ok) throw new Error('No se pudieron cargar los datos iniciales');
-  const cargas = [
-    loadUsuarios(),
-    loadAllConfigUI(),
-    loadPermisos(),
-    sbLoadCtips(),
-    sbLoadTalos(),
-    sbLoadRetes(),
-  ];
-  // Recibos + cheques: YA NO se cargan al login. Se cargan diferidos al abrir
-  // Recibos/Cartera/Ficha/Listado (ensureRecibos()).
-  // Órdenes de compra: YA NO se cargan al login.
-  // Se cargan al abrir el módulo (carga diferida, ver renderOC en oc.js).
-  await Promise.all(cargas);
-  aplicarPermisos();
-  // renderArts() ya NO se llama en el login: artículos se cargan diferidos al
-  // abrir el módulo (ensureArts + auto-guarda en renderArts).
-  renderClis();
-  renderTab && renderTab();
-  renderUsua && renderUsua();
-  renderTalo && renderTalo();
-  renderRete && renderRete();
-  // renderReci/renderCart/renderFicha ya NO se llaman en el login: recibos y
-  // cheques se cargan diferidos al abrir esos módulos (ensureRecibos + auto-guarda).
-  vmesRenderMarcas && vmesRenderMarcas();
-  const ddiUsua = document.getElementById('ddi-usua');
-  if (ddiUsua && usuarioActual) ddiUsua.style.display = usuarioActual.nivel > 80 ? 'block' : 'none';
+  if (window._appIniciando) return;   // evita doble arranque simultáneo (ej. doble click en cold start)
+  window._appIniciando = true;
+  try {
+    const ok = await sbLoad();
+    if (!ok) throw new Error('No se pudieron cargar los datos iniciales');
+    const cargas = [
+      loadUsuarios(),
+      loadAllConfigUI(),
+      loadPermisos(),
+      sbLoadCtips(),
+      sbLoadTalos(),
+      sbLoadRetes(),
+    ];
+    await Promise.all(cargas);
+    aplicarPermisos();
+    renderClis();
+    renderTab && renderTab();
+    renderUsua && renderUsua();
+    renderTalo && renderTalo();
+    renderRete && renderRete();
+    vmesRenderMarcas && vmesRenderMarcas();
+    const ddiUsua = document.getElementById('ddi-usua');
+    if (ddiUsua && usuarioActual) ddiUsua.style.display = usuarioActual.nivel > 80 ? 'block' : 'none';
+  } finally {
+    window._appIniciando = false;
+  }
 }
 </script>
 </div><!-- /app -->
