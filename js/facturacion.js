@@ -105,6 +105,11 @@ function facVendDesc(cod) {
   const v=(TABLAS['VEND']||[]).find(e=>e.CODIGO===cod);
   return v ? `${v.CODIGO} — ${v.DETALLE}` : cod;
 }
+function facConpagDesc(cod) {
+  if(!cod && cod!==0) return '—';
+  const c=(TABLAS['CPAG']||[]).find(e=>String(e.CODIGO)===String(cod));
+  return c ? `${c.CODIGO} — ${c.DETALLE}` : cod;
+}
 
 // Datos fiscales de empresas
 const EMP_DATA = {
@@ -449,7 +454,7 @@ async function renderFacDetalle(f, vista) {
           <div><span style="color:var(--t3)">IVA: </span>${esc(facIvaDesc(f.fac_tiva||cli?.CLI_IVA||''))}</div>
           <div><span style="color:var(--t3)">Dirección: </span>${esc(cli?.CLI_DOMIC||'—')}</div>
           <div><span style="color:var(--t3)">Ciudad: </span>${esc(cli?.CLI_LOCAL||'—')}</div>
-          <div><span style="color:var(--t3)">Cond.Pago: </span>${esc(cli?.CLI_CONPAG||f.fac_conpag||f.fac_vcomi||'—')}</div>
+          <div><span style="color:var(--t3)">Cond.Pago: </span>${esc(facConpagDesc(cli?.CLI_CONPAG||f.fac_conpag||f.fac_vcomi||''))}</div>
           <div><span style="color:var(--t3)">Transporte: </span>${esc(facTranspDesc(f.fac_transp||''))}</div>
           <div><span style="color:var(--t3)">Vendedor: </span>${esc(facVendDesc(f.fac_vend||''))}</div>
         </div>
