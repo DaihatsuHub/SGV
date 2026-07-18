@@ -58,6 +58,7 @@ function showSubPage(menu, sub) {
   else if (sub==='cate') renderTabGral('CATE');
   else if (sub==='grup') renderTabGral('GRUP');
   else if (sub==='perc') renderTabGral('PERC');
+  else if (sub==='expr') renderTabGral('EXPR');
   else if (sub==='usua') renderUsua();
   else if (sub==='fac')  renderFac();
   else if (sub==='reci') renderReci();

@@ -116,11 +116,13 @@
         <button class="dd-item" id="ddi-cli" onclick="showSubPage('cli','cli')">📋 Maestro de Clientes</button>
         <button class="dd-item" id="ddi-ficha" onclick="showSubPage('cli','ficha')">🪪 Ficha del Cliente</button>
         <button class="dd-item" id="ddi-ctacte" onclick="showSubPage('cli','ctacte')">📄 Cuenta Corriente</button>
-        <button class="dd-item" id="ddi-cpag" onclick="showSubPage('cli','cpag')">💳 Condiciones de Pago</button>
+        <div style="height:1px;background:rgba(255,255,255,0.15);margin:6px 12px"></div>
+        <button class="dd-item" id="ddi-cpag" onclick="showSubPage('cli','cpag')">💳 Tabla Condiciones de Pago</button>
         <button class="dd-item" id="ddi-vend" onclick="showSubPage('cli','vend')">👤 Tabla de Vendedores</button>
         <button class="dd-item" id="ddi-cate" onclick="showSubPage('cli','cate')">🏷️ Tabla de Categorías</button>
         <button class="dd-item" id="ddi-grup" onclick="showSubPage('cli','grup')">📂 Tabla de Grupos</button>
         <button class="dd-item" id="ddi-perc" onclick="showSubPage('cli','perc')">🧾 Tabla de Percepciones</button>
+        <button class="dd-item" id="ddi-expr" onclick="showSubPage('cli','expr')">🚚 Tabla de Transportes</button>
       </div>
     </div>
     <div class="dd-wrap">
@@ -389,6 +391,24 @@
   <div class="tbl-wrap">
     <div class="th-tab"><span>Código</span><span>Descripción</span><span>Info</span><span></span></div>
     <div class="tbl-body" id="vend-body"></div>
+  </div>
+</div>
+
+<!-- ══════ TRANSPORTES / EXPRESOS ══════ -->
+<div class="page" id="page-expr">
+  <div class="toolbar">
+    <button class="btn pri" id="btn-expr-alta" onclick="tabAlta('EXPR')">＋ Alta</button>
+    <button class="btn" id="btn-expr-modif" onclick="tabModif('EXPR')">✏️ Modificar</button>
+    <button class="btn dng" id="btn-expr-baja" onclick="tabBaja('EXPR')">✕ Baja</button>
+    <div class="spacer"></div>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="expr-q" placeholder="Buscar..." oninput="renderTabGral('EXPR')">
+      <button class="srch-clr" onclick="clrSrch('expr-q',function(){renderTabGral('EXPR')})" title="Limpiar">✕</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <div class="th-tab"><span>Código</span><span>Descripción</span><span>Dirección</span><span></span></div>
+    <div class="tbl-body" id="expr-body"></div>
   </div>
 </div>
 
