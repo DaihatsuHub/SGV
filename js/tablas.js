@@ -14,6 +14,7 @@ const TAB_CONFIG = {
   PCIA: { label:'Provincias',       lbl1:'% IIBB',     lbl2:'Conv.' },
   GRUP: { label:'Grupos',           lbl1:'Info',       lbl2:'' },
   CATE: { label:'Categorías',       lbl1:'Info',       lbl2:'' },
+  EXPR: { label:'Transportes/Expresos', lbl1:'Dirección', lbl2:'' },
   MONE: { label:'Monedas',           lbl1:'Signo',      lbl2:'',           lblNum:'Cotización' },
   PCIA: { label:'Provincias',         lbl1:'Alícuota IB', lbl2:'' },
   PERC: { label:'Percepciones',       lbl1:'Porcentaje', lbl2:'' },
