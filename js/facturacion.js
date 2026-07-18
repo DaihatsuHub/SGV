@@ -449,7 +449,7 @@ async function renderFacDetalle(f, vista) {
           <div><span style="color:var(--t3)">IVA: </span>${esc(facIvaDesc(f.fac_tiva||cli?.CLI_IVA||''))}</div>
           <div><span style="color:var(--t3)">Dirección: </span>${esc(cli?.CLI_DOMIC||'—')}</div>
           <div><span style="color:var(--t3)">Ciudad: </span>${esc(cli?.CLI_LOCAL||'—')}</div>
-          <div><span style="color:var(--t3)">Cond.Pago: </span>${esc(cli?.CLI_CONPAG||f.fac_vcomi||'—')}</div>
+          <div><span style="color:var(--t3)">Cond.Pago: </span>${esc(cli?.CLI_CONPAG||f.fac_conpag||f.fac_vcomi||'—')}</div>
           <div><span style="color:var(--t3)">Transporte: </span>${esc(facTranspDesc(f.fac_transp||''))}</div>
           <div><span style="color:var(--t3)">Vendedor: </span>${esc(facVendDesc(f.fac_vend||''))}</div>
         </div>
@@ -773,7 +773,7 @@ async function facImprimir(modo) {
       <div><span style="color:#555">CUIT: </span><strong>${esc(cli?.CLI_CUIT||'—')}</strong></div>
       <div><span style="color:#555">IVA: </span>${esc(IVA_DESC[tiva]||tiva||'Consumidor Final')}</div>
       <div><span style="color:#555">Cond. Pago: </span>${(()=>{
-        const cpVal=cli?.CLI_CONPAG||f.fac_vcomi||'';
+        const cpVal=cli?.CLI_CONPAG||f.fac_conpag||f.fac_vcomi||'';
         const cpObj=(TABLAS['CPAG']||[]).find(x=>x.CODIGO===cpVal);
         return esc(cpObj?cpObj.DETALLE:cpVal||'—');
       })()}</div>
@@ -2104,7 +2104,7 @@ async function nfGuardar() {
     fac_total:tot.totalReal||0,fac_saldo:tot.totalReal||0,fac_percib:tot.totalPercep||0,
     fac_neto_afip:tot.netoAfip||0, fac_iva_afip:esA?(tot.ivaAfip||0):0, fac_percep_afip:tot.percepAfip||0, fac_total_afip:tot.totalAfip||0,
     fac_percep_det:NF_PERCEP.map(p=>({cod:p.cod,detalle:p.detalle,pct:p.pct,importe:p.importe})),
-    fac_transp:transp,fac_remito:remito,fac_vcomi:conpag,fac_monpor:dto,
+    fac_transp:transp,fac_remito:remito,fac_conpag:conpag,fac_monpor:dto,
     fac_vend:vend,
     fac_tab_stk:!!ct.tab_stk, fac_tab_fact:!!ct.tab_fact,
     fac_afip_st:'pendiente',fac_cae:null,fac_cae_vto:null
