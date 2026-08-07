@@ -99,7 +99,7 @@ function renderArts(){
   const bArt = document.getElementById('b-art'); if(bArt) bArt.textContent = ARTS.length + ' artículos';
   const sc = artScrollEl();
   window._artScrollEl = sc;
-  if (sc && !sc._artScrollBound) { sc.addEventListener('scroll', artOnScroll); sc._artScrollBound = true; }
+  if (sc) sc.onscroll = artOnScroll;   // engancha siempre al elemento actual (no se pierde en re-render)
   if (scrollToIdx >= 0) { const row = body.children[scrollToIdx - artWinStart]; if (row) row.scrollIntoView({ block:'center' }); }
 }
 
