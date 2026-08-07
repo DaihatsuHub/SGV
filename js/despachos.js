@@ -15,19 +15,36 @@ function despEmpresa(depDesp) {
   return (depDesp||'').trim().toUpperCase().charAt(0);
 }
 
+// Los dos buscadores son EXCLUYENTES: escribir en uno limpia el otro
+function despQArt(){
+  const o=document.getElementById('desp-qdesp'); if(o) o.value='';
+  despSelIdx=null; renderDesp();
+}
+function despQDesp(){
+  const o=document.getElementById('desp-qart'); if(o) o.value='';
+  despSelIdx=null; renderDesp();
+}
+
 function filtDesps() {
-  const q   = (document.getElementById('desp-q')?.value||'').toLowerCase();
+  const qa  = (document.getElementById('desp-qart')?.value||'').trim().toLowerCase();
+  const qd  = (document.getElementById('desp-qdesp')?.value||'').trim().toLowerCase();
   const nro = document.getElementById('desp-nro')?.value||'';
   const srt = document.getElementById('desp-sort')?.value||'fec-desc';
 
   let list = DESPS.filter(d => {
     const mn = !nro || (d.dep_desp||'').trim() === nro;
-    const mq = !q ||
-      (d.dep_desp||'').toLowerCase().includes(q) ||
-      (d.dep_art||'').toLowerCase().includes(q)  ||
-      (d.dep_proc||'').toLowerCase().includes(q);
-    return mn && mq;
+    const ma = !qa || (d.dep_art||'').toLowerCase().includes(qa);
+    const md = !qd || (d.dep_desp||'').toLowerCase().includes(qd);
+    return mn && ma && md;
   });
+
+  const porArt  = (a,b) => (a.dep_art ||'').localeCompare(b.dep_art ||'') || (a.dep_desp||'').localeCompare(b.dep_desp||'');
+  const porDesp = (a,b) => (a.dep_desp||'').localeCompare(b.dep_desp||'') || (a.dep_art ||'').localeCompare(b.dep_art ||'');
+
+  // Si estás buscando, el orden lo manda la búsqueda (Ricardo):
+  // buscás por artículo → ordena por artículo; buscás por despacho → ordena por despacho.
+  if(qa) return list.slice().sort(porArt);
+  if(qd) return list.slice().sort(porDesp);
 
   list = list.slice().sort((a,b) => {
     if(srt==='fec-desc') return (b.dep_fec||'').localeCompare(a.dep_fec||'');

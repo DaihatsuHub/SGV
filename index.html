@@ -619,8 +619,12 @@
       <option value="nro-desc">Nro ↓</option>
     </select>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" onclick="this.select()" id="desp-q" placeholder="Buscar despacho o artículo..." oninput="renderDesp()">
-      <button class="srch-clr" onclick="clrSrch('desp-q',function(){renderDesp()})" title="Limpiar">✕</button>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="desp-qart" placeholder="Buscar artículo" oninput="despQArt()">
+      <button class="srch-clr" onclick="clrSrch('desp-qart',function(){renderDesp()})" title="Limpiar">✕</button>
+    </div>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="desp-qdesp" placeholder="Buscar despacho" oninput="despQDesp()">
+      <button class="srch-clr" onclick="clrSrch('desp-qdesp',function(){renderDesp()})" title="Limpiar">✕</button>
     </div>
   </div>
   <div class="tbl-wrap">
