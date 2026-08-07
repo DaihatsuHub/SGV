@@ -149,10 +149,13 @@ function artOnScroll(){
   const body = document.getElementById('art-body');
   const list = window._artList; if(!sc || !body || !list) return;
   const cols = window._artCols, gridTpl = window._artGridTpl;
-  if (sc.scrollHeight - sc.scrollTop - sc.clientHeight < 400 && artWinEnd < list.length) {
+  // hacia ABAJO
+  if (sc.scrollHeight - sc.scrollTop - sc.clientHeight < 600 && artWinEnd < list.length) {
     const from = artWinEnd; artWinEnd = Math.min(list.length, artWinEnd + ART_PAGE);
     body.insertAdjacentHTML('beforeend', list.slice(from, artWinEnd).map(a => artRowHtml(a, cols, gridTpl)).join(''));
-  } else if (sc.scrollTop < 300 && artWinStart > 0) {
+  }
+  // hacia ARRIBA (independiente del de abajo)
+  if (sc.scrollTop < 600 && artWinStart > 0) {
     const oldH = sc.scrollHeight;
     const to = artWinStart; artWinStart = Math.max(0, artWinStart - ART_PAGE);
     body.insertAdjacentHTML('afterbegin', list.slice(artWinStart, to).map(a => artRowHtml(a, cols, gridTpl)).join(''));
