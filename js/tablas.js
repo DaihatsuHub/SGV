@@ -195,11 +195,13 @@ function renderTabGral(tipo) {
   if (!list.length) { body.innerHTML='<div class="empty">🔍 Sin resultados</div>'; return; }
   body.innerHTML = list.map((r,i) => {
     const sel = _tabGralSel[tipo]===i?'sel':'';
+    const c3 = tipo==='VEND' ? (r.STRING1||'0')+'%' : (r.STRING1||'');
+    const c4 = (tipo==='VEND' && r.STRING2==='S') ? '<span class="pill ps">👥 Gerencia</span>' : '';
     return `<div class="tr-tab ${sel}" onclick="selTabGral('${tipo}',${i})">
       <span class="col-cod">${esc(r.CODIGO)}</span>
       <span class="col-des">${esc(r.DETALLE)}</span>
-      <span class="col-sm">${esc(r.STRING1||'')}</span>
-      <span></span>
+      <span class="col-sm">${esc(c3)}</span>
+      <span class="col-ctr">${c4}</span>
     </div>`;
   }).join('');
 }
