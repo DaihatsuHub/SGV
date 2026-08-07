@@ -390,10 +390,18 @@ function renderFac() {
         ?`<span style="font-size:10px;background:#2a2a1a;color:#facc15;padding:1px 5px;border-radius:3px;margin-left:3px">BORR</span>`
         :'';
     const _anulSty=f.fac_anul?'text-decoration:line-through;opacity:0.55':'';
+    // Marcas al final de la fila: P = pendiente de entrega (solo facturas), $ = con saldo
+    const _esF=(f.fac_nro||'').trim().slice(-1).toUpperCase()==='F';
+    const _pend=_esF && !f.fac_anul && !f.fac_salida;
+    const _debe=!f.fac_anul && Math.abs(Number(f.fac_saldo)||0)>0.005;
+    const marcas=
+      `<span title="${_pend?'Pendiente de entrega':''}" style="color:var(--wrn,#f59e0b);font-weight:700">${_pend?'P':''}</span>`+
+      `<span title="${_debe?'Con saldo pendiente':''}" style="color:var(--red);font-weight:700">${_debe?'$':''}</span>`;
     return `<div class="tr-fac ${sel}" data-idx="${i}" onclick="selFac(${i})" style="${_anulSty}">
       <span style="font-size:12px;color:var(--t2);flex-shrink:0">${fec}</span>
       <span class="col-cod" style="font-family:var(--mono);color:${contColor};flex-shrink:0">${esc(f.fac_nro||'')}${badge}</span>
-      <span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nomCli)}</span>
+      <span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">${esc(nomCli)}</span>
+      <span style="flex-shrink:0;display:flex;gap:6px;width:34px;justify-content:flex-end;font-size:13px;font-family:var(--mono)">${marcas}</span>
     </div>`;
   }).join('');
   body.querySelector('.tr-fac.sel')?.scrollIntoView({block:'nearest'});
