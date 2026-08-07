@@ -36,11 +36,12 @@ function filtClis(){
   }).sort((a,b)=>{
     const s=SORT_STATE['cli'];
     if(s&&s.col){
-      const va=a[s.col]||'', vb=b[s.col]||'';
-      const r=typeof va==='number'?va-vb:String(va).localeCompare(String(vb));
+      let r;
+      if(s.col==='CLI_CODIGO'){ r=(parseInt(a.CLI_CODIGO,10)||0)-(parseInt(b.CLI_CODIGO,10)||0); }
+      else { const va=a[s.col]||'', vb=b[s.col]||''; r=typeof va==='number'?va-vb:String(va).localeCompare(String(vb)); }
       return s.asc?r:-r;
     }
-    return (a.CLI_CODIGO||'').localeCompare(b.CLI_CODIGO||'');
+    return (parseInt(a.CLI_CODIGO,10)||0) - (parseInt(b.CLI_CODIGO,10)||0);
   });
 }
 
