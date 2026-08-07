@@ -23,7 +23,7 @@ function artOnBusq(){
   const q=document.getElementById('art-q'); if(q) q.value='';
   artWinStart=0; artWinEnd=ART_PAGE; _artSeek=true;   // el render calcula y posiciona
   renderArts();
-  const qb=document.getElementById('art-qb'); if(qb) qb.value='';   // limpia tras posicionar
+  const qb=document.getElementById('art-qb'); if(qb){ qb.value=''; qb.blur(); }   // limpia y suelta el foco (para navegar con flechas)
 }
 function artClear(id){
   const el=document.getElementById(id); if(el) el.value='';
@@ -417,7 +417,7 @@ document.addEventListener('keydown', e => {
   const list = filtArts();
   if(!list.length) return;
   let idx = artSelIdx;
-  const cur = idx !== null ? ARTS.indexOf(list.find((a,i)=>ARTS.indexOf(a)===idx)) : -1;
+  const cur = idx !== null ? list.findIndex(a => ARTS.indexOf(a) === idx) : -1;
 
   let next = cur;
   if(e.key==='ArrowDown')  { e.preventDefault(); next = Math.min(cur+1, list.length-1); }
