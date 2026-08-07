@@ -8,6 +8,23 @@
    =========================================================================== */
 
 let _ccData = null;   // último resultado del server { cliente, desde, hasta, monedas }
+let _ccSoloSaldo = false;   // vista "solo comprobantes con saldo"
+
+// Toggle de la vista: todos los movimientos vs. solo lo que queda pendiente
+function ctacteToggleSaldo(){
+  _ccSoloSaldo = !!document.getElementById('ctacte-solosaldo')?.checked;
+  renderCtaCte();
+}
+
+// Arma las filas de la vista "solo con saldo" para una moneda:
+// comprobantes con saldo pendiente + los A/Cuenta sin aplicar.
+function _ccFilasSaldo(d){
+  const conSaldo=(d.movimientos||[]).filter(mv=>
+    mv.tipo!=='REC' && Math.abs(Number(mv.saldo)||0) > 0.005);
+  const acu=(d.aCuenta||[]);
+  return conSaldo.concat(acu).sort((a,b)=>
+    (a.fecha||'').localeCompare(b.fecha||'') || (a.comprobante||'').localeCompare(b.comprobante||''));
+}
 
 function _ccEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function _ccFmt(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
@@ -70,8 +87,48 @@ function renderCtaCte(){
   let html='';
   for(const m of claves){
     const d=monedas[m];
-    let saldo=Number(d.saldoAnterior)||0;
     const sim=_ccMonSimbolo(m);
+
+    // ── Vista "solo con saldo": el importe mostrado es el SALDO, no el total ──
+    if(_ccSoloSaldo){
+      const lista=_ccFilasSaldo(d);
+      if(!lista.length) continue;
+      let pend=0;
+      const filasS=lista.map(mv=>{
+        const esCred = mv.tipo==='C' || mv.tipo==='ACU';
+        const imp=Math.abs(Number(mv.saldo)||0);
+        pend=Math.round((pend + (esCred?-imp:imp))*100)/100;
+        const cls = mv.tipo==='ACU' ? 'cc-rec' : (mv.tipo==='C' ? 'cc-nc' : '');
+        return `<div class="cc-row ${cls}">
+          <span>${_ccFecha(mv.fecha)}</span>
+          <span class="cc-comp">${_ccEsc(mv.comprobante)}</span>
+          <span class="cc-num">${esCred?'':_ccFmt(imp)}</span>
+          <span class="cc-num">${esCred?_ccFmt(imp):''}</span>
+          <span class="cc-num cc-saldo">${_ccFmt(pend)}</span>
+        </div>`;
+      }).join('');
+      html+=`<div class="cc-moneda">
+        <div class="cc-stickyhead">
+          <div class="cc-mon-tit">${_ccMonLabel(m)} <span style="opacity:.6">(${sim})</span>
+            <span style="font-size:11px;font-weight:400;color:var(--t2);margin-left:8px">solo con saldo</span></div>
+          <div class="cc-head">
+            <span>Fecha</span><span>Comprobante</span>
+            <span class="cc-num">Saldo deudor</span><span class="cc-num">Saldo acreedor</span><span class="cc-num">Acumulado</span>
+          </div>
+        </div>
+        <div class="cc-grid">
+          ${filasS}
+          <div class="cc-row cc-fin">
+            <span></span><span class="cc-comp"><b>Total pendiente</b></span>
+            <span class="cc-num"></span><span class="cc-num"></span>
+            <span class="cc-num cc-saldo"><b>${sim} ${_ccFmt(pend)}</b></span>
+          </div>
+        </div>
+      </div>`;
+      continue;
+    }
+
+    let saldo=Number(d.saldoAnterior)||0;
     const filas=(d.movimientos||[]).map(mv=>{
       saldo=Math.round((saldo + (mv.debe||0) - (mv.haber||0))*100)/100;
       const cls = mv.tipo==='REC' ? 'cc-rec' : (mv.tipo==='C' ? 'cc-nc' : '');
@@ -107,7 +164,7 @@ function renderCtaCte(){
       </div>
     </div>`;
   }
-  body.innerHTML=html;
+  body.innerHTML=html || '<div class="empty" style="margin-top:40px">Sin comprobantes con saldo pendiente</div>';
   _ccInjectStyle();
 }
 

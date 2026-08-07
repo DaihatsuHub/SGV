@@ -771,6 +771,9 @@
     <label style="font-size:12px;color:var(--t2)">Hasta</label>
     <input type="date" class="finp" id="ctacte-hasta" style="width:150px">
     <button class="btn pri" onclick="ctacteConsultar()">🔍 Consultar</button>
+    <label style="font-size:12px;color:var(--t2);display:flex;align-items:center;gap:5px;cursor:pointer" title="Muestra solo los comprobantes con saldo pendiente y los A/Cuenta sin aplicar">
+      <input type="checkbox" id="ctacte-solosaldo" onchange="ctacteToggleSaldo()"> Solo con saldo
+    </label>
     <button class="btn" onclick="ctactePrint()">🖨 Imprimir</button>
     <button class="btn" onclick="ctacteExcel()">📥 Excel</button>
   </div>
