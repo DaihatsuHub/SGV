@@ -291,5 +291,35 @@ function tabBaja(tipo) {
 
 let _tabEditTipo = '', _tabEditMode = 'A';
 
+// Navegación por teclado en las grillas del ABM genérico (vendedores, rubros, prov, etc.)
+document.addEventListener('keydown', e => {
+  if(document.querySelector('.ov.open')) return;
+  if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName)) return;
+  const pg = document.querySelector('.page.active');
+  if(!pg || !pg.id.startsWith('page-')) return;
+  const tipo = pg.id.replace('page-','').toUpperCase();
+  const body = document.getElementById(tipo.toLowerCase()+'-body');
+  if(!body || !TAB_CONFIG[tipo]) return;   // solo tablas del ABM genérico
+  const list = getTabGralRows(tipo);
+  if(!list.length) return;
+  let cur = _tabGralSel[tipo];
+  if(cur===undefined||cur===null) cur=-1;
+  let next=cur;
+  if(e.key==='ArrowDown'){ e.preventDefault(); next=Math.min(cur+1, list.length-1); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); next=Math.max(cur-1, 0); }
+  else if(e.key==='PageDown'){ e.preventDefault(); next=Math.min(cur+10, list.length-1); }
+  else if(e.key==='PageUp'){ e.preventDefault(); next=Math.max(cur-10, 0); }
+  else if(e.key==='Home'){ e.preventDefault(); next=0; }
+  else if(e.key==='End'){ e.preventDefault(); next=list.length-1; }
+  else if(e.key==='Enter'){ e.preventDefault(); if(cur>=0) tabModif(tipo); return; }
+  else return;
+  if(next!==cur && next>=0){
+    _tabGralSel[tipo]=next;
+    renderTabGral(tipo);
+    const rows=document.querySelectorAll('#'+tipo.toLowerCase()+'-body .tr-tab');
+    if(rows[next]) rows[next].scrollIntoView({block:'nearest'});
+  }
+});
+
 
 // ══════════════════════════════════════════════
