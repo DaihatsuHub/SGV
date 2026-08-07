@@ -110,6 +110,7 @@ function saveTab() {
     const d = {TABLA:_tabEditTipo,CODIGO:cod,DETALLE:det,
       STRING1:document.getElementById('tf-s1').value.trim(),
       STRING2:s2val,STRING3:'',FECHA1:''};
+    if(_tabEditTipo==='VEND'){ d.STRING1=String(parseFloat(document.getElementById('tf-com').value)||0); d.STRING2=document.getElementById('tf-ger').checked?'S':''; }
     if (!TABLAS[_tabEditTipo]) TABLAS[_tabEditTipo]=[];
     if (_tabEditMode==='A') {
       if (TABLAS[_tabEditTipo].find(r=>r.CODIGO===cod)) { toast('Código ya existe','err'); return; }
@@ -135,6 +136,7 @@ function saveTab() {
     STRING2: document.getElementById('tf-s2').value.trim(),
     STRING3: '', FECHA1: ''
   };
+  if(tabActiva==='VEND'){ d.STRING1=String(parseFloat(document.getElementById('tf-com').value)||0); d.STRING2=document.getElementById('tf-ger').checked?'S':''; }
   if (!TABLAS[tabActiva]) TABLAS[tabActiva] = [];
   if (window._te==='A') {
     if (TABLAS[tabActiva].find(r=>r.CODIGO===cod)) { toast('Código ya existe','err'); return; }
@@ -204,6 +206,18 @@ function renderTabGral(tipo) {
 
 function selTabGral(tipo, i) { _tabGralSel[tipo]=i; renderTabGral(tipo); }
 
+// Muestra/precarga los campos propios de VEND (comisión % + gerencia)
+function _tabVendUI(tipo, r){
+  const isV = (tipo==='VEND');
+  document.getElementById('tf-com-grp').style.display = isV?'flex':'none';
+  document.getElementById('tf-ger-grp').style.display = isV?'flex':'none';
+  document.getElementById('tf-s1').closest('.fgrp').style.display = isV?'none':'flex';
+  if(isV){
+    document.getElementById('tf-com').value = r ? (parseFloat(r.STRING1)||0) : 0;
+    document.getElementById('tf-ger').checked = r ? (r.STRING2==='S') : false;
+  }
+}
+
 function tabAlta(tipo) {
   _tabEditTipo = tipo; _tabEditMode = 'A';
   clrTabForm();
@@ -214,7 +228,8 @@ function tabAlta(tipo) {
   document.getElementById('tf-lbl1').textContent = cfgT.lbl1||'Dato 1';
   document.getElementById('tf-lbl2').textContent = cfgT.lbl2||'';
   document.getElementById('tf-s2').type = 'text';
-  document.getElementById('tf-s2').closest('.fgrp').style.display = (tipo==='RUBR'||tipo==='MONE'||tipo==='PERC')?'none':'flex';
+  document.getElementById('tf-s2').closest('.fgrp').style.display = (tipo==='RUBR'||tipo==='MONE'||tipo==='PERC'||tipo==='VEND')?'none':'flex';
+  _tabVendUI(tipo, null);
   // Campo numérico
   const numGrp = document.getElementById('tf-num-grp');
   const cfgNum = TAB_CONFIG[tipo]||{};
@@ -244,7 +259,8 @@ function tabModif(tipo) {
   const cfgM = TAB_CONFIG[tipo]||{};
   document.getElementById('tf-lbl1').textContent = cfgM.lbl1||'Dato 1';
   document.getElementById('tf-lbl2').textContent = cfgM.lbl2||'';
-  document.getElementById('tf-s2').closest('.fgrp').style.display = (tipo==='RUBR'||tipo==='MONE'||tipo==='PERC')?'none':'flex';
+  document.getElementById('tf-s2').closest('.fgrp').style.display = (tipo==='RUBR'||tipo==='MONE'||tipo==='PERC'||tipo==='VEND')?'none':'flex';
+  _tabVendUI(tipo, r);
   // Campo numérico
   const numGrpM = document.getElementById('tf-num-grp');
   const cfgNumM = TAB_CONFIG[tipo]||{};
