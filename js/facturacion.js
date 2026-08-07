@@ -382,12 +382,15 @@ function renderFac() {
     const ctip=CTIPS.find(c=>c.prefijo===prefijo);
     const contColor=ctip?(ctip.contable?'var(--acc)':'var(--red)'):'var(--t2)';
     const esBorrador=f.fac_afip_st==='pendiente'&&!f.fac_cae;
-    const badge=f.fac_cae
+    const badge=f.fac_anul
+      ?`<span style="font-size:10px;background:#3a1a1a;color:#f87171;padding:1px 5px;border-radius:3px;margin-left:3px">ANULADA</span>`
+      :f.fac_cae
       ?`<span style="font-size:10px;background:#1a3a1a;color:#4ade80;padding:1px 5px;border-radius:3px;margin-left:3px">CAE</span>`
       :esBorrador
         ?`<span style="font-size:10px;background:#2a2a1a;color:#facc15;padding:1px 5px;border-radius:3px;margin-left:3px">BORR</span>`
         :'';
-    return `<div class="tr-fac ${sel}" data-idx="${i}" onclick="selFac(${i})">
+    const _anulSty=f.fac_anul?'text-decoration:line-through;opacity:0.55':'';
+    return `<div class="tr-fac ${sel}" data-idx="${i}" onclick="selFac(${i})" style="${_anulSty}">
       <span style="font-size:12px;color:var(--t2);flex-shrink:0">${fec}</span>
       <span class="col-cod" style="font-family:var(--mono);color:${contColor};flex-shrink:0">${esc(f.fac_nro||'')}${badge}</span>
       <span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nomCli)}</span>
@@ -443,7 +446,17 @@ async function renderFacDetalle(f, vista) {
     ? `<input type="number" step="0.01" value="${_comVal}" style="width:60px;background:var(--s3);border:1px solid var(--b1);border-radius:4px;color:var(--txt);padding:1px 6px;font-family:var(--mono);font-size:12px" onchange="facGuardarComision('${f.fac_nro}',this.value)"> %${_comVend?` <span style="color:var(--t3);font-size:11px">(vend: ${_comVend}%)</span>`:''}`
     : `${_comVal}%`;
 
-  const caeInfo=f.fac_cae
+  // Anulación: banner si ya está anulada, botón si se puede anular
+  const _puedeBajaFac = (typeof puedeh==='function') ? puedeh('fac','baja') : false;
+  const _saldoIgual = Math.abs((Number(f.fac_saldo)||0)-(Number(f.fac_total)||0))<0.01;
+  const _puedeAnular = _puedeBajaFac && !f.fac_anul && !f.fac_cae && _saldoIgual;
+  const anulInfo = f.fac_anul
+    ? `<div style="background:#3a1a1a;border-radius:6px;padding:8px 12px;font-size:12px;color:#f87171;margin-bottom:8px;font-weight:600">
+         🚫 COMPROBANTE ANULADO${f.fac_anul_por?` &nbsp;·&nbsp; por ${esc(f.fac_anul_por)}`:''}${f.fac_anul_fec?` el ${String(f.fac_anul_fec).substring(0,10).split('-').reverse().join('/')}`:''}
+       </div>`
+    : '';
+
+  const caeInfo=f.fac_anul?'':f.fac_cae
     ?`<div style="background:#1a3a1a;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:#4ade80;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
         <span>✅ CAE: ${f.fac_cae} &nbsp;·&nbsp; Vto: ${f.fac_cae_vto||'—'}</span>
         <button onclick="facImprimir('afip')" class="btn scs" style="padding:3px 10px;font-size:11px">🖨 Imprimir</button>
@@ -463,6 +476,7 @@ async function renderFacDetalle(f, vista) {
           <div style="font-size:11px;color:var(--t3);margin-top:2px">I.V.A Responsable Inscripto</div>
           ${tipoChar==='C'?`<button onclick="ncAbrirAplicar('${f.fac_nro}')" class="btn pri" style="margin-top:8px;padding:5px 12px;font-size:12px">📌 ${(f.fac_saldo||0)>0?'Aplicar saldo de NC':'Ver / cancelar aplicaciones'}</button>`:''}
           ${(tieneDto||!esContable)?`<button onclick="facImprimirBorrador()" class="btn" style="margin-top:8px;margin-left:6px;padding:5px 12px;font-size:12px;background:var(--acc);color:#fff">🖨 Imprimir Borrador</button>`:''}
+          ${_puedeAnular?`<button onclick="facAnular('${f.fac_nro}')" class="btn" style="margin-top:8px;margin-left:6px;padding:5px 12px;font-size:12px;background:var(--red);color:#fff">🚫 Anular</button>`:''}
         </div>
         <div style="text-align:right">
           <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:${contColor2}">${esc(f.fac_nro||'')}</div>
@@ -471,7 +485,7 @@ async function renderFacDetalle(f, vista) {
           ${f.fac_usuario?`<div style="font-size:11px;color:var(--t3)">Emitió: ${esc(f.fac_usuario)}</div>`:''}
         </div>
       </div>
-      ${caeInfo}
+      ${anulInfo}${caeInfo}
       <div style="background:var(--s2);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
           <div><span style="color:var(--t3)">Cliente: </span><strong>${esc(cli?cli.CLI_RAZON:(f.fac_cli||'—').trim())}</strong></div>
@@ -657,6 +671,30 @@ async function facAutorizarAfip(facNro) {
 }
 
 // IMPRESIÓN DE FACTURA CON QR AFIP
+// ── Anular comprobante ────────────────────────────────────
+// El server revalida (sin CAE + saldo = total) y devuelve el stock
+// al artículo y al despacho. No borra: marca ANULADA.
+async function facAnular(facNro) {
+  const f=FACS.find(x=>x.fac_nro===facNro);
+  if(!f) return;
+  if(!confirm(`¿Anular el comprobante ${facNro}?\n\nEl stock vuelve al artículo y al despacho.\nEl comprobante queda marcado como ANULADO (no se borra ni se libera el número).\n\nEsta acción no se puede deshacer.`)) return;
+  try{
+    const res=await apiPost('/facturas/anular',{fac_nro:facNro});
+    if(!res.ok){
+      if(res.detalle&&res.detalle.length){
+        alert('⛔ No se pudo anular\n\n'+res.detalle.map(d=>`• ${d.art}: ${d.motivo||'?'}`).join('\n'));
+      } else toast(res.error||'No se pudo anular','err');
+      return;
+    }
+    await sbLoadFacs();
+    if(typeof reloadArts==='function'){ try{ await reloadArts(); }catch(_){} }
+    renderFac();
+    const idx=filtFacs().findIndex(x=>x.fac_nro===facNro);
+    if(idx>=0) selFac(idx);
+    toast(`✓ ${facNro} anulado — stock devuelto`,'scs');
+  }catch(e){ console.error('facAnular:',e); toast('Error al anular: '+e.message,'err'); }
+}
+
 async function facImprimir(modo) {
   modo = (modo==='afip')?'afip':'real';
   if(facSelIdx===null){toast('Seleccioná una factura','err');return;}
@@ -2116,7 +2154,14 @@ async function nfGuardar() {
     if(!it.ite_art?.trim()){toast(`Ítem ${i+1}: falta el código de artículo`,'err');return;}
     if(!ARTS.find(a=>(a.ART_COD||'').trim()===it.ite_art)){toast(`Ítem ${i+1}: código ${it.ite_art} no existe`,'err');return;}
     if(!(it.ite_uni>0)){toast(`Ítem ${i+1}: precio debe ser mayor a 0`,'err');return;}
-    if(!nfEsNC()&&!it._desp_id&&(it._desps||[]).length>1){toast(`Ítem ${i+1}: seleccioná un despacho`,'err');return;}
+    // Regla: ningún ítem se graba sin despacho asignado
+    if(!it._desp_id){
+      const _nd=(it._desps||[]).length;
+      toast(_nd===0
+        ? `Ítem ${i+1}: el artículo ${it.ite_art} no tiene despacho con stock disponible`
+        : `Ítem ${i+1}: seleccioná un despacho`,'err');
+      return;
+    }
   }
   const [prefijo,tipo]=ctipVal.split('|');
   const ct=CTIPS.find(c=>c.empresa===empresa&&c.prefijo===prefijo&&c.tipo===tipo);
