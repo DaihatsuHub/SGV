@@ -9,10 +9,39 @@
 
 let _ccData = null;   // último resultado del server { cliente, desde, hasta, monedas }
 let _ccSoloSaldo = false;   // vista "solo comprobantes con saldo"
+let _ccVerAplic  = false;   // expandir créditos mostrando contra qué débito se aplicaron
+
+// Muestra/oculta el botón "Ver aplicaciones": solo tiene sentido en la vista completa
+function _ccBtnAplicVis(){
+  const b=document.getElementById('btn-cc-aplic');
+  if(b) b.style.display = _ccSoloSaldo ? 'none' : '';
+}
+
+function ctacteToggleAplic(){
+  _ccVerAplic=!_ccVerAplic;
+  const b=document.getElementById('btn-cc-aplic');
+  if(b){ b.classList.toggle('pri',_ccVerAplic); b.textContent = _ccVerAplic?'🔗 Ocultar aplicaciones':'🔗 Ver aplicaciones'; }
+  renderCtaCte();
+}
+
+// Sub-filas de detalle: contra qué débito se aplicó cada crédito y por cuánto
+function _ccFilasAplic(mv){
+  if(!_ccVerAplic) return '';
+  const aps=mv.aplic||[];
+  if(!aps.length) return '';
+  return aps.map(a=>`<div class="cc-row cc-ap">
+      <span></span>
+      <span class="cc-comp">↳ ${a.aCuenta?'<i>A/Cuenta (sin aplicar)</i>':_ccEsc(a.comp)}</span>
+      <span class="cc-num"></span>
+      <span class="cc-num">${_ccFmt(a.importe)}</span>
+      <span class="cc-num"></span>
+    </div>`).join('');
+}
 
 // Toggle de la vista: todos los movimientos vs. solo lo que queda pendiente
 function ctacteToggleSaldo(){
   _ccSoloSaldo = !!document.getElementById('ctacte-solosaldo')?.checked;
+  _ccBtnAplicVis();
   renderCtaCte();
 }
 
@@ -138,7 +167,7 @@ function renderCtaCte(){
         <span class="cc-num">${mv.debe?_ccFmt(mv.debe):''}</span>
         <span class="cc-num">${mv.haber?_ccFmt(mv.haber):''}</span>
         <span class="cc-num cc-saldo">${_ccFmt(saldo)}</span>
-      </div>`;
+      </div>`+_ccFilasAplic(mv);
     }).join('');
 
     html+=`<div class="cc-moneda">
@@ -189,6 +218,8 @@ function _ccInjectStyle(){
     .cc-fin{background:var(--s2);border-top:2px solid var(--acc)}
     .cc-rec .cc-comp{color:var(--scs,#22c55e)}
     .cc-nc .cc-comp{color:var(--wrn,#f59e0b)}
+    .cc-ap{background:var(--s2);font-size:12px;color:var(--t2);border-bottom:1px dotted var(--b1)}
+    .cc-ap .cc-comp{padding-left:14px}
   `;
   document.head.appendChild(st);
 }

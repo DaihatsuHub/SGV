@@ -774,6 +774,7 @@
     <label style="font-size:12px;color:var(--t2);display:flex;align-items:center;gap:5px;cursor:pointer" title="Muestra solo los comprobantes con saldo pendiente y los A/Cuenta sin aplicar">
       <input type="checkbox" id="ctacte-solosaldo" onchange="ctacteToggleSaldo()"> Solo con saldo
     </label>
+    <button class="btn" id="btn-cc-aplic" onclick="ctacteToggleAplic()" title="Muestra contra qué débito se aplicó cada nota de crédito y cada recibo">🔗 Ver aplicaciones</button>
     <button class="btn" onclick="ctactePrint()">🖨 Imprimir</button>
     <button class="btn" onclick="ctacteExcel()">📥 Excel</button>
   </div>
