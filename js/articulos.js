@@ -199,9 +199,17 @@ function selArt(i) {
   artSelIdx = i;
   const list = filtArts();
   const pos = list.findIndex(a => ARTS.indexOf(a) === i);
+  if(pos < 0) return;
+  // asegurar que la fila esté dentro de la ventana pintada
+  if(pos < artWinStart || pos >= artWinEnd){
+    artWinStart = Math.max(0, pos - 30);
+    artWinEnd = Math.min(list.length, pos + ART_PAGE);
+    renderArts();
+  }
   const rows = document.querySelectorAll('#art-body .tr-art');
-  if(rows[pos]) {
-    rows[pos].classList.add('sel');
+  const domPos = pos - artWinStart;
+  if(rows[domPos]) {
+    rows[domPos].classList.add('sel');
     document.activeElement?.blur();
   }
 }
@@ -423,10 +431,18 @@ document.addEventListener('keydown', e => {
 
   if(next !== cur && next >= 0) {
     const newIdx = ARTS.indexOf(list[next]);
-    selArt(newIdx);
-    // Scroll al elemento seleccionado
+    artSelIdx = newIdx;
+    // Si la fila destino quedó fuera de la ventana pintada, la expando y re-pinto
+    if(next < artWinStart || next >= artWinEnd){
+      artWinStart = Math.max(0, next - 30);
+      artWinEnd = Math.min(list.length, next + ART_PAGE);
+      renderArts();
+    } else {
+      document.querySelector('#art-body .tr-art.sel')?.classList.remove('sel');
+    }
     const rows = document.querySelectorAll('#art-body .tr-art');
-    if(rows[next]) rows[next].scrollIntoView({block:'nearest'});
+    const domPos = next - artWinStart;
+    if(rows[domPos]) { rows[domPos].classList.add('sel'); rows[domPos].scrollIntoView({block:'nearest'}); }
   }
 });
 function exportArt() {
