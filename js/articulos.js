@@ -23,6 +23,7 @@ function artOnBusq(){
   const q=document.getElementById('art-q'); if(q) q.value='';
   artWinStart=0; artWinEnd=ART_PAGE; _artSeek=true;   // el render calcula y posiciona
   renderArts();
+  const qb=document.getElementById('art-qb'); if(qb) qb.value='';   // limpia tras posicionar
 }
 function artClear(id){
   const el=document.getElementById(id); if(el) el.value='';
@@ -96,8 +97,21 @@ function renderArts(){
   const slice = list.slice(artWinStart, artWinEnd);
   body.innerHTML = slice.map(a => artRowHtml(a, cols, gridTpl)).join('');
   const bArt = document.getElementById('b-art'); if(bArt) bArt.textContent = ARTS.length + ' artículos';
-  if (!body._artScrollBound) { body.addEventListener('scroll', artOnScroll); body._artScrollBound = true; }
+  const sc = artScrollEl();
+  window._artScrollEl = sc;
+  if (sc && !sc._artScrollBound) { sc.addEventListener('scroll', artOnScroll); sc._artScrollBound = true; }
   if (scrollToIdx >= 0) { const row = body.children[scrollToIdx - artWinStart]; if (row) row.scrollIntoView({ block:'center' }); }
+}
+
+// Detecta el contenedor que realmente scrollea (art-body o un ancestro con overflow)
+function artScrollEl(){
+  let el = document.getElementById('art-body');
+  for (let i=0; el && i<6; i++){
+    const oy = getComputedStyle(el).overflowY;
+    if ((oy==='auto' || oy==='scroll') && el.scrollHeight > el.clientHeight + 4) return el;
+    el = el.parentElement;
+  }
+  return document.getElementById('art-body');
 }
 
 // Construye el HTML de UNA fila de la grilla de artículos
@@ -131,17 +145,18 @@ function artRowHtml(a, cols, gridTpl){
 
 // Scroll incremental: agranda la ventana hacia abajo/arriba trayendo más filas (sin repintar todo)
 function artOnScroll(){
+  const sc = window._artScrollEl || document.getElementById('art-body');
   const body = document.getElementById('art-body');
-  const list = window._artList; if(!body || !list) return;
+  const list = window._artList; if(!sc || !body || !list) return;
   const cols = window._artCols, gridTpl = window._artGridTpl;
-  if (body.scrollHeight - body.scrollTop - body.clientHeight < 400 && artWinEnd < list.length) {
+  if (sc.scrollHeight - sc.scrollTop - sc.clientHeight < 400 && artWinEnd < list.length) {
     const from = artWinEnd; artWinEnd = Math.min(list.length, artWinEnd + ART_PAGE);
     body.insertAdjacentHTML('beforeend', list.slice(from, artWinEnd).map(a => artRowHtml(a, cols, gridTpl)).join(''));
-  } else if (body.scrollTop < 300 && artWinStart > 0) {
-    const oldH = body.scrollHeight;
+  } else if (sc.scrollTop < 300 && artWinStart > 0) {
+    const oldH = sc.scrollHeight;
     const to = artWinStart; artWinStart = Math.max(0, artWinStart - ART_PAGE);
     body.insertAdjacentHTML('afterbegin', list.slice(artWinStart, to).map(a => artRowHtml(a, cols, gridTpl)).join(''));
-    body.scrollTop += (body.scrollHeight - oldH);
+    sc.scrollTop += (sc.scrollHeight - oldH);
   }
 }
 
