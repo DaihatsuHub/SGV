@@ -116,8 +116,6 @@ function despAlta() {
   document.getElementById('desp-mtit').textContent = 'Nuevo Despacho';
   setMtag('desp-mtag','ALTA','tag-a');
   fillDespArtSelect('');
-  const depGrp=document.getElementById('df-depent-grp');
-  if(depGrp) depGrp.style.display='none';
   document.getElementById('ov-desp').classList.add('open');
   window._de = 'A';
 }
@@ -131,8 +129,6 @@ function despModif() {
   document.getElementById('df-art').disabled  = true;
   document.getElementById('desp-mtit').textContent = `Modificar: ${d.dep_desp}${d.dep_sub?' '+d.dep_sub:''}`;
   setMtag('desp-mtag','MODIFICACIÓN','tag-m');
-  const depGrpM=document.getElementById('df-depent-grp');
-  if(depGrpM) depGrpM.style.display='';
   document.getElementById('ov-desp').classList.add('open');
   window._de = 'M';
   window._despOrig = { ...d }; // guardar original para revertir stock si es necesario
@@ -168,7 +164,6 @@ function clrDespForm() {
   document.getElementById('df-fob').value = 0;
   document.getElementById('df-gas2').value = 0;
   const monEl=document.getElementById('df-moneda'); if(monEl) fillDespMoneda('P');
-  const depEntEl=document.getElementById('df-depent'); if(depEntEl) depEntEl.value=0;
   ['df-sal','df-stk','df-coent','df-cosal','df-costk'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=0;});
 }
 
@@ -189,7 +184,6 @@ function fillDespForm(d) {
   document.getElementById('df-gas2').value  = d.dep_gas2||0;
   document.getElementById('df-ent').value   = d.dep_ent||0;
   fillDespMoneda(d.dep_moneda);
-  const depEntEl=document.getElementById('df-depent'); if(depEntEl) depEntEl.value=d.dep_depent||0;
   { const es=document.getElementById('df-sal'); if(es)es.value=d.dep_sal||0;
     const ek=document.getElementById('df-stk'); if(ek)ek.value=d.dep_stk||0;
     const e1=document.getElementById('df-coent'); if(e1)e1.value=d.dep_coent||0;
@@ -205,16 +199,17 @@ function fillDespArtSelect(selArt) {
     ARTS.map(a=>`<option value="${a.ART_COD}"${a.ART_COD===selArt?' selected':''}>${a.ART_COD} — ${a.ART_DES}</option>`).join('');
 }
 
-// Al cambiar ingreso, proponer mismo valor en dep_depent
+// Al cambiar ingreso, proponer los mismos valores en real y contable
 function dfEntChange() {
   const val = parseInt(document.getElementById('df-ent')?.value)||0;
-  const depEntEl = document.getElementById('df-depent');
-  if(depEntEl && depEntEl.value==0) depEntEl.value = val;
-  // En ALTA, proponer Stock real = Ingreso (salida 0). En modif no piso lo cargado.
+  // En ALTA, proponer Stock real = Ingreso (salida 0) y el contable igual al real.
+  // En modif no piso lo cargado.
   if(window._de==='A'){
     const stkEl=document.getElementById('df-stk'); const salEl=document.getElementById('df-sal');
     const sal=parseInt(salEl?.value)||0;
     if(stkEl) stkEl.value = val - sal;
+    const coentEl=document.getElementById('df-coent'); if(coentEl && !parseInt(coentEl.value)) coentEl.value = val;
+    const costkEl=document.getElementById('df-costk'); if(costkEl && !parseInt(costkEl.value)) costkEl.value = val - sal;
   }
 }
 
@@ -241,8 +236,6 @@ async function saveDesp() {
   const adua  = document.getElementById('df-adua').value.trim().toUpperCase();
   const proc  = document.getElementById('df-proc').value.trim().toUpperCase();
   const mone  = document.getElementById('df-moneda').value;
-  const depEntEl = document.getElementById('df-depent');
-  const depent = depEntEl ? (parseInt(depEntEl.value)||ent) : ent;
   const coent = parseInt(document.getElementById('df-coent')?.value)||0;
   const cosal = parseInt(document.getElementById('df-cosal')?.value)||0;
   const costk = parseInt(document.getElementById('df-costk')?.value)||0;
@@ -263,7 +256,7 @@ async function saveDesp() {
   syncSaving();
   try {
     const res = await apiPost('/despachos/guardar', {
-      modo: window._de, desp, sub, fec, art, ent, fob, gas2, adua, proc, mone, depent, coent, cosal, costk, sal, stk
+      modo: window._de, desp, sub, fec, art, ent, fob, gas2, adua, proc, mone, coent, cosal, costk, sal, stk
     });
     aplicarStockMemoria(res.stock);
     if(window._de==='A') {
