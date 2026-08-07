@@ -2,6 +2,23 @@
 // CLIENTES — Listado, filtros, ABM
 // ═══════════════════════════════════════════════════════════
 
+let _cliSeek = false;   // hacer seek+scroll en el próximo render (Buscar)
+
+// Filtrar (achica) y Buscar (posiciona) EXCLUYENTES: escribir en uno limpia el otro
+function cliOnFiltro(){
+  const qb=document.getElementById('cli-qb'); if(qb) qb.value='';
+  _cliSeek=false; renderClis();
+}
+function cliOnBusq(){
+  const q=document.getElementById('cli-q'); if(q) q.value='';
+  _cliSeek=true; renderClis();
+  const qb=document.getElementById('cli-qb'); if(qb){ qb.value=''; qb.blur(); }
+}
+function cliClear(id){
+  const el=document.getElementById(id); if(el) el.value='';
+  _cliSeek=false; renderClis();
+}
+
 function filtClis(){
   const q=document.getElementById('cli-q').value.toLowerCase();
   const pv=document.getElementById('cli-prov').value;
@@ -75,6 +92,22 @@ function renderClis(){
 
   updCliFilts();
   const bCli = document.getElementById('b-cli'); if(bCli) bCli.textContent = CLIS.length + ' clientes';
+
+  // BUSCAR (seek): posiciona en el código sin achicar
+  if(_cliSeek){
+    const qb=(document.getElementById('cli-qb')?.value||'').trim();
+    if(qb){
+      const qU=qb.toUpperCase();
+      let p=list.findIndex(c=>(c.CLI_CODIGO||'').toUpperCase().startsWith(qU));
+      if(p<0) p=list.findIndex(c=>(c.CLI_CODIGO||'').toUpperCase().includes(qU));
+      if(p>=0){
+        cliSelIdx=CLIS.indexOf(list[p]);
+        const rows=document.querySelectorAll('#cli-body .tr-cli');
+        if(rows[p]){ document.querySelector('#cli-body .tr-cli.sel')?.classList.remove('sel'); rows[p].classList.add('sel'); rows[p].scrollIntoView({block:'center'}); }
+      } else toast('No se encontró el código "'+qb+'"','err');
+    }
+    _cliSeek=false;
+  }
 }
 
 function updCliFilts(){
@@ -95,6 +128,32 @@ function setCliFilt(v){
   document.getElementById('cf-'+v)?.classList.add('on');
   renderClis();
 }
+
+// Navegación por teclado (grilla de clientes)
+document.addEventListener('keydown', e => {
+  if(document.querySelector('.ov.open')) return;
+  if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName)) return;
+  const page=document.getElementById('page-cli');
+  if(!page?.classList.contains('active')) return;
+  const list=filtClis();
+  if(!list.length) return;
+  const cur = cliSelIdx!==null ? list.findIndex(c=>CLIS.indexOf(c)===cliSelIdx) : -1;
+  let next=cur;
+  if(e.key==='ArrowDown'){ e.preventDefault(); next=Math.min(cur+1, list.length-1); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); next=Math.max(cur-1, 0); }
+  else if(e.key==='PageDown'){ e.preventDefault(); next=Math.min(cur+10, list.length-1); }
+  else if(e.key==='PageUp'){ e.preventDefault(); next=Math.max(cur-10, 0); }
+  else if(e.key==='Home'){ e.preventDefault(); next=0; }
+  else if(e.key==='End'){ e.preventDefault(); next=list.length-1; }
+  else if(e.key==='Enter'){ e.preventDefault(); if(cliSelIdx!==null) cliDetail(cliSelIdx); return; }
+  else return;
+  if(next!==cur && next>=0){
+    cliSelIdx=CLIS.indexOf(list[next]);
+    document.querySelector('#cli-body .tr-cli.sel')?.classList.remove('sel');
+    const rows=document.querySelectorAll('#cli-body .tr-cli');
+    if(rows[next]){ rows[next].classList.add('sel'); rows[next].scrollIntoView({block:'nearest'}); }
+  }
+});
 
 function cliDetail(idx){
   const c=CLIS[idx];

@@ -229,8 +229,13 @@
     <div class="spacer"></div>
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" onclick="this.select()" id="cli-q" placeholder="Buscar código o razón social..." oninput="renderClis()">
-      <button class="srch-clr" id="cli-q-clr" onclick="clrSrch('cli-q',renderClis)" title="Limpiar">✕</button>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="cli-q" placeholder="Filtrar" oninput="cliOnFiltro()">
+      <button class="srch-clr" id="cli-q-clr" onclick="cliClear('cli-q')" title="Limpiar filtro">✕</button>
+    </div>
+    <div class="srch-wrap">
+      <span class="srch-ico">🎯</span>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="cli-qb" placeholder="Buscar código" onkeydown="if(event.key==='Enter')cliOnBusq()">
+      <button class="srch-clr" id="cli-qb-clr" onclick="cliClear('cli-qb')" title="Limpiar búsqueda">✕</button>
     </div>
   </div>
   <div class="filters">
