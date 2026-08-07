@@ -2165,6 +2165,20 @@ async function nfGuardar() {
     const _numEl=document.getElementById('nf-num');
     if(_numEl){ const n=parseInt((String(_numEl.value||'').split('-').pop()||'').trim(),10); if(n>0) numeroManual=n; }
     nfGrabarEstado(true);
+    // ── Parte A: pre-chequeo de stock REAL contra la base antes de grabar ──
+    const chk=await apiPost('/facturas/stock-check',{ ctId:ct.id, items:itemsAGrabar });
+    if(chk && chk.ok===false && chk.controla){
+      const faltan=(chk.detalle||[]).filter(d=>!d.ok);
+      nfGrabarEstado(false); syncErr();
+      alert('⛔ Stock insuficiente — NO se grabó nada\n\n'+
+        faltan.map(d=>`• ${d.art}  (desp. ${d.desp})\n   pedís ${d.pide} — disponible ${d.disponible} — faltan ${d.falta}`).join('\n')+
+        '\n\nOtro usuario pudo haber facturado esa mercadería. Corregí las cantidades y volvé a intentar.');
+      return;
+    }
+    if(chk && chk.ok===false && !chk.controla){
+      nfGrabarEstado(false); syncErr();
+      toast(chk.error||'No se pudo verificar el stock','err'); return;
+    }
     const res=await apiPost('/facturas/guardar',{ ctId:ct.id, prefijo, tipo, empresa, numero:numeroManual, facData, items:itemsAGrabar });
     if(!res.ok){ syncErr(); nfGrabarEstado(false); toast(res.error||'No se pudo guardar','err'); return; }
     // Aplicar el movimiento de stock a los datos en memoria (para verlo al instante)
