@@ -105,6 +105,24 @@ function facVendDesc(cod) {
   const v=(TABLAS['VEND']||[]).find(e=>e.CODIGO===cod);
   return v ? `${v.CODIGO} — ${v.DETALLE}` : cod;
 }
+// Comisión configurada del vendedor (de la tabla VEND, STRING1 = %)
+function facVendComision(cod){
+  if(!cod) return 0;
+  const v=(TABLAS['VEND']||[]).find(e=>e.CODIGO===cod);
+  return v ? (parseFloat(v.STRING1)||0) : 0;
+}
+// Guarda la comisión (fac_vcomi) de una factura grabada (requiere permiso modificar en facturas)
+async function facGuardarComision(facNro, val){
+  const pct = parseFloat(val)||0;
+  try{
+    const res = await apiPost('/facturas/vcomi', { fac_nro:facNro, vcomi:pct });
+    if(res && res.ok){
+      const f = (typeof FACS!=='undefined') ? FACS.find(x=>x.fac_nro===facNro) : null;
+      if(f) f.fac_vcomi = String(pct);
+      toast('Comisión actualizada','scs');
+    } else { toast((res&&res.error)||'No se pudo guardar la comisión','err'); }
+  }catch(e){ toast('Error al guardar la comisión','err'); }
+}
 function facConpagDesc(cod) {
   if(!cod && cod!==0) return '—';
   const c=(TABLAS['CPAG']||[]).find(e=>String(e.CODIGO)===String(cod));
@@ -417,6 +435,14 @@ async function renderFacDetalle(f, vista) {
   const tieneDto = (Number(f.fac_monpor)||0)!==0;
   const empLabel=facEmpresaLabel(f.fac_empresa||(f.fac_nro||'').substring(0,1));
 
+  // Comisión del vendedor (editable si tiene permiso modificar en facturas)
+  const _puedeModifFac = (typeof puedeh==='function') ? puedeh('fac','modif') : false;
+  const _comVal = parseFloat(f.fac_vcomi)||0;
+  const _comVend = facVendComision(f.fac_vend||'');
+  const comEdit = _puedeModifFac
+    ? `<input type="number" step="0.01" value="${_comVal}" style="width:60px;background:var(--s3);border:1px solid var(--b1);border-radius:4px;color:var(--txt);padding:1px 6px;font-family:var(--mono);font-size:12px" onchange="facGuardarComision('${f.fac_nro}',this.value)"> %${_comVend?` <span style="color:var(--t3);font-size:11px">(vend: ${_comVend}%)</span>`:''}`
+    : `${_comVal}%`;
+
   const caeInfo=f.fac_cae
     ?`<div style="background:#1a3a1a;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:#4ade80;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
         <span>✅ CAE: ${f.fac_cae} &nbsp;·&nbsp; Vto: ${f.fac_cae_vto||'—'}</span>
@@ -454,9 +480,10 @@ async function renderFacDetalle(f, vista) {
           <div><span style="color:var(--t3)">IVA: </span>${esc(facIvaDesc(f.fac_tiva||cli?.CLI_IVA||''))}</div>
           <div><span style="color:var(--t3)">Dirección: </span>${esc(cli?.CLI_DOMIC||'—')}</div>
           <div><span style="color:var(--t3)">Ciudad: </span>${esc(cli?.CLI_LOCAL||'—')}</div>
-          <div><span style="color:var(--t3)">Cond.Pago: </span>${esc(facConpagDesc(cli?.CLI_CONPAG||f.fac_conpag||f.fac_vcomi||''))}</div>
+          <div><span style="color:var(--t3)">Cond.Pago: </span>${esc(facConpagDesc(cli?.CLI_CONPAG||f.fac_conpag||''))}</div>
           <div><span style="color:var(--t3)">Transporte: </span>${esc(facTranspDesc(f.fac_transp||''))}</div>
           <div><span style="color:var(--t3)">Vendedor: </span>${esc(facVendDesc(f.fac_vend||''))}</div>
+          <div><span style="color:var(--t3)">Comisión: </span>${comEdit}</div>
         </div>
       </div>
       <div style="font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:4px;letter-spacing:1px">ÍTEMS (${items.length})</div>
@@ -778,7 +805,7 @@ async function facImprimir(modo) {
       <div><span style="color:#555">CUIT: </span><strong>${esc(cli?.CLI_CUIT||'—')}</strong></div>
       <div><span style="color:#555">IVA: </span>${esc(IVA_DESC[tiva]||tiva||'Consumidor Final')}</div>
       <div><span style="color:#555">Cond. Pago: </span>${(()=>{
-        const cpVal=cli?.CLI_CONPAG||f.fac_conpag||f.fac_vcomi||'';
+        const cpVal=cli?.CLI_CONPAG||f.fac_conpag||'';
         const cpObj=(TABLAS['CPAG']||[]).find(x=>x.CODIGO===cpVal);
         return esc(cpObj?cpObj.DETALLE:cpVal||'—');
       })()}</div>
