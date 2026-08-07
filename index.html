@@ -201,7 +201,7 @@
     </div>
     <div class="srch-wrap">
       <span class="srch-ico">🎯</span>
-      <input class="srch" onfocus="this.select()" onclick="this.select()" id="art-qb" placeholder="Buscar código" onkeydown="if(event.key==='Enter')artOnBusq()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="art-qb" placeholder="Buscar código" onkeydown="if(event.key==='Enter'){event.preventDefault();event.stopPropagation();artOnBusq();}">
       <button class="srch-clr" id="art-qb-clr" onclick="artClear('art-qb')" title="Limpiar búsqueda">✕</button>
     </div>
   </div>
@@ -234,7 +234,7 @@
     </div>
     <div class="srch-wrap">
       <span class="srch-ico">🎯</span>
-      <input class="srch" onfocus="this.select()" onclick="this.select()" id="cli-qb" placeholder="Buscar código" onkeydown="if(event.key==='Enter')cliOnBusq()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="cli-qb" placeholder="Buscar código" onkeydown="if(event.key==='Enter'){event.preventDefault();event.stopPropagation();cliOnBusq();}">
       <button class="srch-clr" id="cli-qb-clr" onclick="cliClear('cli-qb')" title="Limpiar búsqueda">✕</button>
     </div>
   </div>

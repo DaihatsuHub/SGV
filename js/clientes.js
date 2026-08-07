@@ -11,6 +11,7 @@ function cliOnFiltro(){
 }
 function cliOnBusq(){
   const q=document.getElementById('cli-q'); if(q) q.value='';
+  if(typeof SORT_STATE!=='undefined') SORT_STATE['cli']=null;   // forzar orden por código
   _cliSeek=true; renderClis();
   const qb=document.getElementById('cli-qb'); if(qb){ qb.value=''; qb.blur(); }
 }

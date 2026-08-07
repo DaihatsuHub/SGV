@@ -21,6 +21,7 @@ function artOnFiltro(){
 }
 function artOnBusq(){
   const q=document.getElementById('art-q'); if(q) q.value='';
+  if(typeof SORT_STATE!=='undefined') SORT_STATE['art']=null;   // forzar orden por código
   artWinStart=0; artWinEnd=ART_PAGE; _artSeek=true;   // el render calcula y posiciona
   renderArts();
   const qb=document.getElementById('art-qb'); if(qb){ qb.value=''; qb.blur(); }   // limpia y suelta el foco (para navegar con flechas)
