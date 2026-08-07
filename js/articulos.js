@@ -8,15 +8,25 @@ let artSoloFact = false;
 // Colores para diferenciar Stock vs Depósito en grilla
 const STK_BG  = 'background:rgba(30,58,110,0.12)';   // azul — Stock
 const DEP_BG  = 'background:rgba(26,58,42,0.12)';    // verde — Depósito
+let artWinStart = 0, artWinEnd = 300;                 // ventana de filas visibles
+const ART_PAGE = 300;                                 // cuántas trae por tanda
+let _artSeek = false;                                 // hacer seek+scroll en el próximo render (Buscar)
 const SEP_STY = 'width:4px;background:rgba(74,127,193,0.4);padding:0;flex-shrink:0'; // separador
 
 // Filtro (achica) y Búsqueda (posiciona) son EXCLUYENTES: escribir en uno limpia el otro
 function artOnFiltro(){
   const qb=document.getElementById('art-qb'); if(qb) qb.value='';
+  artWinStart=0; artWinEnd=ART_PAGE; _artSeek=false;
   renderArts();
 }
 function artOnBusq(){
   const q=document.getElementById('art-q'); if(q) q.value='';
+  artWinStart=0; artWinEnd=ART_PAGE; _artSeek=true;   // el render calcula y posiciona
+  renderArts();
+}
+function artClear(id){
+  const el=document.getElementById(id); if(el) el.value='';
+  artWinStart=0; artWinEnd=ART_PAGE; _artSeek=false;
   renderArts();
 }
 
@@ -48,18 +58,6 @@ function renderArts(){
   const cols  = getActiveCols('art');
   const gridTpl = cols.map(c => c.width||'1fr').join(' ');
 
-  // BÚSQUEDA (seek): posiciona en la coincidencia sin achicar la lista
-  let seekListIdx = -1;
-  const qBusq = (document.getElementById('art-qb')?.value||'').trim();
-  if (qBusq) {
-    const qU = qBusq.toUpperCase(), qL = qBusq.toLowerCase();
-    // 1) intento por CÓDIGO (prefijo). Si no, por DESCRIPCIÓN (contiene).
-    let t = list.findIndex(a => (a.ART_COD||'').toUpperCase().startsWith(qU));
-    if (t < 0) t = list.findIndex(a => (a.ART_DES||'').toLowerCase().includes(qL));
-    if (t < 0) t = list.findIndex(a => (a.ART_COD||'').toUpperCase().includes(qU)); // último recurso
-    if (t >= 0) { seekListIdx = t; artSelIdx = ARTS.indexOf(list[t]); }
-  }
-
   const thArt = document.querySelector('.th-art');
   if (thArt) {
     thArt.style.gridTemplateColumns = gridTpl;
@@ -77,37 +75,73 @@ function renderArts(){
     return;
   }
 
-  body.innerHTML = list.map(a => {
-    const idx = ARTS.indexOf(a);
-    const sel = artSelIdx===idx ? 'sel' : '';
-    const sH  = a.ART_STK||0,  sT  = a.ART_STKT||0;
-    const sDH = a.ART_DEPH||0, sDT = a.ART_DEPT||0;
-    return `<div class="tr-art ${sel}" style="grid-template-columns:${gridTpl}" onclick="selArt(${idx})" ondblclick="artDetail(${idx})">` +
-      cols.map(c => {
-        if(c.field==='ART_COD')   return `<span class="col-cod">${esc(a.ART_COD)}</span>`;
-        if(c.field==='ART_DES')   return `<span class="col-des">${esc(a.ART_DES)}</span>`;
-        if(c.field==='ART_RUB')   return `<span style="font-family:var(--mono);font-size:12px;color:var(--t2)">${esc(a.ART_RUB||'')}</span>`;
-        if(c.field==='ART_SRUB')  return `<span style="font-family:var(--mono);font-size:12px;color:var(--t3)">${esc(a.ART_SRUB||'')}</span>`;
-        if(c.field==='ART_PRE')   { const mone=(TABLAS['MONE']||[]).find(m=>m.CODIGO===a.ART_MONEDA); const signo=mone?mone.STRING1:'$'; const iva=a.ART_IVA!==undefined&&a.ART_IVA!==null?` <span style="font-size:10px;color:var(--t3);font-family:var(--mono)">${a.ART_IVA}%</span>`:''; return `<span class="col-num" style="color:var(--grn)">${signo} ${fmt(a.ART_PRE)}${iva}</span>`; }
-        if(c.field==='ART_STK')   return `<span class="col-num" style="${STK_BG}">${sH===0?'—':sH}</span>`;
-        if(c.field==='ART_STKT')  return `<span class="col-num" style="${STK_BG}">${sT===0?'—':sT}</span>`;
-        if(c.field==='ART_DEPH')  return `<span class="col-num" style="${DEP_BG};border-left:3px solid rgba(74,127,193,0.5)">${sDH===0?'—':sDH}</span>`;
-        if(c.field==='ART_DEPT')  return `<span class="col-num" style="${DEP_BG}">${sDT===0?'—':sDT}</span>`;
-        if(c.field==='ART_ESTU')  return `<span class="col-ctr"><span class="pill ${a.ART_ESTU==='S'?'pi':'pn'}">${a.ART_ESTU||'—'}</span></span>`;
-        if(c.field==='ART_ACT')   return `<span class="col-ctr"><span class="pill ${a.ART_ACT==='S'?'ps':'pn'}">${a.ART_ACT||'N'}</span></span>`;
-        if(c.field==='ART_GRUP')  return `<span style="font-family:var(--mono);font-size:12px;color:var(--t3)">${esc((a.ART_GRUP||'')+(a.ART_SEX?'-'+a.ART_SEX:''))}</span>`;
-        if(c.field==='ART_SEX')   return `<span class="col-sm">${esc(a.ART_SEX||'')}</span>`;
-        if(c.field==='ART_MARCA') return `<span class="col-sm">${esc(a.ART_MARCA||'')}</span>`;
-        if(c.field==='ART_PROV')  return `<span class="col-sm">${esc(a.ART_PROV||'')}</span>`;
-        if(c.field==='CODCASIO')  return `<span class="col-sm">${esc(a.CODCASIO||'')}</span>`;
-        return `<span>${esc(String(a[c.field]||''))}</span>`;
-      }).join('') +
-    `</div>`;
-  }).join('');
+  // SEEK (solo cuando se dispara Buscar con Enter): posiciona la ventana en la coincidencia
+  let scrollToIdx = -1;
+  if (_artSeek) {
+    const qBusq = (document.getElementById('art-qb')?.value||'').trim();
+    if (qBusq) {
+      const qU = qBusq.toUpperCase();
+      // Buscar SOLO por código: primero por prefijo, si no por coincidencia
+      let t = list.findIndex(a => (a.ART_COD||'').toUpperCase().startsWith(qU));
+      if (t < 0) t = list.findIndex(a => (a.ART_COD||'').toUpperCase().includes(qU));
+      if (t >= 0) { artWinStart = Math.max(0, t-40); artWinEnd = t + ART_PAGE; artSelIdx = ARTS.indexOf(list[t]); scrollToIdx = t; }
+      else toast('No se encontró el código "'+qBusq+'"','err');
+    }
+    _artSeek = false;
+  }
+  if (artWinEnd > list.length) artWinEnd = list.length;
+  if (artWinStart < 0 || artWinStart > artWinEnd) artWinStart = 0;
+  window._artList = list; window._artCols = cols; window._artGridTpl = gridTpl;
+
+  const slice = list.slice(artWinStart, artWinEnd);
+  body.innerHTML = slice.map(a => artRowHtml(a, cols, gridTpl)).join('');
   const bArt = document.getElementById('b-art'); if(bArt) bArt.textContent = ARTS.length + ' artículos';
-  if (seekListIdx >= 0) {
-    const row = body.children[seekListIdx];
-    if (row) row.scrollIntoView({ block:'center' });
+  if (!body._artScrollBound) { body.addEventListener('scroll', artOnScroll); body._artScrollBound = true; }
+  if (scrollToIdx >= 0) { const row = body.children[scrollToIdx - artWinStart]; if (row) row.scrollIntoView({ block:'center' }); }
+}
+
+// Construye el HTML de UNA fila de la grilla de artículos
+function artRowHtml(a, cols, gridTpl){
+  const idx = ARTS.indexOf(a);
+  const sel = artSelIdx===idx ? 'sel' : '';
+  const sH  = a.ART_STK||0,  sT  = a.ART_STKT||0;
+  const sDH = a.ART_DEPH||0, sDT = a.ART_DEPT||0;
+  return `<div class="tr-art ${sel}" style="grid-template-columns:${gridTpl}" onclick="selArt(${idx})" ondblclick="artDetail(${idx})">` +
+    cols.map(c => {
+      if(c.field==='ART_COD')   return `<span class="col-cod">${esc(a.ART_COD)}</span>`;
+      if(c.field==='ART_DES')   return `<span class="col-des">${esc(a.ART_DES)}</span>`;
+      if(c.field==='ART_RUB')   return `<span style="font-family:var(--mono);font-size:12px;color:var(--t2)">${esc(a.ART_RUB||'')}</span>`;
+      if(c.field==='ART_SRUB')  return `<span style="font-family:var(--mono);font-size:12px;color:var(--t3)">${esc(a.ART_SRUB||'')}</span>`;
+      if(c.field==='ART_PRE')   { const mone=(TABLAS['MONE']||[]).find(m=>m.CODIGO===a.ART_MONEDA); const signo=mone?mone.STRING1:'$'; const iva=a.ART_IVA!==undefined&&a.ART_IVA!==null?` <span style="font-size:10px;color:var(--t3);font-family:var(--mono)">${a.ART_IVA}%</span>`:''; return `<span class="col-num" style="color:var(--grn)">${signo} ${fmt(a.ART_PRE)}${iva}</span>`; }
+      if(c.field==='ART_STK')   return `<span class="col-num" style="${STK_BG}">${sH===0?'—':sH}</span>`;
+      if(c.field==='ART_STKT')  return `<span class="col-num" style="${STK_BG}">${sT===0?'—':sT}</span>`;
+      if(c.field==='ART_DEPH')  return `<span class="col-num" style="${DEP_BG};border-left:3px solid rgba(74,127,193,0.5)">${sDH===0?'—':sDH}</span>`;
+      if(c.field==='ART_DEPT')  return `<span class="col-num" style="${DEP_BG}">${sDT===0?'—':sDT}</span>`;
+      if(c.field==='ART_ESTU')  return `<span class="col-ctr"><span class="pill ${a.ART_ESTU==='S'?'pi':'pn'}">${a.ART_ESTU||'—'}</span></span>`;
+      if(c.field==='ART_ACT')   return `<span class="col-ctr"><span class="pill ${a.ART_ACT==='S'?'ps':'pn'}">${a.ART_ACT||'N'}</span></span>`;
+      if(c.field==='ART_GRUP')  return `<span style="font-family:var(--mono);font-size:12px;color:var(--t3)">${esc((a.ART_GRUP||'')+(a.ART_SEX?'-'+a.ART_SEX:''))}</span>`;
+      if(c.field==='ART_SEX')   return `<span class="col-sm">${esc(a.ART_SEX||'')}</span>`;
+      if(c.field==='ART_MARCA') return `<span class="col-sm">${esc(a.ART_MARCA||'')}</span>`;
+      if(c.field==='ART_PROV')  return `<span class="col-sm">${esc(a.ART_PROV||'')}</span>`;
+      if(c.field==='CODCASIO')  return `<span class="col-sm">${esc(a.CODCASIO||'')}</span>`;
+      return `<span>${esc(String(a[c.field]||''))}</span>`;
+    }).join('') +
+  `</div>`;
+}
+
+// Scroll incremental: agranda la ventana hacia abajo/arriba trayendo más filas (sin repintar todo)
+function artOnScroll(){
+  const body = document.getElementById('art-body');
+  const list = window._artList; if(!body || !list) return;
+  const cols = window._artCols, gridTpl = window._artGridTpl;
+  if (body.scrollHeight - body.scrollTop - body.clientHeight < 400 && artWinEnd < list.length) {
+    const from = artWinEnd; artWinEnd = Math.min(list.length, artWinEnd + ART_PAGE);
+    body.insertAdjacentHTML('beforeend', list.slice(from, artWinEnd).map(a => artRowHtml(a, cols, gridTpl)).join(''));
+  } else if (body.scrollTop < 300 && artWinStart > 0) {
+    const oldH = body.scrollHeight;
+    const to = artWinStart; artWinStart = Math.max(0, artWinStart - ART_PAGE);
+    body.insertAdjacentHTML('afterbegin', list.slice(artWinStart, to).map(a => artRowHtml(a, cols, gridTpl)).join(''));
+    body.scrollTop += (body.scrollHeight - oldH);
   }
 }
 
