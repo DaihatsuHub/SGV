@@ -461,7 +461,7 @@ async function renderFacDetalle(f, vista) {
         <div>
           <div style="font-size:18px;font-weight:700;color:var(--txt);letter-spacing:1px">${esc(empLabel)}</div>
           <div style="font-size:11px;color:var(--t3);margin-top:2px">I.V.A Responsable Inscripto</div>
-          ${tipoChar==='C'&&(f.fac_saldo||0)>0?`<button onclick="ncAbrirAplicar('${f.fac_nro}')" class="btn pri" style="margin-top:8px;padding:5px 12px;font-size:12px">📌 Aplicar saldo de NC</button>`:''}
+          ${tipoChar==='C'?`<button onclick="ncAbrirAplicar('${f.fac_nro}')" class="btn pri" style="margin-top:8px;padding:5px 12px;font-size:12px">📌 ${(f.fac_saldo||0)>0?'Aplicar saldo de NC':'Ver / cancelar aplicaciones'}</button>`:''}
           ${(tieneDto||!esContable)?`<button onclick="facImprimirBorrador()" class="btn" style="margin-top:8px;margin-left:6px;padding:5px 12px;font-size:12px;background:var(--acc);color:#fff">🖨 Imprimir Borrador</button>`:''}
         </div>
         <div style="text-align:right">
@@ -2322,10 +2322,11 @@ async function ncAbrirAplicar(ncNro){
       Saldo disponible de la NC: <strong style="color:var(--grn)">${mon} ${fmtN(nc.fac_saldo,2)}</strong>
       &nbsp;·&nbsp; Empresa <strong>${esc(nc.fac_empresa||'')}</strong> &nbsp;·&nbsp; Moneda <strong>${nc.fac_moneda==='P'?'Pesos':nc.fac_moneda}</strong>
     </div>
+    ${(Number(nc.fac_saldo)||0)>0 ? `
     <div style="display:grid;grid-template-columns:1fr 70px 90px 90px 150px;gap:8px;padding:5px 8px;font-size:10px;color:var(--t3);text-transform:uppercase;border-bottom:1px solid var(--b1);letter-spacing:1px">
       <span>Comprobante</span><span>Fecha</span><span style="text-align:right">Total</span><span style="text-align:right">Saldo</span><span style="text-align:right">Importe a aplicar</span>
     </div>
-    <div style="max-height:280px;overflow:auto">${filas}</div>
+    <div style="max-height:280px;overflow:auto">${filas}</div>` : `<div style="padding:10px;text-align:center;color:var(--t3);font-size:12px;background:var(--s2);border-radius:6px">NC totalmente aplicada (sin saldo). Podés cancelar aplicaciones abajo para liberar saldo.</div>`}
     ${bloqueAplic}
   </div>`;
   ov.classList.add('open');
