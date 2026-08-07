@@ -123,7 +123,34 @@ function renderDesp() {
   }).join('');
 }
 
-function selDesp(i) { despSelIdx=i; renderDesp(); }
+function selDesp(i) {
+  despSelIdx=i; renderDesp();
+  const rows=document.querySelectorAll('#desp-body .tr-art');
+  if(rows[i]) rows[i].scrollIntoView({block:'nearest'});
+}
+
+// ── Navegación por teclado en la grilla de despachos ──
+// (estándar de grillas: ↑↓ / PageUp-Down / Home / End / Enter→Modificar)
+document.addEventListener('keydown', e => {
+  if(document.querySelector('.ov.open')) return;                       // hay un modal abierto
+  if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName)) return;
+  const pg = document.querySelector('.page.active');
+  if(!pg || pg.id !== 'page-desp') return;
+  if(!window._despLoaded) return;
+  const list = filtDesps();
+  if(!list.length) return;
+  let cur = (despSelIdx===null||despSelIdx===undefined) ? -1 : despSelIdx;
+  let next = cur;
+  if(e.key==='ArrowDown'){ e.preventDefault(); next=Math.min(cur+1, list.length-1); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); next=Math.max(cur-1, 0); }
+  else if(e.key==='PageDown'){ e.preventDefault(); next=Math.min(cur+10, list.length-1); }
+  else if(e.key==='PageUp'){ e.preventDefault(); next=Math.max(cur-10, 0); }
+  else if(e.key==='Home'){ e.preventDefault(); next=0; }
+  else if(e.key==='End'){ e.preventDefault(); next=list.length-1; }
+  else if(e.key==='Enter'){ e.preventDefault(); if(cur>=0) despModif(); return; }
+  else return;
+  if(next!==cur && next>=0) selDesp(next);
+});
 
 // ── Alta ──────────────────────────────────────────────────
 function despAlta() {
