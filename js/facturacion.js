@@ -397,11 +397,13 @@ function renderFac() {
     const marcas=
       `<span title="${_pend?'Pendiente de entrega':''}" style="color:var(--wrn,#f59e0b);font-weight:700">${_pend?'P':''}</span>`+
       `<span title="${_debe?'Con saldo pendiente':''}" style="color:var(--red);font-weight:700">${_debe?'$':''}</span>`;
+    // La razón social se corta a 20 caracteres: la grilla nunca se estira
+    const nomCorto = nomCli.length>20 ? nomCli.substring(0,20).trim()+'…' : nomCli;
     return `<div class="tr-fac ${sel}" data-idx="${i}" onclick="selFac(${i})" style="${_anulSty}">
       <span style="font-size:12px;color:var(--t2);flex-shrink:0">${fec}</span>
       <span class="col-cod" style="font-family:var(--mono);color:${contColor};flex-shrink:0">${esc(f.fac_nro||'')}${badge}</span>
-      <span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">${esc(nomCli)}</span>
-      <span style="flex-shrink:0;display:flex;gap:6px;width:34px;justify-content:flex-end;font-size:13px;font-family:var(--mono)">${marcas}</span>
+      <span title="${esc(nomCli)}" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">${esc(nomCorto)}</span>
+      <span style="flex-shrink:0;width:22px;text-align:right;font-size:13px;font-family:var(--mono)">${marcas}</span>
     </div>`;
   }).join('');
   body.querySelector('.tr-fac.sel')?.scrollIntoView({block:'nearest'});
@@ -454,6 +456,12 @@ async function renderFacDetalle(f, vista) {
     ? `<input type="number" step="0.01" value="${_comVal}" style="width:60px;background:var(--s3);border:1px solid var(--b1);border-radius:4px;color:var(--txt);padding:1px 6px;font-family:var(--mono);font-size:12px" onchange="facGuardarComision('${f.fac_nro}',this.value)"> %${_comVend?` <span style="color:var(--t3);font-size:11px">(vend: ${_comVend}%)</span>`:''}`
     : `${_comVal}%`;
 
+  // Fecha de entrega (fac_salida): editable si tiene permiso modificar en facturas
+  const _salVal = (f.fac_salida||'').substring(0,10);
+  const salEdit = _puedeModifFac
+    ? `<input type="date" value="${_salVal}" style="background:var(--s3);border:1px solid var(--b1);border-radius:4px;color:var(--txt);padding:1px 6px;font-family:var(--mono);font-size:12px" onchange="facGuardarSalida('${f.fac_nro}',this.value)">`
+    : (_salVal ? _salVal.split('-').reverse().join('/') : '<span style="color:var(--wrn,#f59e0b)">pendiente</span>');
+
   // Anulación: banner si ya está anulada, botón si se puede anular
   const _puedeBajaFac = (typeof puedeh==='function') ? puedeh('fac','baja') : false;
   const _saldoIgual = Math.abs((Number(f.fac_saldo)||0)-(Number(f.fac_total)||0))<0.01;
@@ -482,9 +490,11 @@ async function renderFacDetalle(f, vista) {
         <div>
           <div style="font-size:18px;font-weight:700;color:var(--txt);letter-spacing:1px">${esc(empLabel)}</div>
           <div style="font-size:11px;color:var(--t3);margin-top:2px">I.V.A Responsable Inscripto</div>
-          ${tipoChar==='C'?`<button onclick="ncAbrirAplicar('${f.fac_nro}')" class="btn pri" style="margin-top:8px;padding:5px 12px;font-size:12px">📌 ${(f.fac_saldo||0)>0?'Aplicar saldo de NC':'Ver / cancelar aplicaciones'}</button>`:''}
-          ${(tieneDto||!esContable)?`<button onclick="facImprimirBorrador()" class="btn" style="margin-top:8px;margin-left:6px;padding:5px 12px;font-size:12px;background:var(--acc);color:#fff">🖨 Imprimir Borrador</button>`:''}
-          ${_puedeAnular?`<button onclick="facAnular('${f.fac_nro}')" class="btn" style="margin-top:8px;margin-left:6px;padding:5px 12px;font-size:12px;background:var(--red);color:#fff">🚫 Anular</button>`:''}
+          <div style="display:flex;flex-wrap:nowrap;gap:6px;margin-top:8px">
+          ${tipoChar==='C'?`<button onclick="ncAbrirAplicar('${f.fac_nro}')" class="btn pri" style="padding:5px 12px;font-size:12px;white-space:nowrap">📌 ${(f.fac_saldo||0)>0?'Aplicar saldo de NC':'Ver / cancelar aplicaciones'}</button>`:''}
+          ${(tieneDto||!esContable)?`<button onclick="facImprimirBorrador()" class="btn" style="padding:5px 12px;font-size:12px;background:var(--acc);color:#fff;white-space:nowrap">🖨 Imprimir Borrador</button>`:''}
+          ${_puedeAnular?`<button onclick="facAnular('${f.fac_nro}')" class="btn" style="padding:5px 12px;font-size:12px;background:var(--red);color:#fff;white-space:nowrap">🚫 Anular</button>`:''}
+          </div>
         </div>
         <div style="text-align:right">
           <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:${contColor2}">${esc(f.fac_nro||'')}</div>
@@ -495,17 +505,18 @@ async function renderFacDetalle(f, vista) {
       </div>
       ${anulInfo}${caeInfo}
       <div style="background:var(--s2);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-          <div><span style="color:var(--t3)">Cliente: </span><strong>${esc(cli?cli.CLI_RAZON:(f.fac_cli||'—').trim())}</strong></div>
-          <div><span style="color:var(--t3)">Cód: </span>${esc((f.fac_cli||'').trim())}</div>
-          <div><span style="color:var(--t3)">CUIT: </span>${esc(cli?.CLI_CUIT||'—')}</div>
-          <div><span style="color:var(--t3)">IVA: </span>${esc(facIvaDesc(f.fac_tiva||cli?.CLI_IVA||''))}</div>
-          <div><span style="color:var(--t3)">Dirección: </span>${esc(cli?.CLI_DOMIC||'—')}</div>
-          <div><span style="color:var(--t3)">Ciudad: </span>${esc(cli?.CLI_LOCAL||'—')}</div>
-          <div><span style="color:var(--t3)">Cond.Pago: </span>${esc(facConpagDesc(cli?.CLI_CONPAG||f.fac_conpag||''))}</div>
-          <div><span style="color:var(--t3)">Transporte: </span>${esc(facTranspDesc(f.fac_transp||''))}</div>
-          <div><span style="color:var(--t3)">Vendedor: </span>${esc(facVendDesc(f.fac_vend||''))}</div>
-          <div><span style="color:var(--t3)">Comisión: </span>${comEdit}</div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 20px">
+          <div style="display:flex;gap:6px;min-width:0"><span style="color:var(--t3);width:78px;flex-shrink:0">Cliente:</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>${esc(cli?cli.CLI_RAZON:(f.fac_cli||'—').trim())}</strong> <span style="color:var(--t3)">(${esc((f.fac_cli||'').trim())})</span></span></div>
+          <div style="display:flex;gap:6px;min-width:0"><span style="color:var(--t3);width:78px;flex-shrink:0">Transporte:</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(facTranspDesc(f.fac_transp||''))}</span></div>
+
+          <div style="display:flex;gap:6px;min-width:0"><span style="color:var(--t3);width:78px;flex-shrink:0">Dirección:</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(cli?.CLI_DOMIC||'—')}</span></div>
+          <div style="display:flex;gap:6px;align-items:center;min-width:0"><span style="color:var(--t3);width:78px;flex-shrink:0">Fe.Entrega:</span>${salEdit}</div>
+
+          <div style="display:flex;gap:6px;min-width:0"><span style="color:var(--t3);width:78px;flex-shrink:0">Ciudad:</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(_ccLocProv(cli))}</span></div>
+          <div style="display:flex;gap:6px;min-width:0"><span style="color:var(--t3);width:78px;flex-shrink:0">Vendedor:</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(facVendDesc(f.fac_vend||''))}</span></div>
+
+          <div style="display:flex;gap:6px;min-width:0"><span style="color:var(--t3);width:78px;flex-shrink:0">Cond.Pago:</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(facConpagDesc(cli?.CLI_CONPAG||f.fac_conpag||''))}</span></div>
+          <div style="display:flex;gap:6px;align-items:center;min-width:0"><span style="color:var(--t3);width:78px;flex-shrink:0">Comisión:</span>${comEdit}</div>
         </div>
       </div>
       <div style="font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:4px;letter-spacing:1px">ÍTEMS (${items.length})</div>
@@ -701,6 +712,28 @@ async function facAnular(facNro) {
     if(idx>=0) selFac(idx);
     toast(`✓ ${facNro} anulado — stock devuelto`,'scs');
   }catch(e){ console.error('facAnular:',e); toast('Error al anular: '+e.message,'err'); }
+}
+
+// Ciudad / Provincia del cliente en una sola línea
+function _ccLocProv(cli){
+  const loc=(cli?.CLI_LOCAL||'').trim();
+  const pcia=(cli?.CLI_PROVIN||'').trim();
+  const pd=(TABLAS['PCIA']||[]).find(p=>p.CODIGO===pcia);
+  const pn=pd?(pd.DETALLE||pcia):pcia;
+  if(loc&&pn) return loc+' / '+pn;
+  return loc||pn||'—';
+}
+
+// Guardar la fecha de entrega del comprobante
+async function facGuardarSalida(facNro, val){
+  try{
+    const res=await apiPost('/facturas/salida',{ fac_nro:facNro, salida: val||null });
+    if(!res.ok){ toast(res.error||'No se pudo guardar la fecha','err'); return; }
+    const f=FACS.find(x=>x.fac_nro===facNro);
+    if(f) f.fac_salida = val||null;
+    renderFac();
+    toast(val?'Fecha de entrega guardada':'Marcado como pendiente de entrega','scs');
+  }catch(e){ console.error('facGuardarSalida:',e); toast('Error: '+e.message,'err'); }
 }
 
 async function facImprimir(modo) {
