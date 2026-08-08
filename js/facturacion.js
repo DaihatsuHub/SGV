@@ -399,11 +399,11 @@ function renderFac() {
       `<span title="${_debe?'Con saldo pendiente':''}" style="color:var(--red);font-weight:700">${_debe?'$':''}</span>`;
     // La razón social se corta a 20 caracteres: la grilla nunca se estira
     const nomCorto = nomCli.length>20 ? nomCli.substring(0,20).trim()+'…' : nomCli;
-    return `<div class="tr-fac ${sel}" data-idx="${i}" onclick="selFac(${i})" style="${_anulSty}">
-      <span style="font-size:12px;color:var(--t2);flex-shrink:0">${fec}</span>
-      <span class="col-cod" style="font-family:var(--mono);color:${contColor};flex-shrink:0">${esc(f.fac_nro||'')}${badge}</span>
-      <span title="${esc(nomCli)}" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">${esc(nomCorto)}</span>
-      <span style="flex-shrink:0;width:22px;text-align:right;font-size:13px;font-family:var(--mono)">${marcas}</span>
+    return `<div class="tr-fac ${sel}" data-idx="${i}" onclick="selFac(${i})" style="${_anulSty};display:flex;flex-wrap:nowrap;align-items:center;gap:8px;overflow:hidden">
+      <span style="font-size:12px;color:var(--t2);flex:0 0 auto;white-space:nowrap">${fec}</span>
+      <span class="col-cod" style="font-family:var(--mono);color:${contColor};flex:0 0 auto;white-space:nowrap">${esc(f.fac_nro||'')}${badge}</span>
+      <span title="${esc(nomCli)}" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto;min-width:0">${esc(nomCorto)}</span>
+      <span style="flex:0 0 22px;width:22px;text-align:right;font-size:13px;font-family:var(--mono);white-space:nowrap">${marcas}</span>
     </div>`;
   }).join('');
   body.querySelector('.tr-fac.sel')?.scrollIntoView({block:'nearest'});
@@ -456,6 +456,14 @@ async function renderFacDetalle(f, vista) {
     ? `<input type="number" step="0.01" value="${_comVal}" style="width:60px;background:var(--s3);border:1px solid var(--b1);border-radius:4px;color:var(--txt);padding:1px 6px;font-family:var(--mono);font-size:12px" onchange="facGuardarComision('${f.fac_nro}',this.value)"> %${_comVend?` <span style="color:var(--t3);font-size:11px">(vend: ${_comVend}%)</span>`:''}`
     : `${_comVal}%`;
 
+  // Transporte, fecha de entrega y comisión son solo de FACTURAS
+  const esFactura = tipoChar==='F';
+  // Fila del encabezado: etiqueta a ancho fijo + valor que se corta si no entra
+  const _fila = (lbl, val, plano) => `<div style="display:flex;gap:6px;align-items:center;min-width:0">`+
+    `<span style="color:var(--t3);width:78px;flex-shrink:0">${lbl}:</span>`+
+    (plano ? val : `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${val}</span>`)+
+    `</div>`;
+
   // Fecha de entrega (fac_salida): editable si tiene permiso modificar en facturas
   const _salVal = (f.fac_salida||'').substring(0,10);
   const salEdit = _puedeModifFac
@@ -505,18 +513,19 @@ async function renderFacDetalle(f, vista) {
       </div>
       ${anulInfo}${caeInfo}
       <div style="background:var(--s2);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px">
-        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 20px">
-          <div style="display:flex;gap:6px;min-width:0"><span style="color:var(--t3);width:78px;flex-shrink:0">Cliente:</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong>${esc(cli?cli.CLI_RAZON:(f.fac_cli||'—').trim())}</strong> <span style="color:var(--t3)">(${esc((f.fac_cli||'').trim())})</span></span></div>
-          <div style="display:flex;gap:6px;min-width:0"><span style="color:var(--t3);width:78px;flex-shrink:0">Transporte:</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(facTranspDesc(f.fac_transp||''))}</span></div>
-
-          <div style="display:flex;gap:6px;min-width:0"><span style="color:var(--t3);width:78px;flex-shrink:0">Dirección:</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(cli?.CLI_DOMIC||'—')}</span></div>
-          <div style="display:flex;gap:6px;align-items:center;min-width:0"><span style="color:var(--t3);width:78px;flex-shrink:0">Fe.Entrega:</span>${salEdit}</div>
-
-          <div style="display:flex;gap:6px;min-width:0"><span style="color:var(--t3);width:78px;flex-shrink:0">Ciudad:</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(_ccLocProv(cli))}</span></div>
-          <div style="display:flex;gap:6px;min-width:0"><span style="color:var(--t3);width:78px;flex-shrink:0">Vendedor:</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(facVendDesc(f.fac_vend||''))}</span></div>
-
-          <div style="display:flex;gap:6px;min-width:0"><span style="color:var(--t3);width:78px;flex-shrink:0">Cond.Pago:</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(facConpagDesc(cli?.CLI_CONPAG||f.fac_conpag||''))}</span></div>
-          <div style="display:flex;gap:6px;align-items:center;min-width:0"><span style="color:var(--t3);width:78px;flex-shrink:0">Comisión:</span>${comEdit}</div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 20px">
+          <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+            ${_fila('Cliente', `<strong>${esc(cli?cli.CLI_RAZON:(f.fac_cli||'—').trim())}</strong> <span style="color:var(--t3)">(${esc((f.fac_cli||'').trim())})</span>`)}
+            ${_fila('Dirección', esc(cli?.CLI_DOMIC||'—'))}
+            ${_fila('Ciudad', esc(_ccLocProv(cli)))}
+            ${_fila('Cond.Pago', esc(facConpagDesc(cli?.CLI_CONPAG||f.fac_conpag||'')))}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+            ${esFactura?_fila('Transporte', esc(facTranspDesc(f.fac_transp||''))):''}
+            ${esFactura?_fila('Fe.Entrega', salEdit, true):''}
+            ${_fila('Vendedor', esc(facVendDesc(f.fac_vend||'')))}
+            ${esFactura?_fila('Comisión', comEdit, true):''}
+          </div>
         </div>
       </div>
       <div style="font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:4px;letter-spacing:1px">ÍTEMS (${items.length})</div>
