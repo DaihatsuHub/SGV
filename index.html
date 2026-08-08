@@ -150,6 +150,7 @@
         <button class="dd-item" id="ddi-rete" onclick="showSubPage('cob','rete')">🧮 Tipo de Retenciones</button>
         <button class="dd-item" id="ddi-cart" onclick="showSubPage('cob','cart')">💼 Cartera de Valores</button>
         <button class="dd-item" id="ddi-listcob" onclick="showSubPage('cob','listcob')">📋 Listado de Cobranzas</button>
+        <button class="dd-item" id="ddi-antig" onclick="showSubPage('cob','antig')">⏳ Antigüedad de Saldos</button>
       </div>
     </div>
     <div class="dd-wrap">
@@ -736,6 +737,23 @@
 </div>
 
 <!-- ══════ COBRANZAS: LISTADO DE COBRANZAS ══════ -->
+<div class="page" id="page-antig">
+  <div class="toolbar">
+    <span style="font-weight:600;font-size:14px;color:var(--acc);margin-right:4px">⏳ Antigüedad de Saldos</span>
+    <label style="font-size:12px;color:var(--t2)">Al</label>
+    <input type="date" class="finp" id="ant-hasta" style="width:150px">
+    <select class="fsel" id="ant-vend" style="min-width:200px"><option value="">Todos los vendedores</option></select>
+    <button class="btn pri" onclick="antConsultar()">🔍 Consultar</button>
+    <button class="btn" onclick="antPrint()">🖨 Imprimir</button>
+    <button class="btn" onclick="antExcel()">📥 Excel</button>
+    <div class="spacer"></div>
+    <span style="font-size:11px;color:var(--t3)">Antigüedad medida desde la fecha de entrega</span>
+  </div>
+  <div class="tbl-wrap">
+    <div id="ant-body" class="tbl-body"><div class="empty" style="margin-top:40px">Tocá Consultar</div></div>
+  </div>
+</div>
+
 <div class="page" id="page-listcob">
   <div class="toolbar">
     <span style="font-weight:600;font-size:14px;color:var(--acc);margin-right:4px">📋 Listado de Cobranzas</span>
@@ -1685,6 +1703,7 @@
 <script src="js/fichacli.js"></script>
 <script src="js/listcob.js"></script>
 <script src="js/ctacte.js"></script>
+<script src="js/antiguedad.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/vmes.js"></script>
 <script src="js/resumen.js"></script>
