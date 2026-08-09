@@ -177,28 +177,23 @@ function imprimirResumen(){
       }
     }
   }
-  const win = window.open('', '_blank');
-  win.document.write(`<html><head><title>Resumen de Stock Valorizado</title><meta charset="utf-8">
-  <style>
-    body{font-family:Arial,sans-serif;font-size:11px;margin:20px}
-    h2{margin:0 0 2px} .sub{color:#666;font-size:11px;margin-bottom:12px}
-    table{width:100%;border-collapse:collapse} td{padding:2px 6px;border-bottom:1px solid #eee}
-    .n{text-align:right;font-family:monospace;white-space:nowrap}
-    tr.c{background:#e8e8e8} tr.r{background:#f3f3f3} tr.m{background:#fafafa}
-    tr.c td{border-top:1px solid #999}
-    .tot{font-weight:bold;border-top:2px solid #000}
-  </style></head><body>
-  <h2>Resumen de Stock Valorizado</h2>
-  <div class="sub">Daihatsu Electronics — ${fecha}</div>
-  <table>
-    <tr style="background:#333;color:#fff"><td>C.Costo</td><td>Marca</td><td>Rubro</td><td>SubR</td><td>Artículo</td><td>Descripción</td><td class="n">Unid</td><td class="n">Costo</td><td class="n">Total</td></tr>
+  sgvPrint({
+    titulo:'Resumen de Stock Valorizado',
+    subtitulo:`Daihatsu Electronics — ${fecha}`,
+    estilos:`
+      tr.c td{background:#dde3ea !important;border-top:1.5px solid #8a9099;font-weight:bold}
+      tr.m td{background:#eaeef3 !important;font-weight:bold}
+      tr.r td{background:#f2f4f7 !important;font-style:italic}
+      tr.tot td{background:#dde3ea !important}
+    `,
+    cuerpo:`<table>
+    <thead><tr><th>C.Costo</th><th>Marca</th><th>Rubro</th><th>SubR</th><th>Artículo</th><th>Descripción</th><th class="n">Unid</th><th class="n">Costo</th><th class="n">Total</th></tr></thead>
+    <tbody>
     ${rows}
     <tr class="tot"><td colspan="6">TOTAL GENERAL</td><td class="n">${_resFmtN(gU)}</td><td></td><td class="n">${_resFmtN2(gT)}</td></tr>
-  </table>
-  </body></html>`);
-  win.document.close();
-  win.focus();
-  setTimeout(()=>win.print(), 300);
+    </tbody>
+  </table>`
+  });
 }
 
 // ── Excel nativo (.xlsx con ExcelJS 4.4.0 desde CDN) ──────
