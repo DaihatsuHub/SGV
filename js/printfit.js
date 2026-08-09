@@ -12,6 +12,11 @@
    El zoom achica proporcionalmente letra y columnas, así que el listado se ve
    igual, sólo que más chico.
 
+   REGLA (Ricardo, Ago 2026): los listados impresos se ven como una planilla de
+   Excel — renglones alternados sombreados (cebra), encabezado gris y fila de
+   totales destacada. Ya viene en los estilos base: no hace falta hacer nada en
+   cada listado, sólo usar sgvPrint().
+
    Uso:
      sgvPrint({
        titulo:   'Listado de Cobranzas',
@@ -35,11 +40,16 @@ function sgvPrintEstilosBase(){
     h3{margin:14px 0 4px;color:#0a58ca;border-bottom:1px solid #ccc;padding-bottom:2px;font-size:13px}
     table{border-collapse:collapse;margin-bottom:8px;width:auto}
     th,td{padding:3px 7px;border-bottom:1px solid #e5e5e5;text-align:left;white-space:nowrap}
-    th{background:#f0f0f0}
+    th{background:#e8eaed;font-weight:bold;border-bottom:1.5px solid #999}
     .n,.r{text-align:right;font-variant-numeric:tabular-nums}
-    tr.tot td,tr.fin td{font-weight:bold;border-top:2px solid #0a58ca}
+    /* Cebra tipo planilla: renglones alternados sombreados */
+    tbody tr:nth-child(even) td, table > tr:nth-child(even) td{background:#f4f5f7}
+    tr.tot td,tr.fin td,tr.ant td{font-weight:bold;border-top:2px solid #0a58ca;background:#e8eaed}
     @media print{
-      th{background:#f0f0f0 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      th{background:#e8eaed !important}
+      tbody tr:nth-child(even) td, table > tr:nth-child(even) td{background:#f4f5f7 !important}
+      tr.tot td,tr.fin td,tr.ant td{background:#e8eaed !important}
       thead{display:table-header-group}
       tr{page-break-inside:avoid}
     }
