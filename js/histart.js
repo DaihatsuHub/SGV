@@ -208,28 +208,32 @@ async function renderHistArt() {
 
 function printHistArt() {
   const body = document.getElementById('histart-body');
-  const table = body.querySelector('table');
-  if(!table) { toast('Primero consultá la historia','err'); return; }
+  const tablaEnPantalla = body.querySelector('table');
+  if(!tablaEnPantalla) { toast('Primero consultá la historia','err'); return; }
+  // Copia limpia: sin los estilos inline del tema oscuro ni el ancho fijo,
+  // para que mande el formato estándar de impresión
+  const table = tablaEnPantalla.cloneNode(true);
+  table.removeAttribute('style');
+  table.querySelector('colgroup')?.remove();
+  table.querySelectorAll('[style]').forEach(el=>el.removeAttribute('style'));
+  // Encabezado propio (en pantalla vive aparte, en histart-hdr)
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th>Fecha</th><th>Comprobante</th><th>Detalle</th>'+
+    '<th class="n">Ingreso</th><th class="n">Egreso</th><th class="n">Stock</th><th class="n">Importe</th></tr>';
+  table.insertBefore(thead, table.firstChild);
+  table.querySelectorAll('tbody td:nth-child(n+4)').forEach(td=>td.className='n');
   const tit = document.getElementById('histart-tit')?.textContent||'Historia por Artículo';
   const hoy = new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
-  const win = window.open('','_blank','width=900,height=700');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${tit}</title><style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial,sans-serif;font-size:9px;color:#000}
-    .hdr{display:flex;justify-content:space-between;margin-bottom:4mm}
-    .hdr h3{font-size:12px}
-    table{width:100%;border-collapse:collapse}
-    thead th{background:#000;color:#fff;padding:3px 5px;text-align:right;font-size:9px}
-    thead th:nth-child(1),thead th:nth-child(2),thead th:nth-child(3){text-align:left}
-    td{padding:2px 5px;border-bottom:1px solid #eee;font-size:9px}
-    tr:nth-child(even) td{background:#f9f9f9}
-    @media print{@page{margin:8mm}body{margin:0}}
-  </style></head><body>
-  <div class="hdr"><h3>${tit}</h3><span>${hoy}</span></div>
-  ${table.outerHTML}
-  </body></html>`);
-  win.document.close();
-  setTimeout(()=>win.print(),500);
+  sgvPrint({
+    titulo:tit,
+    subtitulo:`Daihatsu Electronics — ${hoy}`,
+    estilos:`
+      td:nth-child(4){color:#166534}
+      td:nth-child(5){color:#991b1b}
+      td:nth-child(6){font-weight:bold}
+    `,
+    cuerpo:table.outerHTML
+  });
 }
 
 // ── Sticky header por scroll ──────────────────────────────
