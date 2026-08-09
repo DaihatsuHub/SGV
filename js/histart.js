@@ -219,7 +219,7 @@ function printHistArt() {
 
   const cuerpo = _histFilas.map(f=>{
     const cls = f.tipo==='desp' ? ' class="desp"' : (f.tipo==='nc' ? ' class="nc"' : '');
-    return `<tr><td>${_histFmtFec(f.fec)}</td><td${cls}>${_e(f.comp)}</td><td>${_e(f.det)}</td>`+
+    return `<tr><td>${_histFmtFec(f.fec)}</td><td${cls}>${_e(f.comp)}</td><td>${_e(sgvCorta(f.det))}</td>`+
       `<td class="n ing">${f.ing||''}</td><td class="n egr">${f.egr||''}</td>`+
       `<td class="n stk">${f.stk}</td><td class="n">${f.imp!==null?_histFmt2(f.imp):''}</td></tr>`;
   }).join('');

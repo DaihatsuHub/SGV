@@ -2,6 +2,8 @@
 // SALDOS POR MES — Anticuación de saldos por cliente
 // ═══════════════════════════════════════════════════════════
 
+let _saldoLista = [], _saldoMeses = [], _saldoMonSign = c=>c;
+
 function saldoFmt(v) {
   if(!v || v===0) return '';
   return Math.round(v).toLocaleString('es-AR');
@@ -146,6 +148,8 @@ async function renderSaldos() {
         '<span style="flex:0 0 80px;padding:8px 8px;text-align:right">Cheq.</span>';
     }
 
+    _saldoLista = lista; _saldoMeses = meses; _saldoMonSign = monSign;
+
     let html = '';
     let lastVend = null;
     let rowToggle = false;
@@ -185,39 +189,51 @@ async function renderSaldos() {
   }
 }
 
+// La pantalla arma el listado con divs, así que la impresión se construye
+// desde los datos guardados (_saldoLista), no leyendo el DOM.
 function printSaldos() {
-  const body = document.getElementById('saldo-body');
-  const table = body.querySelector('table');
-  if(!table) { toast('Primero consultá los saldos','err'); return; }
+  if(!_saldoLista.length){ toast('Primero consultá los saldos','err'); return; }
   const hoy = new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
-  const win = window.open('','_blank','width=1100,height=700');
-  const t = table.cloneNode(true);
-  let tog=false, lastC='';
-  t.querySelectorAll('tbody tr').forEach(tr=>{
-    if(tr.querySelector('td[colspan]')) return;
-    const cod = tr.querySelector('td:first-child')?.textContent?.trim()||'';
-    if(cod && cod!==lastC){tog=!tog;lastC=cod;}
-    tr.setAttribute('data-bg', tog?'on':'off');
+  const nM = _saldoMeses.length;
+  const _e = (typeof esc==='function') ? esc : (x=>String(x==null?'':x));
+
+  let cuerpo = '', lastVend = null;
+  const T = { mes:Array(nM).fill(0), otros:0, total:0, cheq:0 };
+  const V = () => ({ mes:Array(nM).fill(0), otros:0, total:0, cheq:0 });
+  let sub = V();
+
+  const filaSub = etiqueta => `<tr class="tot"><td colspan="3">${etiqueta}</td>`+
+    sub.mes.map(v=>`<td class="n">${saldoFmt(v)}</td>`).join('')+
+    `<td class="n">${saldoFmt(sub.otros)}</td><td class="n">${saldoFmt(sub.total)}</td><td class="n">${saldoFmt(sub.cheq)}</td></tr>`;
+
+  _saldoLista.forEach(r => {
+    if(r.vend !== lastVend){
+      if(lastVend !== null){ cuerpo += filaSub('Subtotal vendedor'); sub = V(); }
+      const vObj = (TABLAS['VEND']||[]).find(v=>v.CODIGO===r.vend);
+      const vLabel = vObj ? vObj.CODIGO+' — '+vObj.DETALLE : (r.vend||'Sin vendedor asignado');
+      cuerpo += `<tr class="grp"><td colspan="${3+nM+3}">${_e(vLabel)}</td></tr>`;
+      lastVend = r.vend;
+    }
+    r.mes.forEach((v,i)=>{ sub.mes[i]+=v; T.mes[i]+=v; });
+    sub.otros+=r.otros; sub.total+=r.total; sub.cheq+=r.cheq;
+    T.otros+=r.otros;   T.total+=r.total;   T.cheq+=r.cheq;
+    cuerpo += `<tr><td>${_e(r.cod)}</td><td>${_e(sgvCorta(r.razon))}</td><td>${_e(_saldoMonSign(r.mon))}</td>`+
+      r.mes.map(v=>`<td class="n">${saldoFmt(v)}</td>`).join('')+
+      `<td class="n">${saldoFmt(r.otros)}</td><td class="n"><b>${saldoFmt(r.total)}</b></td><td class="n">${saldoFmt(r.cheq)}</td></tr>`;
   });
-  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Saldos por Mes</title><style>' +
-    '*{box-sizing:border-box;margin:0;padding:0}' +
-    'body{font-family:Arial,sans-serif;font-size:9px;color:#000}' +
-    '.hdr{display:flex;justify-content:space-between;margin-bottom:3mm}' +
-    '.hdr h3{font-size:12px}' +
-    'table{width:100%;border-collapse:collapse}' +
-    'thead th{background:#000;color:#fff;padding:3px 5px;text-align:right;font-size:9px}' +
-    'thead th:nth-child(1),thead th:nth-child(2){text-align:left}' +
-    'td{padding:2px 5px;border-bottom:1px solid #eee;font-size:9px}' +
-    'tr[data-bg="on"] td{background:#eef2ff}' +
-    'tr[data-bg="off"] td{background:#fff}' +
-    'tr.sep-vend td{background:#000!important;height:4px;padding:0;border:none}' +
-    'tr td[colspan]{background:#ddd!important;font-weight:700;font-size:10px;padding:4px 5px;border-top:3px solid #000}' +
-    '@media print{@page{margin:8mm}body{margin:0}}' +
-    '</style></head><body>' +
-    '<div class="hdr"><h3>Saldos por Mes — ' + hoy + '</h3><span id="pnum" style="font-size:9px;color:#555"></span></div>' +
-    t.outerHTML +
-    '<script>window.onbeforeprint=function(){document.getElementById("pnum").textContent="Hoja: 1";};<\/script>' +
-    '</body></html>');
-  win.document.close();
-  setTimeout(()=>win.print(),600);
+  if(lastVend !== null) cuerpo += filaSub('Subtotal vendedor');
+
+  const cab = `<tr><th>Cód</th><th>Razón Social</th><th>Mon</th>`+
+    _saldoMeses.map(m=>`<th class="n">${m.label}</th>`).join('')+
+    `<th class="n">Antes</th><th class="n">Total</th><th class="n">Cheq.</th></tr>`;
+  const totGral = `<tr class="fin"><td colspan="3"><b>TOTAL GENERAL</b></td>`+
+    T.mes.map(v=>`<td class="n"><b>${saldoFmt(v)}</b></td>`).join('')+
+    `<td class="n"><b>${saldoFmt(T.otros)}</b></td><td class="n"><b>${saldoFmt(T.total)}</b></td><td class="n"><b>${saldoFmt(T.cheq)}</b></td></tr>`;
+
+  sgvPrint({
+    titulo:'Saldos por Mes',
+    subtitulo:`Daihatsu Electronics — ${hoy} · ${_saldoLista.length} cliente(s)`,
+    estilos:`tr.grp td{background:#dde3ea !important;font-weight:bold;border-top:2px solid #8a9099}`,
+    cuerpo:`<table><thead>${cab}</thead><tbody>${cuerpo}${totGral}</tbody></table>`
+  });
 }

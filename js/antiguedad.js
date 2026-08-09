@@ -76,7 +76,7 @@ function renderAnt(){
       const neg=f.total<0;
       return `<div class="an-row">
         <span class="an-cod">${_anEsc(f.cliente)}</span>
-        <span class="an-cli" title="${_anEsc(_anCliNom(f.cliente))}">${_anEsc(_anCliNom(f.cliente))}</span>
+        <span class="an-cli" title="${_anEsc(_anCliNom(f.cliente))}">${_anEsc(sgvCorta(_anCliNom(f.cliente)))}</span>
         <span class="an-vend">${_anEsc(_anVend(f))}</span>
         <span class="an-num">${_anFmt(f.t1)}</span>
         <span class="an-num">${_anFmt(f.t2)}</span>
@@ -148,7 +148,7 @@ function antPrint(){
     const T=(_antData.totales||{})[m]||{};
     let f='';
     porMon[m].forEach(x=>{
-      f+=`<tr><td>${_anEsc(x.cliente)}</td><td>${_anEsc(_anCliNom(x.cliente))}</td><td>${_anEsc(_anVend(x))}</td>
+      f+=`<tr><td>${_anEsc(x.cliente)}</td><td>${_anEsc(sgvCorta(_anCliNom(x.cliente)))}</td><td>${_anEsc(_anVend(x))}</td>
         <td class="r">${_anFmt(x.t1)}</td><td class="r">${_anFmt(x.t2)}</td>
         <td class="r">${_anFmt(x.t3)}</td><td class="r">${_anFmt(x.t4)}</td>
         <td class="r"><b>${_anFmt(x.total)}</b></td></tr>`;

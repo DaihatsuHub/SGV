@@ -123,7 +123,7 @@ function _lcobPintar(){
       <span style="color:var(--t2);font-family:var(--mono)">${_lcobFecha(x.rec.fecha)}</span>
       <span style="font-family:var(--mono);color:var(--acc)">${esc(_lcobRecNum(x.rec))}</span>
       <span style="font-family:var(--mono);color:var(--t2)">${esc((x.rec.cliente||'').trim())}</span>
-      <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(_lcobCliRazon(x.rec.cliente))}</span>
+      <span title="${esc(_lcobCliRazon(x.rec.cliente))}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sgvCorta(_lcobCliRazon(x.rec.cliente)))}</span>
       <span style="font-family:var(--mono);color:var(--t2)">${esc(_lcobVend(x.rec.cliente))}</span>
       ${numCell(x.ins.efectivo)}${numCell(x.ins.transf)}${numCell(x.ins.cheqF)}${numCell(x.ins.cheqE)}
       ${RC.map(c=>numCell(_lcobRetVal(x.ins,c.key))).join('')}
@@ -217,7 +217,7 @@ function lcobPrint(){
   for(const r of rows){
     T.e+=r.efectivo;T.t+=r.transf;T.cf+=r.cheqF;T.ce+=r.cheqE;T.a+=r.ajuste;T.tot+=r.total;
     RT.forEach(k=>{ T.rets[k]=(T.rets[k]||0)+(k==='__TOT__'?(r.retenc||0):(r.rets[k]||0)); });
-    cuerpo+=`<tr><td>${r.fecha}</td><td>${_e(r.recibo)}</td><td>${_e(r.codigo)}</td><td>${_e(r.razon)}</td><td>${_e(r.vend)}</td>`
+    cuerpo+=`<tr><td>${r.fecha}</td><td>${_e(r.recibo)}</td><td>${_e(r.codigo)}</td><td>${_e(sgvCorta(r.razon))}</td><td>${_e(r.vend)}</td>`
       +`<td class="n">${_lcobFmt(r.efectivo)}</td><td class="n">${_lcobFmt(r.transf)}</td><td class="n">${_lcobFmt(r.cheqF)}</td><td class="n">${_lcobFmt(r.cheqE)}</td>`
       +RT.map(k=>`<td class="n">${_lcobFmt(k==='__TOT__'?(r.retenc||0):(r.rets[k]||0))}</td>`).join('')
       +`<td class="n">${_lcobFmt(r.ajuste)}</td><td class="n"><b>${_lcobFmt0(r.total)}</b></td></tr>`;

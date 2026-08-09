@@ -35,25 +35,37 @@ function sgvPrintEstilosBase(){
   return `
     *{box-sizing:border-box}
     body{font-family:Arial,sans-serif;font-size:11px;margin:0;color:#111;display:inline-block}
-    h2{margin:0 0 2px;font-size:16px}
-    .sub{color:#666;font-size:11px;margin-bottom:10px}
-    h3{margin:14px 0 4px;color:#0a58ca;border-bottom:1px solid #ccc;padding-bottom:2px;font-size:13px}
+    h2{margin:0 0 2px;font-size:1.5em}
+    .sub{color:#666;font-size:1em;margin-bottom:10px}
+    h3{margin:14px 0 4px;color:#0a58ca;border-bottom:1px solid #ccc;padding-bottom:2px;font-size:1.2em}
     table{border-collapse:collapse;margin-bottom:8px;width:auto}
-    th,td{padding:3px 7px;border-bottom:1px solid #e5e5e5;text-align:left;white-space:nowrap}
+    /* padding en em: al achicar la letra, achican también las celdas */
+    th,td{padding:.28em .62em;border-bottom:1px solid #e5e5e5;text-align:left;white-space:nowrap}
     th{background:#e8eaed;font-weight:bold;border-bottom:1.5px solid #999}
     .n,.r{text-align:right;font-variant-numeric:tabular-nums}
     /* Cebra tipo planilla: renglones alternados sombreados */
     tbody tr:nth-child(even) td, table > tr:nth-child(even) td{background:#f4f5f7}
     tr.tot td,tr.fin td,tr.ant td{font-weight:bold;border-top:2px solid #0a58ca;background:#e8eaed}
+    /* Nunca partir un renglón entre dos hojas */
+    tr{page-break-inside:avoid;break-inside:avoid}
+    thead{display:table-header-group}
+    tfoot{display:table-footer-group}
     @media print{
       *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
       th{background:#e8eaed !important}
       tbody tr:nth-child(even) td, table > tr:nth-child(even) td{background:#f4f5f7 !important}
       tr.tot td,tr.fin td,tr.ant td{background:#e8eaed !important}
-      thead{display:table-header-group}
-      tr{page-break-inside:avoid}
     }
   `;
+}
+
+// Recorta un texto largo (razón social, descripción) para que no estire la
+// tabla. REGLA (Ricardo, Ago 2026): la razón social se limita a 30 caracteres
+// en TODOS los listados, en pantalla y en impresión.
+function sgvCorta(txt, n){
+  const t = String(txt==null ? '' : txt).trim();
+  const max = n || 30;
+  return t.length > max ? t.substring(0, max).trim() + '…' : t;
 }
 
 function sgvPrint(opt){
@@ -63,9 +75,8 @@ function sgvPrint(opt){
 
   const ajuste = `
     (function(){
-      var W_V=${SGV_PRINT_W.vertical}, W_H=${SGV_PRINT_W.apaisado}, ZMIN=${SGV_PRINT_ZOOM_MIN};
+      var W_V=${SGV_PRINT_W.vertical}, W_H=${SGV_PRINT_W.apaisado}, ZMIN=${SGV_PRINT_ZOOM_MIN}, BASE_FS=11;
       function natural(){
-        document.body.style.zoom='';
         var w=document.body.scrollWidth;
         var ts=document.querySelectorAll('table');
         for(var i=0;i<ts.length;i++){ if(ts[i].scrollWidth>w) w=ts[i].scrollWidth; }
@@ -74,20 +85,27 @@ function sgvPrint(opt){
       function apaisar(){
         document.getElementById('sgv-page').textContent='@page{size:A4 landscape;margin:10mm}';
       }
-      function ajustar(){
+      // Escala por FONT-SIZE, no por zoom: el zoom hace que el navegador
+      // calcule mal los saltos de página y parta renglones al medio.
+      function achicarHasta(target){
+        var fs=BASE_FS;
+        document.body.style.fontSize=fs+'px';
         var nat=natural();
-        var target=W_V, z = nat>target ? target/nat : 1;
-
-        // Si para entrar en vertical hay que achicar demasiado, girar la hoja
-        if(z < ZMIN){
-          apaisar();
-          target=W_H;
-          z = nat>target ? target/nat : 1;
+        while(nat>target && fs>BASE_FS*ZMIN){
+          fs=Math.round((fs-0.25)*100)/100;
+          document.body.style.fontSize=fs+'px';
+          nat=natural();
         }
-        if(z < 1) document.body.style.zoom = z;
-
-        // Si entra cómodo, que la tabla ocupe todo el ancho de la hoja
-        if(z === 1 && nat < target){
+        return { fs:fs, nat:nat, entra: nat<=target };
+      }
+      function ajustar(){
+        var r=achicarHasta(W_V);
+        if(!r.entra){                 // no entra en vertical ni achicado: girar
+          apaisar();
+          r=achicarHasta(W_H);
+        }
+        var apais = document.getElementById('sgv-page').textContent.indexOf('landscape')>=0;
+        if(r.nat < (apais?W_H:W_V)){
           var ts=document.querySelectorAll('table');
           for(var i=0;i<ts.length;i++) ts[i].style.width='100%';
         }

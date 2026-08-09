@@ -391,7 +391,7 @@ function cartPrint(){
   let tot=0, body='';
   for(const r of rows){
     tot+=r.importe;
-    body+=`<tr><td>${r.fecha}</td><td>${_e(r.numero)}</td><td>${_e(r.codigo)}</td><td>${_e(r.cliente)}</td><td>${_e(r.empresa)}</td><td>${r.tipo}</td><td style="text-align:center">${r.propio}</td><td>${_e(r.estado)}</td><td>${r.fsal}</td><td>${_e(r.recibo)}</td><td>${_e(r.obs)}</td><td class="n">${_cartFmt(r.importe)}</td></tr>`;
+    body+=`<tr><td>${r.fecha}</td><td>${_e(r.numero)}</td><td>${_e(r.codigo)}</td><td>${_e(sgvCorta(r.cliente))}</td><td>${_e(r.empresa)}</td><td>${r.tipo}</td><td style="text-align:center">${r.propio}</td><td>${_e(r.estado)}</td><td>${r.fsal}</td><td>${_e(r.recibo)}</td><td>${_e(r.obs)}</td><td class="n">${_cartFmt(r.importe)}</td></tr>`;
   }
   const fecha=new Date().toLocaleDateString('es-AR');
   sgvPrint({
