@@ -29,7 +29,7 @@ function _lcobVend(cod){
 // Plantilla de columnas: se arma según cuántas retenciones haya
 function _lcobTpl(){
   const rets=_lcobRetCols().map(()=>'95px').join(' ');
-  return `display:grid;grid-template-columns:85px 115px minmax(180px,1fr) 55px 100px 100px 100px 100px ${rets} 95px 120px;gap:6px;align-items:center`;
+  return `display:grid;grid-template-columns:85px 115px 60px minmax(170px,1fr) 55px 100px 100px 100px 100px ${rets} 95px 120px;gap:6px;align-items:center`;
 }
 
 function _lcobFecha(f){
@@ -122,7 +122,8 @@ function _lcobPintar(){
     <div style="${TPL};padding:6px 12px;border-bottom:1px solid var(--b1);font-size:13px">
       <span style="color:var(--t2);font-family:var(--mono)">${_lcobFecha(x.rec.fecha)}</span>
       <span style="font-family:var(--mono);color:var(--acc)">${esc(_lcobRecNum(x.rec))}</span>
-      <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(_lcobCli(x.rec.cliente))}</span>
+      <span style="font-family:var(--mono);color:var(--t2)">${esc((x.rec.cliente||'').trim())}</span>
+      <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(_lcobCliRazon(x.rec.cliente))}</span>
       <span style="font-family:var(--mono);color:var(--t2)">${esc(_lcobVend(x.rec.cliente))}</span>
       ${numCell(x.ins.efectivo)}${numCell(x.ins.transf)}${numCell(x.ins.cheqF)}${numCell(x.ins.cheqE)}
       ${RC.map(c=>numCell(_lcobRetVal(x.ins,c.key))).join('')}
@@ -130,7 +131,7 @@ function _lcobPintar(){
       <span style="text-align:right;font-family:var(--mono);font-weight:700">${_lcobFmt0(x.total)}</span>
     </div>`).join('')
     + `<div style="${TPL};padding:9px 12px;border-top:2px solid var(--b1);font-weight:700;font-family:var(--mono)">
-        <span></span><span></span><span style="text-align:right">TOTALES (${_lcobRows.length})</span><span></span>
+        <span></span><span></span><span></span><span style="text-align:right">TOTALES (${_lcobRows.length})</span><span></span>
         <span style="text-align:right">${_lcobFmt0(T.efectivo)}</span>
         <span style="text-align:right">${_lcobFmt0(T.transf)}</span>
         <span style="text-align:right">${_lcobFmt0(T.cheqF)}</span>
@@ -145,7 +146,7 @@ function _lcobPintar(){
 function _lcobHead(){
   const th=document.querySelector('#page-listcob .th-tab'); if(!th) return;
   th.setAttribute('style', _lcobTpl()+';padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--b1);font-size:11px;color:var(--t2)');
-  th.innerHTML=`<span>Fecha</span><span>Recibo</span><span>Cliente</span><span>Vend</span>`+
+  th.innerHTML=`<span>Fecha</span><span>Recibo</span><span>Cód</span><span>Cliente</span><span>Vend</span>`+
     `<span style="text-align:right">Efectivo</span><span style="text-align:right">Transfer.</span><span style="text-align:right">Cheque</span><span style="text-align:right">Echeq</span>`+
     _lcobRetCols().map(c=>`<span style="text-align:right" title="Retención ${esc(c.label)}">${esc(c.label)}</span>`).join('')+
     `<span style="text-align:right">Ajuste</span><span style="text-align:right">Total</span>`;
@@ -216,7 +217,7 @@ function lcobPrint(){
   for(const r of rows){
     T.e+=r.efectivo;T.t+=r.transf;T.cf+=r.cheqF;T.ce+=r.cheqE;T.a+=r.ajuste;T.tot+=r.total;
     RT.forEach(k=>{ T.rets[k]=(T.rets[k]||0)+(k==='__TOT__'?(r.retenc||0):(r.rets[k]||0)); });
-    cuerpo+=`<tr><td>${r.fecha}</td><td>${_e(r.recibo)}</td><td>${_e(r.codigo)} ${_e(r.razon)}</td><td>${_e(r.vend)}</td>`
+    cuerpo+=`<tr><td>${r.fecha}</td><td>${_e(r.recibo)}</td><td>${_e(r.codigo)}</td><td>${_e(r.razon)}</td><td>${_e(r.vend)}</td>`
       +`<td class="n">${_lcobFmt(r.efectivo)}</td><td class="n">${_lcobFmt(r.transf)}</td><td class="n">${_lcobFmt(r.cheqF)}</td><td class="n">${_lcobFmt(r.cheqE)}</td>`
       +RT.map(k=>`<td class="n">${_lcobFmt(k==='__TOT__'?(r.retenc||0):(r.rets[k]||0))}</td>`).join('')
       +`<td class="n">${_lcobFmt(r.ajuste)}</td><td class="n"><b>${_lcobFmt0(r.total)}</b></td></tr>`;
@@ -225,11 +226,10 @@ function lcobPrint(){
   sgvPrint({
     titulo:'Listado de Cobranzas',
     subtitulo:`Daihatsu Electronics — ${new Date().toLocaleDateString('es-AR')}${periodo} · ${rows.length} recibo(s)`,
-    apaisado:true,
     cuerpo:`<table>
-    <tr><th>Fecha</th><th>Recibo</th><th>Cliente</th><th>Vend</th><th class="n">Efectivo</th><th class="n">Transfer.</th><th class="n">Cheque</th><th class="n">Echeq</th>${RC.map(c=>`<th class="n">${_e(c.label)}</th>`).join('')}<th class="n">Ajuste</th><th class="n">Total</th></tr>
+    <tr><th>Fecha</th><th>Recibo</th><th>Cód</th><th>Cliente</th><th>Vend</th><th class="n">Efectivo</th><th class="n">Transfer.</th><th class="n">Cheque</th><th class="n">Echeq</th>${RC.map(c=>`<th class="n">${_e(c.label)}</th>`).join('')}<th class="n">Ajuste</th><th class="n">Total</th></tr>
     ${cuerpo}
-    <tr class="tot"><td colspan="4">TOTALES</td><td class="n">${_lcobFmt0(T.e)}</td><td class="n">${_lcobFmt0(T.t)}</td><td class="n">${_lcobFmt0(T.cf)}</td><td class="n">${_lcobFmt0(T.ce)}</td>${RC.map(c=>`<td class="n">${_lcobFmt0(T.rets[c.key]||0)}</td>`).join('')}<td class="n">${_lcobFmt0(T.a)}</td><td class="n">${_lcobFmt0(T.tot)}</td></tr>
+    <tr class="tot"><td colspan="5">TOTALES</td><td class="n">${_lcobFmt0(T.e)}</td><td class="n">${_lcobFmt0(T.t)}</td><td class="n">${_lcobFmt0(T.cf)}</td><td class="n">${_lcobFmt0(T.ce)}</td>${RC.map(c=>`<td class="n">${_lcobFmt0(T.rets[c.key]||0)}</td>`).join('')}<td class="n">${_lcobFmt0(T.a)}</td><td class="n">${_lcobFmt0(T.tot)}</td></tr>
   </table>`
   });
 }

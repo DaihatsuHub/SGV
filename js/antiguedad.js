@@ -75,7 +75,8 @@ function renderAnt(){
     const rows=lista.map(f=>{
       const neg=f.total<0;
       return `<div class="an-row">
-        <span class="an-cli" title="${_anEsc(f.cliente+' — '+_anCliNom(f.cliente))}">${_anEsc(f.cliente)} ${_anEsc(_anCliNom(f.cliente))}</span>
+        <span class="an-cod">${_anEsc(f.cliente)}</span>
+        <span class="an-cli" title="${_anEsc(_anCliNom(f.cliente))}">${_anEsc(_anCliNom(f.cliente))}</span>
         <span class="an-vend">${_anEsc(_anVend(f))}</span>
         <span class="an-num">${_anFmt(f.t1)}</span>
         <span class="an-num">${_anFmt(f.t2)}</span>
@@ -89,7 +90,7 @@ function renderAnt(){
         <div class="an-mon-tit">${_anMonLabel(m)} <span style="opacity:.6">(${sim})</span>
           <span style="font-size:11px;font-weight:400;color:var(--t2);margin-left:8px">${lista.length} cliente${lista.length===1?'':'s'}</span></div>
         <div class="an-head">
-          <span>Cliente</span><span>Vend</span>
+          <span>Cód</span><span>Cliente</span><span>Vend</span>
           <span class="an-num">0 a 30</span><span class="an-num">31 a 60</span>
           <span class="an-num">61 a 90</span><span class="an-num">+90</span>
           <span class="an-num">Total</span>
@@ -98,7 +99,7 @@ function renderAnt(){
       <div class="an-grid">
         ${rows}
         <div class="an-row an-fin">
-          <span><b>Total ${_anMonLabel(m)}</b></span><span></span>
+          <span></span><span><b>Total ${_anMonLabel(m)}</b></span><span></span>
           <span class="an-num"><b>${_anFmt(T.t1)}</b></span>
           <span class="an-num"><b>${_anFmt(T.t2)}</b></span>
           <span class="an-num an-w"><b>${_anFmt(T.t3)}</b></span>
@@ -121,8 +122,8 @@ function _anInjectStyle(){
     .an-stickyhead{position:sticky;top:0;z-index:5}
     .an-mon-tit{font-size:14px;font-weight:700;color:var(--acc);padding:6px 10px;background:var(--s2);border-bottom:2px solid var(--acc)}
     .an-grid{border:1px solid var(--b1);border-top:none}
-    .an-head,.an-row{display:grid;grid-template-columns:minmax(200px,1fr) 55px 120px 120px 120px 120px 140px;gap:6px;padding:5px 10px;align-items:center}
-    .an-vend{font-family:var(--mono);color:var(--t2);font-size:12px}
+    .an-head,.an-row{display:grid;grid-template-columns:60px minmax(170px,1fr) 55px 120px 120px 120px 120px 140px;gap:6px;padding:5px 10px;align-items:center}
+    .an-vend,.an-cod{font-family:var(--mono);color:var(--t2);font-size:12px}
     .an-head{background:var(--s2);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1)}
     .an-row{font-size:13px;border-bottom:1px solid var(--b1);background:var(--bg)}
     .an-row:hover{background:var(--s2)}
@@ -147,20 +148,19 @@ function antPrint(){
     const T=(_antData.totales||{})[m]||{};
     let f='';
     porMon[m].forEach(x=>{
-      f+=`<tr><td>${_anEsc(x.cliente)} ${_anEsc(_anCliNom(x.cliente))}</td><td>${_anEsc(_anVend(x))}</td>
+      f+=`<tr><td>${_anEsc(x.cliente)}</td><td>${_anEsc(_anCliNom(x.cliente))}</td><td>${_anEsc(_anVend(x))}</td>
         <td class="r">${_anFmt(x.t1)}</td><td class="r">${_anFmt(x.t2)}</td>
         <td class="r">${_anFmt(x.t3)}</td><td class="r">${_anFmt(x.t4)}</td>
         <td class="r"><b>${_anFmt(x.total)}</b></td></tr>`;
     });
-    f+=`<tr class="fin"><td><b>Total</b></td><td></td><td class="r"><b>${_anFmt(T.t1)}</b></td><td class="r"><b>${_anFmt(T.t2)}</b></td>
+    f+=`<tr class="fin"><td></td><td><b>Total</b></td><td></td><td class="r"><b>${_anFmt(T.t1)}</b></td><td class="r"><b>${_anFmt(T.t2)}</b></td>
         <td class="r"><b>${_anFmt(T.t3)}</b></td><td class="r"><b>${_anFmt(T.t4)}</b></td><td class="r"><b>${_anFmt(T.total)}</b></td></tr>`;
     cuerpo+=`<h3>${_anMonLabel(m)} (${_anMonSim(m)})</h3>
-      <table><thead><tr><th>Cliente</th><th>Vend</th><th class="r">0 a 30</th><th class="r">31 a 60</th><th class="r">61 a 90</th><th class="r">+90</th><th class="r">Total</th></tr></thead><tbody>${f}</tbody></table>`;
+      <table><thead><tr><th>Cód</th><th>Cliente</th><th>Vend</th><th class="r">0 a 30</th><th class="r">31 a 60</th><th class="r">61 a 90</th><th class="r">+90</th><th class="r">Total</th></tr></thead><tbody>${f}</tbody></table>`;
   }
   sgvPrint({
     titulo:'Antigüedad de Saldos',
     subtitulo:`Al ${_anFecha(_antData.hasta)} — antigüedad medida desde la fecha de entrega`,
-    apaisado:true,
     cuerpo:cuerpo
   });
 }
@@ -177,10 +177,10 @@ async function antExcel(){
   if(!_antData){ if(typeof toast==='function') toast('Consultá primero','err'); return; }
   let ExcelJS; try{ ExcelJS=await _anLoadExcelJS(); }catch(e){ if(typeof toast==='function') toast(e.message,'err'); return; }
   const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('Antiguedad');
-  ws.columns=[{width:42},{width:7},{width:16},{width:16},{width:16},{width:16},{width:18}];
-  const t=ws.addRow(['Antigüedad de Saldos']); t.font={bold:true,size:13}; ws.mergeCells(t.number,1,t.number,7);
+  ws.columns=[{width:10},{width:36},{width:7},{width:16},{width:16},{width:16},{width:16},{width:18}];
+  const t=ws.addRow(['Antigüedad de Saldos']); t.font={bold:true,size:13}; ws.mergeCells(t.number,1,t.number,8);
   const s=ws.addRow([`Al ${_anFecha(_antData.hasta)} — desde la fecha de entrega`]);
-  s.font={italic:true,color:{argb:'FF666666'}}; ws.mergeCells(s.number,1,s.number,7);
+  s.font={italic:true,color:{argb:'FF666666'}}; ws.mergeCells(s.number,1,s.number,8);
   ws.addRow([]);
   const NUM='#,##0.00';
   const filas=_antData.filas||[];
@@ -188,17 +188,17 @@ async function antExcel(){
   const claves=Object.keys(porMon).sort((a,b)=>(a==='P'?-1:b==='P'?1:0)||a.localeCompare(b));
   for(const m of claves){
     const rm=ws.addRow([_anMonLabel(m)+' ('+_anMonSim(m)+')']);
-    rm.font={bold:true,size:12,color:{argb:'FF0A58CA'}}; ws.mergeCells(rm.number,1,rm.number,7);
-    const hr=ws.addRow(['Cliente','Vend','0 a 30','31 a 60','61 a 90','+90','Total']);
+    rm.font={bold:true,size:12,color:{argb:'FF0A58CA'}}; ws.mergeCells(rm.number,1,rm.number,8);
+    const hr=ws.addRow(['Cód','Cliente','Vend','0 a 30','31 a 60','61 a 90','+90','Total']);
     hr.eachCell(c=>{ c.font={bold:true}; c.alignment={horizontal:'center'}; c.border={bottom:{style:'thin'}}; });
     porMon[m].forEach(x=>{
-      const r=ws.addRow([x.cliente+' '+_anCliNom(x.cliente), _anVend(x), x.t1||null, x.t2||null, x.t3||null, x.t4||null, x.total]);
-      for(let i=3;i<=7;i++) r.getCell(i).numFmt=NUM;
+      const r=ws.addRow([x.cliente, _anCliNom(x.cliente), _anVend(x), x.t1||null, x.t2||null, x.t3||null, x.t4||null, x.total]);
+      for(let i=4;i<=8;i++) r.getCell(i).numFmt=NUM;
     });
     const T=(_antData.totales||{})[m]||{};
-    const fr=ws.addRow(['Total', '', T.t1||null, T.t2||null, T.t3||null, T.t4||null, T.total||0]);
+    const fr=ws.addRow(['', 'Total', '', T.t1||null, T.t2||null, T.t3||null, T.t4||null, T.total||0]);
     fr.eachCell(c=>{ c.font={bold:true}; c.border={top:{style:'medium',color:{argb:'FF0A58CA'}}}; });
-    for(let i=3;i<=7;i++) fr.getCell(i).numFmt=NUM;
+    for(let i=4;i<=8;i++) fr.getCell(i).numFmt=NUM;
     ws.addRow([]);
   }
   const buf=await wb.xlsx.writeBuffer();

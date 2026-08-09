@@ -12,8 +12,12 @@
        subtitulo:'Daihatsu Electronics — 09/08/2026 · 42 recibos',
        cuerpo:   '<table>…</table>',
        estilos:  'td.x{color:red}',     // opcional, se suma a los de base
-       apaisado: true                   // opcional (default: false = vertical)
+       apaisado: true                   // opcional — NO usarlo salvo caso muy puntual
      });
+
+   REGLA GENERAL (Ricardo, Ago 2026): todos los listados se imprimen en
+   A4 VERTICAL. Si no entran, primero se achica la letra; recién si aun así
+   no entran, la hoja gira sola a apaisado. No forzar apaisado de entrada.
    =========================================================================== */
 
 // Ancho imprimible en px (96 dpi) de una A4 con márgenes de 10 mm
