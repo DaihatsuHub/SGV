@@ -26,8 +26,12 @@
      });
    =========================================================================== */
 
-// Ancho imprimible en px (96 dpi) de una A4 con márgenes de 10 mm
-const SGV_PRINT_W = { vertical: 718, apaisado: 1047 };
+// Ancho imprimible en px (96 dpi) con márgenes de 10 mm.
+// Se toma el MENOR entre A4 y Carta, así el listado entra sin importar cuál
+// tenga elegida el navegador (Chrome recuerda el último tamaño usado):
+//   vertical  → A4 210mm - 20mm = 190mm ≈ 718px  (Carta da 196mm, más ancha)
+//   apaisado  → Carta 279mm - 20mm = 259mm ≈ 979px  (A4 da 277mm, más ancha)
+const SGV_PRINT_W = { vertical: 718, apaisado: 979 };
 // Por debajo de esto la letra ya no se lee: antes de achicar más, gira la hoja
 const SGV_PRINT_ZOOM_MIN = 0.62;
 
