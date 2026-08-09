@@ -118,7 +118,32 @@ function sgvPrint(opt){
           for(var i=0;i<ts.length;i++) ts[i].style.width='100%';
         }
       }
-      window.onload=function(){ ajustar(); setTimeout(function(){ window.print(); }, 150); };
+      // Diagnóstico: mide cuántos renglones entran en la primera hoja
+      function diagnostico(){
+        var d=document.getElementById('sgv-diag'); if(!d) return;
+        var apais=document.getElementById('sgv-page').textContent.indexOf('landscape')>=0;
+        var target=apais?W_H:W_V;
+        var trs=document.querySelectorAll('table tr');
+        // Alto imprimible: A4 vertical 277mm, apaisado (Carta) 196mm, a 96dpi
+        var altoHoja = apais ? 741 : 1047;
+        var top0 = trs.length ? trs[0].getBoundingClientRect().top : 0;
+        var enHoja1 = 0;
+        for(var i=0;i<trs.length;i++){
+          var r=trs[i].getBoundingClientRect();
+          if(r.bottom - top0 > altoHoja) break;
+          enHoja1++;
+        }
+        var altoFila = trs.length>1
+          ? Math.round((trs[1].getBoundingClientRect().bottom - trs[1].getBoundingClientRect().top)*10)/10
+          : 0;
+        d.textContent = 'DIAG · hoja: '+(apais?'APAISADA':'VERTICAL')
+          + ' · ancho tabla: '+Math.round(natural())+'px de '+target+'px'
+          + ' · letra: '+document.body.style.fontSize
+          + ' · alto fila: '+altoFila+'px'
+          + ' · renglones totales: '+trs.length
+          + ' · entran en hoja 1: '+enHoja1;
+      }
+      window.onload=function(){ ajustar(); diagnostico(); setTimeout(function(){ window.print(); }, 150); };
     })();
   `;
 
@@ -129,6 +154,7 @@ function sgvPrint(opt){
     (o.titulo ? '<h2>' + o.titulo + '</h2>' : '') +
     (o.subtitulo ? '<div class="sub">' + o.subtitulo + '</div>' : '') +
     (o.cuerpo || '') +
+    '<div id="sgv-diag" style="margin-top:10px;font-size:9px;color:#b45309;border-top:1px dashed #b45309;padding-top:4px"></div>' +
     '<' + 'script>' + ajuste + '<' + '/script>' +
     '</body></html>'
   );
