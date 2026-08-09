@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 
 let _histArtCod = '';
+let _histFilas = [], _histInfo = { cod:'', des:'' };   // datos del último listado (para imprimir / Excel)
 
 function histArtBusq() {
   const q = (document.getElementById('histart-q')?.value||'').toLowerCase().trim();
@@ -37,7 +38,7 @@ function histArtSeleccionar(cod) {
 }
 
 function histArtLimpiar() {
-  _histArtCod = '';
+  _histArtCod = ''; _histFilas = []; _histInfo = { cod:'', des:'' };
   const el = document.getElementById('histart-q');
   if(el) { el.value=''; el.focus(); }
   const clr = document.getElementById('histart-clr');
@@ -149,6 +150,7 @@ async function renderHistArt() {
     // Calcular stock acumulado
     let stk = 0;
     filas.forEach(f => { stk += f.ing - f.egr; f.stk = stk; });
+    _histFilas = filas; _histInfo = { cod, des: artDes };
 
     // Render tabla
     const fmtN2 = v => v===0||v===null||v===undefined?'':Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -206,34 +208,99 @@ async function renderHistArt() {
   }
 }
 
+// Impresión y Excel se arman desde _histFilas, no leyendo el DOM
+function _histFmtFec(s){ return s ? s.substring(0,10).split('-').reverse().join('/') : ''; }
+function _histFmt2(v){ return (v===0||v===null||v===undefined) ? '' : Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
 function printHistArt() {
-  const body = document.getElementById('histart-body');
-  const tablaEnPantalla = body.querySelector('table');
-  if(!tablaEnPantalla) { toast('Primero consultá la historia','err'); return; }
-  // Copia limpia: sin los estilos inline del tema oscuro ni el ancho fijo,
-  // para que mande el formato estándar de impresión
-  const table = tablaEnPantalla.cloneNode(true);
-  table.removeAttribute('style');
-  table.querySelector('colgroup')?.remove();
-  table.querySelectorAll('[style]').forEach(el=>el.removeAttribute('style'));
-  // Encabezado propio (en pantalla vive aparte, en histart-hdr)
-  const thead = document.createElement('thead');
-  thead.innerHTML = '<tr><th>Fecha</th><th>Comprobante</th><th>Detalle</th>'+
-    '<th class="n">Ingreso</th><th class="n">Egreso</th><th class="n">Stock</th><th class="n">Importe</th></tr>';
-  table.insertBefore(thead, table.firstChild);
-  table.querySelectorAll('tbody td:nth-child(n+4)').forEach(td=>td.className='n');
-  const tit = document.getElementById('histart-tit')?.textContent||'Historia por Artículo';
+  if(!_histFilas.length){ toast('Primero consultá la historia','err'); return; }
+  const _e = (typeof esc==='function') ? esc : (x=>String(x==null?'':x));
   const hoy = new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  const cuerpo = _histFilas.map(f=>{
+    const cls = f.tipo==='desp' ? ' class="desp"' : (f.tipo==='nc' ? ' class="nc"' : '');
+    return `<tr><td>${_histFmtFec(f.fec)}</td><td${cls}>${_e(f.comp)}</td><td>${_e(f.det)}</td>`+
+      `<td class="n ing">${f.ing||''}</td><td class="n egr">${f.egr||''}</td>`+
+      `<td class="n stk">${f.stk}</td><td class="n">${f.imp!==null?_histFmt2(f.imp):''}</td></tr>`;
+  }).join('');
+
+  const totIng = _histFilas.reduce((a,f)=>a+(f.ing||0),0);
+  const totEgr = _histFilas.reduce((a,f)=>a+(f.egr||0),0);
+  const totFin = _histFilas.length ? _histFilas[_histFilas.length-1].stk : 0;
+
   sgvPrint({
-    titulo:tit,
-    subtitulo:`Daihatsu Electronics — ${hoy}`,
+    titulo:`Historia por Artículo — ${_e(_histInfo.cod)} ${_e(_histInfo.des)}`,
+    subtitulo:`Daihatsu Electronics — ${hoy} · ${_histFilas.length} movimiento(s)`,
     estilos:`
-      td:nth-child(4){color:#166534}
-      td:nth-child(5){color:#991b1b}
-      td:nth-child(6){font-weight:bold}
+      td.ing{color:#166534}
+      td.egr{color:#991b1b}
+      td.stk{font-weight:bold}
+      td.desp{color:#0a58ca}
+      td.nc{color:#991b1b}
     `,
-    cuerpo:table.outerHTML
+    cuerpo:`<table>
+      <thead><tr><th>Fecha</th><th>Comprobante</th><th>Detalle</th>
+        <th class="n">Ingreso</th><th class="n">Egreso</th><th class="n">Stock</th><th class="n">Importe</th></tr></thead>
+      <tbody>${cuerpo}
+        <tr class="tot"><td colspan="3">TOTALES</td>
+          <td class="n">${totIng||''}</td><td class="n">${totEgr||''}</td>
+          <td class="n">${totFin}</td><td></td></tr>
+      </tbody>
+    </table>`
   });
+}
+
+function _histLoadExcelJS(){
+  return new Promise((resolve,reject)=>{
+    if(window.ExcelJS) return resolve(window.ExcelJS);
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+    s.onload=()=>resolve(window.ExcelJS); s.onerror=()=>reject(new Error('ExcelJS'));
+    document.head.appendChild(s);
+  });
+}
+
+async function excelHistArt(){
+  if(!_histFilas.length){ toast('Primero consultá la historia','err'); return; }
+  let ExcelJS; try{ ExcelJS=await _histLoadExcelJS(); }catch(e){ toast('No se pudo cargar Excel','err'); return; }
+  const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('Historia');
+  ws.columns=[{width:12},{width:20},{width:34},{width:11},{width:11},{width:11},{width:14}];
+
+  ws.mergeCells('A1:G1');
+  const t=ws.getCell('A1');
+  t.value=`Historia por Artículo — ${_histInfo.cod} ${_histInfo.des}`;
+  t.font={bold:true,size:14}; t.alignment={horizontal:'center'};
+  const st=ws.addRow([new Date().toLocaleDateString('es-AR')+'  ·  '+_histFilas.length+' movimiento(s)']);
+  st.font={italic:true,color:{argb:'FF666666'}}; ws.mergeCells(st.number,1,st.number,7);
+  ws.addRow([]);
+
+  const hr=ws.addRow(['Fecha','Comprobante','Detalle','Ingreso','Egreso','Stock','Importe']);
+  hr.font={bold:true}; hr.alignment={horizontal:'center'};
+  hr.eachCell(c=>{ c.border={bottom:{style:'medium'}}; });
+
+  _histFilas.forEach(f=>{
+    const r=ws.addRow([_histFmtFec(f.fec), f.comp||'', f.det||'',
+      f.ing||null, f.egr||null, f.stk, (f.imp!==null&&f.imp!==undefined)?f.imp:null]);
+    [4,5,6].forEach(i=>r.getCell(i).numFmt='#,##0');
+    r.getCell(7).numFmt='#,##0.00';
+    if(f.tipo==='desp') r.getCell(2).font={color:{argb:'FF0A58CA'}};
+    if(f.tipo==='nc')   r.getCell(2).font={color:{argb:'FF991B1B'}};
+  });
+
+  const totIng=_histFilas.reduce((a,f)=>a+(f.ing||0),0);
+  const totEgr=_histFilas.reduce((a,f)=>a+(f.egr||0),0);
+  const totFin=_histFilas[_histFilas.length-1].stk;
+  const tr=ws.addRow(['','','TOTALES', totIng||null, totEgr||null, totFin, null]);
+  tr.font={bold:true}; tr.eachCell(c=>{ c.border={top:{style:'double'}}; });
+  [4,5,6].forEach(i=>tr.getCell(i).numFmt='#,##0');
+
+  ws.views=[{state:'frozen', ySplit:4}];
+  const buf=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='Historia_'+(_histInfo.cod||'articulo')+'_'+new Date().toISOString().slice(0,10)+'.xlsx';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 }
 
 // ── Sticky header por scroll ──────────────────────────────
