@@ -227,9 +227,9 @@ function lcobPrint(){
     titulo:'Listado de Cobranzas',
     subtitulo:`Daihatsu Electronics — ${new Date().toLocaleDateString('es-AR')}${periodo} · ${rows.length} recibo(s)`,
     cuerpo:`<table>
-    <tr><th>Fecha</th><th>Recibo</th><th>Cód</th><th>Cliente</th><th>Vend</th><th class="n">Efectivo</th><th class="n">Transfer.</th><th class="n">Cheque</th><th class="n">Echeq</th>${RC.map(c=>`<th class="n">${_e(c.label)}</th>`).join('')}<th class="n">Ajuste</th><th class="n">Total</th></tr>
-    ${cuerpo}
-    <tr class="tot"><td colspan="5">TOTALES</td><td class="n">${_lcobFmt0(T.e)}</td><td class="n">${_lcobFmt0(T.t)}</td><td class="n">${_lcobFmt0(T.cf)}</td><td class="n">${_lcobFmt0(T.ce)}</td>${RC.map(c=>`<td class="n">${_lcobFmt0(T.rets[c.key]||0)}</td>`).join('')}<td class="n">${_lcobFmt0(T.a)}</td><td class="n">${_lcobFmt0(T.tot)}</td></tr>
+    <thead><tr><th>Fecha</th><th>Recibo</th><th>Cód</th><th>Cliente</th><th>Vend</th><th class="n">Efectivo</th><th class="n">Transfer.</th><th class="n">Cheque</th><th class="n">Echeq</th>${RC.map(c=>`<th class="n">${_e(c.label)}</th>`).join('')}<th class="n">Ajuste</th><th class="n">Total</th></tr></thead>
+    <tbody>${cuerpo}
+    <tr class="tot"><td colspan="5">TOTALES</td><td class="n">${_lcobFmt0(T.e)}</td><td class="n">${_lcobFmt0(T.t)}</td><td class="n">${_lcobFmt0(T.cf)}</td><td class="n">${_lcobFmt0(T.ce)}</td>${RC.map(c=>`<td class="n">${_lcobFmt0(T.rets[c.key]||0)}</td>`).join('')}<td class="n">${_lcobFmt0(T.a)}</td><td class="n">${_lcobFmt0(T.tot)}</td></tr></tbody>
   </table>`
   });
 }
