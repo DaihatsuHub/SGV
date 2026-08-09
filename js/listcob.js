@@ -222,22 +222,14 @@ function lcobPrint(){
       +`<td class="n">${_lcobFmt(r.ajuste)}</td><td class="n"><b>${_lcobFmt0(r.total)}</b></td></tr>`;
   }
   const periodo=(desde||hasta)?(' · '+(desde?_lcobFecha(desde):'…')+' a '+(hasta?_lcobFecha(hasta):'…')):'';
-  const win=window.open('','_blank');
-  win.document.write(`<html><head><title>Listado de Cobranzas</title><meta charset="utf-8">
-  <style>
-    body{font-family:Arial,sans-serif;font-size:11px;margin:14px}
-    h2{margin:0 0 2px} .sub{color:#666;font-size:11px;margin-bottom:10px}
-    table{width:100%;border-collapse:collapse} td,th{padding:3px 6px;border-bottom:1px solid #eee;text-align:left}
-    th{background:#333;color:#fff} .n{text-align:right;font-family:monospace;white-space:nowrap}
-    tr.tot td{font-weight:bold;border-top:2px solid #000}
-  </style></head><body>
-  <h2>Listado de Cobranzas</h2>
-  <div class="sub">Daihatsu Electronics — ${new Date().toLocaleDateString('es-AR')}${periodo} · ${rows.length} recibo(s)</div>
-  <table>
+  sgvPrint({
+    titulo:'Listado de Cobranzas',
+    subtitulo:`Daihatsu Electronics — ${new Date().toLocaleDateString('es-AR')}${periodo} · ${rows.length} recibo(s)`,
+    apaisado:true,
+    cuerpo:`<table>
     <tr><th>Fecha</th><th>Recibo</th><th>Cliente</th><th>Vend</th><th class="n">Efectivo</th><th class="n">Transfer.</th><th class="n">Cheque</th><th class="n">Echeq</th>${RC.map(c=>`<th class="n">${_e(c.label)}</th>`).join('')}<th class="n">Ajuste</th><th class="n">Total</th></tr>
     ${cuerpo}
-    <tr class="tot"><td colspan="4">TOTALES</td><td class="n">${_lcobFmt0(T.e)}</td><td class="n">${_lcobFmt0(T.t)}</td><td class="n">${_lcobFmt0(T.cf)}</td><td class="n">${_lcobFmt0(T.ce)}</td>${RT.map(k=>`<td class="n">${_lcobFmt0(T.rets[k]||0)}</td>`).join('')}<td class="n">${_lcobFmt0(T.a)}</td><td class="n">${_lcobFmt0(T.tot)}</td></tr>
-  </table>
-  </body></html>`);
-  win.document.close(); win.focus(); setTimeout(()=>win.print(),300);
+    <tr class="tot"><td colspan="4">TOTALES</td><td class="n">${_lcobFmt0(T.e)}</td><td class="n">${_lcobFmt0(T.t)}</td><td class="n">${_lcobFmt0(T.cf)}</td><td class="n">${_lcobFmt0(T.ce)}</td>${RC.map(c=>`<td class="n">${_lcobFmt0(T.rets[c.key]||0)}</td>`).join('')}<td class="n">${_lcobFmt0(T.a)}</td><td class="n">${_lcobFmt0(T.tot)}</td></tr>
+  </table>`
+  });
 }

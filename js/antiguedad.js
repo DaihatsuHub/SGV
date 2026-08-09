@@ -157,19 +157,12 @@ function antPrint(){
     cuerpo+=`<h3>${_anMonLabel(m)} (${_anMonSim(m)})</h3>
       <table><thead><tr><th>Cliente</th><th>Vend</th><th class="r">0 a 30</th><th class="r">31 a 60</th><th class="r">61 a 90</th><th class="r">+90</th><th class="r">Total</th></tr></thead><tbody>${f}</tbody></table>`;
   }
-  const w=window.open('','_blank');
-  w.document.write(`<html><head><title>Antigüedad de Saldos</title>
-    <style>body{font-family:Arial,sans-serif;font-size:12px;margin:24px;color:#111}
-    h2{margin:0 0 2px}.sub{color:#666;font-size:12px;margin-bottom:14px}
-    h3{margin:16px 0 4px;color:#0a58ca;border-bottom:1px solid #ccc;padding-bottom:2px}
-    table{width:100%;border-collapse:collapse;margin-bottom:8px}
-    th,td{padding:4px 8px;border-bottom:1px solid #e5e5e5;text-align:left}
-    th{background:#f0f0f0;font-size:11px}.r{text-align:right;font-variant-numeric:tabular-nums}
-    tr.fin td{border-top:2px solid #0a58ca}</style></head>
-    <body><h2>Antigüedad de Saldos</h2>
-    <div class="sub">Al ${_anFecha(_antData.hasta)} — antigüedad medida desde la fecha de entrega</div>${cuerpo}
-    <script>window.onload=()=>{window.print();}<\/script></body></html>`);
-  w.document.close();
+  sgvPrint({
+    titulo:'Antigüedad de Saldos',
+    subtitulo:`Al ${_anFecha(_antData.hasta)} — antigüedad medida desde la fecha de entrega`,
+    apaisado:true,
+    cuerpo:cuerpo
+  });
 }
 
 /* ─────────── Excel ─────────── */
