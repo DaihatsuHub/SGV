@@ -35,8 +35,8 @@ function sgvPrintEstilosBase(){
   return `
     *{box-sizing:border-box}
     body{font-family:Arial,sans-serif;font-size:11px;margin:0;color:#111;display:inline-block}
-    h2{margin:0 0 2px;font-size:1.5em}
-    .sub{color:#666;font-size:1em;margin-bottom:10px}
+    h2{margin:0 0 2px;font-size:1.5em;white-space:normal;overflow-wrap:anywhere}
+    .sub{color:#666;font-size:1em;margin-bottom:10px;white-space:normal;overflow-wrap:anywhere}
     h3{margin:14px 0 4px;color:#0a58ca;border-bottom:1px solid #ccc;padding-bottom:2px;font-size:1.2em}
     table{border-collapse:collapse;margin-bottom:8px;width:auto}
     /* padding en em: al achicar la letra, achican también las celdas */
@@ -76,11 +76,12 @@ function sgvPrint(opt){
   const ajuste = `
     (function(){
       var W_V=${SGV_PRINT_W.vertical}, W_H=${SGV_PRINT_W.apaisado}, ZMIN=${SGV_PRINT_ZOOM_MIN}, BASE_FS=11;
+      // Mide SOLO las tablas. El título o el subtítulo pueden ser largos y no
+      // deben decidir si la hoja va vertical o apaisada: ellos se parten solos.
       function natural(){
-        var w=document.body.scrollWidth;
-        var ts=document.querySelectorAll('table');
+        var ts=document.querySelectorAll('table'), w=0;
         for(var i=0;i<ts.length;i++){ if(ts[i].scrollWidth>w) w=ts[i].scrollWidth; }
-        return w;
+        return w || document.body.scrollWidth;
       }
       function apaisar(){
         document.getElementById('sgv-page').textContent='@page{size:A4 landscape;margin:10mm}';
@@ -105,7 +106,10 @@ function sgvPrint(opt){
           r=achicarHasta(W_H);
         }
         var apais = document.getElementById('sgv-page').textContent.indexOf('landscape')>=0;
-        if(r.nat < (apais?W_H:W_V)){
+        var target = apais ? W_H : W_V;
+        document.body.style.display='block';
+        document.body.style.width=target+'px';
+        if(r.nat < target){
           var ts=document.querySelectorAll('table');
           for(var i=0;i<ts.length;i++) ts[i].style.width='100%';
         }
