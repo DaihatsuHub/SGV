@@ -38,13 +38,13 @@ const SGV_PRINT_ZOOM_MIN = 0.62;
 function sgvPrintEstilosBase(){
   return `
     *{box-sizing:border-box}
-    body{font-family:Arial,sans-serif;font-size:11px;margin:0;color:#111;display:inline-block}
+    body{font-family:Arial,sans-serif;font-size:11px;margin:0;color:#111;display:inline-block;line-height:1.15}
     h2{margin:0 0 2px;font-size:1.5em;white-space:normal;overflow-wrap:anywhere}
     .sub{color:#666;font-size:1em;margin-bottom:10px;white-space:normal;overflow-wrap:anywhere}
     h3{margin:14px 0 4px;color:#0a58ca;border-bottom:1px solid #ccc;padding-bottom:2px;font-size:1.2em}
     table{border-collapse:collapse;margin-bottom:8px;width:auto}
     /* padding en em: al achicar la letra, achican también las celdas */
-    th,td{padding:.28em .62em;border-bottom:1px solid #e5e5e5;text-align:left;white-space:nowrap}
+    th,td{padding:.16em .62em;border-bottom:1px solid #e5e5e5;text-align:left;white-space:nowrap;line-height:1.15;vertical-align:middle}
     th{background:#e8eaed;font-weight:bold;border-bottom:1.5px solid #999}
     .n,.r{text-align:right;font-variant-numeric:tabular-nums}
     /* Cebra tipo planilla: renglones alternados sombreados */
@@ -103,11 +103,14 @@ function sgvPrint(opt){
         }
         return { fs:fs, nat:nat, entra: nat<=target };
       }
+      var DIAG={};
       function ajustar(){
         var r=achicarHasta(W_V);
+        DIAG.vFs=r.fs; DIAG.vNat=r.nat; DIAG.vEntra=r.entra;
         if(!r.entra){                 // no entra en vertical ni achicado: girar
           apaisar();
           r=achicarHasta(W_H);
+          DIAG.hFs=r.fs; DIAG.hNat=r.nat;
         }
         var apais = document.getElementById('sgv-page').textContent.indexOf('landscape')>=0;
         var target = apais ? W_H : W_V;
@@ -125,7 +128,7 @@ function sgvPrint(opt){
         var target=apais?W_H:W_V;
         var trs=document.querySelectorAll('table tr');
         // Alto imprimible: A4 vertical 277mm, apaisado (Carta) 196mm, a 96dpi
-        var altoHoja = apais ? 741 : 1047;
+        var altoHoja = apais ? H_H : H_V;
         var top0 = trs.length ? trs[0].getBoundingClientRect().top : 0;
         var enHoja1 = 0;
         for(var i=0;i<trs.length;i++){
@@ -133,13 +136,12 @@ function sgvPrint(opt){
           if(r.bottom - top0 > altoHoja) break;
           enHoja1++;
         }
-        var altoFila = trs.length>1
-          ? Math.round((trs[1].getBoundingClientRect().bottom - trs[1].getBoundingClientRect().top)*10)/10
-          : 0;
+        var hFila = Math.round(altoFila()*10)/10;
         d.textContent = 'DIAG · hoja: '+(apais?'APAISADA':'VERTICAL')
-          + ' · ancho tabla: '+Math.round(natural())+'px de '+target+'px'
-          + ' · letra: '+document.body.style.fontSize
-          + ' · alto fila: '+altoFila+'px'
+          + ' · vertical: '+Math.round(DIAG.vNat)+'px de '+W_V+'px con letra '+DIAG.vFs+'px → '+(DIAG.vEntra?'ENTRA':'NO ENTRA')
+          + (apais ? (' · apaisada: '+Math.round(DIAG.hNat)+'px de '+W_H+'px con letra '+DIAG.hFs+'px') : '')
+          + ' · letra final: '+document.body.style.fontSize
+          + ' · alto fila: '+hFila+'px'
           + ' · renglones totales: '+trs.length
           + ' · entran en hoja 1: '+enHoja1;
       }
