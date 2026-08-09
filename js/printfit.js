@@ -36,7 +36,7 @@ const SGV_PRINT_H = { vertical: 1047, apaisado: 718 };
 
 const SGV_LINEAS_HOJA  = 72;     // líneas por página — regla dura
 const SGV_PRINT_FS_MIN = 5;      // piso del cuerpo de letra
-const SGV_PRINT_DIAG   = false;  // true = línea de diagnóstico al pie
+const SGV_PRINT_DIAG   = true;   // true = línea de diagnóstico al pie
 
 // Corta textos largos para que no estiren la tabla (razón social: 30).
 function sgvCorta(txt, n){
@@ -138,7 +138,20 @@ function sgvPrintScript(){
     var d=document.getElementById('sgv-diag'); if(!d) return;
     var trs=document.querySelectorAll('table tr');
     var anchoHoja=D.ap?W_H:W_V, altoHoja=D.ap?H_H:H_V;
-    d.textContent='DIAG · '+(D.ap?'APAISADA':'VERTICAL')+' · letra '+D.r.modo
+    var mm=window.matchMedia;
+    var hojaReal='?';
+    try{
+      var t=document.createElement('div');
+      t.style.cssText='position:absolute;width:210mm;height:297mm;visibility:hidden';
+      document.body.appendChild(t);
+      var b=t.getBoundingClientRect();
+      hojaReal=Math.round(b.width)+'x'+Math.round(b.height)+'px (A4 teorico 794x1123)';
+      t.parentNode.removeChild(t);
+    }catch(e){}
+    d.textContent='DIAG · @page='+document.getElementById('sgv-page').textContent
+      +' · A4 medido: '+hojaReal
+      +' · ventana: '+window.innerWidth+'x'+window.innerHeight
+      +' · '+(D.ap?'APAISADA':'VERTICAL')+' · letra '+D.r.modo
       +' · cuerpo '+D.r.fs+'px (máx '+D.r.fsMax+')'
       +' · alto fila '+D.r.alto+'px → líneas/hoja: '+Math.floor(altoHoja/D.r.alto)
       +' · tabla '+Math.round(D.r.ancho)+'/'+anchoHoja+'px'
