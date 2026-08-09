@@ -1,88 +1,95 @@
 /* ===========================================================================
    IMPRESIÓN CON AUTO-AJUSTE  —  regla general de todos los listados de SGV
    ---------------------------------------------------------------------------
-   Problema: cuando un listado tiene muchas columnas, al imprimir se corta.
-   Solución: se fija el ancho del cuerpo al ancho REAL imprimible de la hoja
-   y se va achicando la letra hasta que todo entre. Si aun con la letra mínima
-   no entra, se gira automáticamente a horizontal (si venía en vertical).
+   REGLA (Ricardo, Ago 2026): todos los listados se imprimen en A4 VERTICAL.
+   Si no entran a lo ancho, se ACHICA hasta que entren. Recién si aun achicado
+   al mínimo legible no entran, la hoja gira sola a APAISADO.
+   NO forzar apaisado de entrada.
+
+   CÓMO: la tabla toma su ancho NATURAL (nada de width:100%, y las celdas con
+   white-space:nowrap para que nunca corten un número en dos líneas). Se mide
+   ese ancho real y se escala todo con `zoom` hasta que entre justo en la hoja.
+   El zoom achica proporcionalmente letra y columnas, así que el listado se ve
+   igual, sólo que más chico.
 
    Uso:
      sgvPrint({
        titulo:   'Listado de Cobranzas',
        subtitulo:'Daihatsu Electronics — 09/08/2026 · 42 recibos',
        cuerpo:   '<table>…</table>',
-       estilos:  'td.x{color:red}',     // opcional, se suma a los de base
-       apaisado: true                   // opcional — NO usarlo salvo caso muy puntual
+       estilos:  'td.x{color:red}'      // opcional, se suma a los de base
      });
-
-   REGLA GENERAL (Ricardo, Ago 2026): todos los listados se imprimen en
-   A4 VERTICAL. Si no entran, primero se achica la letra; recién si aun así
-   no entran, la hoja gira sola a apaisado. No forzar apaisado de entrada.
    =========================================================================== */
 
 // Ancho imprimible en px (96 dpi) de una A4 con márgenes de 10 mm
 const SGV_PRINT_W = { vertical: 718, apaisado: 1047 };
+// Por debajo de esto la letra ya no se lee: antes de achicar más, gira la hoja
+const SGV_PRINT_ZOOM_MIN = 0.62;
 
 function sgvPrintEstilosBase(){
   return `
-    body{font-family:Arial,sans-serif;font-size:11px;margin:0;color:#111}
+    *{box-sizing:border-box}
+    body{font-family:Arial,sans-serif;font-size:11px;margin:0;color:#111;display:inline-block}
     h2{margin:0 0 2px;font-size:16px}
     .sub{color:#666;font-size:11px;margin-bottom:10px}
     h3{margin:14px 0 4px;color:#0a58ca;border-bottom:1px solid #ccc;padding-bottom:2px;font-size:13px}
-    table{width:100%;border-collapse:collapse;margin-bottom:8px;table-layout:auto}
-    th,td{padding:3px 6px;border-bottom:1px solid #e5e5e5;text-align:left;white-space:nowrap}
-    th{background:#f0f0f0;font-size:.95em}
+    table{border-collapse:collapse;margin-bottom:8px;width:auto}
+    th,td{padding:3px 7px;border-bottom:1px solid #e5e5e5;text-align:left;white-space:nowrap}
+    th{background:#f0f0f0}
     .n,.r{text-align:right;font-variant-numeric:tabular-nums}
     tr.tot td,tr.fin td{font-weight:bold;border-top:2px solid #0a58ca}
-    @media print{ th{background:#f0f0f0 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact} }
+    @media print{
+      th{background:#f0f0f0 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      thead{display:table-header-group}
+      tr{page-break-inside:avoid}
+    }
   `;
 }
 
 function sgvPrint(opt){
   const o = opt || {};
-  const apaisado = !!o.apaisado;
-  const anchoIni = apaisado ? SGV_PRINT_W.apaisado : SGV_PRINT_W.vertical;
   const w = window.open('', '_blank');
   if(!w){ if(typeof toast==='function') toast('El navegador bloqueó la ventana de impresión','err'); return; }
 
-  // El script de ajuste corre en la ventana nueva, antes de imprimir
   const ajuste = `
     (function(){
-      var W_V=${SGV_PRINT_W.vertical}, W_H=${SGV_PRINT_W.apaisado};
-      var apaisado=${apaisado};
-      function ancho(){ return apaisado ? W_H : W_V; }
-      function excede(){ return document.body.scrollWidth > ancho()+1; }
-      function girar(){
-        apaisado=true;
+      var W_V=${SGV_PRINT_W.vertical}, W_H=${SGV_PRINT_W.apaisado}, ZMIN=${SGV_PRINT_ZOOM_MIN};
+      function natural(){
+        document.body.style.zoom='';
+        var w=document.body.scrollWidth;
+        var ts=document.querySelectorAll('table');
+        for(var i=0;i<ts.length;i++){ if(ts[i].scrollWidth>w) w=ts[i].scrollWidth; }
+        return w;
+      }
+      function apaisar(){
         document.getElementById('sgv-page').textContent='@page{size:A4 landscape;margin:10mm}';
-        document.body.style.width=W_H+'px';
       }
       function ajustar(){
-        var fs=11;
-        document.body.style.fontSize=fs+'px';
-        // 1) achicar la letra hasta 6px
-        while(excede() && fs>6){ fs-=0.25; document.body.style.fontSize=fs+'px'; }
-        // 2) si sigue sin entrar y estaba vertical, girar la hoja y reintentar
-        if(excede() && !apaisado){
-          girar(); fs=11; document.body.style.fontSize=fs+'px';
-          while(excede() && fs>6){ fs-=0.25; document.body.style.fontSize=fs+'px'; }
+        var nat=natural();
+        var target=W_V, z = nat>target ? target/nat : 1;
+
+        // Si para entrar en vertical hay que achicar demasiado, girar la hoja
+        if(z < ZMIN){
+          apaisar();
+          target=W_H;
+          z = nat>target ? target/nat : 1;
         }
-        // 3) último recurso: dejar que las celdas corten palabras
-        if(excede()){
-          var st=document.createElement('style');
-          st.textContent='th,td{white-space:normal;word-break:break-word}';
-          document.head.appendChild(st);
+        if(z < 1) document.body.style.zoom = z;
+
+        // Si entra cómodo, que la tabla ocupe todo el ancho de la hoja
+        if(z === 1 && nat < target){
+          var ts=document.querySelectorAll('table');
+          for(var i=0;i<ts.length;i++) ts[i].style.width='100%';
         }
       }
-      window.onload=function(){ ajustar(); setTimeout(function(){ window.print(); }, 120); };
+      window.onload=function(){ ajustar(); setTimeout(function(){ window.print(); }, 150); };
     })();
   `;
 
   w.document.write(
     '<html><head><meta charset="utf-8"><title>' + (o.titulo || 'Listado') + '</title>' +
-    '<style id="sgv-page">@page{size:A4 ' + (apaisado ? 'landscape' : 'portrait') + ';margin:10mm}</style>' +
-    '<style>' + sgvPrintEstilosBase() + (o.estilos || '') +
-    'body{width:' + anchoIni + 'px}</style></head><body>' +
+    '<style id="sgv-page">@page{size:A4 portrait;margin:10mm}</style>' +
+    '<style>' + sgvPrintEstilosBase() + (o.estilos || '') + '</style></head><body>' +
     (o.titulo ? '<h2>' + o.titulo + '</h2>' : '') +
     (o.subtitulo ? '<div class="sub">' + o.subtitulo + '</div>' : '') +
     (o.cuerpo || '') +
