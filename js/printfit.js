@@ -25,10 +25,14 @@
    Uso: sgvPrint({ titulo, subtitulo, cuerpo, estilos });
    =========================================================================== */
 
-// Área imprimible en px (96 dpi) con márgenes de 10 mm.
-// Se toma el MENOR entre A4 y Carta, así entra con cualquiera de las dos.
-const SGV_PRINT_W = { vertical: 718, apaisado: 979 };
-const SGV_PRINT_H = { vertical: 979, apaisado: 718 };
+// Hoja A4 FORZADA por medidas exactas (Chrome respeta `size: 210mm 297mm`
+// aunque el driver — p. ej. Microsoft Print to PDF — venga por defecto en Carta).
+const SGV_PAGE_A4 = { vertical: '210mm 297mm', apaisado: '297mm 210mm' };
+// Área imprimible en px (96 dpi) de una A4 con márgenes de 10 mm:
+//   vertical  → 190mm x 277mm ≈ 718 x 1047
+//   apaisado  → 277mm x 190mm ≈ 1047 x 718
+const SGV_PRINT_W = { vertical: 718, apaisado: 1047 };
+const SGV_PRINT_H = { vertical: 1047, apaisado: 718 };
 
 const SGV_LINEAS_HOJA  = 72;     // líneas por página — regla dura
 const SGV_PRINT_FS_MIN = 5;      // piso del cuerpo de letra
@@ -83,7 +87,9 @@ function sgvPrintScript(){
     var h=Math.floor(altoHoja/LINEAS*100)/100;
     document.getElementById('sgv-filas').textContent=
       'th,td{height:'+h+'px;line-height:'+(h-1)+'px;padding-top:0;padding-bottom:0}';
-    return { alto:h, fsMax:Math.floor((h-2)*100)/100 };
+    // La letra ocupa ~70% del alto de fila: el resto es el espacio entre
+    // renglones. Si se le da casi todo el alto, los renglones se pisan.
+    return { alto:h, fsMax:Math.floor(h*0.70*100)/100 };
   }
 
   function anchoTabla(){
@@ -93,10 +99,10 @@ function sgvPrintScript(){
   }
 
   function apaisar(){
-    document.getElementById('sgv-page').textContent='@page{size:landscape;margin:10mm}';
+    document.getElementById('sgv-page').textContent='@page{size:${SGV_PAGE_A4.apaisado};margin:10mm}';
   }
   function esApaisada(){
-    return document.getElementById('sgv-page').textContent.indexOf('landscape')>=0;
+    return document.getElementById('sgv-page').textContent.indexOf('297mm 210mm')>=0;
   }
 
   // Arranca con la letra más grande que permite la línea y achica hasta entrar
@@ -158,7 +164,7 @@ function sgvPrint(opt){
 
   w.document.write(
     '<html><head><meta charset="utf-8"><title>' + (o.titulo || 'Listado') + '</title>' +
-    '<style id="sgv-page">@page{size:portrait;margin:10mm}</style>' +
+    '<style id="sgv-page">@page{size:' + SGV_PAGE_A4.vertical + ';margin:10mm}</style>' +
     '<style>' + sgvPrintEstilosBase() + (o.estilos || '') + '</style>' +
     '<style id="sgv-filas"></style></head><body>' +
     (o.titulo ? '<h2>' + o.titulo + '</h2>' : '') +
