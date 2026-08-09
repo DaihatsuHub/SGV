@@ -6,6 +6,19 @@
 let _lcobRows  = [];
 let _lcobPagos = null;   // cache de recibo_pagos
 let _lcobCheq  = null;   // cache de cheques
+let _lcobRets  = [];     // códigos de retención presentes en el período (una columna c/u)
+
+// Vendedor del cliente del recibo (los recibos no lo guardan: sale de la ficha)
+function _lcobVend(cod){
+  const c=(typeof CLIS!=='undefined')?CLIS.find(k=>(k.CLI_CODIGO||'').trim()===(cod||'').trim()):null;
+  return c ? (c.CLI_VEND||'').trim() : '';
+}
+
+// Plantilla de columnas: se arma según cuántas retenciones haya
+function _lcobTpl(){
+  const rets=_lcobRets.map(()=>'95px').join(' ');
+  return `display:grid;grid-template-columns:85px 115px minmax(180px,1fr) 55px 105px 105px 105px ${rets} 95px 120px;gap:6px;align-items:center`;
+}
 
 function _lcobFecha(f){
   if(!f) return '';
@@ -35,19 +48,28 @@ async function _lcobEnsureData(){
 
 // Suma los instrumentos de un recibo: efectivo/transf/retenc/ajuste (recibo_pagos) + cheques (tabla cheques)
 function _lcobInstrumentos(reciboId){
-  const r={efectivo:0, transf:0, cheques:0, retenc:0, ajuste:0};
+  const r={efectivo:0, transf:0, cheques:0, retenc:0, ajuste:0, rets:{}};
   (_lcobPagos||[]).forEach(p=>{ if(p.recibo_id!==reciboId) return;
     const v=Number(p.importe)||0;
     if(p.tipo==='efectivo') r.efectivo+=v;
     else if(p.tipo==='transferencia') r.transf+=v;
-    else if(p.tipo==='retencion') r.retenc+=v;
+    else if(p.tipo==='retencion'){
+      r.retenc+=v;
+      const k=(p.ret_codigo||'S/C').trim()||'S/C';   // una columna por tipo de retención
+      r.rets[k]=(r.rets[k]||0)+v;
+    }
     else if(p.tipo==='ajuste') r.ajuste+=v;
   });
   (_lcobCheq||[]).forEach(c=>{ if(c.recibo_id===reciboId) r.cheques+=(Number(c.importe)||0); });
   return r;
 }
 
-const _LCOB_TPL='display:grid;grid-template-columns:85px 115px minmax(200px,1fr) 105px 105px 105px 100px 95px 120px;gap:6px;align-items:center';
+// Códigos de retención que aparecen en las filas cargadas
+function _lcobRetsPresentes(rows){
+  const set=new Set();
+  rows.forEach(x=>Object.keys(x.ins.rets||{}).forEach(k=>set.add(k)));
+  return [...set].sort();
+}
 
 async function renderListCob(){
   const body=document.getElementById('lcob-body'); if(!body) return;
@@ -60,31 +82,48 @@ async function renderListCob(){
   if(hasta) list=list.filter(r=>(r.fecha||'').substring(0,10)<=hasta);
   list=list.slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'') || (Number(a.numero)||0)-(Number(b.numero)||0));
   _lcobRows=list.map(r=>({ rec:r, ins:_lcobInstrumentos(r.id), total:Number(r.total_abonado)||0 }));
+  _lcobRets=_lcobRetsPresentes(_lcobRows);
+  _lcobHead();
 
-  const T={efectivo:0,transf:0,cheques:0,retenc:0,ajuste:0,total:0};
-  _lcobRows.forEach(x=>{ T.efectivo+=x.ins.efectivo; T.transf+=x.ins.transf; T.cheques+=x.ins.cheques; T.retenc+=x.ins.retenc; T.ajuste+=x.ins.ajuste; T.total+=x.total; });
+  const T={efectivo:0,transf:0,cheques:0,retenc:0,ajuste:0,total:0,rets:{}};
+  _lcobRows.forEach(x=>{ T.efectivo+=x.ins.efectivo; T.transf+=x.ins.transf; T.cheques+=x.ins.cheques; T.retenc+=x.ins.retenc; T.ajuste+=x.ins.ajuste; T.total+=x.total;
+    _lcobRets.forEach(k=>{ T.rets[k]=(T.rets[k]||0)+(x.ins.rets[k]||0); }); });
   const totEl=document.getElementById('lcob-total'); if(totEl) totEl.textContent='$ '+_lcobFmt0(T.total);
   const cntEl=document.getElementById('lcob-count'); if(cntEl) cntEl.textContent=_lcobRows.length;
 
   if(!_lcobRows.length){ body.innerHTML='<div class="empty" style="margin-top:40px">Sin recibos en el período</div>'; return; }
+  const TPL=_lcobTpl();
   const numCell=v=>`<span style="text-align:right;font-family:var(--mono)">${_lcobFmt(v)}</span>`;
   body.innerHTML=_lcobRows.map(x=>`
-    <div style="${_LCOB_TPL};padding:6px 12px;border-bottom:1px solid var(--b1);font-size:13px">
+    <div style="${TPL};padding:6px 12px;border-bottom:1px solid var(--b1);font-size:13px">
       <span style="color:var(--t2);font-family:var(--mono)">${_lcobFecha(x.rec.fecha)}</span>
       <span style="font-family:var(--mono);color:var(--acc)">${esc(_lcobRecNum(x.rec))}</span>
       <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(_lcobCli(x.rec.cliente))}</span>
-      ${numCell(x.ins.efectivo)}${numCell(x.ins.transf)}${numCell(x.ins.cheques)}${numCell(x.ins.retenc)}${numCell(x.ins.ajuste)}
+      <span style="font-family:var(--mono);color:var(--t2)">${esc(_lcobVend(x.rec.cliente))}</span>
+      ${numCell(x.ins.efectivo)}${numCell(x.ins.transf)}${numCell(x.ins.cheques)}
+      ${_lcobRets.map(k=>numCell(x.ins.rets[k]||0)).join('')}
+      ${numCell(x.ins.ajuste)}
       <span style="text-align:right;font-family:var(--mono);font-weight:700">${_lcobFmt0(x.total)}</span>
     </div>`).join('')
-    + `<div style="${_LCOB_TPL};padding:9px 12px;border-top:2px solid var(--b1);font-weight:700;font-family:var(--mono)">
-        <span></span><span></span><span style="text-align:right">TOTALES (${_lcobRows.length})</span>
+    + `<div style="${TPL};padding:9px 12px;border-top:2px solid var(--b1);font-weight:700;font-family:var(--mono)">
+        <span></span><span></span><span style="text-align:right">TOTALES (${_lcobRows.length})</span><span></span>
         <span style="text-align:right">${_lcobFmt0(T.efectivo)}</span>
         <span style="text-align:right">${_lcobFmt0(T.transf)}</span>
         <span style="text-align:right">${_lcobFmt0(T.cheques)}</span>
-        <span style="text-align:right">${_lcobFmt0(T.retenc)}</span>
+        ${_lcobRets.map(k=>`<span style="text-align:right">${_lcobFmt0(T.rets[k]||0)}</span>`).join('')}
         <span style="text-align:right">${_lcobFmt0(T.ajuste)}</span>
         <span style="text-align:right">${_lcobFmt0(T.total)}</span>
       </div>`;
+}
+
+// El encabezado se re-arma porque las columnas de retención son variables
+function _lcobHead(){
+  const th=document.querySelector('#page-listcob .th-tab'); if(!th) return;
+  th.setAttribute('style', _lcobTpl()+';padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--b1);font-size:11px;color:var(--t2)');
+  th.innerHTML=`<span>Fecha</span><span>Recibo</span><span>Cliente</span><span>Vend</span>`+
+    `<span style="text-align:right">Efectivo</span><span style="text-align:right">Transfer.</span><span style="text-align:right">Cheques</span>`+
+    _lcobRets.map(k=>`<span style="text-align:right" title="Retención ${esc(k)}">${esc(k)}</span>`).join('')+
+    `<span style="text-align:right">Ajuste</span><span style="text-align:right">Total</span>`;
 }
 
 // ── Exportar / Imprimir ──
@@ -92,8 +131,9 @@ function _lcobExportRows(){
   return (_lcobRows||[]).map(x=>({
     fecha:_lcobFecha(x.rec.fecha), recibo:_lcobRecNum(x.rec),
     codigo:x.rec.cliente||'', razon:_lcobCliRazon(x.rec.cliente),
+    vend:_lcobVend(x.rec.cliente),
     efectivo:x.ins.efectivo, transf:x.ins.transf, cheques:x.ins.cheques,
-    retenc:x.ins.retenc, ajuste:x.ins.ajuste, total:x.total
+    rets:x.ins.rets||{}, retenc:x.ins.retenc, ajuste:x.ins.ajuste, total:x.total
   }));
 }
 function _lcobLoadExcelJS(){
@@ -111,22 +151,28 @@ async function lcobExcel(){
   let ExcelJS; try{ ExcelJS=await _lcobLoadExcelJS(); }catch(e){ toast('No se pudo cargar Excel','err'); return; }
   const wb=new ExcelJS.Workbook(); const ws=wb.addWorksheet('Cobranzas');
   const desde=document.getElementById('lcob-desde')?.value||'', hasta=document.getElementById('lcob-hasta')?.value||'';
-  ws.mergeCells('A1:J1');
-  const t=ws.getCell('A1');
+  ws.mergeCells(1,1,1,10+_lcobRets.length);
+  const t=ws.getCell(1,1);
   t.value='Listado de Cobranzas'+((desde||hasta)?('  ('+(desde?_lcobFecha(desde):'…')+' a '+(hasta?_lcobFecha(hasta):'…')+')'):'');
   t.font={bold:true,size:14}; t.alignment={horizontal:'center'};
-  const hr=ws.addRow(['Fecha','Recibo','Código','Cliente','Efectivo','Transfer.','Cheques','Retenc.','Ajuste','Total']);
+  const RT=_lcobRets;
+  const hr=ws.addRow(['Fecha','Recibo','Código','Cliente','Vend','Efectivo','Transfer.','Cheques',...RT,'Ajuste','Total']);
   hr.font={bold:true}; hr.eachCell(c=>{c.border={bottom:{style:'medium'}};});
-  const T={e:0,t:0,c:0,r:0,a:0,tot:0};
+  const nCols=8+RT.length+2;
+  const numIdx=[]; for(let i=6;i<=nCols;i++) numIdx.push(i);
+  const T={e:0,t:0,c:0,a:0,tot:0,rets:{}};
   for(const r of rows){
-    T.e+=r.efectivo;T.t+=r.transf;T.c+=r.cheques;T.r+=r.retenc;T.a+=r.ajuste;T.tot+=r.total;
-    const row=ws.addRow([r.fecha,r.recibo,r.codigo,r.razon,r.efectivo,r.transf,r.cheques,r.retenc,r.ajuste,r.total]);
-    [5,6,7,8,9,10].forEach(i=>row.getCell(i).numFmt='#,##0.00');
+    T.e+=r.efectivo;T.t+=r.transf;T.c+=r.cheques;T.a+=r.ajuste;T.tot+=r.total;
+    RT.forEach(k=>{ T.rets[k]=(T.rets[k]||0)+(r.rets[k]||0); });
+    const row=ws.addRow([r.fecha,r.recibo,r.codigo,r.razon,r.vend,r.efectivo,r.transf,r.cheques,
+      ...RT.map(k=>r.rets[k]||null), r.ajuste, r.total]);
+    numIdx.forEach(i=>row.getCell(i).numFmt='#,##0.00');
   }
-  const tr=ws.addRow(['','','','TOTALES',T.e,T.t,T.c,T.r,T.a,T.tot]);
-  tr.font={bold:true}; [5,6,7,8,9,10].forEach(i=>tr.getCell(i).numFmt='#,##0.00');
+  const tr=ws.addRow(['','','','TOTALES','',T.e,T.t,T.c,...RT.map(k=>T.rets[k]||0),T.a,T.tot]);
+  tr.font={bold:true}; numIdx.forEach(i=>tr.getCell(i).numFmt='#,##0.00');
   tr.eachCell(c=>{c.border={top:{style:'double'}};});
-  ws.columns=[{width:11},{width:14},{width:9},{width:30},{width:13},{width:13},{width:13},{width:12},{width:11},{width:15}];
+  ws.columns=[{width:11},{width:14},{width:9},{width:30},{width:7},{width:13},{width:13},{width:13},
+    ...RT.map(()=>({width:12})),{width:11},{width:15}];
   const buf=await wb.xlsx.writeBuffer();
   const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   const url=URL.createObjectURL(blob); const a=document.createElement('a');
@@ -139,13 +185,16 @@ function lcobPrint(){
   if(!rows.length){ toast('Consultá primero un período con recibos','err'); return; }
   const _e=(typeof esc==='function')?esc:(s=>String(s==null?'':s));
   const desde=document.getElementById('lcob-desde')?.value||'', hasta=document.getElementById('lcob-hasta')?.value||'';
-  const T={e:0,t:0,c:0,r:0,a:0,tot:0};
+  const RT=_lcobRets;
+  const T={e:0,t:0,c:0,a:0,tot:0,rets:{}};
   let cuerpo='';
   for(const r of rows){
-    T.e+=r.efectivo;T.t+=r.transf;T.c+=r.cheques;T.r+=r.retenc;T.a+=r.ajuste;T.tot+=r.total;
-    cuerpo+=`<tr><td>${r.fecha}</td><td>${_e(r.recibo)}</td><td>${_e(r.codigo)} ${_e(r.razon)}</td>`
+    T.e+=r.efectivo;T.t+=r.transf;T.c+=r.cheques;T.a+=r.ajuste;T.tot+=r.total;
+    RT.forEach(k=>{ T.rets[k]=(T.rets[k]||0)+(r.rets[k]||0); });
+    cuerpo+=`<tr><td>${r.fecha}</td><td>${_e(r.recibo)}</td><td>${_e(r.codigo)} ${_e(r.razon)}</td><td>${_e(r.vend)}</td>`
       +`<td class="n">${_lcobFmt(r.efectivo)}</td><td class="n">${_lcobFmt(r.transf)}</td><td class="n">${_lcobFmt(r.cheques)}</td>`
-      +`<td class="n">${_lcobFmt(r.retenc)}</td><td class="n">${_lcobFmt(r.ajuste)}</td><td class="n"><b>${_lcobFmt0(r.total)}</b></td></tr>`;
+      +RT.map(k=>`<td class="n">${_lcobFmt(r.rets[k]||0)}</td>`).join('')
+      +`<td class="n">${_lcobFmt(r.ajuste)}</td><td class="n"><b>${_lcobFmt0(r.total)}</b></td></tr>`;
   }
   const periodo=(desde||hasta)?(' · '+(desde?_lcobFecha(desde):'…')+' a '+(hasta?_lcobFecha(hasta):'…')):'';
   const win=window.open('','_blank');
@@ -160,9 +209,9 @@ function lcobPrint(){
   <h2>Listado de Cobranzas</h2>
   <div class="sub">Daihatsu Electronics — ${new Date().toLocaleDateString('es-AR')}${periodo} · ${rows.length} recibo(s)</div>
   <table>
-    <tr><th>Fecha</th><th>Recibo</th><th>Cliente</th><th class="n">Efectivo</th><th class="n">Transfer.</th><th class="n">Cheques</th><th class="n">Retenc.</th><th class="n">Ajuste</th><th class="n">Total</th></tr>
+    <tr><th>Fecha</th><th>Recibo</th><th>Cliente</th><th>Vend</th><th class="n">Efectivo</th><th class="n">Transfer.</th><th class="n">Cheques</th>${RT.map(k=>`<th class="n">${_e(k)}</th>`).join('')}<th class="n">Ajuste</th><th class="n">Total</th></tr>
     ${cuerpo}
-    <tr class="tot"><td colspan="3">TOTALES</td><td class="n">${_lcobFmt0(T.e)}</td><td class="n">${_lcobFmt0(T.t)}</td><td class="n">${_lcobFmt0(T.c)}</td><td class="n">${_lcobFmt0(T.r)}</td><td class="n">${_lcobFmt0(T.a)}</td><td class="n">${_lcobFmt0(T.tot)}</td></tr>
+    <tr class="tot"><td colspan="4">TOTALES</td><td class="n">${_lcobFmt0(T.e)}</td><td class="n">${_lcobFmt0(T.t)}</td><td class="n">${_lcobFmt0(T.c)}</td>${RT.map(k=>`<td class="n">${_lcobFmt0(T.rets[k]||0)}</td>`).join('')}<td class="n">${_lcobFmt0(T.a)}</td><td class="n">${_lcobFmt0(T.tot)}</td></tr>
   </table>
   </body></html>`);
   win.document.close(); win.focus(); setTimeout(()=>win.print(),300);
