@@ -119,7 +119,7 @@ function _lcobPintar(){
   const TPL=_lcobTpl();
   const numCell=v=>`<span style="text-align:right;font-family:var(--mono)">${_lcobFmt(v)}</span>`;
   body.innerHTML=_lcobRows.map(x=>`
-    <div style="${TPL};padding:6px 12px;border-bottom:1px solid var(--b1);font-size:13px">
+    <div style="${TPL};padding:6px 12px;border-bottom:1px solid var(--b1);font-size:13px;min-width:max-content">
       <span style="color:var(--t2);font-family:var(--mono)">${_lcobFecha(x.rec.fecha)}</span>
       <span style="font-family:var(--mono);color:var(--acc)">${esc(_lcobRecNum(x.rec))}</span>
       <span style="font-family:var(--mono);color:var(--t2)">${esc((x.rec.cliente||'').trim())}</span>
@@ -130,7 +130,7 @@ function _lcobPintar(){
       ${numCell(x.ins.ajuste)}
       <span style="text-align:right;font-family:var(--mono);font-weight:700">${_lcobFmt0(x.total)}</span>
     </div>`).join('')
-    + `<div style="${TPL};padding:9px 12px;border-top:2px solid var(--b1);font-weight:700;font-family:var(--mono)">
+    + `<div style="${TPL};padding:9px 12px;border-top:2px solid var(--b1);font-weight:700;font-family:var(--mono);min-width:max-content">
         <span></span><span></span><span></span><span style="text-align:right">TOTALES (${_lcobRows.length})</span><span></span>
         <span style="text-align:right">${_lcobFmt0(T.efectivo)}</span>
         <span style="text-align:right">${_lcobFmt0(T.transf)}</span>
@@ -140,12 +140,27 @@ function _lcobPintar(){
         <span style="text-align:right">${_lcobFmt0(T.ajuste)}</span>
         <span style="text-align:right">${_lcobFmt0(T.total)}</span>
       </div>`;
+  _lcobSyncScroll();
+}
+
+// Mantiene el encabezado alineado con las columnas al scrollear en horizontal.
+// El encabezado está FUERA del div que scrollea, así que hay que moverlo a mano.
+function _lcobSyncScroll(){
+  const body=document.getElementById('lcob-body');
+  const th=document.querySelector('#page-listcob .th-tab');
+  if(!body||!th) return;
+  const wrap=th.parentElement;
+  if(wrap) wrap.style.overflow='hidden';       // el encabezado no scrollea solo
+  body.onscroll=function(){ th.style.transform='translateX(-'+body.scrollLeft+'px)'; };
+  th.style.transform='translateX(-'+body.scrollLeft+'px)';
 }
 
 // El encabezado se re-arma porque las columnas de retención son variables
 function _lcobHead(){
   const th=document.querySelector('#page-listcob .th-tab'); if(!th) return;
-  th.setAttribute('style', _lcobTpl()+';padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--b1);font-size:11px;color:var(--t2)');
+  // min-width:max-content → el encabezado mide lo mismo que las filas, si no
+  // las columnas se comprimen y dejan de coincidir al scrollear.
+  th.setAttribute('style', _lcobTpl()+';padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--b1);font-size:11px;color:var(--t2);min-width:max-content;will-change:transform');
   th.innerHTML=`<span>Fecha</span><span>Recibo</span><span>Cód</span><span>Cliente</span><span>Vend</span>`+
     `<span style="text-align:right">Efectivo</span><span style="text-align:right">Transfer.</span><span style="text-align:right">Cheque</span><span style="text-align:right">Echeq</span>`+
     _lcobRetCols().map(c=>`<span style="text-align:right" title="Retención ${esc(c.label)}">${esc(c.label)}</span>`).join('')+
