@@ -70,8 +70,11 @@ function sgvPrintScript(){
 (function(){
   var W=${SGV_PAGE_W}, FS=${SGV_FS}, FSMIN=${SGV_FS_MIN};
   var PAD=12;          // relleno horizontal de cada celda (6px de cada lado)
-  var ANCHO_CAR=0.52;  // ancho medio de un carácter en Arial, por px de cuerpo
-  var ANCHO_CAR_TIT=0.60;  // el encabezado va en negrita: un poco más ancho
+  // Ancho de un carácter en Arial por cada px de cuerpo. Van holgados a
+  // propósito: si la estimación queda corta, el listado se corta a la derecha.
+  var ANCHO_CAR=0.58;
+  var ANCHO_CAR_TIT=0.66;   // el encabezado va en negrita
+  var MARGEN=0.96;          // 4% de reserva por si algo mide más de lo previsto
 
   // Ancho que NECESITA la tabla, calculado contando caracteres.
   // No usa ninguna medición del navegador, que es lo que venía fallando.
@@ -107,11 +110,21 @@ function sgvPrintScript(){
     var soloTexto=necesario-cols*PAD;     // la parte que escala con la letra
     var fs=FS;
     if(soloTexto>0){
-      var calc=(W-cols*PAD)/soloTexto;
+      var calc=(W*MARGEN-cols*PAD)/soloTexto;
       fs=Math.min(FS, Math.floor(calc*4)/4);   // redondear a 0.25
     }
     if(fs<FSMIN) fs=FSMIN;
     document.body.style.fontSize=fs+'px';
+
+    // Red de seguridad: si el navegador igual reporta desborde, bajar más.
+    // Sólo puede achicar, nunca agrandar, así que no puede empeorar nada.
+    var vueltas=0;
+    while(fs>FSMIN && vueltas<40 &&
+          Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) > W+1){
+      fs=Math.round((fs-0.25)*100)/100;
+      document.body.style.fontSize=fs+'px';
+      vueltas++;
+    }
     return fs;
   }
 
