@@ -17,7 +17,10 @@ const SGV_PAGE_SIZE = '210mm 297mm';
 const SGV_PAGE_W    = 718;
 const SGV_PAGE_H    = 1047;
 const SGV_LINEAS    = 72;    // líneas por hoja
-const SGV_FS        = 10;    // cuerpo de letra inicial (px)
+// Cuerpo de letra máximo. Va bien por debajo del alto de renglón (14.54px)
+// para que quede aire entre líneas: con 10px la letra ocupaba casi todo el
+// renglón y se veía apelmazado.
+const SGV_FS        = 9;
 const SGV_FS_MIN    = 5;     // hasta acá puede achicar
 
 // Corta textos largos (razón social: 30 caracteres).
@@ -66,23 +69,49 @@ function sgvPrintScript(){
   return `
 (function(){
   var W=${SGV_PAGE_W}, FS=${SGV_FS}, FSMIN=${SGV_FS_MIN};
+  var PAD=12;          // relleno horizontal de cada celda (6px de cada lado)
+  var ANCHO_CAR=0.52;  // ancho medio de un carácter en Arial, por px de cuerpo
+  var ANCHO_CAR_TIT=0.60;  // el encabezado va en negrita: un poco más ancho
 
-  // Detección simple y confiable: el body mide exactamente el ancho de la
-  // hoja, así que si el contenido desborda, scrollWidth es mayor que W.
-  // No depende de medir la tabla, que fue lo que venía fallando.
-  function desborda(){
-    return Math.max(document.body.scrollWidth,
-                    document.documentElement.scrollWidth) > W + 1;
+  // Ancho que NECESITA la tabla, calculado contando caracteres.
+  // No usa ninguna medición del navegador, que es lo que venía fallando.
+  function anchoNecesario(fs){
+    var tablas=document.querySelectorAll('table'), total=0;
+    for(var t=0;t<tablas.length;t++){
+      var filas=tablas[t].rows, maxCar=[], esTit=[];
+      for(var r=0;r<filas.length;r++){
+        var celdas=filas[r].cells;
+        for(var c=0;c<celdas.length;c++){
+          if(celdas[c].colSpan>1) continue;          // las combinadas no mandan
+          var largo=(celdas[c].textContent||'').trim().length;
+          if(maxCar[c]===undefined){ maxCar[c]=0; esTit[c]=false; }
+          var titulo=(celdas[c].tagName==='TH');
+          var peso=largo*(titulo?ANCHO_CAR_TIT:ANCHO_CAR);
+          if(peso>maxCar[c]) maxCar[c]=peso;
+        }
+      }
+      var ancho=0;
+      for(var k=0;k<maxCar.length;k++) ancho+=(maxCar[k]||0)*fs+PAD;
+      if(ancho>total) total=ancho;
+    }
+    return total;
   }
 
   function ajustar(){
-    var fs=FS, vueltas=0;
-    document.body.style.fontSize=fs+'px';
-    while(desborda() && fs>FSMIN && vueltas<200){
-      fs=Math.round((fs-0.25)*100)/100;
-      document.body.style.fontSize=fs+'px';
-      vueltas++;
+    var necesario=anchoNecesario(1);      // ancho por cada px de cuerpo
+    if(necesario<=0) return FS;
+    // Resolver el cuerpo más grande que entra: necesario*fs + PADs <= W
+    var tablas=document.querySelectorAll('table');
+    var cols=0;
+    if(tablas.length && tablas[0].rows.length) cols=tablas[0].rows[0].cells.length;
+    var soloTexto=necesario-cols*PAD;     // la parte que escala con la letra
+    var fs=FS;
+    if(soloTexto>0){
+      var calc=(W-cols*PAD)/soloTexto;
+      fs=Math.min(FS, Math.floor(calc*4)/4);   // redondear a 0.25
     }
+    if(fs<FSMIN) fs=FSMIN;
+    document.body.style.fontSize=fs+'px';
     return fs;
   }
 
@@ -91,13 +120,8 @@ function sgvPrintScript(){
     setTimeout(function(){ window.print(); }, 250);
   }
 
-  // Esperar a que las fuentes estén listas: si se mide antes, los anchos
-  // cambian después y el ajuste queda mal.
-  if(document.fonts && document.fonts.ready){
-    document.fonts.ready.then(function(){ setTimeout(arrancar, 60); });
-  } else {
-    window.onload=arrancar;
-  }
+  if(document.readyState==='complete') arrancar();
+  else window.onload=arrancar;
 })();
 `;
 }
