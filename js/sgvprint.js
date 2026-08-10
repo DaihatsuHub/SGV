@@ -66,28 +66,38 @@ function sgvPrintScript(){
   return `
 (function(){
   var W=${SGV_PAGE_W}, FS=${SGV_FS}, FSMIN=${SGV_FS_MIN};
-  function ancho(){
-    var ts=document.querySelectorAll('table'), w=0;
-    for(var i=0;i<ts.length;i++){
-      ts[i].style.minWidth='0';                 // medir sin el estirado al 100%
-      var a=ts[i].getBoundingClientRect().width;
-      ts[i].style.minWidth='100%';
-      if(a>w) w=a;
-    }
-    return w;
+
+  // Detección simple y confiable: el body mide exactamente el ancho de la
+  // hoja, así que si el contenido desborda, scrollWidth es mayor que W.
+  // No depende de medir la tabla, que fue lo que venía fallando.
+  function desborda(){
+    return Math.max(document.body.scrollWidth,
+                    document.documentElement.scrollWidth) > W + 1;
   }
+
   function ajustar(){
-    var fs=FS;
+    var fs=FS, vueltas=0;
     document.body.style.fontSize=fs+'px';
-    while(ancho()>W && fs>FSMIN){
+    while(desborda() && fs>FSMIN && vueltas<200){
       fs=Math.round((fs-0.25)*100)/100;
       document.body.style.fontSize=fs+'px';
+      vueltas++;
     }
+    return fs;
   }
-  window.onload=function(){
+
+  function arrancar(){
     try{ ajustar(); }catch(e){ console.error('sgvPrint:',e); }
-    setTimeout(function(){ window.print(); }, 200);
-  };
+    setTimeout(function(){ window.print(); }, 250);
+  }
+
+  // Esperar a que las fuentes estén listas: si se mide antes, los anchos
+  // cambian después y el ajuste queda mal.
+  if(document.fonts && document.fonts.ready){
+    document.fonts.ready.then(function(){ setTimeout(arrancar, 60); });
+  } else {
+    window.onload=arrancar;
+  }
 })();
 `;
 }
