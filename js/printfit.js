@@ -34,7 +34,10 @@ const SGV_PAGE_A4 = { vertical: '210mm 297mm', apaisado: '297mm 210mm' };
 const SGV_PRINT_W = { vertical: 718, apaisado: 1047 };
 const SGV_PRINT_H = { vertical: 1047, apaisado: 718 };
 
-const SGV_LINEAS_HOJA  = 72;     // líneas por página — regla dura
+const SGV_LINEAS_HOJA  = 72;     // líneas por página en A4 VERTICAL (regla dura)
+// La hoja SÓLO gira si la tabla no entra en vertical ni achicando la letra
+// hasta este cuerpo. Por encima de este valor nunca se gira.
+const SGV_FS_ANTES_DE_GIRAR = 6;
 const SGV_PRINT_FS_MIN = 5;      // piso del cuerpo de letra
 const SGV_PRINT_DIAG   = true;   // true = línea de diagnóstico al pie
 
@@ -76,15 +79,17 @@ function sgvPrintScript(){
 (function(){
   var W_V=${SGV_PRINT_W.vertical}, W_H=${SGV_PRINT_W.apaisado};
   var H_V=${SGV_PRINT_H.vertical}, H_H=${SGV_PRINT_H.apaisado};
-  var LINEAS=${SGV_LINEAS_HOJA}, FS_MIN=${SGV_PRINT_FS_MIN};
+  var LINEAS=${SGV_LINEAS_HOJA}, FS_MIN=${SGV_PRINT_FS_MIN}, GIRO_FS=${SGV_FS_ANTES_DE_GIRAR};
   var D={};
 
   function setFs(fs){ document.body.style.fontSize=fs+'px'; }
 
-  // Alto de fila fijo: garantiza las 72 líneas por hoja.
-  // Devuelve también el cuerpo de letra máximo que entra en esa línea.
-  function fijarAltoFila(altoHoja){
-    var h=Math.floor(altoHoja/LINEAS*100)/100;
+  // Alto de fila fijo. Se calcula SIEMPRE sobre A4 VERTICAL: las 72 líneas
+  // son la referencia de esa hoja. Si el listado termina en apaisado, el
+  // renglón conserva el mismo alto y simplemente entran menos por hoja
+  // (meter 72 en una apaisada dejaría la letra ilegible).
+  function fijarAltoFila(){
+    var h=Math.floor(H_V/LINEAS*100)/100;
     document.getElementById('sgv-filas').textContent=
       'th,td{height:'+h+'px;line-height:'+(h-1)+'px;padding-top:0;padding-bottom:0}';
     // La letra ocupa ~70% del alto de fila: el resto es el espacio entre
@@ -105,14 +110,15 @@ function sgvPrintScript(){
     return document.getElementById('sgv-page').textContent.indexOf('297mm 210mm')>=0;
   }
 
-  // Arranca con la letra más grande que permite la línea y achica hasta entrar
-  function ajustarEn(anchoHoja, altoHoja){
-    var f=fijarAltoFila(altoHoja);
+  // Arranca con la letra más grande que permite la línea y achica hasta entrar.
+  // El parametro piso es hasta donde se puede achicar antes de darse por vencido.
+  function ajustarEn(anchoHoja, piso){
+    var f=fijarAltoFila();
     var fs=f.fsMax;
     setFs(fs);
     var w=anchoTabla();
     var normal=(w<=anchoHoja);
-    while(w>anchoHoja && fs>FS_MIN){
+    while(w>anchoHoja && fs>piso){
       fs=Math.round((fs-0.25)*100)/100;
       setFs(fs);
       w=anchoTabla();
@@ -122,9 +128,23 @@ function sgvPrintScript(){
   }
 
   function ajustar(){
-    var r=ajustarEn(W_V, H_V);
+    // 1) Intento en VERTICAL, achicando sólo hasta un cuerpo todavía legible
+    var r=ajustarEn(W_V, GIRO_FS);
     D.v=r;
-    if(!r.entra){ apaisar(); r=ajustarEn(W_H, H_H); D.h=r; }
+    // 2) Sólo si ni así entra, girar la hoja. En apaisado el renglón conserva
+    //    su alto, así que simplemente entran menos líneas por página.
+    if(!r.entra){
+      apaisar();
+      r=ajustarEn(W_H, FS_MIN);
+      D.h=r;
+      // 3) Si en apaisado tampoco entra, volver a vertical y achicar a fondo:
+      //    girar la hoja no sirvió de nada.
+      if(!r.entra){
+        document.getElementById('sgv-page').textContent='@page{size:${SGV_PAGE_A4.vertical};margin:10mm}';
+        r=ajustarEn(W_V, FS_MIN);
+        D.h=null;
+      }
+    }
     D.r=r; D.ap=esApaisada();
     var anchoHoja=D.ap?W_H:W_V;
     document.body.style.width=anchoHoja+'px';
@@ -154,6 +174,7 @@ function sgvPrintScript(){
       +' · '+(D.ap?'APAISADA':'VERTICAL')+' · letra '+D.r.modo
       +' · cuerpo '+D.r.fs+'px (máx '+D.r.fsMax+')'
       +' · alto fila '+D.r.alto+'px → líneas/hoja: '+Math.floor(altoHoja/D.r.alto)
+      +' · vertical dio '+Math.round(D.v.ancho)+'/'+W_V+'px con letra '+D.v.fs+' → '+(D.v.entra?'ENTRABA':'NO ENTRABA')
       +' · tabla '+Math.round(D.r.ancho)+'/'+anchoHoja+'px'
       +' · filas totales: '+trs.length;
   }
