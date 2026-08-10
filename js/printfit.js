@@ -56,7 +56,10 @@ function sgvPrintEstilosBase(){
     h2{margin:0 0 2px;font-size:1.4em;white-space:normal;overflow-wrap:anywhere}
     .sub{color:#555;font-size:1em;margin-bottom:6px;white-space:normal;overflow-wrap:anywhere}
     h3{margin:10px 0 3px;color:#0a58ca;border-bottom:1px solid #ccc;font-size:1.1em}
-    table{border-collapse:collapse;margin-bottom:6px;width:auto}
+    /* max-content = el ancho REAL del contenido. Con width:auto la tabla no
+       siempre se encoge, y la medición da un valor fijo que no baja al
+       achicar la letra (era el bug que mandaba todo a apaisado). */
+    table{border-collapse:collapse;margin-bottom:6px;width:max-content;max-width:none}
     th,td{padding:0 .6em;border-bottom:1px solid #e5e5e5;text-align:left;white-space:nowrap;overflow:hidden}
     th{background:#e8eaed;font-weight:bold;border-bottom:1.5px solid #999}
     .n,.r{text-align:right}
@@ -97,9 +100,15 @@ function sgvPrintScript(){
     return { alto:h, fsMax:Math.floor(h*0.70*100)/100 };
   }
 
+  // Mide el ancho real del contenido. Fuerza max-content antes de medir por
+  // si una pasada anterior dejó la tabla estirada al 100%.
   function anchoTabla(){
     var ts=document.querySelectorAll('table'), w=0;
-    for(var i=0;i<ts.length;i++){ if(ts[i].scrollWidth>w) w=ts[i].scrollWidth; }
+    for(var i=0;i<ts.length;i++){
+      ts[i].style.width='max-content';
+      var a=Math.max(ts[i].getBoundingClientRect().width, ts[i].scrollWidth);
+      if(a>w) w=a;
+    }
     return w;
   }
 
