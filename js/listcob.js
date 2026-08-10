@@ -240,6 +240,7 @@ function lcobPrint(){
   const periodo=(desde||hasta)?(' · '+(desde?_lcobFecha(desde):'…')+' a '+(hasta?_lcobFecha(hasta):'…')):'';
   sgvPrint({
     titulo:'Listado de Cobranzas',
+    apaisado:true,   // 14 columnas: en vertical no entra legible
     subtitulo:`Daihatsu Electronics — ${new Date().toLocaleDateString('es-AR')}${periodo} · ${rows.length} recibo(s)`,
     cuerpo:`<table>
     <thead><tr><th>Fecha</th><th>Recibo</th><th>Cód</th><th>Cliente</th><th>Vend</th><th class="n">Efectivo</th><th class="n">Transfer.</th><th class="n">Cheque</th><th class="n">Echeq</th>${RC.map(c=>`<th class="n">${_e(c.label)}</th>`).join('')}<th class="n">Ajuste</th><th class="n">Total</th></tr></thead>

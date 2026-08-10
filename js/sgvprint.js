@@ -12,10 +12,16 @@
    Uso: sgvPrint({ titulo, subtitulo, cuerpo, estilos })
    =========================================================================== */
 
-// A4 con márgenes de 10 mm → útil 190 x 277 mm ≈ 718 x 1047 px a 96 dpi
-const SGV_PAGE_SIZE = '210mm 297mm';
-const SGV_PAGE_W    = 718;
-const SGV_PAGE_H    = 1047;
+// A4 con márgenes de 10 mm.
+//   vertical → útil 190 x 277 mm ≈  718 x 1047 px a 96 dpi
+//   apaisado → útil 277 x 190 mm ≈ 1047 x  718 px
+// El apaisado es para listados de muchas columnas (ej. cobranzas): se pide
+// por listado con apaisado:true, no lo decide el helper.
+const SGV_PAGE = {
+  vertical: { size:'210mm 297mm', ancho: 718  },
+  apaisado: { size:'297mm 210mm', ancho: 1047 }
+};
+const SGV_PAGE_H    = 1047;   // alto útil de la A4 vertical: define las 72 líneas
 const SGV_LINEAS    = 72;    // líneas por hoja
 // Cuerpo de letra máximo. Va bien por debajo del alto de renglón (14.54px)
 // para que quede aire entre líneas: con 10px la letra ocupaba casi todo el
@@ -30,12 +36,12 @@ function sgvCorta(txt, n){
   return t.length > max ? t.substring(0, max).trim() + '…' : t;
 }
 
-function sgvPrintEstilos(){
+function sgvPrintEstilos(ancho){
   const h = Math.floor(SGV_PAGE_H / SGV_LINEAS * 100) / 100;
   return `
     *{box-sizing:border-box}
     body{font-family:Arial,Helvetica,sans-serif;font-size:${SGV_FS}px;margin:0;color:#111;
-         font-variant-numeric:tabular-nums;width:${SGV_PAGE_W}px}
+         font-variant-numeric:tabular-nums;width:${ancho}px}
 
     /* Título fijo: no encoge cuando se achica la letra de la tabla */
     h2{margin:0 0 2px;font-size:15px}
@@ -65,10 +71,10 @@ function sgvPrintEstilos(){
 }
 
 // Corre DENTRO de la ventana de impresión: achica la letra hasta que entre.
-function sgvPrintScript(){
+function sgvPrintScript(ancho){
   return `
 (function(){
-  var W=${SGV_PAGE_W}, FS=${SGV_FS}, FSMIN=${SGV_FS_MIN};
+  var W=${ancho}, FS=${SGV_FS}, FSMIN=${SGV_FS_MIN};
   var PAD=12;          // relleno horizontal de cada celda (6px de cada lado)
   // Ancho de un carácter en Arial por cada px de cuerpo. Van holgados a
   // propósito: si la estimación queda corta, el listado se corta a la derecha.
@@ -141,17 +147,18 @@ function sgvPrintScript(){
 
 function sgvPrint(opt){
   const o = opt || {};
+  const pg = o.apaisado ? SGV_PAGE.apaisado : SGV_PAGE.vertical;
   const w = window.open('', '_blank');
   if(!w){ if(typeof toast==='function') toast('El navegador bloqueó la ventana de impresión','err'); return; }
 
   w.document.write(
     '<html><head><meta charset="utf-8"><title>' + (o.titulo || 'Listado') + '</title>' +
-    '<style>@page{size:' + SGV_PAGE_SIZE + ';margin:10mm}</style>' +
-    '<style>' + sgvPrintEstilos() + (o.estilos || '') + '</style></head><body>' +
+    '<style>@page{size:' + pg.size + ';margin:10mm}</style>' +
+    '<style>' + sgvPrintEstilos(pg.ancho) + (o.estilos || '') + '</style></head><body>' +
     (o.titulo ? '<h2>' + o.titulo + '</h2>' : '') +
     (o.subtitulo ? '<div class="sub">' + o.subtitulo + '</div>' : '') +
     (o.cuerpo || '') +
-    '<' + 'script>' + sgvPrintScript() + '<' + '/script>' +
+    '<' + 'script>' + sgvPrintScript(pg.ancho) + '<' + '/script>' +
     '</body></html>'
   );
   w.document.close();
