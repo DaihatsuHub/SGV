@@ -53,9 +53,11 @@ function sgvPrintEstilosBase(){
     *{box-sizing:border-box}
     body{font-family:Arial,Helvetica,sans-serif;font-size:11px;margin:0;color:#111;
          font-variant-numeric:tabular-nums}
-    h2{margin:0 0 2px;font-size:1.4em;white-space:normal;overflow-wrap:anywhere}
-    .sub{color:#555;font-size:1em;margin-bottom:6px;white-space:normal;overflow-wrap:anywhere}
-    h3{margin:10px 0 3px;color:#0a58ca;border-bottom:1px solid #ccc;font-size:1.1em}
+    /* Título y subtítulo en tamaño FIJO: no deben encoger cuando se achica
+       la letra de la tabla. Antes iban en em y se iban con ella. */
+    h2{margin:0 0 2px;font-size:15px;white-space:normal;overflow-wrap:anywhere}
+    .sub{color:#555;font-size:10px;margin-bottom:6px;white-space:normal;overflow-wrap:anywhere}
+    h3{margin:10px 0 3px;color:#0a58ca;border-bottom:1px solid #ccc;font-size:12px}
     /* max-content = el ancho REAL del contenido. Con width:auto la tabla no
        siempre se encoge, y la medición da un valor fijo que no baja al
        achicar la letra (era el bug que mandaba todo a apaisado). */
