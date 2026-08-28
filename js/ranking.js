@@ -198,7 +198,7 @@ function _rkInjectStyle(){
     #rk-det-box{background:var(--bg);border:1px solid var(--b1);border-radius:10px;max-width:1100px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.5)}
     #rk-det-head{padding:12px 16px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:12px}
     #rk-det-body{overflow:auto;padding:0 0 8px}
-    .rkd-head,.rkd-row{display:grid;grid-template-columns:80px 130px 60px minmax(150px,1fr) 60px 110px 60px 110px 110px 110px;gap:6px;padding:5px 12px;align-items:center}
+    .rkd-head,.rkd-row{display:grid;grid-template-columns:80px 125px 55px minmax(140px,1fr) 55px 105px 55px 110px 105px 105px 60px;gap:6px;padding:5px 12px;align-items:center}
     .rkd-head{background:var(--s2);font-size:11px;color:var(--t2);position:sticky;top:0;border-bottom:1px solid var(--b1)}
     .rkd-row{font-size:12px;border-bottom:1px solid var(--b1)}
     .rkd-row:hover{background:var(--s2)}
@@ -238,7 +238,7 @@ function _rkDetHtml(r){
   return `<div class="rkd-head">
       <span>Fecha</span><span>Comprobante</span><span>Cód</span><span>Cliente</span>
       <span>Vend</span><span class="rkd-num">Unitario</span><span class="rkd-num">Unid</span>
-      <span class="rkd-num">Importe</span><span class="rkd-num">Costo</span><span class="rkd-num">Margen</span>
+      <span class="rkd-num">Importe</span><span class="rkd-num">Costo</span><span class="rkd-num">Margen</span><span class="rkd-num">%</span>
     </div>`
     + f.map(x=>`<div class="rkd-row">
         <span style="color:var(--t2);font-family:var(--mono)">${_rkFecha(x.fec)}</span>
@@ -251,6 +251,7 @@ function _rkDetHtml(r){
         <span class="rkd-num">${_rkFmt(x.importe)}</span>
         <span class="rkd-num" style="color:var(--t2)">${x.costo===null?'—':_rkFmt(x.costo)}</span>
         <span class="rkd-num" title="${x.motivo?_rkEsc(x.motivo):''}" style="${x.margen<0?'color:var(--red)':''}">${x.margen===null?'<span style="color:var(--wrn,#f59e0b);font-size:11px">'+_rkEsc(x.motivo)+'</span>':_rkFmt(x.margen)}</span>
+        <span class="rkd-num" style="font-weight:600;${x.margenPct<0?'color:var(--red)':''}">${x.margenPct===null?'':(Number(x.margenPct)||0).toLocaleString('es-AR',{minimumFractionDigits:1,maximumFractionDigits:1})}</span>
       </div>`).join('')
     + `<div class="rkd-row rkd-fin">
         <span></span><span>TOTAL</span><span></span><span></span><span></span><span></span>
@@ -258,6 +259,7 @@ function _rkDetHtml(r){
         <span class="rkd-num">${_rkFmt0(T.importe)}</span>
         <span class="rkd-num">${_rkFmt0(T.costo)}</span>
         <span class="rkd-num">${_rkFmt0(T.margen)}</span>
+        <span class="rkd-num">${(Number(T.margenPct)||0).toLocaleString('es-AR',{minimumFractionDigits:1,maximumFractionDigits:1})}</span>
       </div>`;
 }
 
