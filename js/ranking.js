@@ -93,7 +93,8 @@ function renderRk(){
     html+=`<div style="margin:10px 12px 0;padding:7px 12px;background:var(--s2);border-left:3px solid var(--acc);border-radius:4px;font-size:12px;color:var(--t2)">
       Comprobantes: <b style="color:var(--txt)">${C.al100}</b> al 100% (importe con IVA)
       · <b style="color:var(--txt)">${C.parcial}</b> con descuento (valor real, sin IVA)
-      ${C.fuera?`· <b style="color:var(--txt)">${C.fuera}</b> fuera (no mueven stock y depósito)`:''}
+      ${C.sinFiscal?`· <b style="color:var(--txt)">${C.sinFiscal}</b> sin comprobante fiscal (importe final)`:''}
+      ${C.fuera?`· <b style="color:var(--txt)">${C.fuera}</b> fuera (no mueven stock)`:''}
     </div>`;
   }
 
@@ -226,7 +227,7 @@ function rkPrint(){
   }
 
   const C=_rkData.comprobantes;
-  const nota=C?` · ${C.al100} comprobante(s) al 100% + ${C.parcial} con descuento`:'';
+  const nota=C?` · ${C.al100} al 100% + ${C.parcial} con descuento`+(C.sinFiscal?` + ${C.sinFiscal} sin fiscal`:''):'';
   sgvPrint({
     titulo:'Ranking de Artículos',
     subtitulo:`Período: ${per} — importes en pesos${nota}`,
