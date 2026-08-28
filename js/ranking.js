@@ -104,7 +104,7 @@ function renderRk(){
         <div class="rk-head">
           <span class="rk-ord" onclick="rkOrdenar('art')">Artículo${flecha('art')}</span>
           <span>Descripción</span><span>Marca</span>
-          ${col('unid','Unid')}${col('importe','Importe')}
+          ${col('unid','Unid')}${col('importe','Importe c/IVA')}
           <span class="rk-num">Costo</span>
           ${col('margen','Margen')}${col('margenPct','%')}
         </div>
