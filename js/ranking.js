@@ -89,11 +89,11 @@ function renderRk(){
 
   // Aviso: sólo entran los comprobantes facturados al 100%
   const C=_rkData.comprobantes;
-  if(C && C.descartados){
+  if(C){
     html+=`<div style="margin:10px 12px 0;padding:7px 12px;background:var(--s2);border-left:3px solid var(--acc);border-radius:4px;font-size:12px;color:var(--t2)">
-      Se incluyen sólo los comprobantes facturados al 100% (mueven stock y depósito, sin descuento):
-      <b style="color:var(--txt)">${C.al100}</b> incluido${C.al100===1?'':'s'},
-      <b style="color:var(--txt)">${C.descartados}</b> fuera del cálculo.
+      Comprobantes: <b style="color:var(--txt)">${C.al100}</b> al 100% (importe con IVA)
+      · <b style="color:var(--txt)">${C.parcial}</b> con descuento (valor real, sin IVA)
+      ${C.fuera?`· <b style="color:var(--txt)">${C.fuera}</b> fuera (no mueven stock y depósito)`:''}
     </div>`;
   }
 
@@ -104,7 +104,7 @@ function renderRk(){
         <div class="rk-head">
           <span class="rk-ord" onclick="rkOrdenar('art')">Artículo${flecha('art')}</span>
           <span>Descripción</span><span>Marca</span>
-          ${col('unid','Unid')}${col('importe','Importe c/IVA')}
+          ${col('unid','Unid')}${col('importe','Importe')}
           <span class="rk-num">Costo</span>
           ${col('margen','Margen')}${col('margenPct','%')}
         </div>
@@ -226,7 +226,7 @@ function rkPrint(){
   }
 
   const C=_rkData.comprobantes;
-  const nota=C?` · sólo comprobantes al 100% (${C.al100} incluidos, ${C.descartados} fuera)`:'';
+  const nota=C?` · ${C.al100} comprobante(s) al 100% + ${C.parcial} con descuento`:'';
   sgvPrint({
     titulo:'Ranking de Artículos',
     subtitulo:`Período: ${per} — importes en pesos${nota}`,
