@@ -87,6 +87,16 @@ function renderRk(){
 
   let html='';
 
+  // Aviso: sólo entran los comprobantes facturados al 100%
+  const C=_rkData.comprobantes;
+  if(C && C.descartados){
+    html+=`<div style="margin:10px 12px 0;padding:7px 12px;background:var(--s2);border-left:3px solid var(--acc);border-radius:4px;font-size:12px;color:var(--t2)">
+      Se incluyen sólo los comprobantes facturados al 100% (mueven stock y depósito, sin descuento):
+      <b style="color:var(--txt)">${C.al100}</b> incluido${C.al100===1?'':'s'},
+      <b style="color:var(--txt)">${C.descartados}</b> fuera del cálculo.
+    </div>`;
+  }
+
   if(filas.length){
     html+=`<div class="rk-blk">
       <div class="rk-stickyhead">
@@ -215,9 +225,11 @@ function rkPrint(){
           <td class="n">${_rkFmt0(TI.importe)}</td><td></td></tr></tbody></table>`;
   }
 
+  const C=_rkData.comprobantes;
+  const nota=C?` · sólo comprobantes al 100% (${C.al100} incluidos, ${C.descartados} fuera)`:'';
   sgvPrint({
     titulo:'Ranking de Artículos',
-    subtitulo:`Período: ${per} — importes en pesos`,
+    subtitulo:`Período: ${per} — importes en pesos${nota}`,
     cuerpo:cuerpo
   });
 }
