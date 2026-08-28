@@ -138,6 +138,7 @@
       <div class="dd-menu" id="dd-ven">
         <button class="dd-item" id="ddi-fac" onclick="showSubPage('ven','fac')">📄 Facturación</button>
         <button class="dd-item" id="ddi-vmes" onclick="showSubPage('ven','vmes')">📅 Ventas mensuales x Artículos</button>
+        <button class="dd-item" id="ddi-rank" onclick="showSubPage('ven','rank')">🏆 Ranking de Artículos</button>
         <button class="dd-item" id="ddi-saldo" onclick="showSubPage('ven','saldo')">📊 Saldos por Mes</button>
         <button class="dd-item" id="ddi-ctip" onclick="showSubPage('ven','ctip')">📋 Tipos de Comprobantes</button>
       </div>
@@ -738,6 +739,27 @@
 </div>
 
 <!-- ══════ COBRANZAS: LISTADO DE COBRANZAS ══════ -->
+<div class="page" id="page-rank">
+  <div class="toolbar">
+    <span style="font-weight:600;font-size:14px;color:var(--acc);margin-right:4px">🏆 Ranking de Artículos</span>
+    <label style="font-size:12px;color:var(--t2)">Desde</label>
+    <input type="date" class="finp" id="rk-desde" style="width:145px">
+    <label style="font-size:12px;color:var(--t2)">Hasta</label>
+    <input type="date" class="finp" id="rk-hasta" style="width:145px">
+    <select class="fsel" id="rk-marca" style="min-width:150px"><option value="">Todas las marcas</option></select>
+    <select class="fsel" id="rk-rubro" style="min-width:150px"><option value="">Todos los rubros</option></select>
+    <select class="fsel" id="rk-vend" style="min-width:160px"><option value="">Todos los vendedores</option></select>
+    <button class="btn pri" onclick="rkConsultar()">🔍 Consultar</button>
+    <button class="btn" onclick="rkPrint()">🖨 Imprimir</button>
+    <button class="btn" onclick="rkExcel()">📥 Excel</button>
+    <div class="spacer"></div>
+    <span style="font-size:11px;color:var(--t3)">Importes en pesos · clic en los títulos para ordenar</span>
+  </div>
+  <div class="tbl-wrap">
+    <div id="rk-body" class="tbl-body"><div class="empty" style="margin-top:40px">Elegí el período y tocá Consultar</div></div>
+  </div>
+</div>
+
 <div class="page" id="page-antig">
   <div class="toolbar">
     <span style="font-weight:600;font-size:14px;color:var(--acc);margin-right:4px">⏳ Antigüedad de Saldos</span>
@@ -1709,6 +1731,7 @@
 <script src="js/listcob.js"></script>
 <script src="js/ctacte.js"></script>
 <script src="js/antiguedad.js"></script>
+<script src="js/ranking.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/vmes.js"></script>
 <script src="js/resumen.js"></script>
