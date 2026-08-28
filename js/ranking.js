@@ -95,6 +95,7 @@ function renderRk(){
       · <b style="color:var(--txt)">${C.parcial}</b> con descuento (valor real, sin IVA)
       ${C.sinFiscal?`· <b style="color:var(--txt)">${C.sinFiscal}</b> sin comprobante fiscal (importe final)`:''}
       ${C.fuera?`· <b style="color:var(--txt)">${C.fuera}</b> fuera (no mueven stock)`:''}
+      <span style="margin-left:8px;color:var(--t3)">— clic en un artículo para ver sus comprobantes</span>
     </div>`;
   }
 
@@ -111,7 +112,7 @@ function renderRk(){
         </div>
       </div>
       <div class="rk-grid">
-        ${_rkSort(filas).map(r=>`<div class="rk-row">
+        ${_rkSort(filas).map(r=>`<div class="rk-row rk-click" onclick="rkDetalle('${_rkEsc(r.art)}')" title="Ver las facturas que lo componen">
           <span class="rk-art">${_rkEsc(r.art)}</span>
           <span class="rk-des" title="${_rkEsc(r.des)}">${_rkEsc(sgvCorta(r.des,34))}</span>
           <span class="rk-mar">${_rkEsc(r.marca)}</span>
@@ -145,7 +146,7 @@ function renderRk(){
         </div>
       </div>
       <div class="rk-grid">
-        ${inc.map(r=>`<div class="rk-row">
+        ${inc.map(r=>`<div class="rk-row rk-click" onclick="rkDetalle('${_rkEsc(r.art)}')" title="Ver las facturas que lo componen">
           <span class="rk-art">${_rkEsc(r.art)}</span>
           <span class="rk-des" title="${_rkEsc(r.des)}">${_rkEsc(sgvCorta(r.des,34))}</span>
           <span class="rk-mar">${_rkEsc(r.marca)}</span>
@@ -191,9 +192,97 @@ function _rkInjectStyle(){
     .rk-cos{color:var(--t2)}
     .rk-mrg,.rk-pct{font-weight:600}
     .rk-fin{background:var(--s2);border-top:2px solid var(--acc)}
+    .rk-click{cursor:pointer}
+    /* Popup de detalle */
+    #rk-det-ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900;display:flex;align-items:center;justify-content:center;padding:24px}
+    #rk-det-box{background:var(--bg);border:1px solid var(--b1);border-radius:10px;max-width:1100px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+    #rk-det-head{padding:12px 16px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:12px}
+    #rk-det-body{overflow:auto;padding:0 0 8px}
+    .rkd-head,.rkd-row{display:grid;grid-template-columns:80px 130px 60px minmax(150px,1fr) 60px 110px 60px 110px 110px 110px;gap:6px;padding:5px 12px;align-items:center}
+    .rkd-head{background:var(--s2);font-size:11px;color:var(--t2);position:sticky;top:0;border-bottom:1px solid var(--b1)}
+    .rkd-row{font-size:12px;border-bottom:1px solid var(--b1)}
+    .rkd-row:hover{background:var(--s2)}
+    .rkd-num{text-align:right;font-family:var(--mono)}
+    .rkd-mono{font-family:var(--mono);color:var(--acc)}
+    .rkd-fin{background:var(--s2);border-top:2px solid var(--acc);font-weight:700}
+    .rkd-tag{font-size:10px;padding:1px 5px;border-radius:3px;background:var(--s3);color:var(--t2)}
+    .rkd-cli{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   `;
   document.head.appendChild(st);
 }
+
+/* ─────────── Detalle: qué facturas componen un artículo ─────────── */
+// Se pide al server EN EL MOMENTO (no viene con el ranking), así la consulta
+// principal queda liviana aunque el período sea largo.
+async function rkDetalle(art){
+  const g=id=>(document.getElementById(id)?.value||'').trim();
+  const qs=['art='+encodeURIComponent(art)];
+  if(g('rk-desde')) qs.push('desde='+g('rk-desde'));
+  if(g('rk-hasta')) qs.push('hasta='+g('rk-hasta'));
+  if(g('rk-vend'))  qs.push('vend='+encodeURIComponent(g('rk-vend')));
+
+  _rkAbrirPopup(art, '<div class="empty" style="margin:30px">⏳ Cargando…</div>');
+  try{
+    const r=await apiGet('/informes/ranking-art-detalle?'+qs.join('&'));
+    if(!r.ok){ _rkPopupBody('<div class="empty" style="margin:30px">⚠️ '+_rkEsc(r.error||'Error')+'</div>'); return; }
+    _rkPopupBody(_rkDetHtml(r));
+  }catch(e){ _rkPopupBody('<div class="empty" style="margin:30px">⚠️ '+_rkEsc(e.message||'Error')+'</div>'); }
+}
+
+function _rkDetHtml(r){
+  const f=r.filas||[], T=r.totales||{};
+  if(!f.length) return '<div class="empty" style="margin:30px">Sin comprobantes en el período</div>';
+  const tag=m=>m==='al100'?'<span class="rkd-tag">100%</span>'
+    :m==='parcial'?'<span class="rkd-tag" style="color:var(--wrn,#f59e0b)">c/dto</span>'
+    :'<span class="rkd-tag" style="color:var(--acc)">s/fiscal</span>';
+  return `<div class="rkd-head">
+      <span>Fecha</span><span>Comprobante</span><span>Cód</span><span>Cliente</span>
+      <span>Vend</span><span class="rkd-num">Unitario</span><span class="rkd-num">Unid</span>
+      <span class="rkd-num">Importe</span><span class="rkd-num">Costo</span><span class="rkd-num">Margen</span>
+    </div>`
+    + f.map(x=>`<div class="rkd-row">
+        <span style="color:var(--t2);font-family:var(--mono)">${_rkFecha(x.fec)}</span>
+        <span class="rkd-mono">${_rkEsc(x.comp)} ${tag(x.modo)}</span>
+        <span style="font-family:var(--mono);color:var(--t2)">${_rkEsc(x.cli)}</span>
+        <span class="rkd-cli" title="${_rkEsc(x.razon)}">${_rkEsc(x.razon)}</span>
+        <span style="font-family:var(--mono);color:var(--t2)">${_rkEsc(x.vend)}</span>
+        <span class="rkd-num">${_rkFmt(x.unitario)}</span>
+        <span class="rkd-num">${_rkFmtU(x.unid)}</span>
+        <span class="rkd-num">${_rkFmt(x.importe)}</span>
+        <span class="rkd-num" style="color:var(--t2)">${x.costo===null?'—':_rkFmt(x.costo)}</span>
+        <span class="rkd-num" title="${x.motivo?_rkEsc(x.motivo):''}" style="${x.margen<0?'color:var(--red)':''}">${x.margen===null?'<span style="color:var(--wrn,#f59e0b);font-size:11px">'+_rkEsc(x.motivo)+'</span>':_rkFmt(x.margen)}</span>
+      </div>`).join('')
+    + `<div class="rkd-row rkd-fin">
+        <span></span><span>TOTAL</span><span></span><span></span><span></span><span></span>
+        <span class="rkd-num">${_rkFmtU(T.unid)}</span>
+        <span class="rkd-num">${_rkFmt0(T.importe)}</span>
+        <span class="rkd-num">${_rkFmt0(T.costo)}</span>
+        <span class="rkd-num">${_rkFmt0(T.margen)}</span>
+      </div>`;
+}
+
+function _rkAbrirPopup(art, contenido){
+  _rkCerrarDet();
+  const des=(_rkData?.filas||[]).concat(_rkData?.incompletas||[]).find(x=>x.art===art)?.des||'';
+  const ov=document.createElement('div'); ov.id='rk-det-ov';
+  ov.onclick=e=>{ if(e.target===ov) _rkCerrarDet(); };
+  ov.innerHTML=`<div id="rk-det-box">
+      <div id="rk-det-head">
+        <span style="font-weight:700;color:var(--acc);font-family:var(--mono)">${_rkEsc(art)}</span>
+        <span style="color:var(--t2);font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_rkEsc(des)}</span>
+        <button class="btn" onclick="_rkCerrarDet()" style="padding:3px 10px;font-size:12px">✕ Cerrar</button>
+      </div>
+      <div id="rk-det-body">${contenido}</div>
+    </div>`;
+  document.body.appendChild(ov);
+  document.addEventListener('keydown', _rkEscCerrar);
+}
+function _rkPopupBody(html){ const b=document.getElementById('rk-det-body'); if(b) b.innerHTML=html; }
+function _rkCerrarDet(){
+  document.getElementById('rk-det-ov')?.remove();
+  document.removeEventListener('keydown', _rkEscCerrar);
+}
+function _rkEscCerrar(e){ if(e.key==='Escape'){ e.preventDefault(); _rkCerrarDet(); } }
 
 /* ─────────── Imprimir ─────────── */
 function rkPrint(){
