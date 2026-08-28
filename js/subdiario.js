@@ -52,7 +52,7 @@ async function sdConsultar(){
 function _sdTpl(){
   const A=(_sdData?.alicuotas||[]).map(()=>'115px 105px').join(' ');
   const P=(_sdData?.percepciones||[]).map(()=>'110px').join(' ');
-  return `display:grid;grid-template-columns:75px 120px 45px 60px minmax(150px,1fr) 115px 45px ${A} ${P} 125px;gap:6px;align-items:center;min-width:max-content`;
+  return `display:grid;grid-template-columns:75px 125px minmax(190px,1fr) 120px 45px ${A} ${P} 125px;gap:6px;align-items:center;min-width:max-content`;
 }
 
 function renderSd(){
@@ -63,7 +63,7 @@ function renderSd(){
 
   const TPL=_sdTpl();
   const cab=`<div class="sd-head" style="${TPL}">
-      <span>Fecha</span><span>Comprobante</span><span>Tipo</span><span>Cód</span><span>Cliente</span>
+      <span>Fecha</span><span>Comprobante</span><span>Cliente</span>
       <span>CUIT</span><span>IVA</span>
       ${AL.map(a=>`<span class="sd-num">Neto ${_sdAlic(a)}</span><span class="sd-num">IVA ${_sdAlic(a)}</span>`).join('')}
       ${PE.map(p=>`<span class="sd-num" title="${_sdEsc(p.detalle)}">${_sdEsc(p.detalle.replace(/^PERCEP\.\s*IIBB\s*/i,''))}</span>`).join('')}
@@ -73,9 +73,7 @@ function renderSd(){
   const filas=F.map(r=>`<div class="sd-row" style="${TPL}">
       <span class="sd-mono" style="color:var(--t2)">${_sdFecha(r.fec)}</span>
       <span class="sd-mono" style="color:${r.tipo==='C'?'var(--red)':'var(--acc)'}">${_sdEsc(r.comp)}</span>
-      <span style="font-size:11px;color:var(--t2)">${r.tipo==='C'?'NC':r.tipo==='D'?'ND':'FC'}</span>
-      <span class="sd-mono" style="color:var(--t2)">${_sdEsc(r.cli)}</span>
-      <span class="sd-cli" title="${_sdEsc(r.razon)}">${_sdEsc(sgvCorta(r.razon))}</span>
+      <span class="sd-cli" title="${_sdEsc(r.razon)}">${_sdEsc(sgvCorta(r.razon, 30))}</span>
       <span class="sd-mono">${_sdEsc(r.cuit)}</span>
       <span style="font-size:11px;color:var(--t2)">${_sdEsc(_sdIvaDesc(r.iva))}</span>
       ${AL.map(a=>`<span class="sd-num">${_sdFmt(r.porAlic[a]?.neto)}</span><span class="sd-num">${_sdFmt(r.porAlic[a]?.iva)}</span>`).join('')}
@@ -84,7 +82,7 @@ function renderSd(){
     </div>`).join('');
 
   const pie=`<div class="sd-row sd-fin" style="${TPL}">
-      <span></span><span><b>TOTALES</b></span><span></span><span></span>
+      <span></span><span><b>TOTALES</b></span>
       <span style="font-size:11px;color:var(--t2)">${F.length} comprobante${F.length===1?'':'s'}</span>
       <span></span><span></span>
       ${AL.map(a=>`<span class="sd-num"><b>${_sdFmt0(T.porAlic?.[a]?.neto)}</b></span><span class="sd-num"><b>${_sdFmt0(T.porAlic?.[a]?.iva)}</b></span>`).join('')}
@@ -149,19 +147,18 @@ function sdPrint(){
   const per=`${_sdData.desde?_sdFecha(_sdData.desde):'inicio'} a ${_sdData.hasta?_sdFecha(_sdData.hasta):'hoy'}`;
   const empTxt=_sdData.empresa==='H'?'Hatsu':_sdData.empresa==='T'?'Tressa':'Todas las empresas';
 
-  const cab=`<tr><th>Fecha</th><th>Comprobante</th><th>T</th><th>Cód</th><th>Cliente</th><th>CUIT</th><th>IVA</th>`
+  const cab=`<tr><th>Fecha</th><th>Comprobante</th><th>Cliente</th><th>CUIT</th><th>IVA</th>`
     + AL.map(a=>`<th class="n">Neto ${_sdAlic(a)}</th><th class="n">IVA ${_sdAlic(a)}</th>`).join('')
     + PE.map(p=>`<th class="n">${_sdEsc(p.detalle.replace(/^PERCEP\.\s*IIBB\s*/i,''))}</th>`).join('')
     + `<th class="n">Total</th></tr>`;
 
   const cuerpo=F.map(r=>`<tr><td>${_sdFecha(r.fec)}</td><td>${_sdEsc(r.comp)}</td>
-      <td>${r.tipo==='C'?'NC':r.tipo==='D'?'ND':'FC'}</td><td>${_sdEsc(r.cli)}</td>
-      <td>${_sdEsc(sgvCorta(r.razon))}</td><td>${_sdEsc(r.cuit)}</td><td>${_sdEsc(_sdIvaDesc(r.iva))}</td>`
+      <td>${_sdEsc(sgvCorta(r.razon, 30))}</td><td>${_sdEsc(r.cuit)}</td><td>${_sdEsc(_sdIvaDesc(r.iva))}</td>`
     + AL.map(a=>`<td class="n">${_sdFmt(r.porAlic[a]?.neto)}</td><td class="n">${_sdFmt(r.porAlic[a]?.iva)}</td>`).join('')
     + PE.map(p=>`<td class="n">${_sdFmt(r.perc[p.cod])}</td>`).join('')
     + `<td class="n">${_sdFmt(r.total)}</td></tr>`).join('');
 
-  const pie=`<tr class="tot"><td colspan="7">TOTALES (${F.length} comprobantes)</td>`
+  const pie=`<tr class="tot"><td colspan="5">TOTALES (${F.length} comprobantes)</td>`
     + AL.map(a=>`<td class="n">${_sdFmt0(T.porAlic?.[a]?.neto)}</td><td class="n">${_sdFmt0(T.porAlic?.[a]?.iva)}</td>`).join('')
     + PE.map(p=>`<td class="n">${_sdFmt0(T.perc?.[p.cod])}</td>`).join('')
     + `<td class="n">${_sdFmt0(T.total)}</td></tr>`;
@@ -194,8 +191,8 @@ async function sdExcel(){
   const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('Subdiario IVA');
   const NUM='#,##0.00';
 
-  const nCols=7+AL.length*2+PE.length+1;
-  ws.columns=[{width:11},{width:15},{width:6},{width:9},{width:34},{width:15},{width:7},
+  const nCols=5+AL.length*2+PE.length+1;
+  ws.columns=[{width:11},{width:15},{width:34},{width:15},{width:7},
     ...AL.flatMap(()=>[{width:15},{width:14}]),
     ...PE.map(()=>({width:15})), {width:16}];
 
@@ -205,20 +202,20 @@ async function sdExcel(){
   const s=ws.addRow([per]); s.font={italic:true,color:{argb:'FF666666'}}; ws.mergeCells(s.number,1,s.number,nCols);
   ws.addRow([]);
 
-  const hr=ws.addRow(['Fecha','Comprobante','Tipo','Cód','Cliente','CUIT','IVA',
+  const hr=ws.addRow(['Fecha','Comprobante','Cliente','CUIT','IVA',
     ...AL.flatMap(a=>['Neto '+_sdAlic(a),'IVA '+_sdAlic(a)]),
     ...PE.map(p=>p.detalle), 'Total']);
   hr.eachCell(c=>{ c.font={bold:true}; c.alignment={horizontal:'center',wrapText:true}; c.border={bottom:{style:'medium'}}; });
 
-  const primerNum=8;
+  const primerNum=6;
   F.forEach(r=>{
-    const row=ws.addRow([_sdFecha(r.fec), r.comp, r.tipo==='C'?'NC':r.tipo==='D'?'ND':'FC', r.cli, r.razon, r.cuit, _sdIvaDesc(r.iva),
+    const row=ws.addRow([_sdFecha(r.fec), r.comp, r.razon, r.cuit, _sdIvaDesc(r.iva),
       ...AL.flatMap(a=>[r.porAlic[a]?.neto||null, r.porAlic[a]?.iva||null]),
       ...PE.map(p=>r.perc[p.cod]||null), r.total]);
     for(let i=primerNum;i<=nCols;i++) row.getCell(i).numFmt=NUM;
   });
 
-  const fr=ws.addRow(['','','','','TOTALES ('+F.length+')','','',
+  const fr=ws.addRow(['','','TOTALES ('+F.length+')','','',
     ...AL.flatMap(a=>[T.porAlic?.[a]?.neto||0, T.porAlic?.[a]?.iva||0]),
     ...PE.map(p=>T.perc?.[p.cod]||0), T.total||0]);
   fr.font={bold:true}; fr.eachCell(c=>{ c.border={top:{style:'double'}}; });
