@@ -49,6 +49,19 @@ function nfEsNC() {
   if (!val) return false;
   return val.split('|')[1] === 'C';
 }
+// Contra qué stock del despacho trabaja el comprobante elegido.
+// Si mueve depósito (tab_fact) pero NO stock físico (tab_stk), el disponible
+// es dep_costk. En todos los demás casos, dep_stk. Misma regla que usa el
+// server al validar: acá se aplica al FILTRO, para que el despacho se pueda
+// elegir aunque su stock físico esté en cero.
+function nfDispDesp(d) {
+  const stk=(d.dep_stk!=null)?d.dep_stk:((d.dep_ent||0)-(d.dep_sal||0));
+  const ct=(typeof nfCtipActual==='function')?nfCtipActual():null;
+  const usarContable = !!(ct && ct.tab_fact && !ct.tab_stk);   // "p/Facturar puro"
+  if(usarContable) return (d.dep_costk!=null)?d.dep_costk:stk;
+  return stk;
+}
+
 function nfEsFacturaA() {
   const val  = document.getElementById('nf-ctip')?.value||'';
   const tiva = document.getElementById('nf-tiva-cod')?.value||'';
@@ -1582,7 +1595,7 @@ async function nfCargarGrupo() {
     let despNro='', despFec='', despId=null, despsArr=null, depStk=null, depCostk=null;
     try {
       const desps=await sbGet('despachos',`dep_art=eq.${encodeURIComponent(a.ART_COD)}&order=dep_fec.desc`);
-      const despsFilt=desps.filter(d=>((d.dep_stk!=null?d.dep_stk:(d.dep_ent||0)-(d.dep_sal||0)))>0);
+      const despsFilt=desps.filter(d=>nfDispDesp(d)>0);
       despsArr=despsFilt;
       if(despsFilt.length===1){
         const d=despsFilt[0];
@@ -1833,7 +1846,7 @@ async function nfItemArtChange(idx,cod) {
   try {
     const esNC=nfEsNC();
     const desps=await sbGet('despachos',`dep_art=eq.${encodeURIComponent(codUp)}&order=dep_fec.desc`);
-    const despsFilt=esNC?desps:desps.filter(d=>(d.dep_ent||0)-(d.dep_sal||0)>0);
+    const despsFilt=esNC?desps:desps.filter(d=>nfDispDesp(d)>0);
     FAC_ITEMS_NUEVA[idx]._desps=despsFilt;
     if(despsFilt.length===1){
       const d=despsFilt[0];
@@ -1842,7 +1855,7 @@ async function nfItemArtChange(idx,cod) {
       const dStk=(d.dep_stk!=null)?d.dep_stk:((d.dep_ent||0)-(d.dep_sal||0));
       FAC_ITEMS_NUEVA[idx]._depStk=dStk;
       FAC_ITEMS_NUEVA[idx]._depCostk=(d.dep_costk!=null)?d.dep_costk:dStk;
-      FAC_ITEMS_NUEVA[idx].ite_disp=esNC?null:dStk;
+      FAC_ITEMS_NUEVA[idx].ite_disp=esNC?null:nfDispDesp(d);
       FAC_ITEMS_NUEVA[idx]._desp_id=d.dep_id;
     }
   } catch(e){console.error('nfItemArtChange desps:',e);}
@@ -1891,7 +1904,7 @@ function nfItemDespChange(idx,depId) {
   const dCoStk=(d.dep_costk!=null)?d.dep_costk:dStk;
   FAC_ITEMS_NUEVA[idx]._depStk=dStk;
   FAC_ITEMS_NUEVA[idx]._depCostk=dCoStk;
-  FAC_ITEMS_NUEVA[idx].ite_disp=esNC?null:dStk;
+  FAC_ITEMS_NUEVA[idx].ite_disp=esNC?null:nfDispDesp(d);
   FAC_ITEMS_NUEVA[idx]._desp_id=depId;
   nfRenderItems();
   nfCalcTotales();
@@ -2007,7 +2020,7 @@ function nfRenderItems() {
       despHtml=`<select class="finp" style="font-size:10px;width:100%;padding:2px 4px" onchange="nfItemDespChange(${i},this.value)">
         <option value="">— Elegir —</option>
         ${desps.map(d=>{
-          const disp=(d.dep_ent||0)-(d.dep_sal||0);
+          const disp=nfDispDesp(d);
           const fec=d.dep_fec?d.dep_fec.substring(0,10).split('-').reverse().join('/'):'';
           return `<option value="${d.dep_id}">${d.dep_desp}${d.dep_sub||''} ${fec} (${disp})</option>`;
         }).join('')}
