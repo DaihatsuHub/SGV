@@ -54,6 +54,17 @@ function nfEsNC() {
 // es dep_costk. En todos los demás casos, dep_stk. Misma regla que usa el
 // server al validar: acá se aplica al FILTRO, para que el despacho se pueda
 // elegir aunque su stock físico esté en cero.
+// Disponible del ARTÍCULO según el comprobante elegido y la empresa.
+// Si mueve depósito pero NO stock físico ("p/Facturar puro"), el disponible
+// es ART_DEPH/ART_DEPT; si no, ART_STK/ART_STKT.
+function nfDispArt(a, empresa) {
+  const emp = empresa || document.getElementById('nf-empresa')?.value || 'H';
+  const ct=(typeof nfCtipActual==='function')?nfCtipActual():null;
+  const usarContable = !!(ct && ct.tab_fact && !ct.tab_stk);
+  if(usarContable) return emp==='T' ? (a.ART_DEPT||0) : (a.ART_DEPH||0);
+  return emp==='T' ? (a.ART_STKT||0) : (a.ART_STK||0);
+}
+
 function nfDispDesp(d) {
   const stk=(d.dep_stk!=null)?d.dep_stk:((d.dep_ent||0)-(d.dep_sal||0));
   const ct=(typeof nfCtipActual==='function')?nfCtipActual():null;
@@ -211,7 +222,17 @@ function renderCtip() {
     return `<div class="tr-tab ${sel}" style="display:grid;grid-template-columns:${gridTpl};gap:8px;padding:11px 16px;font-size:13px;cursor:pointer" onclick="selCtip(${i})">` +
       cols.map(col=>{
         if(col.field==='empresa')    return `<span class="col-cod">${esc(c.empresa)}</span>`;
-        if(col.field==='prefijo')    return `<span class="col-cod">${esc(c.prefijo)}</span>`;
+        if(col.field==='prefijo'){
+          // Si el numerador quedó bloqueado (sesión caída, browser cerrado),
+          // desde nivel 80 se puede forzar la liberación desde acá.
+          const bloq = !!c.bloqueado;
+          const puedeForzar = (usuarioActual?.nivel||0) >= 80;
+          const cand = bloq
+            ? ` <span title="Bloqueado por ${esc(c.bloqueado_por||'?')}" style="color:var(--red)">🔒</span>` +
+              (puedeForzar ? ` <button onclick="event.stopPropagation();ctipDesbloquear(${c.id},'${esc(c.prefijo)}','${esc(c.bloqueado_por||'')}')" title="Liberar el numerador" style="border:none;background:var(--red);color:#fff;border-radius:3px;font-size:10px;padding:1px 5px;cursor:pointer">Liberar</button>` : '')
+            : '';
+          return `<span class="col-cod">${esc(c.prefijo)}${cand}</span>`;
+        }
         if(col.field==='tipo')       return `<span class="col-sm">${esc(TIPO_LABEL[c.tipo]||c.tipo)}</span>`;
         if(col.field==='desc')       return `<span style="color:var(--t2);font-size:12px">${c.empresa==='H'?'Hatsu Electronics SA':'Tressa Argentina SA'}</span>`;
         if(col.field==='ultimo_nro') return `<span style="text-align:right;font-family:var(--mono)">${c.ultimo_nro||0}</span>`;
@@ -225,6 +246,25 @@ function renderCtip() {
   }).join('');
 }
 function selCtip(i) { ctipSelIdx=i; renderCtip(); }
+
+// Liberar a mano un numerador que quedó bloqueado (nivel 80+).
+// Pasa cuando una sesión se cae o se cierra el navegador facturando: el
+// bloqueo queda tomado y nadie más puede usar ese tipo de comprobante.
+async function ctipDesbloquear(id, prefijo, quien){
+  if((usuarioActual?.nivel||0) < 80){ toast('No tenés permiso para liberar el numerador','err'); return; }
+  const msg = `¿Liberar el numerador ${prefijo}?` +
+    (quien ? `\n\nFigura tomado por ${quien}.` : '') +
+    `\n\nAsegurate de que esa persona NO esté facturando en este momento: si lo está, puede perder el comprobante que tiene abierto.`;
+  if(!confirm(msg)) return;
+  try{
+    const res = await apiPost('/comp_tipos/desbloquear', { id, sid:'FORZADO', forzar:true });
+    if(!res.ok){ toast(res.error||'No se pudo liberar','err'); return; }
+    const ct = CTIPS.find(x=>x.id===id);
+    if(ct){ ct.bloqueado=false; ct.bloqueado_por=null; }
+    renderCtip();
+    toast(`✓ Numerador ${prefijo} liberado`,'scs');
+  }catch(e){ console.error('ctipDesbloquear:',e); toast('Error: '+e.message,'err'); }
+}
 
 function ctipAlta() {
   document.getElementById('ctip-empresa').value='H';
@@ -1484,12 +1524,13 @@ function nfFiltrarPopupArt(q) {
   const empresa=document.getElementById('nf-empresa')?.value||'H';
   const esNC=nfEsNC();
   let arts=ARTS;
-  // Factura: solo con stock. NC: todos
+  // Factura: solo con disponible. NC: todos.
+  // El campo a mirar depende del comprobante: si mueve depósito pero NO stock
+  // físico ("p/Facturar puro"), el disponible es ART_DEPH/ART_DEPT. Si no, el
+  // artículo con stock físico en 0 pero unidades para facturar quedaba fuera
+  // del buscador y no se podía seleccionar.
   if(!esNC) {
-    arts=arts.filter(a=>{
-      const disp=empresa==='T'?(a.ART_STKT||0):(a.ART_STK||0);
-      return disp>0;
-    });
+    arts=arts.filter(a=>nfDispArt(a,empresa)>0);
   }
   if(q && q.length>=1) {
     arts=arts.filter(a=>
@@ -1507,7 +1548,7 @@ function nfFiltrarPopupArt(q) {
       <span>Código</span><span>Descripción</span><span style="text-align:right">Disp.</span>
     </div>
     ${arts.map(a=>{
-      const disp=empresa==='T'?(a.ART_STKT||0):(a.ART_STK||0);
+      const disp=nfDispArt(a,empresa);
       const dispColor=disp>0?'color:var(--grn)':'color:var(--red)';
       const sinStock=!esNC&&disp===0;
       return `<div onclick="nfSelArtPopup('${a.ART_COD}')"
@@ -1569,8 +1610,7 @@ async function nfCargarGrupo() {
     if(rubr && (a.ART_RUB||'')!==rubr)   return false;
     if(srub && (a.ART_SRUB||'')!==srub)  return false;
     if(stock){
-      const disp=empresa==='T'?(a.ART_STKT||0):(a.ART_STK||0);
-      if(disp<=0) return false;
+      if(nfDispArt(a,empresa)<=0) return false;
     }
     // Si factura no es pesos, solo artículos de la misma moneda
     if(monFacGrupo!=='P' && (a.ART_MONEDA||'P')!==monFacGrupo) return false;
