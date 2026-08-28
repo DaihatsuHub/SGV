@@ -59,7 +59,7 @@ function renderSd(){
   const body=document.getElementById('sd-body'); if(!body) return;
   if(!_sdData){ body.innerHTML='<div class="empty" style="margin-top:40px">Elegí el período y tocá Consultar</div>'; return; }
   const F=_sdData.filas||[], AL=_sdData.alicuotas||[], PE=_sdData.percepciones||[], T=_sdData.totales||{};
-  if(!F.length){ body.innerHTML='<div class="empty" style="margin-top:40px">Sin comprobantes con CAE en el período</div>'; return; }
+  if(!F.length){ body.innerHTML='<div class="empty" style="margin-top:40px">Sin comprobantes declarables en el período</div>'; return; }
 
   const TPL=_sdTpl();
   const cab=`<div class="sd-head" style="${TPL}">
@@ -72,7 +72,7 @@ function renderSd(){
 
   const filas=F.map(r=>`<div class="sd-row" style="${TPL}">
       <span class="sd-mono" style="color:var(--t2)">${_sdFecha(r.fec)}</span>
-      <span class="sd-mono" style="color:${r.tipo==='C'?'var(--red)':'var(--acc)'}">${_sdEsc(r.comp)}</span>
+      <span class="sd-mono"${r.sinCae?' title="Pendiente de autorización AFIP"':''} style="${r.sinCae?'background:#111;color:#fff;padding:1px 5px;border-radius:3px;font-weight:600':'color:'+(r.tipo==='C'?'var(--red)':'var(--acc)')}">${_sdEsc(r.comp)}</span>
       <span class="sd-cli" title="${_sdEsc(r.razon)}">${_sdEsc(sgvCorta(r.razon, 30))}</span>
       <span class="sd-mono">${_sdEsc(r.cuit)}</span>
       <span style="font-size:11px;color:var(--t2)">${_sdEsc(_sdIvaDesc(r.iva))}</span>
@@ -101,7 +101,11 @@ function renderSd(){
       </div>
     </div>`;
 
-  body.innerHTML=`<div class="sd-wrap">${cab}<div class="sd-grid">${filas}${pie}</div></div>${resumen}`;
+  const avisoCae=_sdData.sinCae
+    ? `<div style="margin:10px 12px 0;padding:7px 12px;background:var(--s2);border-left:3px solid var(--red);border-radius:4px;font-size:12px;color:var(--t2)">
+        <b style="color:var(--txt)">${_sdData.sinCae}</b> comprobante${_sdData.sinCae===1?'':'s'} sin CAE (en negro): falta autorizarlo${_sdData.sinCae===1?'':'s'} en AFIP antes de cerrar el período.
+       </div>` : '';
+  body.innerHTML=avisoCae+`<div class="sd-wrap">${cab}<div class="sd-grid">${filas}${pie}</div></div>${resumen}`;
   _sdInjectStyle();
   _sdSyncScroll();
 }
@@ -152,7 +156,7 @@ function sdPrint(){
     + PE.map(p=>`<th class="n">${_sdEsc(p.detalle.replace(/^PERCEP\.\s*IIBB\s*/i,''))}</th>`).join('')
     + `<th class="n">Total</th></tr>`;
 
-  const cuerpo=F.map(r=>`<tr><td>${_sdFecha(r.fec)}</td><td>${_sdEsc(r.comp)}</td>
+  const cuerpo=F.map(r=>`<tr><td>${_sdFecha(r.fec)}</td><td${r.sinCae?' class="sincae"':''}>${_sdEsc(r.comp)}</td>
       <td>${_sdEsc(sgvCorta(r.razon, 30))}</td><td>${_sdEsc(r.cuit)}</td><td>${_sdEsc(_sdIvaDesc(r.iva))}</td>`
     + AL.map(a=>`<td class="n">${_sdFmt(r.porAlic[a]?.neto)}</td><td class="n">${_sdFmt(r.porAlic[a]?.iva)}</td>`).join('')
     + PE.map(p=>`<td class="n">${_sdFmt(r.perc[p.cod])}</td>`).join('')
@@ -171,7 +175,9 @@ function sdPrint(){
 
   sgvPrint({
     titulo:'Subdiario de IVA Ventas',
-    subtitulo:`${empTxt} — Período: ${per} — sólo comprobantes con CAE — valores declarados a AFIP`,
+    subtitulo:`${empTxt} — Período: ${per} — valores declarados a AFIP`
+      + (_sdData.sinCae?` — ${_sdData.sinCae} comprobante(s) SIN CAE, en negro`:''),
+    estilos:'td.sincae{background:#111 !important;color:#fff !important;font-weight:bold}',
     cuerpo:`<table><thead>${cab}</thead><tbody>${cuerpo}${pie}</tbody></table>${resumen}`
   });
 }
@@ -191,31 +197,36 @@ async function sdExcel(){
   const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('Subdiario IVA');
   const NUM='#,##0.00';
 
-  const nCols=5+AL.length*2+PE.length+1;
-  ws.columns=[{width:11},{width:15},{width:34},{width:15},{width:7},
+  const nCols=6+AL.length*2+PE.length+1;
+  ws.columns=[{width:11},{width:15},{width:17},{width:34},{width:15},{width:7},
     ...AL.flatMap(()=>[{width:15},{width:14}]),
     ...PE.map(()=>({width:15})), {width:16}];
 
   const empTxt=_sdData.empresa==='H'?'Hatsu':_sdData.empresa==='T'?'Tressa':'Todas las empresas';
   const t=ws.addRow(['Subdiario de IVA Ventas']); t.font={bold:true,size:14}; ws.mergeCells(t.number,1,t.number,nCols);
-  const per=`${empTxt} — Período: ${_sdData.desde?_sdFecha(_sdData.desde):'inicio'} a ${_sdData.hasta?_sdFecha(_sdData.hasta):'hoy'} — sólo comprobantes con CAE — valores declarados a AFIP`;
+  const per=`${empTxt} — Período: ${_sdData.desde?_sdFecha(_sdData.desde):'inicio'} a ${_sdData.hasta?_sdFecha(_sdData.hasta):'hoy'} — valores declarados a AFIP`;
   const s=ws.addRow([per]); s.font={italic:true,color:{argb:'FF666666'}}; ws.mergeCells(s.number,1,s.number,nCols);
   ws.addRow([]);
 
-  const hr=ws.addRow(['Fecha','Comprobante','Cliente','CUIT','IVA',
+  const hr=ws.addRow(['Fecha','Comprobante','CAE','Cliente','CUIT','IVA',
     ...AL.flatMap(a=>['Neto '+_sdAlic(a),'IVA '+_sdAlic(a)]),
     ...PE.map(p=>p.detalle), 'Total']);
   hr.eachCell(c=>{ c.font={bold:true}; c.alignment={horizontal:'center',wrapText:true}; c.border={bottom:{style:'medium'}}; });
 
-  const primerNum=6;
+  const primerNum=7;
   F.forEach(r=>{
-    const row=ws.addRow([_sdFecha(r.fec), r.comp, r.razon, r.cuit, _sdIvaDesc(r.iva),
+    const row=ws.addRow([_sdFecha(r.fec), r.comp, r.sinCae?'SIN CAE':r.cae, r.razon, r.cuit, _sdIvaDesc(r.iva),
       ...AL.flatMap(a=>[r.porAlic[a]?.neto||null, r.porAlic[a]?.iva||null]),
       ...PE.map(p=>r.perc[p.cod]||null), r.total]);
     for(let i=primerNum;i<=nCols;i++) row.getCell(i).numFmt=NUM;
+    if(r.sinCae){
+      row.getCell(2).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF111111'}};
+      row.getCell(2).font={bold:true,color:{argb:'FFFFFFFF'}};
+      row.getCell(3).font={bold:true,color:{argb:'FFB91C1C'}};
+    }
   });
 
-  const fr=ws.addRow(['','','TOTALES ('+F.length+')','','',
+  const fr=ws.addRow(['','','','TOTALES ('+F.length+')','','',
     ...AL.flatMap(a=>[T.porAlic?.[a]?.neto||0, T.porAlic?.[a]?.iva||0]),
     ...PE.map(p=>T.perc?.[p.cod]||0), T.total||0]);
   fr.font={bold:true}; fr.eachCell(c=>{ c.border={top:{style:'double'}}; });
