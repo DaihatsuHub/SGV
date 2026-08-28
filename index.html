@@ -139,6 +139,7 @@
         <button class="dd-item" id="ddi-fac" onclick="showSubPage('ven','fac')">📄 Facturación</button>
         <button class="dd-item" id="ddi-vmes" onclick="showSubPage('ven','vmes')">📅 Ventas mensuales x Artículos</button>
         <button class="dd-item" id="ddi-rank" onclick="showSubPage('ven','rank')">🏆 Ranking de Artículos</button>
+        <button class="dd-item" id="ddi-subd" onclick="showSubPage('ven','subd')">📒 Subdiario de IVA</button>
         <button class="dd-item" id="ddi-saldo" onclick="showSubPage('ven','saldo')">📊 Saldos por Mes</button>
         <button class="dd-item" id="ddi-ctip" onclick="showSubPage('ven','ctip')">📋 Tipos de Comprobantes</button>
       </div>
@@ -739,6 +740,29 @@
 </div>
 
 <!-- ══════ COBRANZAS: LISTADO DE COBRANZAS ══════ -->
+<div class="page" id="page-subd">
+  <div class="toolbar">
+    <span style="font-weight:600;font-size:14px;color:var(--acc);margin-right:4px">📒 Subdiario de IVA Ventas</span>
+    <label style="font-size:12px;color:var(--t2)">Desde</label>
+    <input type="date" class="finp" id="sd-desde" style="width:145px">
+    <label style="font-size:12px;color:var(--t2)">Hasta</label>
+    <input type="date" class="finp" id="sd-hasta" style="width:145px">
+    <select class="fsel" id="sd-empresa" style="min-width:150px">
+      <option value="">Todas las empresas</option>
+      <option value="H">Hatsu</option>
+      <option value="T">Tressa</option>
+    </select>
+    <button class="btn pri" onclick="sdConsultar()">🔍 Consultar</button>
+    <button class="btn" onclick="sdPrint()">🖨 Imprimir</button>
+    <button class="btn" onclick="sdExcel()">📥 Excel</button>
+    <div class="spacer"></div>
+    <span style="font-size:11px;color:var(--t3)">Sólo comprobantes con CAE · valores declarados a AFIP</span>
+  </div>
+  <div class="tbl-wrap">
+    <div id="sd-body" class="tbl-body"><div class="empty" style="margin-top:40px">Elegí el período y tocá Consultar</div></div>
+  </div>
+</div>
+
 <div class="page" id="page-rank">
   <div class="toolbar">
     <span style="font-weight:600;font-size:14px;color:var(--acc);margin-right:4px">🏆 Ranking de Artículos</span>
@@ -1732,6 +1756,7 @@
 <script src="js/ctacte.js"></script>
 <script src="js/antiguedad.js"></script>
 <script src="js/ranking.js"></script>
+<script src="js/subdiario.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/vmes.js"></script>
 <script src="js/resumen.js"></script>

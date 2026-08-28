@@ -68,6 +68,7 @@ function showSubPage(menu, sub) {
   else if (sub==='listcob') { /* se renderiza al consultar */ }
   else if (sub==='histart') { if(typeof ensureArts==='function') ensureArts(); /* se renderiza al consultar */ }
   else if (sub==='rank') { if(typeof renderRanking==='function') renderRanking(); }
+  else if (sub==='subd') { if(typeof renderSubdiario==='function') renderSubdiario(); }
   else if (sub==='antig') { if(typeof renderAntiguedad==='function') renderAntiguedad(); }
   else if (sub==='ctip') renderCtip();
   else if (sub==='mone') renderTabGral('MONE');
