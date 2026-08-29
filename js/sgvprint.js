@@ -39,7 +39,12 @@ const SGV_FS     = 9;      // cuerpo de letra máximo
 const SGV_FS_MIN = 4.5;    // hasta acá puede achicar para que entre todo
 const SGV_PAD    = 12;     // relleno horizontal de cada celda (6px por lado)
 const SGV_BORDE  = 1;      // borde entre columnas
-const SGV_HOLGURA= 1.06;   // 6% de reserva: kerning, redondeos, bordes
+const SGV_HOLGURA= 1.06;   // 6% de reserva de la estimación (respaldo)
+// RESERVA sobre el ancho de la hoja. La medición del listado en la página da
+// un ancho algo menor que el que termina produciendo la impresora: con el
+// cálculo justo, la última columna quedaba cortada. Este margen lo cubre.
+// Cuesta medio punto de letra y garantiza que entren TODAS las columnas.
+const SGV_RESERVA= 0.95;
 
 // Corta textos largos (razón social: 30 caracteres).
 function sgvCorta(txt, n){
@@ -137,31 +142,50 @@ function sgvMedirReal(htmlCuerpo, fs, estilosExtra){
   return Math.ceil(max);
 }
 
-// Cuerpo de letra con el que TODAS las tablas entran a lo ancho.
-// Estima, y después BAJA de a 0.25 midiendo de verdad hasta que entre.
+// Cuerpo de letra con el que el listado entra a lo ancho — REGLA GENERAL,
+// vale para cualquier listado sin ajustes por módulo.
+//
+// El ancho de una tabla es LINEAL respecto del cuerpo de letra:
+//     ancho(fs) = fijo + pendiente × fs
+// donde `fijo` son los paddings y bordes (no dependen de la letra) y
+// `pendiente` es el texto. Verificado midiendo el subdiario real:
+//     9px→761   8px→691   7px→621   6px→551      (exactamente 70px por punto)
+//
+// Con DOS mediciones se despejan las dos incógnitas y el tamaño exacto sale de
+// una cuenta, sin iterar ni estimar:
+//     fs = (anchoHoja − fijo) / pendiente
+//
+// Se redondea hacia abajo a 0.25 y se verifica una vez.
 function sgvCuerpoQueEntra(htmlCuerpo, anchoHoja, estilosExtra){
-  let fs = sgvEstimar(htmlCuerpo, anchoHoja);
   try{
-    let real = sgvMedirReal(htmlCuerpo, fs, estilosExtra);
-    if(real > 0){
-      // Si la estimación quedó corta, achicar hasta que entre de verdad
-      let vueltas = 0;
-      while(real > anchoHoja && fs > SGV_FS_MIN && vueltas < 40){
-        fs = Math.round((fs - 0.25) * 100) / 100;
-        real = sgvMedirReal(htmlCuerpo, fs, estilosExtra);
-        vueltas++;
-      }
-      // Si sobró lugar, recuperar tamaño hasta el máximo permitido
-      while(fs < SGV_FS){
-        const prueba = Math.min(SGV_FS, Math.round((fs + 0.25) * 100) / 100);
-        if(sgvMedirReal(htmlCuerpo, prueba, estilosExtra) > anchoHoja) break;
-        fs = prueba;
-      }
+    const A = 10, B = 5;                       // dos cuerpos de referencia
+    const wA = sgvMedirReal(htmlCuerpo, A, estilosExtra);
+    const wB = sgvMedirReal(htmlCuerpo, B, estilosExtra);
+
+    // Sin layout (pruebas fuera del navegador): queda la estimación por texto
+    if(!wA || !wB) return sgvEstimar(htmlCuerpo, anchoHoja);
+
+    const pendiente = (wA - wB) / (A - B);     // px de ancho por px de letra
+    const fijo      = wA - pendiente * A;      // paddings y bordes
+    if(pendiente <= 0) return SGV_FS;
+
+    const objetivo = anchoHoja * SGV_RESERVA;
+    let fs = (objetivo - fijo) / pendiente;
+    fs = Math.floor(fs * 4) / 4;               // a 0.25 hacia abajo
+    fs = Math.max(SGV_FS_MIN, Math.min(SGV_FS, fs));
+
+    // Verificación: si por redondeo del navegador todavía se pasa, bajar.
+    let vueltas = 0;
+    while(fs > SGV_FS_MIN && vueltas < 20 &&
+          sgvMedirReal(htmlCuerpo, fs, estilosExtra) > objetivo){
+      fs = Math.round((fs - 0.25) * 100) / 100;
+      vueltas++;
     }
+    return fs;
   }catch(e){
-    console.error('sgvPrint: falló la medición real, queda la estimación', e);
+    console.error('sgvPrint: falló la medición, queda la estimación', e);
+    return sgvEstimar(htmlCuerpo, anchoHoja);
   }
-  return Math.max(SGV_FS_MIN, Math.min(SGV_FS, fs));
 }
 
 function sgvPrintEstilos(ancho, fs){
@@ -232,16 +256,18 @@ function sgvPrint(opt){
 // Desde la consola:  sgvPrintDiag(_sdData ? document.getElementById('sd-body').innerHTML : '')
 function sgvPrintDiag(htmlCuerpo, apaisado, estilosExtra){
   const ancho = apaisado ? SGV_PAGE.apaisado.ancho : SGV_PAGE.vertical.ancho;
-  const estimada = sgvEstimar(htmlCuerpo, ancho);
+  const wA = sgvMedirReal(htmlCuerpo, 10, estilosExtra);
+  const wB = sgvMedirReal(htmlCuerpo, 5,  estilosExtra);
+  const pendiente = (wA - wB) / 5;
+  const fijo = wA - pendiente * 10;
   const fs = sgvCuerpoQueEntra(htmlCuerpo, ancho, estilosExtra);
-  const doc = new DOMParser().parseFromString('<body>' + (htmlCuerpo || '') + '</body>', 'text/html');
-  const out = [];
-  for(const t of doc.querySelectorAll('table')){
-    const m = sgvMedirTabla(t);
-    out.push({ columnas: m.cols,
-               anchoReal: sgvMedirReal(t.outerHTML, fs, estilosExtra),
-               hoja: ancho });
-  }
-  return { hoja: ancho, letraEstimada: estimada, letraFinal: fs,
-           anchoConEsaLetra: sgvMedirReal(htmlCuerpo, fs, estilosExtra), tablas: out };
+  return {
+    hoja: ancho,
+    medido: { a10px: wA, a5px: wB },
+    pendiente: Math.round(pendiente * 100) / 100,   // px de ancho por px de letra
+    fijo: Math.round(fijo),                          // paddings y bordes
+    letraFinal: fs,
+    anchoConEsaLetra: sgvMedirReal(htmlCuerpo, fs, estilosExtra),
+    entra: sgvMedirReal(htmlCuerpo, fs, estilosExtra) <= ancho
+  };
 }
