@@ -29,9 +29,14 @@
 // A4 con márgenes de 10 mm.
 //   vertical → útil 190 x 277 mm ≈  718 x 1047 px a 96 dpi
 //   apaisado → útil 277 x 190 mm ≈ 1047 x  718 px
+// El ancho del cuerpo se declara en MILÍMETROS, igual que la hoja. Antes iba
+// en px (718 = 190mm a 96dpi) y ahí estaba el error: al generar el PDF el
+// navegador no siempre usa 96dpi, así que el px no coincide con el mm. Todo
+// lo definido en mm se escala solo con la hoja; lo definido en px, no.
+// `ancho` (px) se sigue usando sólo para MEDIR y elegir el tamaño de letra.
 const SGV_PAGE = {
-  vertical: { size:'210mm 297mm', ancho: 718  },
-  apaisado: { size:'297mm 210mm', ancho: 1047 }
+  vertical: { size:'210mm 297mm', util:'190mm', ancho: 718  },
+  apaisado: { size:'297mm 210mm', util:'277mm', ancho: 1047 }
 };
 const SGV_PAGE_H = 1047;   // alto útil de la A4 vertical: define las 72 líneas
 const SGV_LINEAS = 72;     // líneas por hoja — REGLA DURA
@@ -188,14 +193,14 @@ function sgvCuerpoQueEntra(htmlCuerpo, anchoHoja, estilosExtra){
   }
 }
 
-function sgvPrintEstilos(ancho, fs){
+function sgvPrintEstilos(ancho, fs, util){
   // Alto de renglón: SIEMPRE el de la hoja vertical. Va en px fijos, así que
   // NO se achica junto con la letra.
   const h = Math.floor(SGV_PAGE_H / SGV_LINEAS * 100) / 100;
   return `
     *{box-sizing:border-box}
     body{font-family:Arial,Helvetica,sans-serif;font-size:${fs}px;margin:0;color:#111;
-         font-variant-numeric:tabular-nums;width:${ancho}px}
+         font-variant-numeric:tabular-nums;width:${util};max-width:${util}}
 
     /* Título fijo: no encoge cuando se achica la letra de la tabla */
     h2{margin:0 0 2px;font-size:15px}
@@ -206,7 +211,7 @@ function sgvPrintEstilos(ancho, fs){
        que un max-width no la comprime — sólo la hace desbordar en silencio.
        El ancho se resuelve con el tamaño de letra, ya calculado antes de abrir
        esta ventana. */
-    table{width:max-content;min-width:100%;border-collapse:collapse;margin-bottom:6px}
+    table{width:max-content;min-width:100%;max-width:${util};border-collapse:collapse;margin-bottom:6px}
 
     /* ALTO DE RENGLÓN FIJO EN PX: achicar la letra nunca aprieta los renglones */
     th,td{padding:0 ${SGV_PAD / 2}px;border-bottom:1px solid #e5e5e5;text-align:left;
@@ -241,7 +246,7 @@ function sgvPrint(opt){
   w.document.write(
     '<html><head><meta charset="utf-8"><title>' + (o.titulo || 'Listado') + '</title>' +
     '<style>@page{size:' + pg.size + ';margin:10mm}</style>' +
-    '<style>' + sgvPrintEstilos(pg.ancho, fs) + (o.estilos || '') + '</style></head><body>' +
+    '<style>' + sgvPrintEstilos(pg.ancho, fs, pg.util) + (o.estilos || '') + '</style></head><body>' +
     (o.titulo ? '<h2>' + o.titulo + '</h2>' : '') +
     (o.subtitulo ? '<div class="sub">' + o.subtitulo + '</div>' : '') +
     (o.cuerpo || '') +
