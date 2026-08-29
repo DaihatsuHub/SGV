@@ -136,15 +136,44 @@ function sgvPrintScript(ancho){
     return Math.max(FSMIN, Math.min(FS, fs));
   }
 
+  // Ancho REAL que ocupa la tabla más ancha, medido sin la restricción del
+  // contenedor: se ensancha el body un momento para que la tabla tome su
+  // ancho natural (max-content), se mide, y se restaura. Así la medición de
+  // layout SÍ es confiable — el problema anterior era medirla comprimida.
+  function anchoReal(){
+    var prev=document.body.style.width;
+    document.body.style.width='20000px';
+    var tablas=document.querySelectorAll('table'), max=0;
+    for(var i=0;i<tablas.length;i++){
+      var w=tablas[i].getBoundingClientRect().width;
+      if(w>max) max=w;
+    }
+    document.body.style.width=prev;
+    return max;
+  }
+
   function ajustar(){
+    // 1) Punto de partida calculado con measureText
     var fs=cuerpoQueEntra();
     document.body.style.fontSize=fs+'px';
 
-    // Red de seguridad: si aun así el navegador reporta desborde, bajar más.
-    // Sólo puede achicar, nunca agrandar. El alto de renglón no se toca.
+    // 2) Verificación con el ancho REAL. El alto de renglón es fijo en px, así
+    //    que bajar el cuerpo NO aprieta los renglones: sólo angosta el texto.
+    for(var i=0;i<6;i++){
+      var real=anchoReal();
+      if(real<=W || fs<=FSMIN) break;
+      // El ancho no baja proporcional (los PAD y bordes son fijos), así que se
+      // despeja sobre la parte que sí escala y se agrega un pelín de reserva.
+      var nuevo=fs*(W/real)*0.995;
+      nuevo=Math.floor(nuevo*4)/4;
+      if(nuevo>=fs) nuevo=Math.round((fs-0.25)*100)/100;
+      fs=Math.max(FSMIN, nuevo);
+      document.body.style.fontSize=fs+'px';
+    }
+
+    // 3) Último ajuste fino, de a 0.25, por si quedó al filo
     var vueltas=0;
-    while(fs>FSMIN && vueltas<40 &&
-          Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) > W+1){
+    while(fs>FSMIN && vueltas<40 && anchoReal()>W){
       fs=Math.round((fs-0.25)*100)/100;
       document.body.style.fontSize=fs+'px';
       vueltas++;
