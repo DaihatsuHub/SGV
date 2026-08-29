@@ -178,8 +178,11 @@ function sgvPrintEstilos(ancho, fs){
     .sub{color:#555;font-size:10px;margin-bottom:6px}
     h3{margin:8px 0 3px;color:#0a58ca;border-bottom:1px solid #ccc;font-size:12px}
 
-    table{width:max-content;min-width:100%;max-width:${ancho}px;
-          border-collapse:collapse;margin-bottom:6px;table-layout:auto}
+    /* SIN max-width: con las celdas en nowrap la tabla no puede achicarse, así
+       que un max-width no la comprime — sólo la hace desbordar en silencio.
+       El ancho se resuelve con el tamaño de letra, ya calculado antes de abrir
+       esta ventana. */
+    table{width:max-content;min-width:100%;border-collapse:collapse;margin-bottom:6px}
 
     /* ALTO DE RENGLÓN FIJO EN PX: achicar la letra nunca aprieta los renglones */
     th,td{padding:0 ${SGV_PAD / 2}px;border-bottom:1px solid #e5e5e5;text-align:left;
