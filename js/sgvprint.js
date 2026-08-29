@@ -2,32 +2,41 @@
    IMPRESIÓN DE LISTADOS — SGV
    ---------------------------------------------------------------------------
    REGLAS (Ricardo, Ago 2026):
-     · Hoja A4 VERTICAL siempre (forzada por medidas exactas en mm).
-     · 72 LÍNEAS por hoja: alto de renglón fijo = alto_util / 72.
-     · Si la tabla no entra a lo ancho, se ACHICA LA LETRA. No se gira la hoja.
+     · Hoja A4 VERTICAL (forzada por medidas exactas en mm).
+     · 72 LÍNEAS por hoja: alto de renglón FIJO = alto_util / 72.
+     · Si la tabla no entra a lo ancho, se ACHICA LA LETRA hasta que entren
+       TODAS las columnas.
+     · ACHICAR LA LETRA NO SIGNIFICA APRETAR LOS RENGLONES: el alto de fila y
+       el interlineado son constantes y NO dependen del cuerpo de letra. Al
+       achicar sólo cambia el ancho del texto; el renglón sigue midiendo lo
+       mismo y siguen entrando 72 por hoja.
      · Cada columna toma el ancho que necesita: nada se corta ni se aplasta.
      · Se ve como planilla: cebra, encabezado gris, totales destacados,
        títulos de columna repetidos en cada hoja.
 
-   Uso: sgvPrint({ titulo, subtitulo, cuerpo, estilos })
+   CÓMO CALCULA EL ANCHO
+     Mide el texto real de cada celda con canvas.measureText a un cuerpo de
+     referencia (100px) y lo divide: obtiene los px que ocupa esa columna por
+     cada px de cuerpo de letra. Con eso despeja el cuerpo más grande que hace
+     entrar la tabla. Es una medición de TEXTO, no de LAYOUT: el layout dentro
+     de la ventana de impresión resultó poco confiable (ver notas del proyecto),
+     measureText no.
+
+   Uso: sgvPrint({ titulo, subtitulo, cuerpo, estilos, apaisado })
    =========================================================================== */
 
 // A4 con márgenes de 10 mm.
 //   vertical → útil 190 x 277 mm ≈  718 x 1047 px a 96 dpi
 //   apaisado → útil 277 x 190 mm ≈ 1047 x  718 px
-// El apaisado es para listados de muchas columnas (ej. cobranzas): se pide
-// por listado con apaisado:true, no lo decide el helper.
 const SGV_PAGE = {
   vertical: { size:'210mm 297mm', ancho: 718  },
   apaisado: { size:'297mm 210mm', ancho: 1047 }
 };
-const SGV_PAGE_H    = 1047;   // alto útil de la A4 vertical: define las 72 líneas
-const SGV_LINEAS    = 72;    // líneas por hoja
-// Cuerpo de letra máximo. Va bien por debajo del alto de renglón (14.54px)
-// para que quede aire entre líneas: con 10px la letra ocupaba casi todo el
-// renglón y se veía apelmazado.
-const SGV_FS        = 9;
-const SGV_FS_MIN    = 5;     // hasta acá puede achicar
+const SGV_PAGE_H = 1047;   // alto útil de la A4 vertical: define las 72 líneas
+const SGV_LINEAS = 72;     // líneas por hoja — REGLA DURA
+const SGV_FS     = 9;      // cuerpo de letra máximo
+const SGV_FS_MIN = 4.5;    // hasta acá puede achicar para que entre todo
+const SGV_PAD    = 12;     // relleno horizontal de cada celda (6px por lado)
 
 // Corta textos largos (razón social: 30 caracteres).
 function sgvCorta(txt, n){
@@ -37,6 +46,8 @@ function sgvCorta(txt, n){
 }
 
 function sgvPrintEstilos(ancho){
+  // Alto de renglón: SIEMPRE el de la hoja vertical, así el renglón mide igual
+  // en las dos orientaciones y NO se achica junto con la letra.
   const h = Math.floor(SGV_PAGE_H / SGV_LINEAS * 100) / 100;
   return `
     *{box-sizing:border-box}
@@ -51,8 +62,11 @@ function sgvPrintEstilos(ancho){
     /* max-content = cada columna toma lo que necesita. min-width:100% para
        que, si sobra, la tabla igual ocupe el ancho de la hoja. */
     table{width:max-content;min-width:100%;border-collapse:collapse;margin-bottom:6px}
-    th,td{padding:0 6px;border-bottom:1px solid #e5e5e5;text-align:left;
-          white-space:nowrap;height:${h}px;line-height:${h - 1}px}
+
+    /* ALTO DE RENGLÓN FIJO EN PX: no está en em ni depende del font-size, así
+       que achicar la letra NUNCA aprieta los renglones. */
+    th,td{padding:0 ${SGV_PAD / 2}px;border-bottom:1px solid #e5e5e5;text-align:left;
+          white-space:nowrap;height:${h}px;line-height:${h - 1}px;vertical-align:middle}
     .n,.r{text-align:right}
 
     th{background:#e8eaed;font-weight:bold;border-bottom:1.5px solid #999}
@@ -70,60 +84,64 @@ function sgvPrintEstilos(ancho){
   `;
 }
 
-// Corre DENTRO de la ventana de impresión: achica la letra hasta que entre.
+// Corre DENTRO de la ventana de impresión.
 function sgvPrintScript(ancho){
   return `
 (function(){
-  var W=${ancho}, FS=${SGV_FS}, FSMIN=${SGV_FS_MIN};
-  var PAD=12;          // relleno horizontal de cada celda (6px de cada lado)
-  // Ancho de un carácter en Arial por cada px de cuerpo. Van holgados a
-  // propósito: si la estimación queda corta, el listado se corta a la derecha.
-  var ANCHO_CAR=0.58;
-  var ANCHO_CAR_TIT=0.66;   // el encabezado va en negrita
-  var MARGEN=0.96;          // 4% de reserva por si algo mide más de lo previsto
+  var W=${ancho}, FS=${SGV_FS}, FSMIN=${SGV_FS_MIN}, PAD=${SGV_PAD};
+  var REF=100;              // cuerpo de referencia para medir
+  var MARGEN=0.985;         // reserva mínima por redondeos
 
-  // Ancho que NECESITA la tabla, calculado contando caracteres.
-  // No usa ninguna medición del navegador, que es lo que venía fallando.
-  function anchoNecesario(fs){
-    var tablas=document.querySelectorAll('table'), total=0;
-    for(var t=0;t<tablas.length;t++){
-      var filas=tablas[t].rows, maxCar=[], esTit=[];
-      for(var r=0;r<filas.length;r++){
-        var celdas=filas[r].cells;
-        for(var c=0;c<celdas.length;c++){
-          if(celdas[c].colSpan>1) continue;          // las combinadas no mandan
-          var largo=(celdas[c].textContent||'').trim().length;
-          if(maxCar[c]===undefined){ maxCar[c]=0; esTit[c]=false; }
-          var titulo=(celdas[c].tagName==='TH');
-          var peso=largo*(titulo?ANCHO_CAR_TIT:ANCHO_CAR);
-          if(peso>maxCar[c]) maxCar[c]=peso;
-        }
+  var ctx=null;
+  function medir(txt, negrita){
+    if(!ctx) ctx=document.createElement('canvas').getContext('2d');
+    ctx.font=(negrita?'bold ':'')+REF+'px Arial, Helvetica, sans-serif';
+    return ctx.measureText(txt||'').width;
+  }
+
+  // Para una tabla: px de texto por cada px de cuerpo de letra, y cuántas
+  // columnas tiene. El ancho total será  texto*fs + columnas*PAD.
+  function medirTabla(tabla){
+    var filas=tabla.rows, anchoCol=[], nCols=0;
+    for(var r=0;r<filas.length;r++){
+      var celdas=filas[r].cells, col=0;
+      for(var c=0;c<celdas.length;c++){
+        var span=celdas[c].colSpan||1;
+        if(span>1){ col+=span; continue; }          // las combinadas no mandan
+        var txt=(celdas[c].textContent||'').trim();
+        var w=medir(txt, celdas[c].tagName==='TH')/REF;
+        if(anchoCol[col]===undefined||w>anchoCol[col]) anchoCol[col]=w;
+        col++;
       }
-      var ancho=0;
-      for(var k=0;k<maxCar.length;k++) ancho+=(maxCar[k]||0)*fs+PAD;
-      if(ancho>total) total=ancho;
+      if(col>nCols) nCols=col;
     }
-    return total;
+    var texto=0;
+    for(var k=0;k<nCols;k++) texto+=(anchoCol[k]||0);
+    return { texto:texto, cols:nCols };
+  }
+
+  // Cuerpo de letra más grande con el que TODAS las tablas entran a lo ancho
+  function cuerpoQueEntra(){
+    var tablas=document.querySelectorAll('table');
+    var fs=FS;
+    for(var t=0;t<tablas.length;t++){
+      var m=medirTabla(tablas[t]);
+      if(m.texto<=0) continue;
+      var disp=W*MARGEN - m.cols*PAD;              // lo que queda para el texto
+      if(disp<=0){ fs=FSMIN; continue; }
+      var cabe=disp/m.texto;
+      if(cabe<fs) fs=cabe;
+    }
+    fs=Math.floor(fs*4)/4;                          // redondear a 0.25 hacia abajo
+    return Math.max(FSMIN, Math.min(FS, fs));
   }
 
   function ajustar(){
-    var necesario=anchoNecesario(1);      // ancho por cada px de cuerpo
-    if(necesario<=0) return FS;
-    // Resolver el cuerpo más grande que entra: necesario*fs + PADs <= W
-    var tablas=document.querySelectorAll('table');
-    var cols=0;
-    if(tablas.length && tablas[0].rows.length) cols=tablas[0].rows[0].cells.length;
-    var soloTexto=necesario-cols*PAD;     // la parte que escala con la letra
-    var fs=FS;
-    if(soloTexto>0){
-      var calc=(W*MARGEN-cols*PAD)/soloTexto;
-      fs=Math.min(FS, Math.floor(calc*4)/4);   // redondear a 0.25
-    }
-    if(fs<FSMIN) fs=FSMIN;
+    var fs=cuerpoQueEntra();
     document.body.style.fontSize=fs+'px';
 
-    // Red de seguridad: si el navegador igual reporta desborde, bajar más.
-    // Sólo puede achicar, nunca agrandar, así que no puede empeorar nada.
+    // Red de seguridad: si aun así el navegador reporta desborde, bajar más.
+    // Sólo puede achicar, nunca agrandar. El alto de renglón no se toca.
     var vueltas=0;
     while(fs>FSMIN && vueltas<40 &&
           Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) > W+1){

@@ -443,6 +443,13 @@ function renderFac() {
         ?`<span style="font-size:10px;background:#2a2a1a;color:#facc15;padding:1px 5px;border-radius:3px;margin-left:3px">BORR</span>`
         :'';
     const _anulSty=f.fac_anul?'text-decoration:line-through;opacity:0.55':'';
+    // Subfacturada: se distingue en la grilla con fondo violeta suave y una
+    // etiqueta con el % declarado, para no confundirla con una factura al 100%.
+    const _dto=Number(f.fac_monpor)||0;
+    const _dtoSty=(_dto!==0&&!f.fac_anul)?'background:rgba(139,92,246,.13);':'';
+    const _dtoTag=(_dto!==0&&!f.fac_anul)
+      ?`<span title="Subfacturada al ${100-_dto}%" style="font-size:10px;background:#3b2a5c;color:#c4b5fd;padding:1px 4px;border-radius:3px;margin-left:3px;font-family:var(--mono)">${100-_dto}%</span>`
+      :'';
     // Marcas al final de la fila: P = pendiente de entrega (solo facturas), $ = con saldo
     const _esF=(f.fac_nro||'').trim().slice(-1).toUpperCase()==='F';
     const _pend=_esF && !f.fac_anul && !f.fac_salida;
@@ -452,9 +459,9 @@ function renderFac() {
       `<span title="${_debe?'Con saldo pendiente':''}" style="color:var(--red);font-weight:700">${_debe?'$':''}</span>`;
     // La razón social se corta a 20 caracteres: la grilla nunca se estira
     const nomCorto = nomCli.length>20 ? nomCli.substring(0,20).trim()+'…' : nomCli;
-    return `<div class="tr-fac ${sel}" data-idx="${i}" onclick="selFac(${i})" style="${_anulSty};display:flex;flex-wrap:nowrap;align-items:center;gap:8px;overflow:hidden">
+    return `<div class="tr-fac ${sel}" data-idx="${i}" onclick="selFac(${i})" style="${_dtoSty}${_anulSty};display:flex;flex-wrap:nowrap;align-items:center;gap:8px;overflow:hidden">
       <span style="font-size:12px;color:var(--t2);flex:0 0 auto;white-space:nowrap">${fec}</span>
-      <span class="col-cod" style="font-family:var(--mono);color:${contColor};flex:0 0 auto;white-space:nowrap">${esc(f.fac_nro||'')}${badge}</span>
+      <span class="col-cod" style="font-family:var(--mono);color:${contColor};flex:0 0 auto;white-space:nowrap">${esc(f.fac_nro||'')}${badge}${_dtoTag}</span>
       <span title="${esc(nomCli)}" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto;min-width:0">${esc(nomCorto)}</span>
       <span style="flex:0 0 22px;width:22px;text-align:right;font-size:13px;font-family:var(--mono);white-space:nowrap">${marcas}</span>
     </div>`;
