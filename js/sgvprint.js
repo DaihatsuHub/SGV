@@ -81,27 +81,86 @@ function sgvMedirTabla(tabla){
   return { texto, cols: nCols };
 }
 
-// Cuerpo de letra con el que TODAS las tablas del listado entran a lo ancho.
-// Ancho de una tabla = texto × fs × holgura + columnas × (padding + borde)
-function sgvCuerpoQueEntra(htmlCuerpo, anchoHoja){
+// Estimación por medición de texto. Se usa como punto de partida y como
+// respaldo si la medición real no está disponible.
+function sgvEstimar(htmlCuerpo, anchoHoja){
   let fs = SGV_FS;
   try{
     const doc = new DOMParser().parseFromString('<body>' + (htmlCuerpo || '') + '</body>', 'text/html');
-    const tablas = doc.querySelectorAll('table');
-    for(const t of tablas){
+    for(const t of doc.querySelectorAll('table')){
       const m = sgvMedirTabla(t);
       if(m.texto <= 0 || m.cols <= 0) continue;
-      const fijo = m.cols * (SGV_PAD + SGV_BORDE);
-      const disp = anchoHoja - fijo;
+      const disp = anchoHoja - m.cols * (SGV_PAD + SGV_BORDE);
       if(disp <= 0){ fs = SGV_FS_MIN; continue; }
       const cabe = disp / (m.texto * SGV_HOLGURA);
       if(cabe < fs) fs = cabe;
     }
   }catch(e){
-    console.error('sgvPrint: no se pudo calcular el tamaño de letra', e);
-    return SGV_FS_MIN;                              // ante la duda, la más chica
+    console.error('sgvPrint: no se pudo estimar el tamaño de letra', e);
+    return SGV_FS_MIN;
   }
-  fs = Math.floor(fs * 4) / 4;                      // redondear a 0.25 hacia abajo
+  fs = Math.floor(fs * 4) / 4;
+  return Math.max(SGV_FS_MIN, Math.min(SGV_FS, fs));
+}
+
+// ── Medición REAL ──────────────────────────────────────────
+// Se arma el listado en un contenedor invisible de ESTA página, con las mismas
+// reglas de ancho que va a tener al imprimir, y se mide la tabla de verdad.
+// Acá la medición de layout SÍ es confiable (la ventana de impresión no lo era)
+// y además es verificable desde la consola con sgvPrintDiag().
+//
+// Devuelve el ancho de la tabla más ancha a ese cuerpo de letra, o 0 si el
+// entorno no calcula layout (por ejemplo en pruebas fuera del navegador).
+function sgvMedirReal(htmlCuerpo, fs, estilosExtra){
+  const ID = 'sgv-medidor';
+  document.getElementById(ID)?.remove();
+  const cont = document.createElement('div');
+  cont.id = ID;
+  // Sólo las reglas que afectan el ANCHO, acotadas al medidor para no tocar la app
+  cont.innerHTML =
+    '<style>' +
+    `#${ID}{position:fixed;left:-99999px;top:0;width:auto;visibility:hidden;` +
+      `font-family:Arial,Helvetica,sans-serif;font-size:${fs}px;font-variant-numeric:tabular-nums}` +
+    `#${ID} table{width:max-content;border-collapse:collapse}` +
+    `#${ID} th,#${ID} td{padding:0 ${SGV_PAD / 2}px;white-space:nowrap;border-bottom:1px solid #eee}` +
+    `#${ID} th{font-weight:bold}` +
+    (estilosExtra || '').replace(/(^|\})\s*([^@{}]+)\{/g, (m0, cierre, sel) =>
+      cierre + sel.split(',').map(x => `#${ID} ` + x.trim()).join(',') + '{') +
+    '</style>' + (htmlCuerpo || '');
+  document.body.appendChild(cont);
+  let max = 0;
+  for(const t of cont.querySelectorAll('table')){
+    const w = t.getBoundingClientRect().width;
+    if(w > max) max = w;
+  }
+  cont.remove();
+  return Math.ceil(max);
+}
+
+// Cuerpo de letra con el que TODAS las tablas entran a lo ancho.
+// Estima, y después BAJA de a 0.25 midiendo de verdad hasta que entre.
+function sgvCuerpoQueEntra(htmlCuerpo, anchoHoja, estilosExtra){
+  let fs = sgvEstimar(htmlCuerpo, anchoHoja);
+  try{
+    let real = sgvMedirReal(htmlCuerpo, fs, estilosExtra);
+    if(real > 0){
+      // Si la estimación quedó corta, achicar hasta que entre de verdad
+      let vueltas = 0;
+      while(real > anchoHoja && fs > SGV_FS_MIN && vueltas < 40){
+        fs = Math.round((fs - 0.25) * 100) / 100;
+        real = sgvMedirReal(htmlCuerpo, fs, estilosExtra);
+        vueltas++;
+      }
+      // Si sobró lugar, recuperar tamaño hasta el máximo permitido
+      while(fs < SGV_FS){
+        const prueba = Math.min(SGV_FS, Math.round((fs + 0.25) * 100) / 100);
+        if(sgvMedirReal(htmlCuerpo, prueba, estilosExtra) > anchoHoja) break;
+        fs = prueba;
+      }
+    }
+  }catch(e){
+    console.error('sgvPrint: falló la medición real, queda la estimación', e);
+  }
   return Math.max(SGV_FS_MIN, Math.min(SGV_FS, fs));
 }
 
@@ -147,7 +206,7 @@ function sgvPrint(opt){
   const pg = o.apaisado ? SGV_PAGE.apaisado : SGV_PAGE.vertical;
 
   // El tamaño de letra se resuelve ACÁ, antes de abrir la ventana
-  const fs = sgvCuerpoQueEntra(o.cuerpo, pg.ancho);
+  const fs = sgvCuerpoQueEntra(o.cuerpo, pg.ancho, o.estilos);
 
   const w = window.open('', '_blank');
   if(!w){ if(typeof toast==='function') toast('El navegador bloqueó la ventana de impresión','err'); return; }
@@ -168,16 +227,18 @@ function sgvPrint(opt){
 
 // Diagnóstico: qué letra elegiría para un listado, sin imprimir.
 // Desde la consola:  sgvPrintDiag(_sdData ? document.getElementById('sd-body').innerHTML : '')
-function sgvPrintDiag(htmlCuerpo, apaisado){
+function sgvPrintDiag(htmlCuerpo, apaisado, estilosExtra){
   const ancho = apaisado ? SGV_PAGE.apaisado.ancho : SGV_PAGE.vertical.ancho;
+  const estimada = sgvEstimar(htmlCuerpo, ancho);
+  const fs = sgvCuerpoQueEntra(htmlCuerpo, ancho, estilosExtra);
   const doc = new DOMParser().parseFromString('<body>' + (htmlCuerpo || '') + '</body>', 'text/html');
   const out = [];
   for(const t of doc.querySelectorAll('table')){
     const m = sgvMedirTabla(t);
-    const fs = sgvCuerpoQueEntra(t.outerHTML, ancho);
-    out.push({ columnas: m.cols, textoPorPx: Math.round(m.texto * 100) / 100,
-               letra: fs, anchoFinal: Math.round(m.texto * fs * SGV_HOLGURA + m.cols * (SGV_PAD + SGV_BORDE)),
+    out.push({ columnas: m.cols,
+               anchoReal: sgvMedirReal(t.outerHTML, fs, estilosExtra),
                hoja: ancho });
   }
-  return { letraElegida: sgvCuerpoQueEntra(htmlCuerpo, ancho), tablas: out };
+  return { hoja: ancho, letraEstimada: estimada, letraFinal: fs,
+           anchoConEsaLetra: sgvMedirReal(htmlCuerpo, fs, estilosExtra), tablas: out };
 }
