@@ -4,8 +4,6 @@
 // Retenc., Ajuste) + Total. Se arma del lado cliente.
 // ═══════════════════════════════════════════════════════════
 let _lcobRows  = [];
-let _lcobPagos = null;   // cache de recibo_pagos
-let _lcobCheq  = null;   // cache de cheques
 let _lcobRets  = [];     // códigos de retención presentes en el período (una columna c/u)
 
 // ¿Unificar todas las retenciones en una sola columna?
@@ -39,72 +37,57 @@ function _lcobFecha(f){
 }
 function _lcobFmt(n){ n=Number(n)||0; return n? n.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}) : ''; }
 function _lcobFmt0(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function _lcobRecNum(r){ return (r.empresa||'')+(r.talonario||'')+String(r.numero||'').padStart(6,'0'); }
-function _lcobCliRazon(cod){
+// Vienen resueltos del server; se dejan como función por compatibilidad
+function _lcobRecNum(r){ return r._num || ((r.empresa||'')+(r.talonario||'')+String(r.numero||'').padStart(6,'0')); }
+function _lcobCliRazon(cod, fila){
+  if(fila && fila._razon!==undefined) return fila._razon;
   const c=(typeof CLIS!=='undefined')?CLIS.find(k=>(k.CLI_CODIGO||'').trim()===(cod||'').trim()):null;
   return c ? (c.CLI_RAZON||'') : '';
 }
-function _lcobCli(cod){ const rz=_lcobCliRazon(cod); return rz ? ((cod||'')+' — '+rz) : (cod||''); }
-
-async function _lcobEnsureData(){
-  if(typeof ensureRecibos==='function') { try{ await ensureRecibos(); }catch(e){ console.error('listcob/recibos:',e); } }
-  else if(typeof RECIS!=='undefined' && (!RECIS||!RECIS.length) && typeof sbLoadRecis==='function'){
-    try{ await sbLoadRecis(); }catch(e){ console.error('listcob/recibos:',e); }
-  }
-  if(!_lcobPagos){ try{ _lcobPagos = await sbGetAll('recibo_pagos','id'); }catch(e){ _lcobPagos=[]; } }
-  if(!_lcobCheq){
-    if(typeof CHEQUES!=='undefined' && CHEQUES && CHEQUES.length) _lcobCheq = CHEQUES;
-    else { try{ _lcobCheq = await sbGetAll('cheques','id'); }catch(e){ _lcobCheq=[]; } }
-  }
+function _lcobVend(cod, fila){
+  if(fila && fila._vend!==undefined) return fila._vend;
+  const c=(typeof CLIS!=='undefined')?CLIS.find(k=>(k.CLI_CODIGO||'').trim()===(cod||'').trim()):null;
+  return c ? (c.CLI_VEND||'').trim() : '';
 }
 
-// Suma los instrumentos de un recibo: efectivo/transf/retenc/ajuste (recibo_pagos) + cheques (tabla cheques)
-function _lcobInstrumentos(reciboId){
-  const r={efectivo:0, transf:0, cheques:0, cheqF:0, cheqE:0, retenc:0, ajuste:0, rets:{}};
-  (_lcobPagos||[]).forEach(p=>{ if(p.recibo_id!==reciboId) return;
-    const v=Number(p.importe)||0;
-    if(p.tipo==='efectivo') r.efectivo+=v;
-    else if(p.tipo==='transferencia') r.transf+=v;
-    else if(p.tipo==='retencion'){
-      r.retenc+=v;
-      const k=(p.ret_codigo||'S/C').trim()||'S/C';   // una columna por tipo de retención
-      r.rets[k]=(r.rets[k]||0)+v;
-    }
-    else if(p.tipo==='ajuste') r.ajuste+=v;
-  });
-  // Los cheques se separan en físicos (fisico=true) y electrónicos (ECheq)
-  (_lcobCheq||[]).forEach(c=>{ if(c.recibo_id!==reciboId) return;
-    const v=Number(c.importe)||0;
-    r.cheques+=v;
-    if(c.fisico===false) r.cheqE+=v; else r.cheqF+=v;
-  });
-  return r;
-}
-
-// Códigos de retención que aparecen en las filas cargadas
-function _lcobRetsPresentes(rows){
-  const set=new Set();
-  rows.forEach(x=>Object.keys(x.ins.rets||{}).forEach(k=>set.add(k)));
-  return [...set].sort();
-}
+// El cálculo lo hace el SERVER (/informes/cobranzas). Antes se bajaban
+// recibo_pagos y cheques ENTEROS al navegador: crecen con el tiempo aunque se
+// consulte una semana, y podían quedar desactualizados si otro usuario cobraba.
 
 async function renderListCob(){
   const body=document.getElementById('lcob-body'); if(!body) return;
   body.innerHTML='<div class="empty" style="margin-top:40px">Cargando…</div>';
-  await _lcobEnsureData();
   const desde=document.getElementById('lcob-desde')?.value||'';
   const hasta=document.getElementById('lcob-hasta')?.value||'';
-  let list=(RECIS||[]).filter(r=>!r.anulado);
-  if(desde) list=list.filter(r=>(r.fecha||'').substring(0,10)>=desde);
-  if(hasta) list=list.filter(r=>(r.fecha||'').substring(0,10)<=hasta);
-  list=list.slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'') || (Number(a.numero)||0)-(Number(b.numero)||0));
-  _lcobRows=list.map(r=>({ rec:r, ins:_lcobInstrumentos(r.id), total:Number(r.total_abonado)||0 }));
-  _lcobRets=_lcobRetsPresentes(_lcobRows);
-
   const totEl=document.getElementById('lcob-total');
-  const cntEl=document.getElementById('lcob-count'); if(cntEl) cntEl.textContent=_lcobRows.length;
-  if(!_lcobRows.length){ if(totEl) totEl.textContent='$ 0,00'; body.innerHTML='<div class="empty" style="margin-top:40px">Sin recibos en el período</div>'; return; }
-  _lcobPintar();
+  const cntEl=document.getElementById('lcob-count');
+  try{
+    const qs=[];
+    if(desde) qs.push('desde='+desde);
+    if(hasta) qs.push('hasta='+hasta);
+    const r=await apiGet('/informes/cobranzas'+(qs.length?'?'+qs.join('&'):''));
+    if(!r.ok){ body.innerHTML='<div class="empty" style="margin-top:40px">⚠️ '+(r.error||'Error')+'</div>'; return; }
+
+    // El server ya devuelve cada fila con sus instrumentos separados
+    _lcobRows=(r.filas||[]).map(f=>({
+      rec:{ fecha:f.fecha, _num:f.recibo, cliente:f.codigo, _razon:f.razon, _vend:f.vend },
+      ins:{ efectivo:f.efectivo, transf:f.transf, cheqF:f.cheqF, cheqE:f.cheqE,
+            retenc:f.retenc, ajuste:f.ajuste, rets:f.rets||{} },
+      total:f.total
+    }));
+    _lcobRets=r.retenciones||[];
+
+    if(cntEl) cntEl.textContent=_lcobRows.length;
+    if(!_lcobRows.length){
+      if(totEl) totEl.textContent='$ 0,00';
+      body.innerHTML='<div class="empty" style="margin-top:40px">Sin recibos en el período</div>';
+      return;
+    }
+    _lcobPintar();
+  }catch(e){
+    console.error('renderListCob:', e);
+    body.innerHTML='<div class="empty" style="margin-top:40px">⚠️ '+(e.message||'Error')+'</div>';
+  }
 }
 
 // Dibuja la grilla con las filas ya calculadas (se llama también al togglear retenciones)
@@ -123,8 +106,8 @@ function _lcobPintar(){
       <span style="color:var(--t2);font-family:var(--mono)">${_lcobFecha(x.rec.fecha)}</span>
       <span style="font-family:var(--mono);color:var(--acc)">${esc(_lcobRecNum(x.rec))}</span>
       <span style="font-family:var(--mono);color:var(--t2)">${esc((x.rec.cliente||'').trim())}</span>
-      <span title="${esc(_lcobCliRazon(x.rec.cliente))}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sgvCorta(_lcobCliRazon(x.rec.cliente)))}</span>
-      <span style="font-family:var(--mono);color:var(--t2)">${esc(_lcobVend(x.rec.cliente))}</span>
+      <span title="${esc(_lcobCliRazon(x.rec.cliente,x.rec))}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sgvCorta(_lcobCliRazon(x.rec.cliente,x.rec)))}</span>
+      <span style="font-family:var(--mono);color:var(--t2)">${esc(_lcobVend(x.rec.cliente,x.rec))}</span>
       ${numCell(x.ins.efectivo)}${numCell(x.ins.transf)}${numCell(x.ins.cheqF)}${numCell(x.ins.cheqE)}
       ${RC.map(c=>numCell(_lcobRetVal(x.ins,c.key))).join('')}
       ${numCell(x.ins.ajuste)}
@@ -171,8 +154,8 @@ function _lcobHead(){
 function _lcobExportRows(){
   return (_lcobRows||[]).map(x=>({
     fecha:_lcobFecha(x.rec.fecha), recibo:_lcobRecNum(x.rec),
-    codigo:x.rec.cliente||'', razon:_lcobCliRazon(x.rec.cliente),
-    vend:_lcobVend(x.rec.cliente),
+    codigo:x.rec.cliente||'', razon:_lcobCliRazon(x.rec.cliente,x.rec),
+    vend:_lcobVend(x.rec.cliente,x.rec),
     efectivo:x.ins.efectivo, transf:x.ins.transf, cheqF:x.ins.cheqF, cheqE:x.ins.cheqE,
     rets:x.ins.rets||{}, retenc:x.ins.retenc, ajuste:x.ins.ajuste, total:x.total
   }));
