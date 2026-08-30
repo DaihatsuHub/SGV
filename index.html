@@ -959,6 +959,18 @@
       </div>
       <div id="vmes-marcas" style="display:flex;flex-wrap:wrap;gap:4px 14px;max-height:96px;overflow:auto;background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:6px 10px;min-width:380px"></div>
     </div>
+    <div style="display:flex;flex-direction:column;gap:4px;margin-left:10px">
+      <label style="font-size:12px;color:var(--t2)">Cliente (opcional):</label>
+      <div style="display:flex;align-items:center;gap:4px">
+        <input class="finp" id="vmes-cli" list="vmes-cli-list" placeholder="Todos los clientes" style="width:240px" onfocus="this.select()">
+        <datalist id="vmes-cli-list"></datalist>
+        <button class="btn" style="padding:2px 7px;font-size:11px" onclick="vmesLimpiarCli()" title="Todos los clientes">✕</button>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;margin-left:10px">
+      <label style="font-size:12px;color:var(--t2)">Vendedor:</label>
+      <select class="finp" id="vmes-vend" style="width:200px"><option value="">Todos los vendedores</option></select>
+    </div>
     <button class="btn pri" onclick="vmesGenerar()" style="align-self:center">▶ Generar</button>
     <button class="btn" onclick="vmesExportar()" style="align-self:center" title="Exportar a Excel (CSV)">⬇ Excel</button>
     <span id="vmes-status" style="font-size:12px;color:var(--t3);align-self:center"></span>

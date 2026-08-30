@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 
 let FAC_ITEMS_ALL = null;   // cache del detalle de ventas (se carga 1 vez)
-let _vmesRows = [], _vmesMonths = [];
+let _vmesRows = [], _vmesMonths = [], _vmesFiltrado = false;
 const VMES_MES3 = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
 
 function vmesMonths(n){
@@ -27,6 +27,36 @@ function vmesRenderMarcas(){
 }
 function vmesSetAllMarcas(on){ document.querySelectorAll('#vmes-marcas input').forEach(c=>c.checked=on); }
 
+// ── Filtros de cliente y vendedor ─────────────────────────
+// Al elegir uno de los dos, el listado deja de ser "qué hay" y pasa a ser
+// "qué le vendí a este". Por eso se ocultan Stock y los datos del despacho:
+// no son del cliente, y mostrarlos confunde.
+function vmesFillFiltros(){
+  const dl=document.getElementById('vmes-cli-list');
+  if(dl) dl.innerHTML=(CLIS||[]).map(c=>`<option value="${esc((c.CLI_CODIGO||'').trim())} — ${esc(c.CLI_RAZON||'')}">`).join('');
+  const sv=document.getElementById('vmes-vend');
+  if(sv && sv.options.length<=1){
+    sv.innerHTML='<option value="">Todos los vendedores</option>'+
+      (TABLAS['VEND']||[]).map(v=>`<option value="${esc(v.CODIGO)}">${esc(v.CODIGO)} — ${esc(v.DETALLE)}</option>`).join('');
+  }
+}
+// Resuelve el código de cliente desde el input ("COD — Razón", código o razón)
+function vmesCliCod(){
+  const val=(document.getElementById('vmes-cli')?.value||'').trim();
+  if(!val) return '';
+  const cod=(val.split('—')[0]||'').trim().toUpperCase();
+  let c=(CLIS||[]).find(x=>(x.CLI_CODIGO||'').trim().toUpperCase()===cod);
+  if(!c) c=(CLIS||[]).find(x=>(x.CLI_RAZON||'').trim().toLowerCase()===val.toLowerCase());
+  return c ? (c.CLI_CODIGO||'').trim() : val;   // si no matchea, se usa tal cual
+}
+function vmesLimpiarCli(){
+  const el=document.getElementById('vmes-cli'); if(el){ el.value=''; el.focus(); }
+}
+// ¿Hay filtro de cliente o vendedor puesto?
+function vmesFiltrado(){
+  return !!(vmesCliCod() || (document.getElementById('vmes-vend')?.value||'').trim());
+}
+
 async function vmesGenerar(){
   const n=parseInt(document.getElementById('vmes-meses').value)||6;
   const marcas=[...document.querySelectorAll('#vmes-marcas input:checked')].map(c=>c.value);
@@ -43,11 +73,18 @@ async function vmesGenerar(){
   const months=vmesMonths(n);
   const monthKeys=new Set(months.map(m=>m.key));
 
+  // Filtros de cliente y vendedor
+  const fCli =vmesCliCod().toUpperCase();
+  const fVend=(document.getElementById('vmes-vend')?.value||'').trim().toUpperCase();
+  const filtrado=!!(fCli||fVend);
+
   // facturas dentro del rango: fac_nro -> {mk, tipo}
   const facMap={};
   (FACS||[]).forEach(f=>{
     const mk=(f.fac_fec||'').substring(0,7);
     if(!monthKeys.has(mk)) return;
+    if(fCli  && (f.fac_cli ||'').trim().toUpperCase()!==fCli)  return;
+    if(fVend && (f.fac_vend||'').trim().toUpperCase()!==fVend) return;
     facMap[(f.fac_nro||'').trim()]={ mk, tipo:(f.fac_nro||'').trim().slice(-1).toUpperCase() };
   });
 
@@ -80,7 +117,10 @@ async function vmesGenerar(){
     const stock=(Number(a.ART_STK)||0)+(Number(a.ART_STKT)||0);
     const mes=months.map(m=>v[m.key]||0);
     const totalVentas=mes.reduce((s,q)=>s+q,0);
-    if(totalVentas===0 && stock===0) return;
+    // Sin filtro: se muestra lo que tiene ventas O stock.
+    // Con filtro: sólo lo que ese cliente/vendedor efectivamente movió.
+    if(filtrado){ if(totalVentas===0) return; }
+    else if(totalVentas===0 && stock===0) return;
     const d=ultDesp[art];
     const fob=d?Number(d.dep_fob)||0:0;
     const gas2=d?Number(d.dep_gas2)||0:0;
@@ -92,37 +132,53 @@ async function vmesGenerar(){
     });
   });
   rows.sort((a,b)=>a.cod.localeCompare(b.cod));
-  _vmesRows=rows; _vmesMonths=months;
+  _vmesRows=rows; _vmesMonths=months; _vmesFiltrado=filtrado;
   vmesRender(rows, months);
-  if(status) status.textContent=`${rows.length} artículo(s)`;
+  if(status){
+    const quien=[];
+    if(fCli)  quien.push('cliente '+fCli);
+    if(fVend) quien.push('vendedor '+fVend);
+    status.textContent=`${rows.length} artículo(s)`+(quien.length?' · '+quien.join(' · '):'');
+  }
 }
 
 function vmesRender(rows, months){
   const head=document.getElementById('vmes-thead');
   const body=document.getElementById('vmes-body');
   if(!head||!body) return;
-  const grid=`120px 46px 100px ${months.map(()=>'58px').join(' ')} 72px 92px 64px 100px 78px 70px 92px`;
+  // Con filtro de cliente/vendedor se ocultan Stock y los datos del despacho:
+  // no son de ese cliente y mostrarlos confunde. Queda "qué le vendí, mes a mes".
+  const filt=_vmesFiltrado;
+  const grid = filt
+    ? `120px 46px 100px ${months.map(()=>'58px').join(' ')} 72px 100px`
+    : `120px 46px 100px ${months.map(()=>'58px').join(' ')} 72px 92px 64px 100px 78px 70px 92px`;
   head.style.gridTemplateColumns=grid;
   head.innerHTML=
     `<span>Código</span><span>PR</span><span>Marca</span>`
     + months.map(m=>`<span style="text-align:right">${m.label}</span>`).join('')
-    + `<span style="text-align:right">Stock</span><span>DFec</span><span style="text-align:right">DIng</span><span style="text-align:right">Precio</span><span style="text-align:right">FOB</span><span style="text-align:right">Gasto2</span><span style="text-align:right">Costo2</span>`;
-  if(!rows.length){ body.innerHTML='<div class="empty">Sin resultados — probá otras marcas o más meses.</div>'; return; }
+    + (filt
+        ? `<span style="text-align:right">Total</span><span style="text-align:right">Precio</span>`
+        : `<span style="text-align:right">Stock</span><span>DFec</span><span style="text-align:right">DIng</span><span style="text-align:right">Precio</span><span style="text-align:right">FOB</span><span style="text-align:right">Gasto2</span><span style="text-align:right">Costo2</span>`);
+  if(!rows.length){ body.innerHTML='<div class="empty">Sin resultados — probá otras marcas, otro cliente o más meses.</div>'; return; }
   const numF=v=>(v||0).toLocaleString('es-AR');
   const fdate=d=>{ if(!d) return ''; const p=d.substring(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0].slice(-2)}`:''; };
   body.innerHTML=rows.map(r=>{
+    const tot=r.mes.reduce((s,q)=>s+q,0);
     return `<div class="tr-art" style="grid-template-columns:${grid}">
       <span class="col-cod" style="color:var(--acc)">${esc(r.cod)}</span>
       <span class="col-sm">${esc(r.pr)}</span>
       <span class="col-sm" style="font-family:var(--mono)">${esc(r.marca)}</span>
       ${r.mes.map(q=>`<span style="text-align:right;font-family:var(--mono)">${q?numF(q):''}</span>`).join('')}
-      <span style="text-align:right;font-family:var(--mono);${r.stock>0?'color:var(--grn);font-weight:600':''}">${numF(r.stock)}</span>
-      <span class="col-sm">${fdate(r.dfec)}</span>
-      <span style="text-align:right;font-family:var(--mono)">${r.ding?numF(r.ding):''}</span>
-      <span style="text-align:right;font-family:var(--mono)">${reciFmt(r.precio)}</span>
-      <span style="text-align:right;font-family:var(--mono)">${reciFmt(r.fob)}</span>
-      <span style="text-align:right;font-family:var(--mono)">${reciFmt(r.gas2)}</span>
-      <span style="text-align:right;font-family:var(--mono)">${reciFmt(r.costo)}</span>
+      ${filt
+        ? `<span style="text-align:right;font-family:var(--mono);font-weight:600;color:var(--grn)">${numF(tot)}</span>
+           <span style="text-align:right;font-family:var(--mono)">${reciFmt(r.precio)}</span>`
+        : `<span style="text-align:right;font-family:var(--mono);${r.stock>0?'color:var(--grn);font-weight:600':''}">${numF(r.stock)}</span>
+           <span class="col-sm">${fdate(r.dfec)}</span>
+           <span style="text-align:right;font-family:var(--mono)">${r.ding?numF(r.ding):''}</span>
+           <span style="text-align:right;font-family:var(--mono)">${reciFmt(r.precio)}</span>
+           <span style="text-align:right;font-family:var(--mono)">${reciFmt(r.fob)}</span>
+           <span style="text-align:right;font-family:var(--mono)">${reciFmt(r.gas2)}</span>
+           <span style="text-align:right;font-family:var(--mono)">${reciFmt(r.costo)}</span>`}
     </div>`;
   }).join('');
 }
@@ -170,8 +226,13 @@ async function vmesExportar(){
   const allB={top:thin,left:thin,right:thin,bottom:thin};
 
   // columnas: ... Stock | [COLUMNA NEGRA ~1cm] | DFec ...
-  const headers=['Marca','Código','PR', ...months.map(m=>m.label), 'Stock','', 'DFec','DIng','Precio','FOB','Gasto2','Costo2'];
-  const widths =[10,16,6, ...months.map(()=>8), 9, 1, 10,9,12,10,9,11];
+  const filt=_vmesFiltrado;
+  const headers = filt
+    ? ['Marca','Código','PR', ...months.map(m=>m.label), 'Total','', 'Precio']
+    : ['Marca','Código','PR', ...months.map(m=>m.label), 'Stock','', 'DFec','DIng','Precio','FOB','Gasto2','Costo2'];
+  const widths = filt
+    ? [10,16,6, ...months.map(()=>8), 10, 1, 12]
+    : [10,16,6, ...months.map(()=>8), 9, 1, 10,9,12,10,9,11];
 
   const wb=new ExcelJS.Workbook();
   const ws=wb.addWorksheet('Ventas mensuales');
@@ -199,21 +260,26 @@ async function vmesExportar(){
     }
     prevMarca=r.marca;
 
-    const vals=[ r.marca, r.cod, r.pr,
-      ...r.mes.map(q=>q||null),
-      r.stock||0, '', fdate(r.dfec), r.ding||null,
-      r.precio||0, r.fob||0, r.gas2||0, r.costo||0 ];
+    const vals = filt
+      ? [ r.marca, r.cod, r.pr, ...r.mes.map(q=>q||null),
+          r.mes.reduce((s,q)=>s+q,0)||0, '', r.precio||0 ]
+      : [ r.marca, r.cod, r.pr, ...r.mes.map(q=>q||null),
+          r.stock||0, '', fdate(r.dfec), r.ding||null,
+          r.precio||0, r.fob||0, r.gas2||0, r.costo||0 ];
     const row=ws.addRow(vals);
     for(let i=cM0;i<=cMn;i++){ row.getCell(i).numFmt='#,##0'; row.getCell(i).alignment={horizontal:'right'}; }
     row.getCell(cStock).numFmt='#,##0'; row.getCell(cStock).alignment={horizontal:'right'};
-    row.getCell(cDIng).numFmt='#,##0';  row.getCell(cDIng).alignment={horizontal:'right'};
-    [cPrecio,cFob,cGas,cCosto].forEach(ci=>{ row.getCell(ci).numFmt='#,##0.00'; row.getCell(ci).alignment={horizontal:'right'}; });
-    row.getCell(cDFec).alignment={horizontal:'center'};
+    if(filt){
+      row.getCell(cDFec).numFmt='#,##0.00'; row.getCell(cDFec).alignment={horizontal:'right'};
+    } else {
+      row.getCell(cDIng).numFmt='#,##0';  row.getCell(cDIng).alignment={horizontal:'right'};
+      [cPrecio,cFob,cGas,cCosto].forEach(ci=>{ row.getCell(ci).numFmt='#,##0.00'; row.getCell(ci).alignment={horizontal:'right'}; });
+      row.getCell(cDFec).alignment={horizontal:'center'};
+    }
     // fondos naranja en Código y Stock; Precio naranja + negrita
     row.getCell(2).fill=orangeFill;
     row.getCell(cStock).fill=orangeFill;
-    row.getCell(cPrecio).fill=orangeFill;
-    row.getCell(cPrecio).font={bold:true};
+    if(!filt){ row.getCell(cPrecio).fill=orangeFill; row.getCell(cPrecio).font={bold:true}; }
     // columna negra separadora
     row.getCell(cBlack).fill=blackFill;
     // borde simple en toda la fila
@@ -226,7 +292,7 @@ async function vmesExportar(){
     const buf=await wb.xlsx.writeBuffer();
     const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-    a.download='ventas_mensuales_x_articulo.xlsx';
+    a.download='ventas_mensuales_x_articulo'+(filt?'_filtrado':'')+'.xlsx';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(a.href),1000);
     if(status) status.textContent=`${rows.length} artículo(s)`;
