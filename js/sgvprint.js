@@ -3,7 +3,9 @@
    ---------------------------------------------------------------------------
    REGLAS (Ricardo, Ago 2026):
      · Hoja A4 VERTICAL (forzada por medidas exactas en mm).
-     · 72 LÍNEAS por hoja: alto de renglón FIJO = alto_util / 72.
+     · Alto de renglón FIJO, elegido para que se lea cómodo. La cantidad de
+       líneas por hoja sale de ahí (con 18px, unas 58 en A4 vertical).
+     · Agrandar el renglón NO agranda la letra: son independientes.
      · TODAS las columnas tienen que entrar. Si la tabla se pasa del ancho de
        la hoja, se ESCALA lo justo para que entre.
      · ACHICAR NO SIGNIFICA APRETAR LOS RENGLONES: se escala el bloque entero
@@ -35,9 +37,12 @@ const SGV_PAGE = {
   vertical: { size:'210mm 297mm', util:'190mm' },
   apaisado: { size:'297mm 210mm', util:'277mm' }
 };
-const SGV_PAGE_H = 1047;   // alto útil de la A4 vertical: define las 72 líneas
-const SGV_LINEAS = 72;     // líneas por hoja — REGLA DURA
-const SGV_FS     = 9;      // cuerpo de letra de los listados
+// Alto de RENGLÓN y cuerpo de LETRA son independientes: el renglón se elige
+// para que el listado se lea cómodo, no al revés. Con 18px entran ~58 líneas
+// en una A4 vertical. (Las "72 líneas" venían de la matricial y quedaban
+// demasiado apretadas.)
+const SGV_FILA   = 18;     // alto de renglón en px
+const SGV_FS     = 9;      // cuerpo de letra — NO cambia si cambia el renglón
 
 // Corta textos largos (razón social: 30 caracteres).
 function sgvCorta(txt, n){
@@ -47,8 +52,7 @@ function sgvCorta(txt, n){
 }
 
 function sgvPrintEstilos(util){
-  // Alto de renglón: SIEMPRE el de la hoja vertical, en px fijos.
-  const h = Math.floor(SGV_PAGE_H / SGV_LINEAS * 100) / 100;
+  const h = SGV_FILA;
   return `
     *{box-sizing:border-box}
     body{font-family:Arial,Helvetica,sans-serif;font-size:${SGV_FS}px;margin:0;color:#111;
@@ -60,8 +64,11 @@ function sgvPrintEstilos(util){
 
     /* La tabla toma su ancho natural; si se pasa, la escala el script */
     table{width:max-content;border-collapse:collapse;margin-bottom:6px}
+    /* El renglón mide ${h}px y la letra ${SGV_FS}px: agrandar el renglón NO
+       agranda la letra, que es lo que dejaba el listado apretado. */
     th,td{padding:0 6px;border-bottom:1px solid #e5e5e5;text-align:left;
-          white-space:nowrap;height:${h}px;line-height:${h - 1}px;vertical-align:middle}
+          white-space:nowrap;height:${h}px;line-height:${h}px;
+          font-size:${SGV_FS}px;vertical-align:middle}
     .n,.r{text-align:right}
 
     th{background:#e8eaed;font-weight:bold;border-bottom:1.5px solid #999}
@@ -140,4 +147,22 @@ function sgvPrint(opt){
   );
   w.document.close();
   w.focus();
+}
+
+
+// ── Compatibilidad: listados que todavía llaman al helper viejo ─────────────
+// printArt y printCli arman la tabla y se la pasan a openPrint. En vez de
+// tocar cada uno, openPrint delega en sgvPrint y así heredan todo el estándar
+// (nowrap, escalado al ancho de la hoja, cebra, títulos repetidos).
+function openPrint(titulo, cuerpo, n){
+  sgvPrint({
+    titulo: String(titulo || '').replace(/^[^\w\dÁÉÍÓÚÑ]+\s*/, ''),
+    subtitulo: 'Daihatsu Electronics — ' + new Date().toLocaleDateString('es-AR')
+             + (n !== undefined ? ' · ' + n + ' registros' : ''),
+    // Se sacan los estilos inline: traen colores de pantalla que en papel no
+    // se leen, y alineaciones que ya resuelve el estándar.
+    cuerpo: String(cuerpo || '').replace(/\sstyle="[^"]*"/g, ''),
+    estilos: 'td:nth-child(1){font-family:Consolas,monospace;color:#0a58ca}'
+           + 'td:nth-child(n+4),th:nth-child(n+4){text-align:right}'
+  });
 }
