@@ -2,7 +2,6 @@
 // VENTAS MENSUALES x ARTÍCULO
 // ═══════════════════════════════════════════════════════════
 
-let FAC_ITEMS_ALL = null;   // cache del detalle de ventas (se carga 1 vez)
 let _vmesRows = [], _vmesMonths = [], _vmesFiltrado = false;
 const VMES_MES3 = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
 
@@ -32,113 +31,99 @@ function vmesSetAllMarcas(on){ document.querySelectorAll('#vmes-marcas input').f
 // "qué le vendí a este". Por eso se ocultan Stock y los datos del despacho:
 // no son del cliente, y mostrarlos confunde.
 function vmesFillFiltros(){
+  const cli=document.getElementById('vmes-cli');
   const dl=document.getElementById('vmes-cli-list');
-  if(dl) dl.innerHTML=(CLIS||[]).map(c=>`<option value="${esc((c.CLI_CODIGO||'').trim())} — ${esc(c.CLI_RAZON||'')}">`).join('');
   const sv=document.getElementById('vmes-vend');
+
+  // La RAZÓN SOCIAL va primero: el datalist del navegador filtra por el
+  // principio del texto, así que con el código adelante no se puede buscar
+  // por nombre. Y autocomplete off para no ofrecer los últimos escritos.
+  if(dl) dl.innerHTML=(CLIS||[]).map(c=>
+    `<option value="${esc((c.CLI_RAZON||'').trim())} — ${esc((c.CLI_CODIGO||'').trim())}">`).join('');
+  if(cli){ cli.setAttribute('autocomplete','off'); cli.removeAttribute('name'); cli.disabled=false; }
+
   if(sv && sv.options.length<=1){
     sv.innerHTML='<option value="">Todos los vendedores</option>'+
       (TABLAS['VEND']||[]).map(v=>`<option value="${esc(v.CODIGO)}">${esc(v.CODIGO)} — ${esc(v.DETALLE)}</option>`).join('');
   }
+  if(sv) sv.disabled=false;
+
+  // Cliente y vendedor son EXCLUYENTES: un cliente pertenece a un vendedor,
+  // combinarlos no aporta nada. Se ATENÚA el otro, no se deshabilita:
+  // deshabilitar el input rompe el desplegable del datalist.
+  if(cli && !cli._vmesSync){
+    cli._vmesSync=true;
+    ['input','change','keyup','search','blur'].forEach(ev=>cli.addEventListener(ev, vmesSyncFiltros));
+  }
+  if(sv && !sv._vmesSync){
+    sv._vmesSync=true;
+    sv.addEventListener('change', function(){ if(sv.value && cli) cli.value=''; vmesSyncFiltros(); });
+  }
+  vmesSyncFiltros();
 }
-// Resuelve el código de cliente desde el input ("COD — Razón", código o razón)
+
+function vmesSyncFiltros(){
+  const cli=document.getElementById('vmes-cli'), sv=document.getElementById('vmes-vend');
+  if(!cli||!sv) return;
+  const hayCli=!!vmesCliCod(), hayVend=!!(sv.value||'').trim();
+  sv.style.opacity  = hayCli ? .45 : 1;
+  cli.style.opacity = hayVend ? .45 : 1;
+  cli.placeholder   = hayVend ? '(vendedor seleccionado)' : 'Todos los clientes';
+  if(hayCli && sv.value) sv.value='';
+}
+
+// Código de cliente a partir del input. El valor visible es "Razón — CÓDIGO".
+// Devuelve '' si no matchea ninguno: no se filtra por texto suelto.
 function vmesCliCod(){
   const val=(document.getElementById('vmes-cli')?.value||'').trim();
   if(!val) return '';
-  const cod=(val.split('—')[0]||'').trim().toUpperCase();
+  const cod=(val.split('—').pop()||'').trim().toUpperCase();
   let c=(CLIS||[]).find(x=>(x.CLI_CODIGO||'').trim().toUpperCase()===cod);
-  if(!c) c=(CLIS||[]).find(x=>(x.CLI_RAZON||'').trim().toLowerCase()===val.toLowerCase());
-  return c ? (c.CLI_CODIGO||'').trim() : val;   // si no matchea, se usa tal cual
+  if(!c) c=(CLIS||[]).find(x=>(x.CLI_RAZON||'').trim().toUpperCase()===val.toUpperCase());
+  if(!c) c=(CLIS||[]).find(x=>(x.CLI_CODIGO||'').trim().toUpperCase()===val.toUpperCase());
+  return c ? (c.CLI_CODIGO||'').trim() : '';
 }
 function vmesLimpiarCli(){
-  const el=document.getElementById('vmes-cli'); if(el){ el.value=''; el.focus(); }
-}
-// ¿Hay filtro de cliente o vendedor puesto?
-function vmesFiltrado(){
-  return !!(vmesCliCod() || (document.getElementById('vmes-vend')?.value||'').trim());
+  const cli=document.getElementById('vmes-cli'), sv=document.getElementById('vmes-vend');
+  if(cli){ cli.value=''; cli.disabled=false; }
+  if(sv){ sv.value=''; sv.disabled=false; }
+  vmesSyncFiltros();
+  if(cli) cli.focus();
 }
 
+// El cálculo lo hace el SERVER (/informes/vmes). Antes se bajaban los ~27.000
+// fac_items al navegador y se cruzaban en memoria: tardaba lo mismo con filtro
+// que sin él, porque el filtro se aplicaba al final. Ahora el server filtra las
+// facturas ANTES de traer los ítems, así que con un cliente es inmediato.
 async function vmesGenerar(){
   const n=parseInt(document.getElementById('vmes-meses').value)||6;
   const marcas=[...document.querySelectorAll('#vmes-marcas input:checked')].map(c=>c.value);
   const status=document.getElementById('vmes-status');
   if(!marcas.length){ toast('Seleccioná al menos una marca','err'); return; }
 
-  if(FAC_ITEMS_ALL===null){
-    if(status) status.textContent='Cargando detalle de ventas…';
-    try{ FAC_ITEMS_ALL=await sbGetAll('fac_items','id'); }
-    catch(e){ console.error('fac_items:', e); toast('Error cargando detalle de ventas','err'); if(status) status.textContent=''; return; }
-  }
+  const cli=vmesCliCod();
+  const vend=(document.getElementById('vmes-vend')?.value||'').trim();
+
   if(status) status.textContent='Calculando…';
+  try{
+    const qs=['meses='+n, 'marcas='+encodeURIComponent(marcas.join(','))];
+    if(cli)  qs.push('cli='+encodeURIComponent(cli));
+    if(vend) qs.push('vend='+encodeURIComponent(vend));
+    const r=await apiGet('/informes/vmes?'+qs.join('&'));
+    if(!r.ok){ toast(r.error||'Error al generar','err'); if(status) status.textContent=''; return; }
 
-  const months=vmesMonths(n);
-  const monthKeys=new Set(months.map(m=>m.key));
-
-  // Filtros de cliente y vendedor
-  const fCli =vmesCliCod().toUpperCase();
-  const fVend=(document.getElementById('vmes-vend')?.value||'').trim().toUpperCase();
-  const filtrado=!!(fCli||fVend);
-
-  // facturas dentro del rango: fac_nro -> {mk, tipo}
-  const facMap={};
-  (FACS||[]).forEach(f=>{
-    const mk=(f.fac_fec||'').substring(0,7);
-    if(!monthKeys.has(mk)) return;
-    if(fCli  && (f.fac_cli ||'').trim().toUpperCase()!==fCli)  return;
-    if(fVend && (f.fac_vend||'').trim().toUpperCase()!==fVend) return;
-    facMap[(f.fac_nro||'').trim()]={ mk, tipo:(f.fac_nro||'').trim().slice(-1).toUpperCase() };
-  });
-
-  // ventas por artículo y mes (F suma, C resta)
-  const ventas={};
-  (FAC_ITEMS_ALL||[]).forEach(it=>{
-    const fm=facMap[(it.ite_nro||'').trim()]; if(!fm) return;
-    const art=(it.ite_art||'').trim(); if(!art) return;
-    const q=Number(it.ite_can)||0;
-    const signed = fm.tipo==='C' ? -q : (fm.tipo==='F' ? q : 0);
-    if(!signed) return;
-    (ventas[art]||(ventas[art]={}));
-    ventas[art][fm.mk]=(ventas[art][fm.mk]||0)+signed;
-  });
-
-  // último despacho por artículo (por fecha)
-  const ultDesp={};
-  (DESPS||[]).forEach(d=>{
-    const art=(d.dep_art||'').trim(); if(!art) return;
-    if(!ultDesp[art] || (d.dep_fec||'')>(ultDesp[art].dep_fec||'')) ultDesp[art]=d;
-  });
-
-  // filas (filtradas por marca; sin ventas y stock 0 -> no mostrar)
-  const marcaSet=new Set(marcas.map(m=>(m||'').trim().toUpperCase()));
-  const rows=[];
-  (ARTS||[]).forEach(a=>{
-    if(!marcaSet.has((a.ART_MARCA||'').trim().toUpperCase())) return;
-    const art=(a.ART_COD||'').trim();
-    const v=ventas[art]||{};
-    const stock=(Number(a.ART_STK)||0)+(Number(a.ART_STKT)||0);
-    const mes=months.map(m=>v[m.key]||0);
-    const totalVentas=mes.reduce((s,q)=>s+q,0);
-    // Sin filtro: se muestra lo que tiene ventas O stock.
-    // Con filtro: sólo lo que ese cliente/vendedor efectivamente movió.
-    if(filtrado){ if(totalVentas===0) return; }
-    else if(totalVentas===0 && stock===0) return;
-    const d=ultDesp[art];
-    const fob=d?Number(d.dep_fob)||0:0;
-    const gas2=d?Number(d.dep_gas2)||0:0;
-    rows.push({
-      cod:art, pr:(a.ART_PROV||'').trim(), marca:(a.ART_MARCA||'').trim(),
-      mes, stock,
-      dfec:d?d.dep_fec:'', ding:d?(Number(d.dep_ent)||0):0,
-      precio:Number(a.ART_PRE)||0, fob, gas2, costo:fob*(1+gas2/100)
-    });
-  });
-  rows.sort((a,b)=>a.cod.localeCompare(b.cod));
-  _vmesRows=rows; _vmesMonths=months; _vmesFiltrado=filtrado;
-  vmesRender(rows, months);
-  if(status){
-    const quien=[];
-    if(fCli)  quien.push('cliente '+fCli);
-    if(fVend) quien.push('vendedor '+fVend);
-    status.textContent=`${rows.length} artículo(s)`+(quien.length?' · '+quien.join(' · '):'');
+    _vmesRows=r.filas||[]; _vmesMonths=r.meses||[]; _vmesFiltrado=!!r.filtrado;
+    vmesRender(_vmesRows, _vmesMonths);
+    if(status){
+      const quien=[];
+      if(cli)  quien.push('cliente '+cli);
+      if(vend) quien.push('vendedor '+vend);
+      status.textContent=`${_vmesRows.length} artículo(s)`+(quien.length?' · '+quien.join(' · '):'');
+    }
+  }catch(e){
+    console.error('vmesGenerar:', e);
+    toast('Error al generar el listado','err');
+    if(status) status.textContent='';
   }
 }
 
