@@ -25,12 +25,12 @@ function toast(msg,type='scs'){
   el.classList.add('show');
   setTimeout(()=>el.classList.remove('show'),2800);
 }
-function openPrint(title,tableHtml,count){
-  const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>body{font-family:Arial;font-size:12px;margin:20px}h2{border-bottom:2px solid #4f8ef7;padding-bottom:8px;color:#1a1a2e}table{width:100%;border-collapse:collapse;margin-top:16px}th{background:#1a1a2e;color:#fff;padding:8px;text-align:left;font-size:12px}td{padding:7px 8px;border-bottom:1px solid #eee}tr:hover td{background:#f0f4ff}.footer{margin-top:20px;font-size:12px;color:#999}</style></head><body><h2>${title}</h2><p style="color:#666;font-size:12px">${new Date().toLocaleString('es-AR')} — ${count} registros</p>${tableHtml}<div class="footer">SGV-Gestión</div><script>window.print();<\/script></div><!-- /app -->
-</body></html>`);
-  w.document.close();
-}
+// openPrint vive ahora en js/sgvprint.js: delega en sgvPrint() y así los
+// listados de artículos y clientes heredan el estándar de impresión
+// (renglón de 18px, escalado al ancho de la hoja, cebra, títulos por hoja).
+// La versión vieja estaba acá y, al cargarse ui.js DESPUÉS de sgvprint.js,
+// la pisaba. No volver a definirla en este archivo.
+
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape')document.querySelectorAll('.ov.open').forEach(o=>o.classList.remove('open'));
   if(e.key==='F2'){document.getElementById('page-art').classList.contains('active')?aAlta():cAlta();}
