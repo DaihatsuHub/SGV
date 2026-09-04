@@ -2403,24 +2403,30 @@ function nfCalcTotales() {
   // La cotización viene en STRING2 de la tabla MONE (Casio=1450, etc.)
   const cotiz = monSel==='P' ? 1 : (parseFloat(monObj?.STRING2)||1);
 
-  // REGLA (Ricardo): el NETO a facturar es  precio x cotizacion x (1 - dto).
-  // Ese es la BASE, y de ahi salen el IVA y las percepciones POR ENCIMA.
-  //   ej.: 100 U$C x 1450 x 0,70 = 101.500 de neto
-  //        + IVA 21%   = 21.315
-  //        + percep 4% =  4.060   ->  total factura 126.875
-  // El precio de lista trae IVA incluido, pero para facturar se toma como neto.
-  const precioTotal = FAC_ITEMS_NUEVA.reduce((a,it)=>a+(it.ite_uni||0)*(it.ite_can||0), 0);
-  const netoAfip = r2(precioTotal*cotiz*factor);
+  // REGLA (Ricardo): el NETO a facturar depende de si hay descuento.
+  //   SIN descuento -> el precio de lista TRAE IVA INCLUIDO, asi que el neto
+  //     sale de dividirlo: (precio x cotiz) / (1 + IVA).
+  //     ej. 41 U$C x 1550 = 63.550 -> neto 52.520,66 + IVA 11.029,34 = 63.550
+  //     (el cliente paga el precio de lista, ni mas ni menos)
+  //   CON descuento -> precio x cotiz x (1 - dto) YA ES el neto: el descuento
+  //     cumple la funcion de sacar el IVA, que va POR ENCIMA.
+  //     ej. 41 x 1550 x 0,50 = 31.775 de neto, mas IVA
+  const conDto = dto !== 0;
+  const netoDeItem = it => {
+    const bruto = (it.ite_uni||0)*(it.ite_can||0)*cotiz*factor;
+    return conDto ? bruto : bruto/(1+(it.ite_iva_porc||21)/100);
+  };
+  const netoAfip = r2(FAC_ITEMS_NUEVA.reduce((a,it)=>a+netoDeItem(it), 0));
 
-  // IVA sobre el neto ya convertido, por alicuota
+  // IVA sobre ese neto, por alicuota
   let ivaAfip = 0;
   if(esA){
     const porAlic = {};
     FAC_ITEMS_NUEVA.forEach(it=>{
       const pct=it.ite_iva_porc||21;
-      porAlic[pct]=(porAlic[pct]||0)+(it.ite_uni||0)*(it.ite_can||0);
+      porAlic[pct]=(porAlic[pct]||0)+netoDeItem(it);
     });
-    for(const pct in porAlic) ivaAfip += r2(porAlic[pct]*cotiz*factor)*(Number(pct)/100);
+    for(const pct in porAlic) ivaAfip += r2(porAlic[pct])*(Number(pct)/100);
     ivaAfip = r2(ivaAfip);
   }
 
