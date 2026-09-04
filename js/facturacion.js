@@ -73,6 +73,18 @@ function nfDispDesp(d) {
   return stk;
 }
 
+// Letra del comprobante = 2º carácter del prefijo (H·A·4 = Hatsu / A / suc 4)
+//   A → discrimina IVA (Responsable Inscripto)
+//   B → Monotributista o Consumidor Final: IVA incluido, se muestra discriminado
+//   X → NO chequea condición de IVA; el total ES el precio facturado, sin IVA
+function nfLetraComp(){
+  const val=document.getElementById('nf-ctip')?.value||'';
+  const pre=(val.split('|')[0]||'');
+  const l=(pre.charAt(1)||'').toUpperCase();
+  return ['A','B','C','X'].includes(l) ? l : '';
+}
+
+// ¿Calcula IVA? A y B sí (en B va incluido pero se discrimina). X no.
 function nfEsFacturaA() {
   const val  = document.getElementById('nf-ctip')?.value||'';
   const tiva = document.getElementById('nf-tiva-cod')?.value||'';
@@ -80,8 +92,11 @@ function nfEsFacturaA() {
   const tipo = val.split('|')[1];
   const ct = nfCtipActual();
   const paraFacturar = !!(ct && ct.tab_fact);   // p/Facturar off = mercadería → sin IVA
-  // Letra A (discrimina IVA): sólo si es "para facturar", F/C/D y cliente Inscripto
-  return paraFacturar && (tipo==='F'||tipo==='C'||tipo==='D') && tiva==='I';
+  if(!paraFacturar || !(tipo==='F'||tipo==='C'||tipo==='D')) return false;
+  const letra = nfLetraComp();
+  if(letra==='X') return false;                 // X: el total es el precio, sin IVA
+  if(letra==='A'||letra==='B') return true;     // A y B discriminan IVA
+  return tiva==='I';                            // sin letra en el prefijo: por el cliente
 }
 function facEmpresaLabel(emp) {
   if (emp==='H') return 'HATSU ELECTRONICS S.A.';
@@ -488,7 +503,9 @@ function renderFac() {
     // Subfacturada: se distingue en la grilla con fondo violeta suave y una
     // etiqueta con el % declarado, para no confundirla con una factura al 100%.
     const _dto=Number(f.fac_monpor)||0;
-    const _dtoSty=(_dto!==0&&!f.fac_anul)?'background:rgba(139,92,246,.13);':'';
+    // Con descuento se marca el NÚMERO en naranja, no la fila entera
+    const _dtoSty='';
+    const _dtoCol=(_dto!==0&&!f.fac_anul)?'var(--wrn,#f59e0b)':contColor;
     const _dtoTag=(_dto!==0&&!f.fac_anul)
       ?`<span title="Subfacturada al ${100-_dto}%" style="font-size:10px;background:#3b2a5c;color:#c4b5fd;padding:1px 4px;border-radius:3px;margin-left:3px;font-family:var(--mono)">${100-_dto}%</span>`
       :'';
@@ -503,7 +520,7 @@ function renderFac() {
     const nomCorto = nomCli.length>20 ? nomCli.substring(0,20).trim()+'…' : nomCli;
     return `<div class="tr-fac ${sel}" data-idx="${i}" onclick="selFac(${i})" style="${_dtoSty}${_anulSty};display:flex;flex-wrap:nowrap;align-items:center;gap:8px;overflow:hidden">
       <span style="font-size:12px;color:var(--t2);flex:0 0 auto;white-space:nowrap">${fec}</span>
-      <span class="col-cod" style="font-family:var(--mono);color:${contColor};flex:0 0 auto;white-space:nowrap">${esc(f.fac_nro||'')}${badge}${_dtoTag}</span>
+      <span class="col-cod" style="font-family:var(--mono);color:${_dtoCol};flex:0 0 auto;white-space:nowrap">${esc(f.fac_nro||'')}${badge}${_dtoTag}</span>
       <span title="${esc(nomCli)}" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto;min-width:0">${esc(nomCorto)}</span>
       <span style="flex:0 0 22px;width:22px;text-align:right;font-size:13px;font-family:var(--mono);white-space:nowrap">${marcas}</span>
     </div>`;
@@ -576,6 +593,12 @@ async function renderFacDetalle(f, vista) {
   const _puedeBajaFac = (typeof puedeh==='function') ? puedeh('fac','baja') : false;
   const _saldoIgual = Math.abs((Number(f.fac_saldo)||0)-(Number(f.fac_total)||0))<0.01;
   const _puedeAnular = _puedeBajaFac && !f.fac_anul && !f.fac_cae && _saldoIgual;
+  // ELIMINAR: borra el registro y libera el número, por eso sólo dentro del mes
+  // de la factura. Mismas condiciones que anular (sin CAE, sin cobros) más la
+  // fecha. Permiso propio 'fac/eliminar', configurable en la pantalla de Permisos.
+  const _puedeElim = (typeof puedeh==='function') && puedeh('fac','eliminar')
+    && !f.fac_cae && _saldoIgual
+    && (f.fac_fec||'').substring(0,7) === new Date().toISOString().substring(0,7);
   const anulInfo = f.fac_anul
     ? `<div style="background:#3a1a1a;border-radius:6px;padding:8px 12px;font-size:12px;color:#f87171;margin-bottom:8px;font-weight:600">
          🚫 COMPROBANTE ANULADO${f.fac_anul_por?` &nbsp;·&nbsp; por ${esc(f.fac_anul_por)}`:''}${f.fac_anul_fec?` el ${String(f.fac_anul_fec).substring(0,10).split('-').reverse().join('/')}`:''}
@@ -605,6 +628,7 @@ async function renderFacDetalle(f, vista) {
           ${tipoChar==='C'?`<button onclick="ncAbrirAplicar('${f.fac_nro}')" class="btn pri" style="padding:5px 12px;font-size:12px;white-space:nowrap">📌 ${(f.fac_saldo||0)>0?'Aplicar saldo de NC':'Ver / cancelar aplicaciones'}</button>`:''}
           ${(tieneDto||!esContable)?`<button onclick="facImprimirBorrador()" class="btn" style="padding:5px 12px;font-size:12px;background:var(--acc);color:#fff;white-space:nowrap">🖨 Imprimir Borrador</button>`:''}
           ${_puedeAnular?`<button onclick="facAnular('${f.fac_nro}')" class="btn" style="padding:5px 12px;font-size:12px;background:var(--red);color:#fff;white-space:nowrap">🚫 Anular</button>`:''}
+          ${_puedeElim?`<button onclick="facEliminar('${f.fac_nro}')" class="btn" style="padding:5px 12px;font-size:12px;background:#7f1d1d;color:#fff;white-space:nowrap" title="Borra el comprobante y libera el número. Sólo dentro del mes.">🗑 Eliminar</button>`:''}
           </div>
         </div>
         <div style="text-align:right">
@@ -802,6 +826,32 @@ async function facAutorizarAfip(facNro) {
 }
 
 // IMPRESIÓN DE FACTURA CON QR AFIP
+// ── Eliminar comprobante ──────────────────────────────────
+// Borra el registro y sus ítems, y LIBERA EL NÚMERO. Por eso sólo se permite
+// dentro del mes de la factura: fuera de ese plazo dejaría un hueco o un
+// duplicado en la numeración. Requiere el permiso 'fac/eliminar'.
+async function facEliminar(facNro){
+  const f=FACS.find(x=>x.fac_nro===facNro);
+  if(!f) return;
+  const msg=`¿ELIMINAR el comprobante ${facNro}?\n\n`
+    +`Se borra el comprobante y todos sus ítems, y el stock vuelve al artículo y al despacho.\n`
+    +`El número queda LIBRE y lo va a reutilizar el próximo comprobante.\n\n`
+    +`No queda ningún rastro. Si sólo querés dejarlo sin efecto, usá Anular.`;
+  if(!confirm(msg)) return;
+  if(!confirm(`Confirmá una vez más: ${facNro} se borra definitivamente.`)) return;
+  try{
+    const res=await apiPost('/facturas/eliminar',{fac_nro:facNro});
+    if(!res.ok){ toast(res.error||'No se pudo eliminar','err'); return; }
+    await sbLoadFacs();
+    if(typeof reloadArts==='function'){ try{ await reloadArts(); }catch(_){} }
+    facSelIdx=null;
+    renderFac();
+    const det=document.getElementById('fac-det');
+    if(det) det.innerHTML='<div style="padding:24px;color:var(--t3);text-align:center">Comprobante eliminado</div>';
+    toast(`✓ ${facNro} eliminado — número liberado`,'scs');
+  }catch(e){ console.error('facEliminar:',e); toast('Error al eliminar: '+e.message,'err'); }
+}
+
 // ── Anular comprobante ────────────────────────────────────
 // El server revalida (sin CAE + saldo = total) y devuelve el stock
 // al artículo y al despacho. No borra: marca ANULADA.
@@ -864,13 +914,17 @@ async function facImprimir(modo) {
   const tiva = f.fac_tiva || cli?.CLI_IVA || '';
   const prefijo = facGetPrefijo(f.fac_nro);
   const ctip = CTIPS.find(c=>c.prefijo===prefijo&&c.empresa===emp);
-  let letra = 'C';
-  if(ctip?.tipo==='F') {
+  // La LETRA sale del 2º carácter del prefijo (H·A·4 = Hatsu / letra A / suc 4).
+  //   A → discrimina IVA (Responsable Inscripto)
+  //   B → Monotributista o Consumidor Final: IVA incluido, se muestra discriminado
+  //   X → no chequea condición de IVA; el total ES el precio facturado
+  // Sólo si el prefijo no trae una letra válida se deduce por la condición del
+  // cliente, como respaldo para comprobantes viejos.
+  let letra = (prefijo.charAt(1)||'').toUpperCase();
+  if(!['A','B','C','X'].includes(letra)){
     if(tiva==='I') letra='A';
     else if(tiva==='C'||tiva==='M'||tiva==='N') letra='B';
     else letra='C';
-  } else if(ctip?.tipo==='C') {
-    if(tiva==='I') letra='A'; else letra='B';
   }
   let qrUrl = '';
   if(f.fac_cae) {
@@ -891,10 +945,16 @@ async function facImprimir(modo) {
     qrUrl = `https://www.afip.gob.ar/fe/qr/?p=${qrB64}`;
   }
   const subtotalNeto = (f.fac_sub||0)-(f.fac_iva||0);
+  // Neto e IVA se muestran en A y en B (en B el IVA va incluido en el precio
+  // pero igual se discrimina). En X no hay IVA: el total ES el precio facturado.
   const tieneIva = (f.fac_iva||0)>0;
   // ── Modo de impresión: 'afip' (declarado) o 'real' (interna) ──
   const _esAfip = modo==='afip';
-  const _factor = _esAfip ? (1-(Number(f.fac_monpor)||0)/100) : 1;
+  // La FACTURA va siempre en PESOS: se aplica el descuento Y la cotización.
+  // El BORRADOR/presupuesto va en la moneda elegida y con el valor pleno.
+  const _cot = Number(f.fac_cotiz)||1;
+  const _factor = _esAfip ? (1-(Number(f.fac_monpor)||0)/100)*_cot : 1;
+  const _monImp = _esAfip ? '$' : mon;        // símbolo a usar en la impresión
   const _vNeto   = _esAfip ? (Number(f.fac_neto_afip)>0 ? Number(f.fac_neto_afip) : subtotalNeto*_factor) : subtotalNeto;
   const _vIva    = _esAfip ? (Number(f.fac_iva_afip)>0  ? Number(f.fac_iva_afip)  : (f.fac_iva||0)*_factor) : (f.fac_iva||0);
   const _vTotal  = _esAfip ? (Number(f.fac_total_afip)>0? Number(f.fac_total_afip): (f.fac_total||0)*_factor) : (f.fac_total||0);
@@ -1023,8 +1083,8 @@ async function facImprimir(modo) {
           <td class="des" title="${esc(desArt)}">${esc(desArt)}</td>
           <td class="cod">${esc(it.ite_desp||'')}</td>
           <td class="r">${it.ite_can||0}</td>
-          <td class="r">${(()=>{const d=1+(it.ite_iva_porc||21)/100;const n=(it.ite_uni*_factor)/d;return mon+' '+fmtN(n,2);})()}</td>
-          <td class="r">${mon} ${fmtN((it.ite_imp||0)*_factor,2)}</td>
+          <td class="r">${(()=>{const d=1+(it.ite_iva_porc||21)/100;const n=(it.ite_uni*_factor)/d;return _monImp+' '+fmtN(n,2);})()}</td>
+          <td class="r">${_monImp} ${fmtN((it.ite_imp||0)*_factor,2)}</td>
         </tr>`;
       }).join('')}
       ${items.length<8?Array(8-items.length).fill('<tr><td colspan="6" style="height:6mm">&nbsp;</td></tr>').join(''):''}
@@ -1034,13 +1094,21 @@ async function facImprimir(modo) {
     <div></div>
     <div class="totales">
       ${tieneIva?`
-        <div class="tot-row"><span class="tot-lbl">Subtotal neto</span><span class="tot-val">${mon} ${fmt(_vNeto)}</span></div>
-        <div class="tot-row"><span class="tot-lbl">IVA 21%</span><span class="tot-val">${mon} ${fmt(_vIva)}</span></div>
+        <div class="tot-row"><span class="tot-lbl">Subtotal neto</span><span class="tot-val">${_monImp} ${fmt(_vNeto)}</span></div>
+        ${(()=>{
+          // IVA discriminado por alícuota, tomado de los ítems
+          const porAlic={};
+          items.forEach(it=>{ const pct=Number(it.ite_iva_porc)||0; if(!pct) return;
+            porAlic[pct]=(porAlic[pct]||0)+(Number(it.ite_iva_imp)||0); });
+          const alics=Object.keys(porAlic).sort((a,b)=>b-a);
+          if(!alics.length) return `<div class="tot-row"><span class="tot-lbl">IVA</span><span class="tot-val">${_monImp} ${fmt(_vIva)}</span></div>`;
+          return alics.map(pct=>`<div class="tot-row"><span class="tot-lbl">IVA ${fmt(pct)}%</span><span class="tot-val">${_monImp} ${fmt(porAlic[pct]*_factor)}</span></div>`).join('');
+        })()}
       `:''}
       ${(Array.isArray(f.fac_percep_det)&&f.fac_percep_det.length)
-        ? f.fac_percep_det.map(p=>`<div class="tot-row"><span class="tot-lbl">${esc(p.detalle||'Perc. IIBB')} (${fmt(p.pct)}%)</span><span class="tot-val">${mon} ${fmt((Number(p.importe)||0)*_factor)}</span></div>`).join('')
-        : ((f.fac_percib||0)>0?`<div class="tot-row"><span class="tot-lbl">Perc. IIBB</span><span class="tot-val">${mon} ${fmt((f.fac_percib||0)*_factor)}</span></div>`:'')}
-      <div class="tot-row"><span class="tot-lbl">TOTAL</span><span class="tot-val">${mon} ${fmt(_vTotal)}</span></div>
+        ? f.fac_percep_det.map(p=>`<div class="tot-row"><span class="tot-lbl">${esc(p.detalle||'Perc. IIBB')} (${fmt(p.pct)}%)</span><span class="tot-val">${_monImp} ${fmt((Number(p.importe)||0)*_factor)}</span></div>`).join('')
+        : ((f.fac_percib||0)>0?`<div class="tot-row"><span class="tot-lbl">Perc. IIBB</span><span class="tot-val">${_monImp} ${fmt((f.fac_percib||0)*_factor)}</span></div>`:'')}
+      <div class="tot-row"><span class="tot-lbl">TOTAL</span><span class="tot-val">${_monImp} ${fmt(_vTotal)}</span></div>
     </div>
   </div>
   ${f.fac_cae?`
@@ -2293,7 +2361,8 @@ function nfCalcTotales() {
   set('nf-tot-dto',  dto>0?`- ${mon} ${fmtN(dtoImp,2)}`:'—');
   set('nf-tot-total',`${mon} ${fmtN(total,2)}`);
   // Línea de subfacturación: total declarado (AFIP) cuando hay descuento
-  document.querySelectorAll('.nf-tot-afip').forEach(e=>{ e.textContent=`${mon} ${fmtN(totalAfip,2)}`; });
+  // El comprobante SIEMPRE es en pesos, aunque la deuda esté en otra moneda
+  document.querySelectorAll('.nf-tot-afip').forEach(e=>{ e.textContent=`$ ${fmtN(totalAfip,2)}`; });
   // Rótulo neutro a propósito: no conviene que el comprobante impreso ni la
   // pantalla digan "declarado AFIP".
   document.querySelectorAll('.nf-afip-lbl').forEach(e=>{ e.textContent='Comprobante'; });
