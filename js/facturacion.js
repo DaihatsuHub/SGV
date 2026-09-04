@@ -990,6 +990,10 @@ async function facImprimir(modo) {
   const _cot = Number(f.fac_cotiz)||1;
   const _factor = _esAfip ? (1-(Number(f.fac_monpor)||0)/100)*_cot : 1;
   const _monImp = _esAfip ? '$' : mon;        // símbolo a usar en la impresión
+  // Con descuento, precio × cotización × (1−dto) YA es el neto (el descuento
+  // cumple la función de sacar el IVA). Sin descuento el precio de lista trae
+  // IVA incluido y hay que dividirlo.
+  const _conDto = _esAfip && (Number(f.fac_monpor)||0) !== 0;
   // Sin descuento el neto declarado sale de dividir el precio (que trae IVA);
   // con descuento, `fac_neto_afip` ya viene calculado como precio×cotiz×(1−dto).
   const _netoSinDto = (items||[]).reduce((a,it)=>
