@@ -138,6 +138,7 @@
       <div class="dd-menu" id="dd-ven">
         <button class="dd-item" id="ddi-fac" onclick="showSubPage('ven','fac')">📄 Facturación</button>
         <button class="dd-item" id="ddi-vmes" onclick="showSubPage('ven','vmes')">📅 Ventas mensuales x Artículos</button>
+        <button class="dd-item" id="ddi-dash" onclick="showSubPage('ven','dash')">📊 Panel de control</button>
         <button class="dd-item" id="ddi-rank" onclick="showSubPage('ven','rank')">🏆 Ranking de Artículos</button>
         <button class="dd-item" id="ddi-subd" onclick="showSubPage('ven','subd')">📒 Subdiario de IVA</button>
         <button class="dd-item" id="ddi-saldo" onclick="showSubPage('ven','saldo')">📊 Saldos por Mes</button>
@@ -760,6 +761,26 @@
   </div>
   <div class="tbl-wrap">
     <div id="sd-body" class="tbl-body"><div class="empty" style="margin-top:40px">Elegí el período y tocá Consultar</div></div>
+  </div>
+</div>
+
+<div class="page" id="page-dash">
+  <div class="toolbar">
+    <span style="font-weight:600;font-size:14px;color:var(--acc);margin-right:4px">📊 Panel de control</span>
+    <label style="font-size:12px;color:var(--t2)">Desde</label>
+    <input type="date" class="finp" id="dash-desde" style="width:145px">
+    <label style="font-size:12px;color:var(--t2)">Hasta</label>
+    <input type="date" class="finp" id="dash-hasta" style="width:145px">
+    <select class="fsel" id="dash-marca" style="min-width:140px"><option value="">Todas las marcas</option></select>
+    <select class="fsel" id="dash-rubro" style="min-width:140px"><option value="">Todos los rubros</option></select>
+    <select class="fsel" id="dash-vend"  style="min-width:150px"><option value="">Todos los vendedores</option></select>
+    <select class="fsel" id="dash-ccos"  style="min-width:150px"><option value="">Todos los centros</option></select>
+    <button class="btn pri" onclick="dashConsultar()">🔍 Consultar</button>
+    <div class="spacer"></div>
+    <span style="font-size:11px;color:var(--t3)">Comprobantes reales · sin fechas toma el mes en curso</span>
+  </div>
+  <div class="tbl-wrap">
+    <div id="dash-body" class="tbl-body"></div>
   </div>
 </div>
 
@@ -1768,6 +1789,7 @@
 <script src="js/ctacte.js"></script>
 <script src="js/antiguedad.js"></script>
 <script src="js/ranking.js"></script>
+<script src="js/dashboard.js"></script>
 <script src="js/subdiario.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/vmes.js"></script>
