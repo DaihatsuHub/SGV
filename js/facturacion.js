@@ -1247,7 +1247,7 @@ function renderFacModal(fecha, empresa, cliCod) {
             <div id="nf-fila-dto" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>Descuento</span><span id="nf-tot-dto">—</span></div>
             <div class="nf-percep-cont" style="color:rgba(255,255,255,0.8)"></div>
             <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:#fff;padding:6px 0 2px;border-top:1px solid rgba(255,255,255,0.15);margin-top:4px"><span>TOTAL</span><span id="nf-tot-total">$ 0,00</span></div>
-            <div class="nf-fila-afip" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.75);padding:3px 0;font-style:italic"><span class="nf-afip-lbl">Declarado AFIP</span><span class="nf-tot-afip">—</span></div>
+            <div class="nf-fila-afip" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.75);padding:3px 0;font-style:italic"><span class="nf-afip-lbl">Comprobante</span><span class="nf-tot-afip">—</span></div>
           </div>
           <!-- Botones -->
           <div style="display:flex;flex-direction:column;gap:6px">
@@ -1442,7 +1442,7 @@ function renderFacForm(fecha, empresa, cliCod) {
           <div id="nf-fila-dto"  style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Descuento</span><span id="nf-tot-dto">—</span></div>
           <div id="nf-percep-cont" class="nf-percep-cont" style="color:var(--t2)"></div>
           <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:var(--txt);padding:6px 0 2px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL</span><span id="nf-tot-total">$ 0,00</span></div>
-          <div class="nf-fila-afip" style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0;font-style:italic"><span class="nf-afip-lbl">Declarado AFIP</span><span class="nf-tot-afip">—</span></div>
+          <div class="nf-fila-afip" style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0;font-style:italic"><span class="nf-afip-lbl">Comprobante</span><span class="nf-tot-afip">—</span></div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
           <button class="btn pri nf-grabar-btn" onclick="nfGuardar()" style="padding:8px 18px;font-size:13px">💾 Guardar borrador</button>
@@ -1712,13 +1712,7 @@ async function nfOnCtipChange() {
   if(!val){if(el)el.value='';return;}
   const [prefijo,tipo]=val.split('|');
   const emp=document.getElementById('nf-empresa').value;
-  // Punto 1: si el 2º carácter del prefijo es "X" permito elegir moneda; si no, fijo Pesos
-  (function(){
-    const monEl=document.getElementById('nf-moneda'); if(!monEl) return;
-    const permite = (prefijo||'').charAt(1).toUpperCase()==='X';
-    if(permite){ monEl.disabled=false; }
-    else { monEl.value='P'; monEl.disabled=true; if(typeof nfCalcTotales==='function') nfCalcTotales(); }
-  })();
+  nfSyncMoneda();
   const ct=CTIPS.find(c=>c.empresa===emp&&c.prefijo===prefijo&&c.tipo===tipo);
   if(!ct){if(el)el.value='';return;}
   // Bloqueo atómico en el server (lee estado fresco + bloquea si está libre o es mío)
@@ -2158,7 +2152,28 @@ function nfOnMonedaChange(){
   else { nfPercepSync(); nfCalcTotales(); }
 }
 
+// Cuándo se puede elegir moneda:
+//   · prefijo con "X" en el 2º carácter → siempre
+//   · sin X → sólo si el descuento es distinto de cero
+// El descuento se carga DESPUÉS de elegir el comprobante, así que esto se
+// vuelve a evaluar cada vez que se toca el campo: al poner un descuento se
+// libera la moneda, y al volverlo a cero se bloquea y vuelve a Pesos.
+function nfSyncMoneda(){
+  const monEl=document.getElementById('nf-moneda'); if(!monEl) return;
+  const val=document.getElementById('nf-ctip')?.value||'';
+  const prefijo=(val.split('|')[0]||'');
+  const conX=prefijo.charAt(1).toUpperCase()==='X';
+  const dto=parseFloat(document.getElementById('nf-dto')?.value||0)||0;
+  const libre = conX || dto!==0;
+  monEl.disabled=!libre;
+  if(!libre && monEl.value!=='P'){
+    monEl.value='P';
+    if(typeof nfOnMonedaChange==='function') nfOnMonedaChange();
+  }
+}
+
 function nfCalcTotales() {
+  nfSyncMoneda();
   const esA=nfEsFacturaA();
   const dto=parseFloat(document.getElementById('nf-dto')?.value||0)||0;
   let neto=0, iva21=0, iva105=0, ivaOtro=0;
@@ -2221,7 +2236,9 @@ function nfCalcTotales() {
   set('nf-tot-total',`${mon} ${fmtN(total,2)}`);
   // Línea de subfacturación: total declarado (AFIP) cuando hay descuento
   document.querySelectorAll('.nf-tot-afip').forEach(e=>{ e.textContent=`${mon} ${fmtN(totalAfip,2)}`; });
-  const afipLbls=document.querySelectorAll('.nf-afip-lbl'); afipLbls.forEach(e=>{ e.textContent = dto>0?`Declarado AFIP (−${fmtN(dto,2)}%)`:'Declarado AFIP'; });
+  // Rótulo neutro a propósito: no conviene que el comprobante impreso ni la
+  // pantalla digan "declarado AFIP".
+  document.querySelectorAll('.nf-afip-lbl').forEach(e=>{ e.textContent='Comprobante'; });
   setFlex('nf-fila-neto', esA);
   setFlex('nf-fila-iva21', esA&&iva21>0);
   setFlex('nf-fila-iva105',esA&&iva105>0);
