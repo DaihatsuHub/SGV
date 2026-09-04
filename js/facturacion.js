@@ -1661,7 +1661,12 @@ function nfLimpiarBusqCli() {
 let _nfArtPopupIdx = null;
 
 function nfAbrirBusqArt(idx) {
-  if(!nfItemsHabilitados()){toast('Completá empresa, tipo y cliente primero','err');return;}
+  if(!nfItemsHabilitados()){
+    const inc=nfLetraIncompatible();
+    toast(inc||'Completá empresa, tipo y cliente primero','err');
+    if(inc) nfChequearLetra();
+    return;
+  }
   _nfArtPopupIdx = (idx !== undefined) ? idx : null;
   document.getElementById('nf-art-popup').style.display='block';
   document.getElementById('nf-art-overlay').style.display='block';
@@ -1729,7 +1734,12 @@ function nfSelArtPopup(cod) {
 }
 
 function nfAbrirCargaGrupo() {
-  if(!nfItemsHabilitados()){toast('Completá empresa, tipo y cliente primero','err');return;}
+  if(!nfItemsHabilitados()){
+    const inc=nfLetraIncompatible();
+    toast(inc||'Completá empresa, tipo y cliente primero','err');
+    if(inc) nfChequearLetra();
+    return;
+  }
   document.getElementById('nf-grupo-popup').style.display='block';
   document.getElementById('nf-grupo-overlay').style.display='block';
   const esNC=nfEsNC();
@@ -2129,18 +2139,16 @@ function nfItemChange(idx,campo,valor) {
   }
 }
 
+// Habilita la carga de ítems. Además de empresa/tipo/cliente, exige que la
+// LETRA del comprobante corresponda a la condición de IVA del cliente: si no
+// cierra, no se puede ni cargar un ítem (no tiene sentido cargar algo que
+// después no se va a poder emitir).
 function nfItemsHabilitados() {
   const emp=document.getElementById('nf-empresa')?.value||'';
   const ctip=document.getElementById('nf-ctip')?.value||'';
   const cli=document.getElementById('nf-cli-cod')?.value||'';
-  return emp && ctip && cli;
-}
-
-function nfItemsHabilitados() {
-  const emp=document.getElementById('nf-empresa')?.value||'';
-  const ctip=document.getElementById('nf-ctip')?.value||'';
-  const cli=document.getElementById('nf-cli-cod')?.value||'';
-  return emp && ctip && cli;
+  if(!(emp && ctip && cli)) return false;
+  return !nfLetraIncompatible();
 }
 
 function nfRenderItems() {
