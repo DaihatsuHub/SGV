@@ -548,6 +548,7 @@ async function renderFacDetalle(f, vista) {
     :esBorrador
       ?`<div style="background:#2a2a1a;border-radius:6px;padding:8px 12px;font-size:11px;color:#facc15;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
           <span>⚠️ Borrador — pendiente de autorización AFIP</span>
+          <button onclick="facImprimir('afip')" class="btn" style="padding:3px 10px;font-size:11px" title="Ver el formato factura antes de autorizar. Sale marcado SIN VALOR FISCAL.">🖨 Ver formato factura</button>
           <button onclick="facAutorizarAfip('${f.fac_nro}')" class="btn pri" style="padding:3px 10px;font-size:11px;background:#b45309;border-color:#b45309">⚡ Autorizar AFIP</button>
         </div>`
       :'';
@@ -922,6 +923,7 @@ async function facImprimir(modo) {
       <div class="letra-box">${letra}</div>
       <div style="font-size:8px;text-align:center">COD. ${codComp}</div>
       ${!_esAfip&&(Number(f.fac_monpor)||0)!==0?`<div style="font-size:8px;text-align:center;color:#b45309;font-weight:700;margin-top:2px">COPIA INTERNA · VALOR REAL</div>`:''}
+      ${_esAfip&&!f.fac_cae?`<div style="font-size:9px;text-align:center;color:#b91c1c;font-weight:700;margin-top:2px;border:1px solid #b91c1c;padding:2px">SIN VALOR FISCAL · PENDIENTE DE AUTORIZACIÓN AFIP</div>`:''}
     </div>
     <div class="h-right">
       <div class="comp-titulo">${esc(tipoLabel)}</div>
@@ -2176,22 +2178,39 @@ function nfCalcTotales() {
   const iva=iva21+iva105+ivaOtro;
   const subtotal=neto+iva;
   const dtoImp=subtotal*dto/100;
-  // Percepciones IIBB: se calculan sobre el NETO (sin IVA)
+  // Percepciones IIBB: se calculan más abajo, sobre el neto DECLARADO en pesos
   let totalPercep=0;
-  NF_PERCEP.forEach(p=>{ p.importe=Math.round(neto*(Number(p.pct)||0)/100*100)/100; totalPercep+=p.importe; });
   // ── SUBFACTURACIÓN: dos juegos de totales ──
-  // REAL = base (deuda del cliente, sin el descuento). DECLARADO (AFIP) = real × (1 − dto%).
+  // REAL = deuda del cliente, en la MONEDA ELEGIDA y sin el descuento.
+  // DECLARADO (AFIP) = siempre EN PESOS, con la cotización y el descuento.
+  //
+  // Ej.: artículo de 100 U$C, dólar a 1450, descuento 30%
+  //   real     → 100 U$C           (lo que debe el cliente)
+  //   declarado→ 100×1450×0,70 = 101.500 pesos + impuestos
+  //
+  // Las PERCEPCIONES se calculan sobre el DECLARADO EN PESOS, no sobre el real.
   const r2 = x => Math.round(x*100)/100;
   const factor = 1 - dto/100;
-  const totalReal = r2(subtotal + totalPercep);        // fac_total = REAL
-  const netoAfip  = r2(neto*factor);
-  const ivaAfip   = r2(iva*factor);
-  const percepAfip= r2(totalPercep*factor);
-  const totalAfip = r2(netoAfip + ivaAfip + percepAfip); // fac_total_afip = DECLARADO
-  const total = totalReal;                              // el TOTAL mostrado = real (deuda)
   const monSel=document.getElementById('nf-moneda')?.value||'P';
   const monObj=(TABLAS['MONE']||[]).find(m=>m.CODIGO===monSel);
   const mon=monObj?monObj.STRING1:'$';
+  // La cotización viene en STRING2 de la tabla MONE (Casio=1450, etc.)
+  const cotiz = monSel==='P' ? 1 : (parseFloat(monObj?.STRING2)||1);
+
+  // Lo declarado va en pesos: se convierte con la cotización y se aplica el dto
+  const aPesos = x => r2(x*cotiz*factor);
+  const netoAfip  = aPesos(neto);
+  const ivaAfip   = aPesos(iva);
+
+  // Percepciones sobre el neto DECLARADO en pesos
+  totalPercep = 0;
+  NF_PERCEP.forEach(p=>{ p.importe=r2(netoAfip*(Number(p.pct)||0)/100); totalPercep+=p.importe; });
+  const percepAfip = r2(totalPercep);
+  const totalAfip  = r2(netoAfip + ivaAfip + percepAfip);   // fac_total_afip
+
+  // El real queda en la moneda elegida, con las percepciones (que son en pesos)
+  const totalReal = r2(subtotal);                            // fac_total = REAL
+  const total = totalReal;
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   const setFlex=(id,show)=>{const el=document.getElementById(id);if(el)el.style.display=show?'flex':'none';};
   set('nf-tot-neto', `${mon} ${fmtN(neto,2)}`);
@@ -2230,7 +2249,7 @@ function nfCalcTotales() {
     }
     contList.forEach(el=>{ el.innerHTML=html; });
   }
-  window._nfTotales={neto,iva21,iva105,iva,subtotal,dtoImp,totalPercep,total,totalReal,netoAfip,ivaAfip,percepAfip,totalAfip,factor,dto};
+  window._nfTotales={neto,iva21,iva105,iva,subtotal,dtoImp,totalPercep,total,totalReal,netoAfip,ivaAfip,percepAfip,totalAfip,factor,dto,cotiz,monSel};
 }
 
 function nfGrabarEstado(saving){
@@ -2289,6 +2308,12 @@ async function nfGuardar() {
     fac_empresa:empresa,fac_ctip:prefijo,fac_tiva:tiva,fac_moneda:moneda,
     fac_sub:tot.subtotal||0,fac_iva:esA?(tot.iva||0):0,
     fac_total:tot.totalReal||0,fac_saldo:tot.totalReal||0,fac_percib:tot.totalPercep||0,
+    // Cotización usada al emitir: sin esto no se puede reconstruir después cómo
+    // se llegó al importe declarado (la tabla monedas guarda la ACTUAL).
+    fac_cotiz:tot.cotiz||1,
+    // Saldo CONTABLE vivo, en pesos. Baja en PROPORCIÓN a lo que se cobre del
+    // real: si paga la mitad del real, se cancela la mitad del contable.
+    fac_saldo_afip:tot.totalAfip||0,
     fac_neto_afip:tot.netoAfip||0, fac_iva_afip:esA?(tot.ivaAfip||0):0, fac_percep_afip:tot.percepAfip||0, fac_total_afip:tot.totalAfip||0,
     fac_percep_det:NF_PERCEP.map(p=>({cod:p.cod,detalle:p.detalle,pct:p.pct,importe:p.importe})),
     fac_transp:transp,fac_remito:remito,fac_conpag:conpag,fac_monpor:dto,
