@@ -990,8 +990,17 @@ async function facImprimir(modo) {
   const _cot = Number(f.fac_cotiz)||1;
   const _factor = _esAfip ? (1-(Number(f.fac_monpor)||0)/100)*_cot : 1;
   const _monImp = _esAfip ? '$' : mon;        // símbolo a usar en la impresión
-  const _vNeto   = _esAfip ? (Number(f.fac_neto_afip)>0 ? Number(f.fac_neto_afip) : subtotalNeto*_factor) : subtotalNeto;
-  const _vIva    = _esAfip ? (Number(f.fac_iva_afip)>0  ? Number(f.fac_iva_afip)  : (f.fac_iva||0)*_factor) : (f.fac_iva||0);
+  // Sin descuento el neto declarado sale de dividir el precio (que trae IVA);
+  // con descuento, `fac_neto_afip` ya viene calculado como precio×cotiz×(1−dto).
+  const _netoSinDto = (items||[]).reduce((a,it)=>
+    a + ((Number(it.ite_uni)||0)*_factor)/(1+(Number(it.ite_iva_porc)||21)/100)*(Number(it.ite_can)||0), 0);
+  const _vNeto   = _esAfip
+    ? (_conDto ? (Number(f.fac_neto_afip)>0 ? Number(f.fac_neto_afip) : subtotalNeto*_factor) : _netoSinDto)
+    : subtotalNeto;
+  const _vIva    = _esAfip
+    ? (_conDto ? (Number(f.fac_iva_afip)>0 ? Number(f.fac_iva_afip) : (f.fac_iva||0)*_factor)
+               : (f.fac_iva||0)*_factor)
+    : (f.fac_iva||0);
   const _vTotal  = _esAfip ? (Number(f.fac_total_afip)>0? Number(f.fac_total_afip): (f.fac_total||0)*_factor) : (f.fac_total||0);
   const codComp = letra==='A'?'01':letra==='B'?'06':'11';
 
@@ -1119,15 +1128,19 @@ async function facImprimir(modo) {
           <td class="cod">${esc(it.ite_desp||'')}</td>
           <td class="r">${it.ite_can||0}</td>
           <td class="r">${(()=>{
-            // El NETO es el precio de lista convertido — NUNCA se divide por
-            // (1+IVA). El IVA va por encima, igual que en el pie. Vale con y
-            // sin descuento: el neto siempre es precio × cotización × (1−dto).
-            return _monImp+' '+fmtN((it.ite_uni||0)*_factor, 2);
+            // Unitario SIN IVA:
+            //   · sin descuento → el precio de lista trae IVA incluido, así que
+            //     se divide por (1+IVA).  ej. 63.550 / 1,21 = 52.520,66
+            //   · con descuento → precio × cotización × (1−dto) YA es el neto:
+            //     el descuento cumple esa función.  ej. 41×1550×0,50 = 31.775
+            const n = _conDto ? (it.ite_uni||0)*_factor
+                              : ((it.ite_uni||0)*_factor)/(1+(it.ite_iva_porc||21)/100);
+            return _monImp+' '+fmtN(n, 2);
           })()}</td>
           <td class="r">${(()=>{
-            // Subtotal = unitario × cantidad, para que cierre con el unitario
-            // mostrado y con el "Subtotal neto" del pie.
-            return _monImp+' '+fmtN((it.ite_uni||0)*(it.ite_can||0)*_factor, 2);
+            const u = _conDto ? (it.ite_uni||0)*_factor
+                              : ((it.ite_uni||0)*_factor)/(1+(it.ite_iva_porc||21)/100);
+            return _monImp+' '+fmtN(u*(it.ite_can||0), 2);
           })()}</td>
         </tr>`;
       }).join('')}
