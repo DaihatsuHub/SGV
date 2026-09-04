@@ -3,6 +3,10 @@
 // ═══════════════════════════════════════════════════════════
 
 let fichaCliCod = null;
+// Los comprobantes que sólo bajan depósito son contables, no ventas reales:
+// se ocultan salvo que se pidan expresamente (regla general de SGV).
+let _fichaContables = false;
+function fichaToggleContables(on){ _fichaContables=!!on; renderFicha(); }
 
 function fichaFillClienteList(){
   const dl=document.getElementById('ficha-cli-list'); if(!dl) return;
@@ -23,7 +27,7 @@ function fichaOnPick(){
 }
 function fichaClear(){ fichaCliCod=null; renderFicha(); }
 
-function renderFicha(){
+async function renderFicha(){
   fichaFillClienteList();
   const datos=document.getElementById('ficha-datos');
   const izq=document.getElementById('ficha-izq');
@@ -39,11 +43,21 @@ function renderFicha(){
   const c=CLIS.find(x=>(x.CLI_CODIGO||'').trim()===fichaCliCod);
   if(!c){ datos.innerHTML='<div style="color:var(--red);padding:14px">Cliente no encontrado.</div>'; return; }
 
-  // Carga diferida: la ficha necesita facturas + recibos + cheques (hoy diferidos)
-  if(!window._facsLoaded || (typeof _recisLoaded!=='undefined' && !_recisLoaded)){
-    datos.innerHTML='<div style="color:var(--t3);padding:24px;text-align:center">⏳ Cargando datos del cliente…</div>';
-    if(izq) izq.innerHTML=''; if(der) der.innerHTML=''; if(pie) pie.innerHTML=''; { const _cc=document.getElementById('ficha-cred'); if(_cc) _cc.innerHTML=''; }
-    Promise.all([ ensureFacturas(), (typeof ensureRecibos==='function'?ensureRecibos():Promise.resolve()) ]).then(()=>renderFicha()).catch(e=>console.error('ficha/carga:',e));
+  // Los datos los arma el SERVER (/ficha/:cli). Antes se calculaban en memoria
+  // y hacía falta tener FACS, RECIS, RECI_ITEMS y CHEQUES cargados: si no se
+  // había pasado por facturación o recibos, la ficha quedaba esperando.
+  datos.innerHTML='<div style="color:var(--t3);padding:24px;text-align:center">⏳ Cargando datos del cliente…</div>';
+  if(izq) izq.innerHTML=''; if(der) der.innerHTML=''; if(pie) pie.innerHTML='';
+  { const _cc=document.getElementById('ficha-cred'); if(_cc) _cc.innerHTML=''; }
+
+  let D;
+  try{
+    const qs = _fichaContables ? '?contables=1' : '';
+    D = await apiGet('/ficha/'+encodeURIComponent(fichaCliCod)+qs);
+    if(!D.ok){ datos.innerHTML='<div style="color:var(--red);padding:14px">'+esc(D.error||'Error')+'</div>'; return; }
+  }catch(e){
+    console.error('ficha:', e);
+    datos.innerHTML='<div style="color:var(--red);padding:14px">Error al cargar la ficha: '+esc(e.message||'')+'</div>';
     return;
   }
 
@@ -57,34 +71,26 @@ function renderFicha(){
     </div>`;
 
   // ── IZQUIERDA: comprobantes con saldo + A/Cuenta, encolumnado por moneda ──
-  const comps=(FACS||[]).filter(f=>(f.fac_cli||'').trim()===fichaCliCod && (f.fac_saldo||0)>0)
-    .sort((a,b)=>(a.fac_fec||'').localeCompare(b.fac_fec||''));
-  const acuenta=[];
-  (RECI_ITEMS||[]).forEach(it=>{
-    if((it.comprobante||'').toUpperCase()!=='A/CUENTA' && !it.a_cuenta) return;
-    const rec=(RECIS||[]).find(r=>r.id===it.recibo_id);
-    if(!rec || rec.anulado || (rec.cliente||'').trim()!==fichaCliCod) return;
-    acuenta.push({it,rec});
-  });
-  acuenta.sort((a,b)=>(a.rec.fecha||'').localeCompare(b.rec.fecha||''));
   const LGRID='80px 1fr 95px 95px 95px';
   let totP=0, totT=0, totC=0, lrows='';
-  comps.forEach(f=>{
-    const key=reciMonKey(f.fac_moneda), v=f.fac_saldo||0;
+  (D.comprobantes||[]).forEach(f=>{
+    const key=reciMonKey(f.moneda), v=f.saldo||0;
     if(key==='pesos') totP+=v; else if(key==='tressa') totT+=v; else totC+=v;
-    const fec=(f.fac_fec||'').substring(0,10).split('-').reverse().join('/');
+    const fec=(f.fec||'').split('-').reverse().join('/');
+    // Los contables (sólo bajan depósito) se marcan: no son ventas reales
+    const marca=f.contable?' <span style="font-size:9px;color:var(--wrn,#f59e0b)">CONT</span>':'';
     lrows+=`<div style="display:grid;grid-template-columns:${LGRID};gap:6px;font-size:12px;font-family:var(--mono);padding:2px 0">
-      <span style="color:var(--t3)">${fec}</span><span style="color:var(--acc)">${esc(f.fac_nro||'')}</span>
+      <span style="color:var(--t3)">${fec}</span><span style="color:var(--acc)">${esc(f.nro||'')}${marca}</span>
       <span style="text-align:right">${key==='pesos'?reciFmt(v):''}</span>
       <span style="text-align:right">${key==='tressa'?reciFmt(v):''}</span>
       <span style="text-align:right">${key==='casio'?reciFmt(v):''}</span></div>`;
   });
-  acuenta.forEach(a=>{
-    const key=reciMonKey(a.it.moneda), v=key==='pesos'?(a.it.abona||0):(a.it.abona_orig||0);
+  (D.acuenta||[]).forEach(a=>{
+    const key=reciMonKey(a.moneda), v=a.importe||0;
     if(key==='pesos') totP-=v; else if(key==='tressa') totT-=v; else totC-=v;
-    const fec=(a.rec.fecha||'').substring(0,10).split('-').reverse().join('/'), cell='- '+reciFmt(v);
+    const fec=(a.fec||'').split('-').reverse().join('/'), cell='- '+reciFmt(v);
     lrows+=`<div style="display:grid;grid-template-columns:${LGRID};gap:6px;font-size:12px;font-family:var(--mono);padding:2px 0;color:var(--grn)">
-      <span>${fec}</span><span>A/Cuenta ${esc(a.rec.empresa||'')}${esc(String(a.rec.numero||''))}</span>
+      <span>${fec}</span><span>${esc(a.desc||'A/Cuenta')}</span>
       <span style="text-align:right">${key==='pesos'?cell:''}</span>
       <span style="text-align:right">${key==='tressa'?cell:''}</span>
       <span style="text-align:right">${key==='casio'?cell:''}</span></div>`;
@@ -99,13 +105,13 @@ function renderFicha(){
 
   // ── DERECHA: cheques encolumnado Físico / ECheq ──
   const hoy=new Date().toISOString().substring(0,10);
-  const chs=(CHEQUES||[]).filter(ch=>(ch.cliente||'').trim()===fichaCliCod);
-  const enCart=chs.filter(ch=>(ch.estado||'cartera')==='cartera').sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
-  const otros =chs.filter(ch=>(ch.estado||'cartera')!=='cartera' && (ch.fecha||'')>=hoy).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  const chs=D.cheques||[];
+  const enCart=chs.filter(ch=>(ch.estado||'cartera')==='cartera');
+  const otros =chs.filter(ch=>(ch.estado||'cartera')!=='cartera' && (ch.fec||'')>=hoy);
   const RGRID='80px 80px 95px 95px 1fr';
   let totFis=0, totEch=0, rrows='';
   const chRow=(ch,gris)=>{
-    const fec=(ch.fecha||'').substring(0,10).split('-').reverse().join('/');
+    const fec=(ch.fec||'').split('-').reverse().join('/');
     const est=(typeof cheqEstadoLabel==='function')?cheqEstadoLabel(ch.estado):(ch.estado||'');
     const imp=ch.importe||0;
     if(ch.fisico) totFis+=imp; else totEch+=imp;
@@ -138,17 +144,19 @@ function renderFicha(){
   }
 
   // ── PIE: última compra / último pago ──
-  const facsCli=(FACS||[]).filter(f=>(f.fac_cli||'').trim()===fichaCliCod);
-  const ultFac=facsCli.filter(f=>(f.fac_nro||'').slice(-1).toUpperCase()==='F').map(f=>f.fac_fec).filter(Boolean).sort().pop();
-  const ultPago=(RECIS||[]).filter(r=>(r.cliente||'').trim()===fichaCliCod && !r.anulado).map(r=>r.fecha).filter(Boolean).sort().pop();
   const fmtD=d=>d?d.substring(0,10).split('-').reverse().join('/'):'—';
-  pie.innerHTML=`🧾 Última compra (factura): <b style="color:var(--txt)">${fmtD(ultFac)}</b> &nbsp;·&nbsp; 💵 Último pago (recibo): <b style="color:var(--txt)">${fmtD(ultPago)}</b>`;
+  const avisoCont = (!_fichaContables && D.ocultosContables)
+    ? ` &nbsp;·&nbsp; <span style="color:var(--wrn,#f59e0b)">${D.ocultosContables} comprobante(s) contable(s) oculto(s)</span>`
+    : '';
+  pie.innerHTML=`🧾 Última compra (factura): <b style="color:var(--txt)">${fmtD(D.ultCompra)}</b> &nbsp;·&nbsp; 💵 Último pago (recibo): <b style="color:var(--txt)">${fmtD(D.ultPago)}</b>`
+    + avisoCont
+    + ` &nbsp;·&nbsp; <label style="cursor:pointer;color:var(--t2)"><input type="checkbox" ${_fichaContables?'checked':''} onchange="fichaToggleContables(this.checked)"> ver contables</label>`;
 }
 
 // ── Auto-refresco de la ficha ──────────────────────────────
-// La ficha se recalcula sola cada vez que se la muestra, con datos
-// frescos de memoria (FACS, RECIS, CHEQUES, RECI_ITEMS). NO depende
-// de recibos/facturación ni de cómo navegue el sistema.
+// La ficha se recalcula sola cada vez que se la muestra, pidiendo los datos
+// al server. NO depende de que se haya entrado antes a facturación o recibos,
+// ni de cómo navegue el sistema.
 (function(){
   const refrescar=()=>{ if(typeof fichaCliCod!=='undefined' && fichaCliCod && typeof renderFicha==='function') renderFicha(); };
 
