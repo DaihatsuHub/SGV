@@ -2254,10 +2254,26 @@ function nfCalcTotales() {
   // La cotización viene en STRING2 de la tabla MONE (Casio=1450, etc.)
   const cotiz = monSel==='P' ? 1 : (parseFloat(monObj?.STRING2)||1);
 
-  // Lo declarado va en pesos: se convierte con la cotización y se aplica el dto
-  const aPesos = x => r2(x*cotiz*factor);
-  const netoAfip  = aPesos(neto);
-  const ivaAfip   = aPesos(iva);
+  // REGLA (Ricardo): el NETO a facturar es  precio x cotizacion x (1 - dto).
+  // Ese es la BASE, y de ahi salen el IVA y las percepciones POR ENCIMA.
+  //   ej.: 100 U$C x 1450 x 0,70 = 101.500 de neto
+  //        + IVA 21%   = 21.315
+  //        + percep 4% =  4.060   ->  total factura 126.875
+  // El precio de lista trae IVA incluido, pero para facturar se toma como neto.
+  const precioTotal = FAC_ITEMS_NUEVA.reduce((a,it)=>a+(it.ite_uni||0)*(it.ite_can||0), 0);
+  const netoAfip = r2(precioTotal*cotiz*factor);
+
+  // IVA sobre el neto ya convertido, por alicuota
+  let ivaAfip = 0;
+  if(esA){
+    const porAlic = {};
+    FAC_ITEMS_NUEVA.forEach(it=>{
+      const pct=it.ite_iva_porc||21;
+      porAlic[pct]=(porAlic[pct]||0)+(it.ite_uni||0)*(it.ite_can||0);
+    });
+    for(const pct in porAlic) ivaAfip += r2(porAlic[pct]*cotiz*factor)*(Number(pct)/100);
+    ivaAfip = r2(ivaAfip);
+  }
 
   // Percepciones sobre el neto DECLARADO en pesos
   totalPercep = 0;
