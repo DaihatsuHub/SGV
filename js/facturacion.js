@@ -201,6 +201,7 @@ function filtCtip() {
   return list;
 }
 function renderCtip() {
+  ctipBotonLiberar();          // muestra/oculta el botón según haya bloqueados
   const list = filtCtip();
   const body = document.getElementById('ctip-body');
   const cols = getActiveCols('ctip');
@@ -227,9 +228,10 @@ function renderCtip() {
           // desde nivel 80 se puede forzar la liberación desde acá.
           const bloq = !!c.bloqueado;
           const puedeForzar = (usuarioActual?.nivel||0) >= 80;
+          // Sólo el candado: el botón "Liberar" va en la barra de herramientas,
+          // acá no entra (la columna Prefijo tiene ancho fijo y se cortaba).
           const cand = bloq
-            ? ` <span title="Bloqueado por ${esc(c.bloqueado_por||'?')}" style="color:var(--red)">🔒</span>` +
-              (puedeForzar ? ` <button onclick="event.stopPropagation();ctipDesbloquear(${c.id},'${esc(c.prefijo)}','${esc(c.bloqueado_por||'')}')" title="Liberar el numerador" style="border:none;background:var(--red);color:#fff;border-radius:3px;font-size:10px;padding:1px 5px;cursor:pointer">Liberar</button>` : '')
+            ? ` <span title="Bloqueado por ${esc(c.bloqueado_por||'?')}" style="color:var(--red)">🔒</span>`
             : '';
           return `<span class="col-cod">${esc(c.prefijo)}${cand}</span>`;
         }
@@ -246,6 +248,46 @@ function renderCtip() {
   }).join('');
 }
 function selCtip(i) { ctipSelIdx=i; renderCtip(); }
+
+
+// Botón "Liberar numerador" en la barra de Tipos de Comprobantes. Se agrega
+// desde acá (no en el HTML) y sólo se muestra cuando hay alguno bloqueado.
+function ctipBotonLiberar(){
+  const bar=document.querySelector('#page-ctip .toolbar'); if(!bar) return;
+  const hay=(typeof CTIPS!=='undefined') && CTIPS.some(c=>c.bloqueado);
+  const puede=(usuarioActual?.nivel||0)>=80;
+  let b=document.getElementById('btn-ctip-lib');
+  if(!hay || !puede){ if(b) b.remove(); return; }
+  if(!b){
+    b=document.createElement('button');
+    b.id='btn-ctip-lib'; b.className='btn';
+    b.style.cssText='border-color:var(--red);color:var(--red)';
+    b.innerHTML='🔓 Liberar numerador';
+    b.onclick=ctipLiberarBloqueados;
+    bar.appendChild(b);
+  }
+}
+
+// Libera TODOS los numeradores bloqueados (nivel 80+). Pasa cuando una sesión
+// se cae o se cierra el navegador facturando: el bloqueo queda tomado y nadie
+// más puede usar ese tipo de comprobante.
+async function ctipLiberarBloqueados(){
+  if((usuarioActual?.nivel||0)<80){ toast('No tenés permiso para liberar el numerador','err'); return; }
+  const bloq=(CTIPS||[]).filter(c=>c.bloqueado);
+  if(!bloq.length){ toast('No hay numeradores bloqueados','err'); return; }
+  const lista=bloq.map(c=>`• ${c.prefijo}  (tomado por ${c.bloqueado_por||'?'})`).join('\n');
+  if(!confirm('¿Liberar estos numeradores?\n\n'+lista+
+              '\n\nAsegurate de que esas personas NO estén facturando: si lo están, pueden perder el comprobante que tienen abierto.')) return;
+  let n=0;
+  for(const c of bloq){
+    try{
+      const r=await apiPost('/comp_tipos/desbloquear',{id:c.id,sid:'FORZADO',forzar:true});
+      if(r.ok!==false){ c.bloqueado=false; c.bloqueado_por=null; n++; }
+    }catch(e){ console.error('ctipLiberar:',e); }
+  }
+  renderCtip();
+  toast(n?`✓ ${n} numerador(es) liberado(s)`:'No se pudo liberar','scs');
+}
 
 // Liberar a mano un numerador que quedó bloqueado (nivel 80+).
 // Pasa cuando una sesión se cae o se cierra el navegador facturando: el
