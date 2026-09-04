@@ -990,6 +990,9 @@ async function facImprimir(modo) {
   const _cot = Number(f.fac_cotiz)||1;
   const _factor = _esAfip ? (1-(Number(f.fac_monpor)||0)/100)*_cot : 1;
   const _monImp = _esAfip ? '$' : mon;        // símbolo a usar en la impresión
+  // Con descuento el precio de lista es la BASE a facturar: los renglones no
+  // llevan el IVA descontado, se calcula por encima (igual que el pie).
+  const _conDto = _esAfip && (Number(f.fac_monpor)||0) !== 0;
   const _vNeto   = _esAfip ? (Number(f.fac_neto_afip)>0 ? Number(f.fac_neto_afip) : subtotalNeto*_factor) : subtotalNeto;
   const _vIva    = _esAfip ? (Number(f.fac_iva_afip)>0  ? Number(f.fac_iva_afip)  : (f.fac_iva||0)*_factor) : (f.fac_iva||0);
   const _vTotal  = _esAfip ? (Number(f.fac_total_afip)>0? Number(f.fac_total_afip): (f.fac_total||0)*_factor) : (f.fac_total||0);
@@ -1118,8 +1121,22 @@ async function facImprimir(modo) {
           <td class="des" title="${esc(desArt)}">${esc(desArt)}</td>
           <td class="cod">${esc(it.ite_desp||'')}</td>
           <td class="r">${it.ite_can||0}</td>
-          <td class="r">${(()=>{const d=1+(it.ite_iva_porc||21)/100;const n=(it.ite_uni*_factor)/d;return _monImp+' '+fmtN(n,2);})()}</td>
-          <td class="r">${_monImp} ${fmtN((it.ite_imp||0)*_factor,2)}</td>
+          <td class="r">${(()=>{
+            // Unitario del renglón. CON DESCUENTO el precio de lista ES la base
+            // (precio × dto × cotización), así que NO se divide por el IVA: eso
+            // dejaba el renglón sin cerrar con el neto del pie.
+            // Sin descuento se mantiene el comportamiento de siempre.
+            const n = _conDto ? (it.ite_uni||0)*_factor
+                              : ((it.ite_uni||0)*_factor)/(1+(it.ite_iva_porc||21)/100);
+            return _monImp+' '+fmtN(n,2);
+          })()}</td>
+          <td class="r">${(()=>{
+            // Subtotal = unitario × cantidad, para que cierre con el unitario
+            // mostrado. Con descuento `ite_imp` es el declarado sin convertir.
+            const n = _conDto ? (it.ite_uni||0)*(it.ite_can||0)*_factor
+                              : (it.ite_imp||0)*_factor;
+            return _monImp+' '+fmtN(n,2);
+          })()}</td>
         </tr>`;
       }).join('')}
       ${items.length<8?Array(8-items.length).fill('<tr><td colspan="6" style="height:6mm">&nbsp;</td></tr>').join(''):''}
