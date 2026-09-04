@@ -84,6 +84,41 @@ function nfLetraComp(){
   return ['A','B','C','X'].includes(l) ? l : '';
 }
 
+// Qué letras admite cada condición de IVA del cliente:
+//   I (Resp. Inscripto)                          -> A y X
+//   M (Monotributista), C (Cons.Final),
+//   E (Exento), N (No Responsable)               -> B y X
+// La X no chequea condición de IVA, así que sirve para todos.
+const NF_LETRAS_POR_IVA = { I:['A','X'], M:['B','X'], C:['B','X'], E:['B','X'], N:['B','X'] };
+
+// '' si la combinación tipo de comprobante <-> cliente es válida; el motivo si no.
+function nfLetraIncompatible(){
+  const letra = nfLetraComp();
+  const tiva  = (document.getElementById('nf-tiva-cod')?.value||'').trim().toUpperCase();
+  if(!letra || !tiva) return '';
+  const permitidas = NF_LETRAS_POR_IVA[tiva];
+  if(!permitidas || permitidas.includes(letra)) return '';
+  return 'No se puede facturar "'+letra+'" a un cliente '+facIvaDesc(tiva)
+       + '. Para este cliente corresponde "'+permitidas[0]+'".';
+}
+
+// Muestra el aviso debajo del tipo de comprobante. Devuelve false si no cierra.
+function nfChequearLetra(){
+  const viejo=document.getElementById('nf-aviso-letra');
+  if(viejo) viejo.remove();
+  const motivo = nfLetraIncompatible();
+  if(!motivo) return true;
+  const ctip=document.getElementById('nf-ctip');
+  if(ctip && ctip.parentElement){
+    const d=document.createElement('div');
+    d.id='nf-aviso-letra';
+    d.style.cssText='margin-top:4px;padding:5px 8px;background:#7f1d1d;color:#fff;border-radius:4px;font-size:11px;line-height:1.3';
+    d.textContent='⛔ '+motivo;
+    ctip.parentElement.appendChild(d);
+  }
+  return false;
+}
+
 // ¿Calcula IVA? A y B sí (en B va incluido pero se discrimina). X no.
 function nfEsFacturaA() {
   const val  = document.getElementById('nf-ctip')?.value||'';
@@ -1823,6 +1858,7 @@ async function nfOnCtipChange() {
   const [prefijo,tipo]=val.split('|');
   const emp=document.getElementById('nf-empresa').value;
   nfSyncMoneda();
+  setTimeout(nfChequearLetra, 0);
   const ct=CTIPS.find(c=>c.empresa===emp&&c.prefijo===prefijo&&c.tipo===tipo);
   if(!ct){if(el)el.value='';return;}
   // Bloqueo atómico en el server (lee estado fresco + bloquea si está libre o es mío)
@@ -1919,6 +1955,7 @@ function nfSetCliente(cli) {
   nfPercepSync(cli);
   nfCalcTotales();
   nfRenderItems();
+  nfChequearLetra();
 }
 function nfLimpiarCliente() {
   const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
@@ -2422,6 +2459,10 @@ async function nfGuardar() {
   if(!FAC_ITEMS_NUEVA.length){toast('Agregá al menos un ítem','err');return;}
   const cli=facFindCli(cliCod);
   if(!cli){toast(`Cliente ${cliCod} no encontrado`,'err');return;}
+  // No se puede facturar una letra que no corresponde a la condición de IVA del
+  // cliente (ej. "A" a un monotributista). Es un error fiscal: se bloquea.
+  const _incomp=nfLetraIncompatible();
+  if(_incomp){ toast(_incomp,'err'); nfChequearLetra(); return; }
   for(let i=0;i<FAC_ITEMS_NUEVA.length;i++){
     const it=FAC_ITEMS_NUEVA[i];
     if(!it.ite_art?.trim()){toast(`Ítem ${i+1}: falta el código de artículo`,'err');return;}
