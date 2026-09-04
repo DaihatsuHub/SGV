@@ -9,7 +9,36 @@
 
 let _ccData = null;   // último resultado del server { cliente, desde, hasta, monedas }
 let _ccSoloSaldo = false;   // vista "solo comprobantes con saldo"
+// Vista CONTABLE (arranca en OFF), igual que la ficha:
+//   OFF → comprobantes que bajan STOCK, importes reales en su moneda
+//   ON  → los que bajan DEPÓSITO, importes contables en pesos
+// Los recibos y A/Cuenta se muestran en las dos vistas.
+let _ccContable  = false;
+
+function ctacteToggleContable(){
+  _ccContable = !_ccContable;
+  const b=document.getElementById('btn-cc-contable');
+  if(b){
+    b.classList.toggle('pri', _ccContable);
+    b.textContent = _ccContable ? '📗 Contable: ON' : '📗 Contable: OFF';
+  }
+  if(_ccData) ctacteConsultar();   // hay que re-consultar: cambia qué trae el server
+}
 let _ccVerAplic  = false;   // expandir créditos mostrando contra qué débito se aplicaron
+
+// El botón Contable se agrega desde acá (no en el HTML) para no depender de
+// un cambio en index.html. Se pone al lado de "Ver aplicaciones".
+function _ccBtnContable(){
+  const ref=document.getElementById('btn-cc-aplic');
+  const bar=ref ? ref.parentElement : document.querySelector('#page-ctacte .toolbar');
+  if(!bar || document.getElementById('btn-cc-contable')) return;
+  const b=document.createElement('button');
+  b.id='btn-cc-contable'; b.className='btn';
+  b.textContent='📗 Contable: OFF';
+  b.title='OFF: comprobantes que bajan stock, importes reales · ON: los que bajan depósito, importes declarados en pesos';
+  b.onclick=ctacteToggleContable;
+  if(ref && ref.nextSibling) bar.insertBefore(b, ref.nextSibling); else bar.appendChild(b);
+}
 
 // Muestra/oculta el botón "Ver aplicaciones": solo tiene sentido en la vista completa
 function _ccBtnAplicVis(){
@@ -66,6 +95,7 @@ function _ccMonSimbolo(m){ return m==='P' ? '$' : 'u$s'; }
 
 // Llena el datalist de clientes (al abrir la página)
 function ctacteFillClientes(){
+  _ccBtnContable();
   const dl=document.getElementById('ctacte-cli-list'); if(!dl) return;
   dl.innerHTML=(CLIS||[]).map(c=>`<option value="${_ccEsc((c.CLI_CODIGO||'').trim())} — ${_ccEsc(c.CLI_RAZON||'')}">`).join('');
 }
@@ -89,6 +119,7 @@ async function ctacteConsultar(){
   if(body) body.innerHTML='<div class="empty" style="margin-top:40px">⏳ Cargando cuenta corriente…</div>';
   try{
     const qs=[]; if(desde) qs.push('desde='+desde); if(hasta) qs.push('hasta='+hasta);
+    if(_ccContable) qs.push('contable=1');
     const r=await apiGet('/ctacte/'+encodeURIComponent(cli)+(qs.length?'?'+qs.join('&'):''));
     _ccData={ ...r, _cli:cli };
     renderCtaCte();
@@ -104,6 +135,7 @@ function _ccCliNombre(cod){
 }
 
 function renderCtaCte(){
+  _ccBtnContable();
   const body=document.getElementById('ctacte-body'); if(!body) return;
   if(!_ccData){ body.innerHTML='<div class="empty" style="margin-top:40px">Elegí un cliente y tocá Consultar</div>'; return; }
   const monedas=_ccData.monedas||{};
@@ -172,7 +204,8 @@ function renderCtaCte(){
 
     html+=`<div class="cc-moneda">
       <div class="cc-stickyhead">
-        <div class="cc-mon-tit">${_ccMonLabel(m)} <span style="opacity:.6">(${sim})</span></div>
+        <div class="cc-mon-tit">${_ccMonLabel(m)} <span style="opacity:.6">(${sim})</span>
+          ${_ccContable?'<span style="font-size:11px;font-weight:400;color:var(--t2);margin-left:8px">vista contable — importes declarados</span>':''}</div>
         <div class="cc-head">
           <span>Fecha</span><span>Comprobante</span>
           <span class="cc-num">Debe</span><span class="cc-num">Haber</span><span class="cc-num">Saldo</span>
@@ -243,19 +276,11 @@ function ctactePrint(){
     cuerpo+=`<h3>${_ccMonLabel(m)} (${_ccMonSimbolo(m)})</h3>
       <table><thead><tr><th>Fecha</th><th>Comprobante</th><th class="r">Debe</th><th class="r">Haber</th><th class="r">Saldo</th></tr></thead><tbody>${filas}</tbody></table>`;
   }
-  const w=window.open('','_blank');
-  w.document.write(`<html><head><title>Cuenta Corriente - ${_ccEsc(nom)}</title>
-    <style>body{font-family:Arial,sans-serif;font-size:12px;margin:24px;color:#111}
-    h2{margin:0 0 2px} .sub{color:#666;font-size:12px;margin-bottom:14px}
-    h3{margin:16px 0 4px;color:#0a58ca;border-bottom:1px solid #ccc;padding-bottom:2px}
-    table{width:100%;border-collapse:collapse;margin-bottom:8px}
-    th,td{padding:4px 8px;border-bottom:1px solid #e5e5e5;text-align:left}
-    th{background:#f0f0f0;font-size:11px}.r{text-align:right;font-variant-numeric:tabular-nums}
-    tr.fin td{border-top:2px solid #0a58ca}</style></head>
-    <body><h2>Cuenta Corriente — ${_ccEsc(cli)} ${_ccEsc(nom)}</h2>
-    <div class="sub">${per}</div>${cuerpo}
-    <script>window.onload=()=>{window.print();}<\/script></body></html>`);
-  w.document.close();
+  sgvPrint({
+    titulo:`Cuenta Corriente — ${_ccEsc(cli)} ${_ccEsc(nom)}`,
+    subtitulo:per+(_ccContable?' — vista contable (importes declarados, en pesos)':''),
+    cuerpo:cuerpo
+  });
 }
 
 /* ─────────── Excel (.xlsx nativo con ExcelJS) ─────────── */
