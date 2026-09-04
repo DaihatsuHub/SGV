@@ -62,25 +62,41 @@ async function renderFicha(){
   }
 
   const vend=(typeof reciVendDesc==='function')?reciVendDesc(c.CLI_VEND):'';
+  // Interruptor CONTABLE, al lado del nombre. Arranca en OFF (vista real).
+  //   OFF → comprobantes que bajan STOCK, saldo real en su moneda
+  //   ON  → comprobantes que bajan DEPÓSITO, saldo contable en pesos
+  const _sw = _fichaContables
+    ? 'background:var(--acc);justify-content:flex-end'
+    : 'background:var(--b1);justify-content:flex-start';
   datos.innerHTML=`
     <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:baseline">
       <div style="font-size:16px;font-weight:700;color:var(--txt)">${esc(c.CLI_RAZON||'')}
         <span style="font-family:var(--mono);color:var(--acc);font-size:13px">${esc((c.CLI_CODIGO||'').trim())}</span></div>
+      <div onclick="fichaToggleContables(!${_fichaContables})" title="OFF: comprobantes que bajan stock, saldo real · ON: los que bajan depósito, importe contable"
+           style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
+        <span style="display:flex;align-items:center;${_sw};width:34px;height:18px;border-radius:9px;padding:2px;transition:all .15s">
+          <span style="width:14px;height:14px;border-radius:50%;background:#fff;display:block"></span>
+        </span>
+        <span style="font-size:12px;font-weight:600;color:${_fichaContables?'var(--acc)':'var(--t3)'}">Contable</span>
+      </div>
       <div style="font-size:12px;color:var(--t2)">📍 ${esc(c.CLI_DOMIC||'—')}${c.CLI_LOCAL?', '+esc(c.CLI_LOCAL):''} ${esc(PCIA[c.CLI_PROVIN]||c.CLI_PROVIN||'')}</div>
       <div style="font-size:12px;color:var(--t2)">👤 Vendedor: ${esc(vend||c.CLI_VEND||'—')}</div>
     </div>`;
 
   // ── IZQUIERDA: comprobantes con saldo + A/Cuenta, encolumnado por moneda ──
   const LGRID='80px 1fr 95px 95px 95px';
+  // En la vista contable todo va en pesos: se avisa arriba del bloque
+  const _tit=document.getElementById('ficha-izq-tit');
+  if(_tit) _tit.textContent=_fichaContables
+    ? 'Comprobantes con saldo contable (en pesos)'
+    : 'Comprobantes con saldo';
   let totP=0, totT=0, totC=0, lrows='';
   (D.comprobantes||[]).forEach(f=>{
     const key=reciMonKey(f.moneda), v=f.saldo||0;
     if(key==='pesos') totP+=v; else if(key==='tressa') totT+=v; else totC+=v;
     const fec=(f.fec||'').split('-').reverse().join('/');
-    // Los contables (sólo bajan depósito) se marcan: no son ventas reales
-    const marca=f.contable?' <span style="font-size:9px;color:var(--wrn,#f59e0b)">CONT</span>':'';
     lrows+=`<div style="display:grid;grid-template-columns:${LGRID};gap:6px;font-size:12px;font-family:var(--mono);padding:2px 0">
-      <span style="color:var(--t3)">${fec}</span><span style="color:var(--acc)">${esc(f.nro||'')}${marca}</span>
+      <span style="color:var(--t3)">${fec}</span><span style="color:var(--acc)">${esc(f.nro||'')}</span>
       <span style="text-align:right">${key==='pesos'?reciFmt(v):''}</span>
       <span style="text-align:right">${key==='tressa'?reciFmt(v):''}</span>
       <span style="text-align:right">${key==='casio'?reciFmt(v):''}</span></div>`;
@@ -145,12 +161,7 @@ async function renderFicha(){
 
   // ── PIE: última compra / último pago ──
   const fmtD=d=>d?d.substring(0,10).split('-').reverse().join('/'):'—';
-  const avisoCont = (!_fichaContables && D.ocultosContables)
-    ? ` &nbsp;·&nbsp; <span style="color:var(--wrn,#f59e0b)">${D.ocultosContables} comprobante(s) contable(s) oculto(s)</span>`
-    : '';
-  pie.innerHTML=`🧾 Última compra (factura): <b style="color:var(--txt)">${fmtD(D.ultCompra)}</b> &nbsp;·&nbsp; 💵 Último pago (recibo): <b style="color:var(--txt)">${fmtD(D.ultPago)}</b>`
-    + avisoCont
-    + ` &nbsp;·&nbsp; <label style="cursor:pointer;color:var(--t2)"><input type="checkbox" ${_fichaContables?'checked':''} onchange="fichaToggleContables(this.checked)"> ver contables</label>`;
+  pie.innerHTML=`🧾 Última compra (factura): <b style="color:var(--txt)">${fmtD(D.ultCompra)}</b> &nbsp;·&nbsp; 💵 Último pago (recibo): <b style="color:var(--txt)">${fmtD(D.ultPago)}</b>`;
 }
 
 // ── Auto-refresco de la ficha ──────────────────────────────
