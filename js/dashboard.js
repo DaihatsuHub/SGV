@@ -23,6 +23,22 @@ function _dDia(f){
 }
 function _dFecha(f){ const p=(f||'').substring(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0].slice(-2)}`:(f||''); }
 
+// Símbolo de la moneda, de la tabla MONE
+function _dSimb(cod){
+  const m=((TABLAS&&TABLAS['MONE'])||[]).find(x=>x.CODIGO===cod);
+  return m ? (m.STRING1||cod) : (cod==='P'?'$':cod);
+}
+// Parcial POR MONEDA debajo del total. La moneda dice de qué mercadería se
+// trata, así que el desglose informa tanto como la cifra.
+function _dPorMoneda(obj){
+  if(!obj) return '';
+  const claves=Object.keys(obj).filter(k=>Math.abs(Number(obj[k])||0)>0.005)
+    .sort((a,b)=>(a==='P'?-1:b==='P'?1:0)||a.localeCompare(b));
+  if(!claves.length || (claves.length===1 && claves[0]==='P')) return '';
+  return `<div class="dash-mon">`+claves.map(k=>
+    `<span><i>${_dEsc(_dSimb(k))}</i> ${_dFmt(obj[k])}</span>`).join('')+`</div>`;
+}
+
 // Llena los combos de filtro
 function dashFillCombos(){
   const put=(id,tabla,label)=>{
@@ -65,12 +81,13 @@ async function dashConsultar(){
 
 function pintarDash(){
   const body=document.getElementById('dash-body'); if(!body||!_dashData) return;
-  const D=_dashData, V=D.ventas||{}, C=D.cobranzas||{}, CH=D.cheques||{}, A=D.alertas||{};
+  const D=_dashData, V=D.ventas||{}, C=D.cobranzas||{}, CH=D.cheques||{}, A=D.alertas||{}, CO=D.cobrado||{};
 
-  const tarjeta=(titulo,valor,pie,color)=>`
+  const tarjeta=(titulo,valor,pie,color,monedas)=>`
     <div class="dash-card">
       <div class="dash-lbl">${titulo}</div>
       <div class="dash-val">${valor}</div>
+      ${_dPorMoneda(monedas)}
       <div class="dash-pie" style="${color?'color:'+color:''}">${pie||''}</div>
     </div>`;
 
@@ -101,9 +118,10 @@ function pintarDash(){
   body.innerHTML=`
     <div class="dash-wrap">
       <div class="dash-cards">
-        ${tarjeta('Vendido hoy','$ '+_dFmt(V.hoy),`${V.compHoy||0} comprobante${V.compHoy===1?'':'s'}`,'var(--t2)')}
-        ${tarjeta('Vendido en el período','$ '+_dFmt(V.periodo),`${V.compPeriodo||0} comprobante${V.compPeriodo===1?'':'s'}`,'var(--t2)')}
-        ${tarjeta('Por cobrar','$ '+_dFmt(C.deuda), C.vencida>0?`$ ${_dCorto(C.vencida)} con más de 90 días`:'sin deuda vencida', C.vencida>0?'var(--red)':'var(--grn)')}
+        ${tarjeta('Vendido hoy','$ '+_dFmt(V.hoy),`${V.compHoy||0} comprobante${V.compHoy===1?'':'s'}`,'var(--t2)',V.monHoy)}
+        ${tarjeta('Vendido en el período','$ '+_dFmt(V.periodo),`${V.compPeriodo||0} comprobante${V.compPeriodo===1?'':'s'}`,'var(--t2)',V.monPeriodo)}
+        ${tarjeta('Cobrado hoy','$ '+_dFmt(CO.hoy),`${CO.recHoy||0} recibo${CO.recHoy===1?'':'s'} · $ ${_dCorto(CO.periodo)} en el período`,'var(--grn)',CO.monHoy)}
+        ${tarjeta('Por cobrar','$ '+_dFmt(C.deuda), C.vencida>0?`$ ${_dCorto(C.vencida)} con más de 90 días`:'sin deuda vencida', C.vencida>0?'var(--red)':'var(--grn)',C.porMoneda)}
         ${tarjeta('Cheques en cartera','$ '+_dFmt(CH.cartera), CH.vencenPronto?`${CH.vencenPronto} vence${CH.vencenPronto===1?'':'n'} esta semana`:'ninguno vence esta semana', CH.vencenPronto?'var(--wrn,#f59e0b)':'var(--t2)')}
       </div>
       <div class="dash-fila">
@@ -126,11 +144,13 @@ function _dashStyle(){
   st.textContent=`
     #dash-body{padding:0 0 16px;overflow:auto}
     .dash-wrap{margin:14px 14px 0}
-    .dash-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:14px}
+    .dash-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;margin-bottom:14px}
     .dash-card{background:var(--s2);border-radius:8px;padding:14px 16px}
     .dash-lbl{font-size:12px;color:var(--t2);margin-bottom:5px}
     .dash-val{font-size:22px;font-weight:600;color:var(--txt);font-family:var(--mono)}
     .dash-pie{font-size:11px;margin-top:3px;color:var(--t3)}
+    .dash-mon{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:5px;font-size:11px;color:var(--t2);font-family:var(--mono)}
+    .dash-mon i{color:var(--t3);font-style:normal;margin-right:2px}
     .dash-fila{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px}
     .dash-panel{background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:14px 16px}
     .dash-tit{font-size:14px;font-weight:600;color:var(--txt);margin-bottom:12px}
