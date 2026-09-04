@@ -990,9 +990,6 @@ async function facImprimir(modo) {
   const _cot = Number(f.fac_cotiz)||1;
   const _factor = _esAfip ? (1-(Number(f.fac_monpor)||0)/100)*_cot : 1;
   const _monImp = _esAfip ? '$' : mon;        // símbolo a usar en la impresión
-  // Con descuento el precio de lista es la BASE a facturar: los renglones no
-  // llevan el IVA descontado, se calcula por encima (igual que el pie).
-  const _conDto = _esAfip && (Number(f.fac_monpor)||0) !== 0;
   const _vNeto   = _esAfip ? (Number(f.fac_neto_afip)>0 ? Number(f.fac_neto_afip) : subtotalNeto*_factor) : subtotalNeto;
   const _vIva    = _esAfip ? (Number(f.fac_iva_afip)>0  ? Number(f.fac_iva_afip)  : (f.fac_iva||0)*_factor) : (f.fac_iva||0);
   const _vTotal  = _esAfip ? (Number(f.fac_total_afip)>0? Number(f.fac_total_afip): (f.fac_total||0)*_factor) : (f.fac_total||0);
@@ -1122,20 +1119,15 @@ async function facImprimir(modo) {
           <td class="cod">${esc(it.ite_desp||'')}</td>
           <td class="r">${it.ite_can||0}</td>
           <td class="r">${(()=>{
-            // Unitario del renglón. CON DESCUENTO el precio de lista ES la base
-            // (precio × dto × cotización), así que NO se divide por el IVA: eso
-            // dejaba el renglón sin cerrar con el neto del pie.
-            // Sin descuento se mantiene el comportamiento de siempre.
-            const n = _conDto ? (it.ite_uni||0)*_factor
-                              : ((it.ite_uni||0)*_factor)/(1+(it.ite_iva_porc||21)/100);
-            return _monImp+' '+fmtN(n,2);
+            // El NETO es el precio de lista convertido — NUNCA se divide por
+            // (1+IVA). El IVA va por encima, igual que en el pie. Vale con y
+            // sin descuento: el neto siempre es precio × cotización × (1−dto).
+            return _monImp+' '+fmtN((it.ite_uni||0)*_factor, 2);
           })()}</td>
           <td class="r">${(()=>{
             // Subtotal = unitario × cantidad, para que cierre con el unitario
-            // mostrado. Con descuento `ite_imp` es el declarado sin convertir.
-            const n = _conDto ? (it.ite_uni||0)*(it.ite_can||0)*_factor
-                              : (it.ite_imp||0)*_factor;
-            return _monImp+' '+fmtN(n,2);
+            // mostrado y con el "Subtotal neto" del pie.
+            return _monImp+' '+fmtN((it.ite_uni||0)*(it.ite_can||0)*_factor, 2);
           })()}</td>
         </tr>`;
       }).join('')}
@@ -1148,13 +1140,23 @@ async function facImprimir(modo) {
       ${tieneIva?`
         <div class="tot-row"><span class="tot-lbl">Subtotal neto</span><span class="tot-val">${_monImp} ${fmt(_vNeto)}</span></div>
         ${(()=>{
-          // IVA discriminado por alícuota, tomado de los ítems
+          // IVA discriminado por alícuota. El IMPORTE TOTAL es el declarado
+          // (`_vIva`): los ítems guardan `ite_iva_imp` calculado sobre el neto
+          // dividido por (1+IVA), que no es la base que se factura.
+          // Los ítems sólo se usan para saber QUÉ alícuotas hay y en qué
+          // proporción repartir ese total.
           const porAlic={};
           items.forEach(it=>{ const pct=Number(it.ite_iva_porc)||0; if(!pct) return;
-            porAlic[pct]=(porAlic[pct]||0)+(Number(it.ite_iva_imp)||0); });
+            porAlic[pct]=(porAlic[pct]||0)+(Number(it.ite_uni)||0)*(Number(it.ite_can)||0); });
           const alics=Object.keys(porAlic).sort((a,b)=>b-a);
           if(!alics.length) return `<div class="tot-row"><span class="tot-lbl">IVA</span><span class="tot-val">${_monImp} ${fmt(_vIva)}</span></div>`;
-          return alics.map(pct=>`<div class="tot-row"><span class="tot-lbl">IVA ${fmt(pct)}%</span><span class="tot-val">${_monImp} ${fmt(porAlic[pct]*_factor)}</span></div>`).join('');
+          if(alics.length===1) return `<div class="tot-row"><span class="tot-lbl">IVA ${fmt(alics[0])}%</span><span class="tot-val">${_monImp} ${fmt(_vIva)}</span></div>`;
+          // Varias alícuotas: se prorratea el IVA declarado según el peso de cada una
+          const baseTot=alics.reduce((a,p)=>a+porAlic[p]*(Number(p)/100),0)||1;
+          return alics.map(pct=>{
+            const parte=_vIva*(porAlic[pct]*(Number(pct)/100))/baseTot;
+            return `<div class="tot-row"><span class="tot-lbl">IVA ${fmt(pct)}%</span><span class="tot-val">${_monImp} ${fmt(parte)}</span></div>`;
+          }).join('');
         })()}
       `:''}
       ${(Array.isArray(f.fac_percep_det)&&f.fac_percep_det.length)
@@ -1359,7 +1361,7 @@ function renderFacModal(fecha, empresa, cliCod) {
             </div>
             <div>
               <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Descuento %</label>
-              <input class="finp" id="nf-dto" type="number" min="0" max="100" step="0.1" value="0" oninput="nfCalcTotales();nfRenderItems()" onclick="this.select()" style="width:100%">
+              <input class="finp" id="nf-dto" type="number" min="0" max="100" step="0.1" value="0" oninput="nfCalcTotales()" onclick="this.select()" style="width:100%">
             </div>
           </div>
           <!-- Cliente -->
@@ -1538,7 +1540,7 @@ function renderFacForm(fecha, empresa, cliCod) {
         </div>
         <div>
           <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Descuento %</label>
-          <input class="finp" id="nf-dto" type="number" min="0" max="100" step="0.1" value="0" oninput="nfCalcTotales();nfRenderItems()" onclick="this.select()" style="width:100%">
+          <input class="finp" id="nf-dto" type="number" min="0" max="100" step="0.1" value="0" oninput="nfCalcTotales()" onclick="this.select()" style="width:100%">
         </div>
       </div>
       <div style="background:var(--s2);border-radius:6px;padding:10px 12px">
@@ -2202,16 +2204,12 @@ function nfRenderItems() {
     const el=document.getElementById(id);if(el)el.style.display='';
   });
   const esA=nfEsFacturaA();
-  // CON DESCUENTO el importe REAL se comporta como una X: no discrimina IVA ni
-  // se lo suma. Se ocultan %IVA y Precio s/IVA, y "Precio c/IVA" pasa a ser
-  // simplemente "Precio" (el de lista, que es lo que el cliente debe).
-  const _dtoGrilla = (parseFloat(document.getElementById('nf-dto')?.value||0)||0) !== 0;
   const cols=`90px 1fr 50px 100px 65px 90px 45px 90px 90px 28px`;
   hdr.innerHTML=`<div style="display:grid;grid-template-columns:${cols};gap:4px;padding:6px 8px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase">
     <span>Código</span><span>Descripción</span><span style="text-align:right">Disp</span><span>Despacho</span>
-    <span style="text-align:right">Cant</span><span style="text-align:right">${_dtoGrilla?'Precio':'Precio c/IVA'}</span>
-    <span style="text-align:center;${_dtoGrilla?'visibility:hidden':''}">%IVA</span>
-    <span style="text-align:right;${_dtoGrilla?'visibility:hidden':''}">Precio s/IVA</span>
+    <span style="text-align:right">Cant</span><span style="text-align:right">Precio c/IVA</span>
+    <span style="text-align:center">%IVA</span>
+    <span style="text-align:right">Precio s/IVA</span>
     <span style="text-align:right">Importe</span><span></span>
   </div>`;
   if(!FAC_ITEMS_NUEVA.length){
@@ -2226,9 +2224,7 @@ function nfRenderItems() {
     const precioConIva=it.ite_uni||0;
     const neto=esA?precioConIva/divIva:precioConIva;
     const cant=it.ite_can||0;
-    // Con descuento el importe del renglón es precio × cantidad: el precio de
-    // lista ES lo que se debe, no hay que sacarle el IVA.
-    const imp = _dtoGrilla ? (it.ite_uni||0)*cant : neto*cant;
+    const imp=neto*cant;
     const dispTxt=nfItemDispTxt(it);
     const dispColor=(!nfEsNC()&&it.ite_art&&(it._artReal||0)===0&&(it._artPfac||0)===0)?'color:var(--red)':'color:var(--grn)';
     const _max=nfItemMax(it);
@@ -2269,8 +2265,8 @@ function nfRenderItems() {
           onclick="this.select()"
           onchange="nfItemChange(${i},'ite_uni',nfParseNum(this.value))">
       </div>
-      <span style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--t3);${_dtoGrilla?'visibility:hidden':''}">${ivaPct}%</span>
-      <span style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--grn);${_dtoGrilla?'visibility:hidden':''}">${fmtN(neto,2)}</span>
+      <span style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--t3)">${ivaPct}%</span>
+      <span style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--grn)">${fmtN(neto,2)}</span>
       <span class="nf-imp" style="text-align:right;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--txt)">${fmtN(imp,2)}</span>
       <button class="btn dng" onclick="nfEliminarItem(${i})" style="padding:2px 6px;font-size:11px">✕</button>
     </div>`;
