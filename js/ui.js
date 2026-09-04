@@ -86,6 +86,27 @@ document.addEventListener('input', function(e) {
   }
 });
 
+// ── SIN AUTOCOMPLETADO DEL NAVEGADOR ─────────────────────
+// Chrome guarda lo que se escribe en los campos y después lo ofrece en un
+// globo. En un sistema de gestión eso confunde: al buscar un cliente aparecen
+// los últimos escritos, que no tienen nada que ver con lo que se está haciendo.
+// Se apaga en TODOS los campos, incluidos los que se crean después (grillas,
+// modales, filtros que se arman al vuelo).
+(function(){
+  function apagarAutocomplete(){
+    document.querySelectorAll('input:not([type=checkbox]):not([type=radio]),textarea')
+      .forEach(i=>{ if(i.getAttribute('autocomplete')!=='off') i.setAttribute('autocomplete','off'); });
+  }
+  const arrancar=()=>{
+    apagarAutocomplete();
+    if('MutationObserver' in window){
+      new MutationObserver(apagarAutocomplete).observe(document.body,{childList:true,subtree:true});
+    }
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', arrancar);
+  else arrancar();
+})();
+
 // ── EXPORTAR A EXCEL ─────────────────────────────────────
 function exportToXls(titulo, headers, rows) {
   const sep = '\t';
