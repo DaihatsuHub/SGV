@@ -413,14 +413,26 @@ async function reciClienteChange(){
 function reciLoadDeudores(){
   const cod=_reciHdr.cliente, emp=_reciHdr.empresa; _reciDeud=[];
   if(cod){
+    // ¿El cliente tiene alguna deudora CONTABLE que además baja stock? Si la
+    // hay, el talonario fiscal también puede asentar las no contables.
+    const hayContableConStock = !_reciEsX() && (FACS||[]).some(f=>{
+      const t=(f.fac_nro||'').trim().slice(-1);
+      const mE=(f.fac_empresa? f.fac_empresa===emp : (f.fac_nro||'').startsWith(emp));
+      return (f.fac_cli||'').trim()===cod.trim() && mE && ['F','D','R'].includes(t)
+          && (f.fac_saldo||0)>0 && !!f.fac_tab_fact && !!f.fac_tab_stk;
+    });
     (FACS||[]).forEach(f=>{
       const tipo=(f.fac_nro||'').trim().slice(-1);
       const esDeudor=['F','D','R'].includes(tipo);
       const mismaEmp=(f.fac_empresa? f.fac_empresa===emp : (f.fac_nro||'').startsWith(emp));
       // EL TIPO DE TALONARIO define qué comprobantes se pueden cobrar:
       //   "X"        → sólo los NO CONTABLES (no bajan depósito)
-      //   los demás  → sólo los CONTABLES (bajan depósito)
-      const okTipo = _reciEsX() ? !f.fac_tab_fact : !!f.fac_tab_fact;
+      //   los demás  → los CONTABLES y, si entre ellos hay alguno que TAMBIÉN
+      //                BAJA STOCK, también los NO CONTABLES que bajan stock,
+      //                para poder asentar esos pagos en el mismo recibo.
+      const okTipo = _reciEsX()
+        ? !f.fac_tab_fact
+        : (!!f.fac_tab_fact || (hayContableConStock && !!f.fac_tab_stk && !f.fac_tab_fact));
       if((f.fac_cli||'').trim()===cod.trim() && mismaEmp && esDeudor && okTipo && (f.fac_saldo||0)>0){
         const info=reciMonInfo(f.fac_moneda,_reciHdr);
         const saldoOrig=round2(f.fac_saldo||0);
@@ -471,8 +483,9 @@ function renderReciDeud(){
     const sAfip = Number(d.saldo_afip) || 0;
     const aAfip = (d.abona_afip === undefined || d.abona_afip === null)
       ? reciAbonaAfipAuto(d) : d.abona_afip;
+    // Fondo distinto al del abono real: son dos cosas que no hay que confundir
     const cellAfip = sAfip > 0
-      ? `<input type="text" value="${reciFmt(aAfip)}" onclick="event.stopPropagation()" onchange="reciAbonaAfipInput(${i},this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px;background:var(--s3)">`
+      ? `<input type="text" value="${reciFmt(aAfip)}" onclick="event.stopPropagation()" onchange="reciAbonaAfipInput(${i},this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px;background:#3b2a5c;color:#e9d5ff;border-color:#6d28d9">`
       : `<span style="text-align:right;color:var(--t3)">—</span>`;
     return `<div onclick="reciAplicarFila(${i})" title="Clic para aplicar: ofrece el saldo del comprobante o lo que falta del saldo a aplicar" style="display:grid;grid-template-columns:92px 60px 92px 84px 70px 96px 92px 96px 92px;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--b1);font-size:12px;font-family:var(--mono);cursor:pointer">
       <span style="color:var(--acc)">${esc(d.fac_nro)}</span>
