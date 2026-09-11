@@ -152,6 +152,7 @@
         <button class="dd-item" id="ddi-talo" onclick="showSubPage('cob','talo')">📓 Talonarios</button>
         <button class="dd-item" id="ddi-rete" onclick="showSubPage('cob','rete')">🧮 Tipo de Retenciones</button>
         <button class="dd-item" id="ddi-cart" onclick="showSubPage('cob','cart')">💼 Cartera de Valores</button>
+        <button class="dd-item" id="ddi-sdcob" onclick="showSubPage('cob','sdcob')">📗 Subdiario de Cobranzas</button>
         <button class="dd-item" id="ddi-listcob" onclick="showSubPage('cob','listcob')">📋 Listado de Cobranzas</button>
         <button class="dd-item" id="ddi-antig" onclick="showSubPage('cob','antig')">⏳ Antigüedad de Saldos</button>
       </div>
@@ -820,6 +821,29 @@
   </div>
   <div class="tbl-wrap">
     <div id="ant-body" class="tbl-body"><div class="empty" style="margin-top:40px">Tocá Consultar</div></div>
+  </div>
+</div>
+
+<div class="page" id="page-sdcob">
+  <div class="toolbar">
+    <span style="font-weight:600;font-size:14px;color:var(--acc);margin-right:4px">📗 Subdiario de Cobranzas</span>
+    <label style="font-size:12px;color:var(--t2)">Desde</label>
+    <input type="date" class="finp" id="sdc-desde" style="width:145px">
+    <label style="font-size:12px;color:var(--t2)">Hasta</label>
+    <input type="date" class="finp" id="sdc-hasta" style="width:145px">
+    <select class="fsel" id="sdc-empresa" style="min-width:150px">
+      <option value="">Ambas empresas</option><option value="H">Hatsu</option><option value="T">Tressa</option>
+    </select>
+    <button class="btn pri" onclick="sdcConsultar()">🔍 Consultar</button>
+    <button class="btn" onclick="sdcPrint()">🖨 Imprimir</button>
+    <button class="btn" onclick="sdcExcel()">⬇ Excel</button>
+    <div class="spacer"></div>
+    <span style="font-size:12px;color:var(--t3)"><b id="sdc-count">0</b> recibo(s) · importes contables</span>
+  </div>
+  <div class="tbl-wrap">
+    <div id="sdc-head"></div>
+    <div id="sdc-body" class="tbl-body"></div>
+    <div id="sdc-pie"></div>
   </div>
 </div>
 
@@ -1788,6 +1812,7 @@
 <script src="js/oc.js"></script>
 <script src="js/fichacli.js"></script>
 <script src="js/listcob.js"></script>
+<script src="js/subdiariocob.js"></script>
 <script src="js/ctacte.js"></script>
 <script src="js/antiguedad.js"></script>
 <script src="js/ranking.js"></script>
