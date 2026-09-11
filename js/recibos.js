@@ -720,6 +720,12 @@ async function saveReci(){
   const totAplicado=round2(items.reduce((s,d)=>s+(d.abona||0),0)+aCta.reduce((s,a)=>s+(a.abona||0),0));
   if(totAplicado<=0){ toast('Cargá al menos un importe a abonar o una A/Cuenta','err'); return; }
   if(Math.abs(reciTotInstrumentos()-totAplicado)>0.01){ toast('Los instrumentos no coinciden con lo abonado','err'); return; }
+  // Un recibo FISCAL tiene que aplicar algo contablemente: su razón de ser es
+  // cancelar la parte declarada. Los "X" no, porque cobran los no contables.
+  if(!_reciEsX() && reciTotAbonadoAfip()<=0.005){
+    toast('Este recibo no aplica nada contablemente. Cargá el importe en "Abona cont." o usá un talonario "X".','err');
+    return;
+  }
   const efe=reciParseNum(document.getElementById('rf-efectivo')?.value||'0');
   const aju=reciParseNum(document.getElementById('rf-ajuste')?.value||'0');
   const payload={
