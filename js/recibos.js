@@ -255,7 +255,10 @@ function reciResetEnabled(){
 function reciApplyReadonly(){
   const ov=document.getElementById('ov-reci'); if(!ov) return;
   ov.querySelectorAll('input,select,textarea').forEach(el=>{ el.disabled=true; });
-  ov.querySelectorAll('button').forEach(el=>{ if(el.id!=='rf-cancel' && !el.classList.contains('mcls')) el.disabled=true; });
+  // Imprimir SÍ tiene que andar en solo lectura: es justo cuando más se usa
+  ov.querySelectorAll('button').forEach(el=>{
+    if(el.id!=='rf-cancel' && el.id!=='rf-print' && !el.classList.contains('mcls')) el.disabled=true;
+  });
   const sv=document.getElementById('rf-save'); if(sv) sv.style.display='none';
 }
 function reciModif(){ _reciReadonly=false; return _reciOpenEditor(); }
@@ -290,9 +293,16 @@ async function _reciOpenEditor(){
   try{
     const items=await sbGet('recibo_items',`recibo_id=eq.${rc.id}&order=id.asc`);
     const esAC = it => (it.a_cuenta===true) || ((it.comprobante||'')==='A/CUENTA');
-    _reciDeud=items.filter(it=>!esAC(it)).map(it=>({ fac_nro:it.comprobante, fac_fec:it.fecha, fac_moneda:it.moneda,
-      simbolo:reciMonInfo(it.moneda,_reciHdr).simbolo, saldo_orig:it.saldo_orig||0,
-      cotizacion:it.cotizacion||1, saldo:it.saldo||0, abona:it.abona||0, abona_orig:it.abona_orig||0 }));
+    _reciDeud=items.filter(it=>!esAC(it)).map(it=>{
+      const f=(FACS||[]).find(x=>x.fac_nro===it.comprobante);
+      return { fac_nro:it.comprobante, fac_fec:it.fecha, fac_moneda:it.moneda,
+        simbolo:reciMonInfo(it.moneda,_reciHdr).simbolo, saldo_orig:it.saldo_orig||0,
+        cotizacion:it.cotizacion||1, saldo:it.saldo||0, abona:it.abona||0, abona_orig:it.abona_orig||0,
+        // Parte CONTABLE que este recibo aplicó, para verla al abrirlo
+        saldo_afip: round2(Number(f?.fac_saldo_afip)||0) + round2(Number(it.abona_afip)||0),
+        abona_afip: round2(Number(it.abona_afip)||0),
+        _afipManual: true };      // ya está aplicado: no recalcular
+    });
     _reciACuenta=items.filter(esAC).map(it=>({ moneda:it.moneda||'', cotizacion:it.cotizacion||1,
       importe:it.abona_orig||0, abona:it.abona||0, simbolo:reciMonInfo(it.moneda,_reciHdr).simbolo }));
     const pagos=await sbGet('recibo_pagos',`recibo_id=eq.${rc.id}`);
@@ -776,3 +786,114 @@ async function saveReci(){
   s.textContent='#reci-thead>*,#reci-body .tr-art>*{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}';
   document.head.appendChild(s);
 })();
+
+
+// ══════════════════════════════════════════════════════════
+//  IMPRESIÓN DE RECIBO
+//  Se arma desde los datos en memoria (_reciHdr, _reciDeud, _reciACuenta,
+//  _reciCheques, _reciTransf, _reciRetenc), no leyendo el DOM: así sale igual
+//  en pantalla y en papel, y no depende de qué se esté mostrando.
+// ══════════════════════════════════════════════════════════
+function reciImprimir(){
+  const h=_reciHdr||{};
+  if(!h.cliente){ toast('Abrí o cargá un recibo primero','err'); return; }
+  const cli=(CLIS||[]).find(c=>(c.CLI_CODIGO||'').trim()===(h.cliente||'').trim());
+  const nro=`${h.empresa||''}${h.talonario||''} ${String(h.numero||'').padStart(6,'0')}`;
+  const fmt=v=>(Number(v)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fec=d=>{ const p=(d||'').substring(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:(d||''); };
+  const esc2=v=>esc(v==null?'':String(v));
+
+  // ── Comprobantes cancelados ──
+  const items=(_reciDeud||[]).filter(d=>(d.abona||0)>0);
+  const hayCont=items.some(d=>(d.abona_afip||0)>0);
+  let filas=items.map(d=>`<tr>
+      <td>${esc2(d.fac_nro)}</td>
+      <td>${fec(d.fac_fec)}</td>
+      <td class="r">${esc2(d.simbolo)} ${fmt(d.saldo_orig)}</td>
+      <td class="r">${esc2(d.simbolo)} ${fmt(d.abona_orig)}</td>
+      <td class="r">$ ${fmt(d.abona)}</td>
+      ${hayCont?`<td class="r">${(d.abona_afip||0)>0?'$ '+fmt(d.abona_afip):''}</td>`:''}
+    </tr>`).join('');
+  (_reciACuenta||[]).filter(a=>(a.abona||0)>0).forEach(a=>{
+    filas+=`<tr><td colspan="2"><i>A/Cuenta</i></td>
+      <td class="r"></td><td class="r">${esc2(a.simbolo)} ${fmt(a.importe)}</td>
+      <td class="r">$ ${fmt(a.abona)}</td>${hayCont?'<td></td>':''}</tr>`;
+  });
+  const totAplic=items.reduce((s2,d)=>s2+(d.abona||0),0)
+                + (_reciACuenta||[]).reduce((s2,a)=>s2+(a.abona||0),0);
+  const totCont=items.reduce((s2,d)=>s2+(d.abona_afip||0),0);
+
+  // ── Valores recibidos ──
+  let val='';
+  const efe=reciParseNum(document.getElementById('rf-efectivo')?.value||'0');
+  if(efe>0) val+=`<tr><td>Efectivo</td><td></td><td class="r">$ ${fmt(efe)}</td></tr>`;
+  (_reciTransf||[]).forEach(t=>{ if((t.importe||0)>0)
+    val+=`<tr><td>Transferencia</td><td>${fec(t.fecha)}</td><td class="r">$ ${fmt(t.importe)}</td></tr>`; });
+  (_reciCheques||[]).forEach(c=>{ if((c.importe||0)>0)
+    val+=`<tr><td>Cheque ${c.fisico?'':'ECheq '}N° ${esc2(c.numero)}</td><td>${fec(c.fecha)}</td><td class="r">$ ${fmt(c.importe)}</td></tr>`; });
+  (_reciRetenc||[]).forEach(r=>{ if((r.importe||0)>0)
+    val+=`<tr><td>Retención ${esc2(r.codigo)}${typeof reteDesc==='function'&&reteDesc(r.codigo)?' — '+esc2(reteDesc(r.codigo)):''}</td><td></td><td class="r">$ ${fmt(r.importe)}</td></tr>`; });
+  const aju=reciParseNum(document.getElementById('rf-ajuste')?.value||'0');
+  if(Math.abs(aju)>0.001) val+=`<tr><td>Ajuste</td><td></td><td class="r">$ ${fmt(aju)}</td></tr>`;
+  const totVal=reciTotInstrumentos();
+
+  const cuerpo=`
+    <div class="rec-cab">
+      <div>
+        <div class="rec-cli">${esc2(cli?.CLI_RAZON||h.cliente)}</div>
+        <div class="rec-sub">${esc2((h.cliente||'').trim())}</div>
+        <div class="rec-sub">${esc2(cli?.CLI_DOMIC||'')}</div>
+        <div class="rec-sub">${esc2(cli?.CLI_LOCAL||'')} ${esc2(PCIA[cli?.CLI_PROVIN]||cli?.CLI_PROVIN||'')}</div>
+      </div>
+      <div class="rec-der">
+        <div><b>Recibo N° ${esc2(nro)}</b></div>
+        <div class="rec-sub">Fecha: ${fec(h.fecha)}</div>
+        ${cli?.CLI_CUIT?`<div class="rec-sub">CUIT: ${esc2(cli.CLI_CUIT)}</div>`:''}
+      </div>
+    </div>
+
+    <h3>Comprobantes cancelados</h3>
+    <table>
+      <thead><tr>
+        <th>Comprobante</th><th>Fecha</th>
+        <th class="r">Saldo</th><th class="r">Abona</th><th class="r">Importe $</th>
+        ${hayCont?'<th class="r">Contable $</th>':''}
+      </tr></thead>
+      <tbody>${filas||'<tr><td colspan="6"><i>Sin comprobantes</i></td></tr>'}
+        <tr class="fin"><td colspan="4"><b>Total aplicado</b></td>
+          <td class="r"><b>$ ${fmt(totAplic)}</b></td>
+          ${hayCont?`<td class="r"><b>$ ${fmt(totCont)}</b></td>`:''}</tr>
+      </tbody>
+    </table>
+
+    <h3>Valores recibidos</h3>
+    <table>
+      <thead><tr><th>Concepto</th><th>Fecha</th><th class="r">Importe</th></tr></thead>
+      <tbody>${val||'<tr><td colspan="3"><i>Sin valores</i></td></tr>'}
+        <tr class="fin"><td colspan="2"><b>Total</b></td><td class="r"><b>$ ${fmt(totVal)}</b></td></tr>
+      </tbody>
+    </table>
+
+    <div class="rec-firma">
+      <div>Recibí conforme</div>
+      <div class="rec-linea"></div>
+      <div class="rec-sub">Firma y aclaración</div>
+    </div>
+  `;
+
+  sgvPrint({
+    titulo:`Recibo ${nro}`,
+    subtitulo:`${esc2(cli?.CLI_RAZON||h.cliente)} — ${fec(h.fecha)}`,
+    cuerpo:cuerpo,
+    estilos:`
+      .rec-cab{display:flex;justify-content:space-between;gap:16px;margin-bottom:10px;
+               border:1px solid #000;padding:8px}
+      .rec-cli{font-size:13px;font-weight:700}
+      .rec-sub{font-size:10px;color:#333}
+      .rec-der{text-align:right}
+      h3{font-size:11px;margin:10px 0 4px;text-transform:uppercase;letter-spacing:.5px}
+      .rec-firma{margin-top:26px;text-align:right}
+      .rec-linea{border-top:1px solid #000;width:60mm;margin:16px 0 3px auto}
+    `
+  });
+}
