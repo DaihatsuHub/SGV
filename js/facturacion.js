@@ -2540,7 +2540,8 @@ async function nfGuardar() {
     fac_cotiz:tot.cotiz||1,
     // Saldo CONTABLE vivo, en pesos. Baja en PROPORCIÓN a lo que se cobre del
     // real: si paga la mitad del real, se cancela la mitad del contable.
-    fac_saldo_afip:tot.totalAfip||0,
+    // Sólo los comprobantes que BAJAN DEPÓSITO tienen parte contable
+    fac_saldo_afip: (nfCtipActual()?.tab_fact) ? (tot.totalAfip||0) : 0,
     fac_neto_afip:tot.netoAfip||0, fac_iva_afip:esA?(tot.ivaAfip||0):0, fac_percep_afip:tot.percepAfip||0, fac_total_afip:tot.totalAfip||0,
     fac_percep_det:NF_PERCEP.map(p=>({cod:p.cod,detalle:p.detalle,pct:p.pct,importe:p.importe})),
     fac_transp:transp,fac_remito:remito,fac_conpag:conpag,fac_monpor:dto,

@@ -347,7 +347,13 @@ function reciEmpresaChange(){
   document.getElementById('rf-talo').value=_reciHdr.talonario;
   reciSetNumero(); reciLoadDeudores();
 }
-function reciTaloChange(){ _reciHdr.talonario=document.getElementById('rf-talo').value; reciSetNumero(); }
+// Al cambiar el TALONARIO cambia qué comprobantes corresponden (el tipo "X" no
+// cobra los mismos que los fiscales), así que hay que rearmar la lista.
+function reciTaloChange(){
+  _reciHdr.talonario=document.getElementById('rf-talo').value;
+  reciSetNumero();
+  if(_reciHdr.cliente) reciClienteChange();   // vuelve a filtrar los deudores
+}
 function reciSetNumero(){
   if(_reciMode!=='A') return;
   _reciHdr.numero=_reciHdr.talonario?taloNextNumero(_reciHdr.empresa,_reciHdr.talonario):'';
@@ -411,26 +417,48 @@ function reciLoadDeudores(){
       const tipo=(f.fac_nro||'').trim().slice(-1);
       const esDeudor=['F','D','R'].includes(tipo);
       const mismaEmp=(f.fac_empresa? f.fac_empresa===emp : (f.fac_nro||'').startsWith(emp));
-      // RECIBO "X" (talonario con X): sólo cobra los comprobantes que BAJAN
-      // STOCK y NO depósito — o sea los NO fiscales. Los contables se cobran
-      // con los otros talonarios.
-      const okTipo = !_reciEsX() || (!!f.fac_tab_stk && !f.fac_tab_fact);
+      // EL TIPO DE TALONARIO define qué comprobantes se pueden cobrar:
+      //   "X"        → sólo los NO CONTABLES (no bajan depósito)
+      //   los demás  → sólo los CONTABLES (bajan depósito)
+      const okTipo = _reciEsX() ? !f.fac_tab_fact : !!f.fac_tab_fact;
       if((f.fac_cli||'').trim()===cod.trim() && mismaEmp && esDeudor && okTipo && (f.fac_saldo||0)>0){
         const info=reciMonInfo(f.fac_moneda,_reciHdr);
         const saldoOrig=round2(f.fac_saldo||0);
         _reciDeud.push({ fac_nro:f.fac_nro, fac_fec:f.fac_fec, fac_moneda:f.fac_moneda,
           simbolo:info.simbolo, saldo_orig:saldoOrig, cotizacion:info.cotiz,
           saldo:round2(saldoOrig*info.cotiz), abona:0, abona_orig:0,
-          // Saldo CONTABLE de la factura (sólo lo tienen las subfacturadas)
-          saldo_afip:round2(f.fac_saldo_afip||0), abona_afip:0 });
+          // Saldo CONTABLE: sólo existe si el comprobante BAJA DEPÓSITO.
+          // Si no baja depo no es fiscal, así que no tiene parte contable y no
+          // se muestra ni se calcula lo abonado contable.
+          saldo_afip: f.fac_tab_fact ? round2(f.fac_saldo_afip||0) : 0,
+          abona_afip:0 });
       }
+    });
+    // Si no quedó ninguno pero el cliente SÍ debe del otro tipo, el talonario
+    // elegido no corresponde: hay que avisarlo en vez de mostrar la lista vacía.
+    _reciTipoNoCorresponde = !_reciDeud.length && (FACS||[]).some(f=>{
+      const tipo=(f.fac_nro||'').trim().slice(-1);
+      const mismaEmp=(f.fac_empresa? f.fac_empresa===emp : (f.fac_nro||'').startsWith(emp));
+      return (f.fac_cli||'').trim()===cod.trim() && mismaEmp
+          && ['F','D','R'].includes(tipo) && (f.fac_saldo||0)>0
+          && (_reciEsX() ? !!f.fac_tab_fact : !f.fac_tab_fact);
     });
   }
   renderReciDeud(); reciReconcile();
 }
 function renderReciDeud(){
   const body=document.getElementById('rf-deud-body'); if(!body) return;
-  if(!_reciDeud.length){ body.innerHTML='<div class="empty" style="padding:14px">Sin comprobantes deudores</div>'; }
+  if(!_reciDeud.length){
+    body.innerHTML = _reciTipoNoCorresponde
+      ? `<div style="padding:14px;background:#7f1d1d;color:#fff;border-radius:6px;font-size:13px;font-weight:600">
+           ⛔ No corresponde este tipo de Recibo
+           <div style="font-weight:400;font-size:12px;margin-top:4px;opacity:.9">
+             El cliente sólo tiene deuda de comprobantes ${_reciEsX()?'contables':'no contables'}.
+             Elegí ${_reciEsX()?'otro talonario':'el talonario "X"'}.
+           </div>
+         </div>`
+      : '<div class="empty" style="padding:14px">Sin comprobantes deudores</div>';
+  }
   else body.innerHTML=_reciDeud.map((d,i)=>{
     const fec=_reciFecha(d.fac_fec);
     const esPeso=(RECI_MON_COTIZ[d.fac_moneda]||'')==='pesos';
@@ -467,6 +495,9 @@ function renderReciDeud(){
 }
 // ¿El talonario del recibo es de tipo "X"? Esos sólo cobran comprobantes no
 // fiscales (bajan stock, no depósito).
+// true cuando el cliente debe, pero del OTRO tipo que el talonario elegido
+let _reciTipoNoCorresponde = false;
+
 function _reciEsX(){
   return (_reciHdr?.talonario||'').toUpperCase().includes('X');
 }
