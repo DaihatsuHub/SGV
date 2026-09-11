@@ -782,6 +782,10 @@ function facAfipError(rawMsg){
   document.addEventListener('keydown',onKey);
 }
 
+// El comprobante electrónico lo arma el SERVER a partir de la factura ya
+// grabada. Antes se componía acá (importes, tipo, punto de venta, CUIT del
+// receptor) y se mandaba directo a AFIP: el navegador decidía qué se declaraba
+// ante el organismo fiscal. Ahora sólo se dice QUÉ comprobante autorizar.
 async function facAutorizarAfip(facNro) {
   const f = FACS.find(x=>x.fac_nro===facNro);
   if (!f) { toast('Factura no encontrada','err'); return; }
@@ -789,63 +793,8 @@ async function facAutorizarAfip(facNro) {
   const btn = document.querySelector('button[onclick*="facAutorizarAfip"]');
   if (btn) { btn.disabled=true; btn.textContent='⏳ Autorizando...'; }
   try {
-    const cli = facFindCli(f.fac_cli);
-    const empresa = f.fac_empresa || (f.fac_nro||'').substring(0,1);
-    const prefijo = facGetPrefijo(f.fac_nro);
-    // El tipo sale de la última letra del número (F/C/D/R). Si una factura vieja
-    // no tiene letra, se cae al ctip por prefijo+empresa como respaldo.
-    // Tipo de DOCUMENTO (Factura/NC/ND) = última letra del número (F/C/D/R)
-    let tipoChar = facGetTipo(f.fac_nro);
-    if (!['F','C','D'].includes(tipoChar)) {
-      const ctipFb = CTIPS.find(c=>c.prefijo===prefijo&&c.empresa===empresa);
-      tipoChar = ctipFb ? ctipFb.tipo : 'F';
-    }
-    const tiva = f.fac_tiva || '';
-    // LETRA AFIP (A/B/C) = 2do carácter del prefijo (ej. "HA4" → "A").
-    // Si el prefijo no la trae clara, se deduce de la condición de IVA como respaldo.
-    let letra = (prefijo.charAt(1) || '').toUpperCase();
-    if (!['A','B','C'].includes(letra)) {
-      letra = tiva==='I' ? 'A' : (tiva==='C'||tiva==='M'||tiva==='N') ? 'B' : 'C';
-    }
-    let cbteTipo;
-    if (tipoChar === 'F')      cbteTipo = letra==='A' ? 1 : letra==='C' ? 11 : 6;
-    else if (tipoChar === 'C') cbteTipo = letra==='A' ? 3 : letra==='C' ? 13 : 8;
-    else if (tipoChar === 'D') cbteTipo = letra==='A' ? 2 : letra==='C' ? 12 : 7;
-    else throw new Error('Tipo de comprobante no soportado para AFIP');
-    const ptoVtaStr = prefijo.replace(/[^0-9]/g,'');
-    const ptoVta = parseInt(ptoVtaStr) || 1;
-    const docTipo = cli?.CLI_CUIT ? 80 : 99;
-    const docNro  = cli?.CLI_CUIT ? parseInt((cli.CLI_CUIT||'').replace(/\D/g,'')) : 0;
-    const condIvaMap = { I:1, M:4, C:5, E:6, N:5, L:5 };
-    const condIvaReceptor = condIvaMap[tiva] || 5;
-    // AFIP recibe SIEMPRE los importes DECLARADOS (con descuento aplicado).
-    // Fallback al real para facturas viejas sin el juego _afip.
-    const impTotal = Number(f.fac_total_afip)>0 ? Number(f.fac_total_afip) : (f.fac_total||0);
-    const impIva   = Number(f.fac_iva_afip)>0   ? Number(f.fac_iva_afip)   : (f.fac_iva||0);
-    const impNeto  = impTotal - impIva;
-    const ivas = impIva > 0 ? [{ id:5, baseImp: impNeto, importe: impIva }] : [];
-    const esC = cbteTipo===11||cbteTipo===13||cbteTipo===12;
-    const payload = {
-      empresa,
-      factura: {
-        ptoVta, cbteTipo, docTipo, docNro, condIvaReceptor,
-        impTotal,
-        impNeto: esC ? impTotal : impNeto,
-        impIva:  esC ? 0 : impIva,
-        concepto: 1,
-        moneda: f.fac_moneda==='U' ? 'DOL' : 'PES',
-        monCotiz: 1,
-        ivas: esC ? [] : ivas
-      }
-    };
-    const resp = await fetch(`${SB_URL}/functions/v1/afip-facturar`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + (await getAuthToken()) },
-      body: JSON.stringify(payload)
-    });
-    const data = await resp.json();
-    if (!resp.ok || !data.cae) { console.error('AFIP respuesta completa:', data); throw new Error(data.errores || data.error || ('AFIP respondió: ' + JSON.stringify(data))); }
-    await apiPost('/facturas/cae', { fac_nro: facNro, cae: data.cae, caeVto: data.caeVto });
+    const data = await apiPost('/facturas/autorizar', { fac_nro: facNro });
+    if (!data.ok || !data.cae) throw new Error(data.error || 'AFIP no devolvió CAE');
     const idx = FACS.findIndex(x=>x.fac_nro===facNro);
     if (idx>=0) {
       FACS[idx].fac_cae     = data.cae;
@@ -863,7 +812,6 @@ async function facAutorizarAfip(facNro) {
   }
 }
 
-// IMPRESIÓN DE FACTURA CON QR AFIP
 // ── Eliminar comprobante ──────────────────────────────────
 // Borra el registro y sus ítems, y LIBERA EL NÚMERO. Por eso sólo se permite
 // dentro del mes de la factura: fuera de ese plazo dejaría un hueco o un
