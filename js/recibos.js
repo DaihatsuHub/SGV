@@ -298,10 +298,14 @@ async function _reciOpenEditor(){
       return { fac_nro:it.comprobante, fac_fec:it.fecha, fac_moneda:it.moneda,
         simbolo:reciMonInfo(it.moneda,_reciHdr).simbolo, saldo_orig:it.saldo_orig||0,
         cotizacion:it.cotizacion||1, saldo:it.saldo||0, abona:it.abona||0, abona_orig:it.abona_orig||0,
-        // Parte CONTABLE que este recibo aplicó, para verla al abrirlo
+        // Parte CONTABLE que este recibo aplicó. El saldo de la factura ya
+        // tiene descontado lo aplicado, así que se le vuelve a sumar para
+        // mostrar el saldo que había ANTES de este recibo.
         saldo_afip: round2(Number(f?.fac_saldo_afip)||0) + round2(Number(it.abona_afip)||0),
         abona_afip: round2(Number(it.abona_afip)||0),
-        _afipManual: true };      // ya está aplicado: no recalcular
+        // En MODIFICAR se comporta igual que en el alta: si se cambia el real,
+        // el contable lo sigue. En sólo lectura da lo mismo, no se edita.
+        _afipManual: false };
     });
     _reciACuenta=items.filter(esAC).map(it=>({ moneda:it.moneda||'', cotizacion:it.cotizacion||1,
       importe:it.abona_orig||0, abona:it.abona||0, simbolo:reciMonInfo(it.moneda,_reciHdr).simbolo }));
@@ -732,9 +736,19 @@ async function saveReci(){
   if(Math.abs(reciTotInstrumentos()-totAplicado)>0.01){ toast('Los instrumentos no coinciden con lo abonado','err'); return; }
   // Un recibo FISCAL tiene que aplicar algo contablemente: su razón de ser es
   // cancelar la parte declarada. Los "X" no, porque cobran los no contables.
-  if(!_reciEsX() && reciTotAbonadoAfip()<=0.005){
-    toast('Este recibo no aplica nada contablemente. Cargá el importe en "Abona cont." o usá un talonario "X".','err');
-    return;
+  if(!_reciEsX()){
+    const totAfip=reciTotAbonadoAfip();
+    if(totAfip<=0.005){
+      toast('Este recibo no aplica nada contablemente. Cargá el importe en "Abona cont." o usá un talonario "X".','err');
+      return;
+    }
+    // Las RETENCIONES son el MÍNIMO que hay que aplicar al contable: el cliente
+    // las deposita a AFIP a tu nombre, así que cancelan deuda fiscal sí o sí.
+    const totRet=round2((_reciRetenc||[]).reduce((s2,r)=>s2+(Number(r.importe)||0),0));
+    if(totRet>0.005 && totAfip < totRet-0.011){
+      toast(`Lo aplicado contablemente ($ ${reciFmt(totAfip)}) no puede ser menor que las retenciones ($ ${reciFmt(totRet)}).`,'err');
+      return;
+    }
   }
   const efe=reciParseNum(document.getElementById('rf-efectivo')?.value||'0');
   const aju=reciParseNum(document.getElementById('rf-ajuste')?.value||'0');
