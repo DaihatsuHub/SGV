@@ -430,10 +430,20 @@ function filtFacs() {
     const mf=!facFechaBusq||(f.fac_fec||'').includes(facFechaBusq);
     return me&&mf;
   });
+  // `_razon` no es una columna: se resuelve contra el maestro de clientes.
+  // Al ordenar por razón social, dentro de cada cliente van de la MÁS RECIENTE
+  // a la más vieja, que es lo que se quiere ver al buscar un cliente.
+  const valor=(f,col)=>{
+    if(col==='_razon'){ const c=facFindCli(f.fac_cli); return (c?.CLI_RAZON||f.fac_cli||'').toLowerCase(); }
+    return f[col]||'';
+  };
   return list.slice().sort((a,b)=>{
-    const va=a[facSort.col]||'', vb=b[facSort.col]||'';
-    const r=String(va).localeCompare(String(vb));
+    const r=String(valor(a,facSort.col)).localeCompare(String(valor(b,facSort.col)));
     if(r!==0) return facSort.asc?r:-r;
+    if(facSort.col==='_razon'){
+      const rf=(b.fac_fec||'').localeCompare(a.fac_fec||'');   // más reciente primero
+      if(rf!==0) return rf;
+    }
     return (a.fac_nro||'').localeCompare(b.fac_nro||'');
   });
 }
@@ -484,10 +494,16 @@ function buscarFac() {
     if(idx>=0){facSelIdx=idx;document.getElementById('fac-q').value='';renderFac();document.getElementById('fac-body')?.querySelector(`[data-idx="${idx}"]`)?.scrollIntoView({block:'center'});}
     return;
   }
-  facSort={col:'fac_cli',asc:true};
-  const lc=FACS.filter(f=>{const emp=document.getElementById('fac-empresa')?.value||'';return!emp||(f.fac_nro||'').startsWith(emp);})
+  // Búsqueda por RAZÓN SOCIAL: la grilla se ordena por razón social + fecha, y
+  // queda seleccionada la factura MÁS RECIENTE de ese cliente (antes ordenaba
+  // por código de cliente y saltaba a la más vieja).
+  facSort={col:'_razon',asc:true};
+  const emp=document.getElementById('fac-empresa')?.value||'';
+  const lc=FACS.filter(f=>(!emp||(f.fac_nro||'').startsWith(emp)))
     .map(f=>{const cli=facFindCli(f.fac_cli);return{...f,_r:(cli?.CLI_RAZON||f.fac_cli||'').toLowerCase()};})
-    .filter(f=>f._r.includes(q)).sort((a,b)=>a._r.localeCompare(b._r));
+    .filter(f=>f._r.includes(q))
+    .sort((a,b)=>(b.fac_fec||'').localeCompare(a.fac_fec||'')      // más reciente primero
+               ||(b.fac_nro||'').localeCompare(a.fac_nro||''));
   if(lc.length>0){
     const list=filtFacs();
     const idx=list.findIndex(f=>f.fac_nro===lc[0].fac_nro);
@@ -540,9 +556,14 @@ function renderFac() {
     const _dto=Number(f.fac_monpor)||0;
     // Con descuento se marca el NÚMERO en naranja, no la fila entera
     const _dtoSty='';
-    const _dtoCol=(_dto!==0&&!f.fac_anul)?'var(--wrn,#f59e0b)':contColor;
-    const _dtoTag=(_dto!==0&&!f.fac_anul)
-      ?`<span title="Subfacturada al ${100-_dto}%" style="font-size:10px;background:#3b2a5c;color:#c4b5fd;padding:1px 4px;border-radius:3px;margin-left:3px;font-family:var(--mono)">${100-_dto}%</span>`
+    const _dtoCol=(_dto>0&&_dto<100&&!f.fac_anul)?'var(--wrn,#f59e0b)':contColor;
+    // La etiqueta va en su PROPIA columna, de ancho fijo: si se pega al número
+    // corre el nombre del cliente y las filas dejan de estar encolumnadas.
+    // Sólo se muestra entre 1 y 99: los valores fuera de rango son comprobantes
+    // viejos donde `fac_monpor` guardaba la COTIZACIÓN, no un porcentaje.
+    const _dtoValido = _dto>0 && _dto<100 && !f.fac_anul;
+    const _dtoTag=_dtoValido
+      ?`<span title="Subfacturada al ${100-_dto}%" style="font-size:10px;background:#3b2a5c;color:#c4b5fd;padding:1px 4px;border-radius:3px;font-family:var(--mono)">${100-_dto}%</span>`
       :'';
     // Marcas al final de la fila: P = pendiente de entrega (solo facturas), $ = con saldo
     const _esF=(f.fac_nro||'').trim().slice(-1).toUpperCase()==='F';
@@ -553,11 +574,14 @@ function renderFac() {
       `<span title="${_debe?'Con saldo pendiente':''}" style="color:var(--red);font-weight:700">${_debe?'$':''}</span>`;
     // La razón social se corta a 20 caracteres: la grilla nunca se estira
     const nomCorto = nomCli.length>20 ? nomCli.substring(0,20).trim()+'…' : nomCli;
-    return `<div class="tr-fac ${sel}" data-idx="${i}" onclick="selFac(${i})" style="${_dtoSty}${_anulSty};display:flex;flex-wrap:nowrap;align-items:center;gap:8px;overflow:hidden">
-      <span style="font-size:12px;color:var(--t2);flex:0 0 auto;white-space:nowrap">${fec}</span>
-      <span class="col-cod" style="font-family:var(--mono);color:${_dtoCol};flex:0 0 auto;white-space:nowrap">${esc(f.fac_nro||'')}${badge}${_dtoTag}</span>
-      <span title="${esc(nomCli)}" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto;min-width:0">${esc(nomCorto)}</span>
-      <span style="flex:0 0 22px;width:22px;text-align:right;font-size:13px;font-family:var(--mono);white-space:nowrap">${marcas}</span>
+    // Grilla de columnas FIJAS (antes era flex y el nombre arrancaba en una
+    // posición distinta en cada fila, según el largo del número y la etiqueta).
+    return `<div class="tr-fac ${sel}" data-idx="${i}" onclick="selFac(${i})" style="${_dtoSty}${_anulSty};display:grid;grid-template-columns:78px 122px 46px 1fr 22px;gap:8px;align-items:center;overflow:hidden">
+      <span style="font-size:12px;color:var(--t2);white-space:nowrap">${fec}</span>
+      <span class="col-cod" style="font-family:var(--mono);color:${_dtoCol};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(f.fac_nro||'')}${badge}</span>
+      <span style="white-space:nowrap">${_dtoTag}</span>
+      <span title="${esc(nomCli)}" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">${esc(nomCorto)}</span>
+      <span style="text-align:right;font-size:13px;font-family:var(--mono);white-space:nowrap">${marcas}</span>
     </div>`;
   }).join('');
   body.querySelector('.tr-fac.sel')?.scrollIntoView({block:'nearest'});
