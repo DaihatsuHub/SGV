@@ -14,6 +14,7 @@ let _ccSoloSaldo = false;   // vista "solo comprobantes con saldo"
 //   ON  → los que bajan DEPÓSITO, importes contables en pesos
 // Los recibos y A/Cuenta se muestran en las dos vistas.
 let _ccContable  = false;
+let _ccEmpresa   = '';     // '' = las dos juntas, 'H' Hatsu, 'T' Tressa
 
 function ctacteToggleContable(){
   _ccContable = !_ccContable;
@@ -28,7 +29,24 @@ let _ccVerAplic  = false;   // expandir créditos mostrando contra qué débito 
 
 // El botón Contable se agrega desde acá (no en el HTML) para no depender de
 // un cambio en index.html. Se pone al lado de "Ver aplicaciones".
+// Selector de empresa: Hatsu, Tressa o las dos juntas. Se agrega desde acá
+// para no depender de un cambio en index.html.
+function _ccSelEmpresa(){
+  const ref=document.getElementById('btn-cc-aplic');
+  const bar=ref ? ref.parentElement : document.querySelector('#page-ctacte .toolbar');
+  if(!bar || document.getElementById('cc-empresa')) return;
+  const s=document.createElement('select');
+  s.id='cc-empresa'; s.className='fsel';
+  s.style.minWidth='150px';
+  s.innerHTML='<option value="">Ambas empresas</option>'
+            + '<option value="H">Hatsu</option>'
+            + '<option value="T">Tressa</option>';
+  s.onchange=function(){ _ccEmpresa=this.value; if(_ccData) ctacteConsultar(); };
+  if(ref) bar.insertBefore(s, ref); else bar.appendChild(s);
+}
+
 function _ccBtnContable(){
+  _ccSelEmpresa();
   const ref=document.getElementById('btn-cc-aplic');
   const bar=ref ? ref.parentElement : document.querySelector('#page-ctacte .toolbar');
   if(!bar || document.getElementById('btn-cc-contable')) return;
@@ -120,6 +138,7 @@ async function ctacteConsultar(){
   try{
     const qs=[]; if(desde) qs.push('desde='+desde); if(hasta) qs.push('hasta='+hasta);
     if(_ccContable) qs.push('contable=1');
+    if(_ccEmpresa)  qs.push('empresa='+_ccEmpresa);
     const r=await apiGet('/ctacte/'+encodeURIComponent(cli)+(qs.length?'?'+qs.join('&'):''));
     _ccData={ ...r, _cli:cli };
     renderCtaCte();
@@ -278,7 +297,9 @@ function ctactePrint(){
   }
   sgvPrint({
     titulo:`Cuenta Corriente — ${_ccEsc(cli)} ${_ccEsc(nom)}`,
-    subtitulo:per+(_ccContable?' — vista contable (importes declarados, en pesos)':''),
+    subtitulo:per
+      +(_ccEmpresa?' — '+(_ccEmpresa==='H'?'Hatsu':'Tressa'):'')
+      +(_ccContable?' — vista contable (importes declarados, en pesos)':''),
     cuerpo:cuerpo
   });
 }
