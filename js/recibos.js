@@ -416,7 +416,9 @@ function reciLoadDeudores(){
         const saldoOrig=round2(f.fac_saldo||0);
         _reciDeud.push({ fac_nro:f.fac_nro, fac_fec:f.fac_fec, fac_moneda:f.fac_moneda,
           simbolo:info.simbolo, saldo_orig:saldoOrig, cotizacion:info.cotiz,
-          saldo:round2(saldoOrig*info.cotiz), abona:0, abona_orig:0 });
+          saldo:round2(saldoOrig*info.cotiz), abona:0, abona_orig:0,
+          // Saldo CONTABLE de la factura (sólo lo tienen las subfacturadas)
+          saldo_afip:round2(f.fac_saldo_afip||0), abona_afip:0 });
       }
     });
   }
@@ -431,7 +433,16 @@ function renderReciDeud(){
     const cotizCell = esPeso
       ? `<span style="text-align:right;color:var(--t3)">1,00</span>`
       : `<input type="text" value="${reciFmt(d.cotizacion)}" onclick="event.stopPropagation()" onchange="reciCotizInput(${i},this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px">`;
-    return `<div onclick="reciAplicarFila(${i})" title="Clic para aplicar: ofrece el saldo del comprobante o lo que falta del saldo a aplicar" style="display:grid;grid-template-columns:92px 64px 100px 92px 78px 104px 100px;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--b1);font-size:12px;font-family:var(--mono);cursor:pointer">
+    // Parte CONTABLE: el saldo es informativo; lo que se abona se propone por
+    // proporción pero se puede cambiar (queda marcado con `_afipManual` para
+    // que el server respete el valor en vez de recalcularlo).
+    const sAfip = Number(d.saldo_afip) || 0;
+    const aAfip = (d.abona_afip === undefined || d.abona_afip === null)
+      ? reciAbonaAfipAuto(d) : d.abona_afip;
+    const cellAfip = sAfip > 0
+      ? `<input type="text" value="${reciFmt(aAfip)}" onclick="event.stopPropagation()" onchange="reciAbonaAfipInput(${i},this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px;background:var(--s3)">`
+      : `<span style="text-align:right;color:var(--t3)">—</span>`;
+    return `<div onclick="reciAplicarFila(${i})" title="Clic para aplicar: ofrece el saldo del comprobante o lo que falta del saldo a aplicar" style="display:grid;grid-template-columns:92px 60px 92px 84px 70px 96px 92px 96px 92px;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--b1);font-size:12px;font-family:var(--mono);cursor:pointer">
       <span style="color:var(--acc)">${esc(d.fac_nro)}</span>
       <span style="color:var(--t2)">${fec}</span>
       <span style="text-align:right">${esc(d.simbolo)} ${reciFmt(d.saldo_orig)}</span>
@@ -439,11 +450,42 @@ function renderReciDeud(){
       ${cotizCell}
       <span style="text-align:right">$ ${reciFmt(d.saldo)}</span>
       <input type="text" value="${reciFmt(d.abona)}" onclick="event.stopPropagation()" onchange="reciAbonaInput(${i},this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px;background:var(--s3)">
+      <span style="text-align:right;color:${sAfip>0?'var(--t2)':'var(--t3)'}">${sAfip>0?'$ '+reciFmt(sAfip):'—'}</span>
+      ${cellAfip}
     </div>`;
   }).join('');
   const ts=document.getElementById('rf-tot-saldo'); if(ts) ts.textContent='$ '+reciFmt(_reciDeud.reduce((s,d)=>s+(d.saldo||0),0));
   const ta=document.getElementById('rf-tot-abona'); if(ta) ta.textContent='$ '+reciFmt(reciTotAbonado());
+  const tsa=document.getElementById('rf-tot-saldo-afip');
+  if(tsa) tsa.textContent='$ '+reciFmt(_reciDeud.reduce((s,d)=>s+(Number(d.saldo_afip)||0),0));
+  const taa=document.getElementById('rf-tot-abona-afip');
+  if(taa) taa.textContent='$ '+reciFmt(reciTotAbonadoAfip());
 }
+// Cuánto del saldo CONTABLE cancelaría este abono, por proporción. Es la
+// propuesta automática: el usuario puede cambiarla.
+function reciAbonaAfipAuto(d){
+  const sAfip=Number(d.saldo_afip)||0;
+  const sOrig=Number(d.saldo_orig)||0;
+  if(sAfip<=0 || sOrig<=0) return 0;
+  return round2(sAfip * ((Number(d.abona_orig)||0) / sOrig));
+}
+// Si el usuario lo cambia a mano queda fijo: el server respeta el valor.
+function reciAbonaAfipInput(i,val){
+  const d=_reciDeud[i]; if(!d) return;
+  let a=reciParseNum(val); if(a<0) a=0;
+  const tope=Number(d.saldo_afip)||0;
+  if(a>tope) a=tope;
+  d.abona_afip=round2(a);
+  d._afipManual=true;
+  renderReciDeud(); reciReconcile();
+}
+function reciTotAbonadoAfip(){
+  return round2(_reciDeud.reduce((s,d)=>{
+    const v=(d.abona_afip===undefined||d.abona_afip===null)?reciAbonaAfipAuto(d):d.abona_afip;
+    return s+(Number(v)||0);
+  },0));
+}
+
 function reciAbonaInput(i,val){
   const d=_reciDeud[i]; if(!d) return;
   let a=reciParseNum(val); if(a<0)a=0;
@@ -452,6 +494,8 @@ function reciAbonaInput(i,val){
   const tope=Math.min(d.saldo, disponible);
   if(a>tope) a=tope;
   d.abona=round2(a); d.abona_orig=d.cotizacion>0?round2(d.abona/d.cotizacion):0;
+  // El contable sigue al real, salvo que se haya cargado a mano
+  if(!d._afipManual) d.abona_afip=reciAbonaAfipAuto(d);
   renderReciDeud(); reciReconcile();
 }
 // Al clickear el comprobante: ofrecer el menor entre saldo y lo que falta de instrumentos
@@ -627,7 +671,9 @@ async function saveReci(){
           cliente:hdr.cliente, cotCasio:hdr.cotCasio||0, cotTressa:hdr.cotTressa||0 },
     items:items.map(d=>({ fac_nro:d.fac_nro, fac_fec:d.fac_fec||null, fac_moneda:d.fac_moneda||null,
           saldo_orig:round2(d.saldo_orig), cotizacion:Math.max(1,d.cotizacion),
-          saldo:round2(d.saldo), abona:round2(d.abona), abona_orig:round2(d.abona_orig) })),
+          saldo:round2(d.saldo), abona:round2(d.abona), abona_orig:round2(d.abona_orig),
+          // Sólo se manda si se cargó a mano: si no, lo calcula el server
+          abona_afip:d._afipManual?round2(d.abona_afip||0):null })),
     aCuenta:aCta.map(a=>({ moneda:a.moneda||null, cotizacion:Math.max(1,a.cotizacion),
           importe:round2(a.importe), abona:round2(a.abona) })),
     pagos:{ efectivo:round2(efe), ajuste:round2(aju),
