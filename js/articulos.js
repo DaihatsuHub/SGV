@@ -127,7 +127,9 @@ function artRowHtml(a, cols, gridTpl){
       if(c.field==='ART_DES')   return `<span class="col-des">${esc(a.ART_DES)}</span>`;
       if(c.field==='ART_RUB')   return `<span style="font-family:var(--mono);font-size:12px;color:var(--t2)">${esc(a.ART_RUB||'')}</span>`;
       if(c.field==='ART_SRUB')  return `<span style="font-family:var(--mono);font-size:12px;color:var(--t3)">${esc(a.ART_SRUB||'')}</span>`;
-      if(c.field==='ART_PRE')   { const mone=(TABLAS['MONE']||[]).find(m=>m.CODIGO===a.ART_MONEDA); const signo=mone?mone.STRING1:'$'; const iva=a.ART_IVA!==undefined&&a.ART_IVA!==null?` <span style="font-size:10px;color:var(--t3);font-family:var(--mono)">${a.ART_IVA}%</span>`:''; return `<span class="col-num" style="color:var(--grn)">${signo} ${fmt(a.ART_PRE)}${iva}</span>`; }
+      // Sólo el precio con el signo de su moneda. El % de IVA NO va en la
+      // grilla: partía la celda en varias líneas y no aporta al listado.
+      if(c.field==='ART_PRE')   { const mone=(TABLAS['MONE']||[]).find(m=>m.CODIGO===a.ART_MONEDA); const signo=mone?mone.STRING1:'$'; return `<span class="col-num" style="color:var(--grn);white-space:nowrap">${signo} ${fmt(a.ART_PRE)}</span>`; }
       if(c.field==='ART_STK')   return `<span class="col-num" style="${STK_BG}">${sH===0?'—':sH}</span>`;
       if(c.field==='ART_STKT')  return `<span class="col-num" style="${STK_BG}">${sT===0?'—':sT}</span>`;
       if(c.field==='ART_DEPH')  return `<span class="col-num" style="${DEP_BG};border-left:3px solid rgba(74,127,193,0.5)">${sDH===0?'—':sDH}</span>`;
