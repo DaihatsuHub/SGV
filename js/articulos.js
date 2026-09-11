@@ -308,6 +308,7 @@ function fillArtSelects(selMarc, selRub, selSrub, selProv, selMone='P', selCcos=
 function clrArtForm(){
   ['af-cod','af-des','af-grup','af-sex','af-estu','af-codcasio'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
   ['af-pre','af-stk','af-stkt','af-deph','af-dept'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=0; });
+  artMascaraPrecio();
   const ivaEl=document.getElementById('af-iva'); if(ivaEl) ivaEl.value='21';
   const ivaInp=document.getElementById('af-iva-otro'); if(ivaInp){ ivaInp.value=''; ivaInp.style.display='none'; }
   const act = document.getElementById('af-act'); if(act) act.value='S';
@@ -319,6 +320,7 @@ function fillArtForm(a){
   document.getElementById('af-cod').value     = a.ART_COD||'';
   document.getElementById('af-des').value     = a.ART_DES||'';
   document.getElementById('af-pre').value     = a.ART_PRE||0;
+  artMascaraPrecio();
   document.getElementById('af-stk').value     = a.ART_STK||0;
   document.getElementById('af-stkt').value    = a.ART_STKT||0;
   document.getElementById('af-deph').value    = a.ART_DEPH||0;
@@ -354,7 +356,7 @@ async function saveArt(){
     ART_SRUB:  document.getElementById('af-srub')?.value||null,
     ART_MARCA: document.getElementById('af-marc').value,
     ART_CCOS:  document.getElementById('af-ccos')?.value||null,
-    ART_PRE:   parseFloat(document.getElementById('af-pre').value)||0,
+    ART_PRE:   artPrecioNum(document.getElementById('af-pre').value),
     ART_STK:   parseInt(document.getElementById('af-stk').value)||0,
     ART_STKT:  parseInt(document.getElementById('af-stkt').value)||0,
     ART_DEPH:  parseInt(document.getElementById('af-deph').value)||0,
@@ -456,4 +458,71 @@ function exportArt() {
     a.ART_ESTU||'', a.ART_ACT||'S', a.ART_GRUP||'', a.CODCASIO||''
   ]);
   exportToXls('Articulos', headers, rows);
+}
+
+
+// ── MÁSCARA DEL PRECIO ────────────────────────────────────
+// El campo muestra el signo de la moneda y separador de miles. Al entrar se
+// deja el número pelado para poder editarlo sin pelear con los puntos, y al
+// salir se vuelve a formatear.
+
+// Texto con formato → número. OJO: `parseFloat` NO sirve acá, con
+// "1.049.900,00" devuelve 1.
+function artPrecioNum(v){
+  const t = String(v==null?'':v).replace(/[^0-9,.-]/g,'').replace(/\./g,'').replace(',','.');
+  const n = Number(t);
+  return isNaN(n) ? 0 : n;
+}
+function artPrecioFmt(v){
+  if(v==='' || v==null) return '';
+  const n = artPrecioNum(v);
+  return n.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+// Signo de la moneda elegida en el formulario
+function artPrecioSimbolo(){
+  const cod = document.getElementById('af-moneda')?.value || 'P';
+  const m = ((typeof TABLAS!=='undefined' && TABLAS['MONE'])||[]).find(x=>x.CODIGO===cod);
+  return m ? (m.STRING1||'$') : '$';
+}
+
+function artMascaraPrecio(){
+  const inp = document.getElementById('af-pre');
+  if(!inp) return;
+  // El campo pasa a texto para poder mostrar los puntos; el guardado lo limpia
+  // con artPrecioNum().
+  inp.type = 'text';
+  inp.style.fontFamily = 'var(--mono)';
+  inp.style.textAlign  = 'right';
+
+  const box = inp.parentElement;
+  if(box && getComputedStyle(box).position === 'static') box.style.position = 'relative';
+
+  let sim = document.getElementById('af-pre-sim');
+  if(!sim && box){
+    sim = document.createElement('span');
+    sim.id = 'af-pre-sim';
+    sim.style.cssText = 'position:absolute;left:10px;top:50%;transform:translateY(-50%);'
+                      + 'color:var(--t3);font-family:var(--mono);pointer-events:none;font-size:13px';
+    box.appendChild(sim);
+  }
+  const refrescarSigno = ()=>{
+    if(!sim) return;
+    sim.textContent = artPrecioSimbolo();
+    inp.style.paddingLeft = (14 + sim.offsetWidth) + 'px';
+  };
+  refrescarSigno();
+
+  if(!inp._mascara){
+    inp._mascara = true;
+    inp.addEventListener('focus', function(){
+      this.value = artPrecioNum(this.value) || '';
+      this.select();
+    });
+    inp.addEventListener('blur', function(){
+      if(this.value !== '') this.value = artPrecioFmt(this.value);
+    });
+    const mon = document.getElementById('af-moneda');
+    if(mon) mon.addEventListener('change', refrescarSigno);
+  }
+  if(inp.value !== '') inp.value = artPrecioFmt(inp.value);
 }
