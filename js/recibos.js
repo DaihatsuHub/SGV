@@ -411,7 +411,11 @@ function reciLoadDeudores(){
       const tipo=(f.fac_nro||'').trim().slice(-1);
       const esDeudor=['F','D','R'].includes(tipo);
       const mismaEmp=(f.fac_empresa? f.fac_empresa===emp : (f.fac_nro||'').startsWith(emp));
-      if((f.fac_cli||'').trim()===cod.trim() && mismaEmp && esDeudor && (f.fac_saldo||0)>0){
+      // RECIBO "X" (talonario con X): sólo cobra los comprobantes que BAJAN
+      // STOCK y NO depósito — o sea los NO fiscales. Los contables se cobran
+      // con los otros talonarios.
+      const okTipo = !_reciEsX() || (!!f.fac_tab_stk && !f.fac_tab_fact);
+      if((f.fac_cli||'').trim()===cod.trim() && mismaEmp && esDeudor && okTipo && (f.fac_saldo||0)>0){
         const info=reciMonInfo(f.fac_moneda,_reciHdr);
         const saldoOrig=round2(f.fac_saldo||0);
         _reciDeud.push({ fac_nro:f.fac_nro, fac_fec:f.fac_fec, fac_moneda:f.fac_moneda,
@@ -461,6 +465,12 @@ function renderReciDeud(){
   const taa=document.getElementById('rf-tot-abona-afip');
   if(taa) taa.textContent='$ '+reciFmt(reciTotAbonadoAfip());
 }
+// ¿El talonario del recibo es de tipo "X"? Esos sólo cobran comprobantes no
+// fiscales (bajan stock, no depósito).
+function _reciEsX(){
+  return (_reciHdr?.talonario||'').toUpperCase().includes('X');
+}
+
 // Cuánto del saldo CONTABLE cancelaría este abono, por proporción. Es la
 // propuesta automática: el usuario puede cambiarla.
 function reciAbonaAfipAuto(d){
@@ -505,6 +515,9 @@ function reciAplicarFila(i){
   const disponible=Math.max(0, round2(reciTotInstrumentos() - (reciTotAplicado() - (d.abona||0))));
   d.abona=round2(Math.min(d.saldo, disponible));
   d.abona_orig=d.cotizacion>0?round2(d.abona/d.cotizacion):0;
+  // Al aplicar, el contable se propone por proporción junto con el real
+  d.abona_afip=reciAbonaAfipAuto(d);
+  d._afipManual=false;
   renderReciDeud(); reciReconcile();
 }
 function reciCotizInput(i,val){
@@ -512,6 +525,7 @@ function reciCotizInput(i,val){
   let c=reciParseNum(val); if(c<1)c=1; d.cotizacion=c;
   d.saldo=round2(d.saldo_orig*c); if(d.abona>d.saldo)d.abona=d.saldo;
   d.abona_orig=round2(d.abona/c);
+  if(!d._afipManual) d.abona_afip=reciAbonaAfipAuto(d);
   renderReciDeud(); reciReconcile();
 }
 
