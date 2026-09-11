@@ -65,10 +65,59 @@ function _bkAskFormato(){
   });
 }
 
+// Arma el .sql del esquema: las funciones de Postgres y las columnas de cada
+// tabla. Sin `fac_mover_stock` la facturación no valida el stock, así que tiene
+// que viajar con el respaldo.
+// NO reemplaza al backup de Supabase (Dashboard → Database → Backups), que trae
+// índices, claves y permisos. Sirve para reconstruir lo esencial sin depender
+// de la cuenta.
+function _bkEsquemaSQL(esq){
+  if(!esq) return null;
+  let out = '-- SGV — esquema de la base\n'
+          + '-- Generado: ' + (esq.generado || new Date().toISOString()) + '\n'
+          + '-- Este archivo NO reemplaza al backup de Supabase: no incluye\n'
+          + '-- índices, claves foráneas ni permisos.\n\n';
+
+  out += '-- ══════════════════════════════════════════════════════\n'
+       + '-- FUNCIONES  (ejecutar en el SQL Editor para restaurarlas)\n'
+       + '-- ══════════════════════════════════════════════════════\n\n';
+  for(const f of (esq.funciones || [])){
+    out += '-- ' + f.nombre + '\n' + f.codigo + ';\n\n';
+  }
+  if(!(esq.funciones || []).length) out += '-- (sin funciones)\n\n';
+
+  out += '\n-- ══════════════════════════════════════════════════════\n'
+       + '-- TABLAS Y COLUMNAS  (referencia — no son CREATE TABLE)\n'
+       + '-- ══════════════════════════════════════════════════════\n\n';
+  for(const t of (esq.tablas || [])){
+    out += '-- ── ' + t.tabla + ' ──\n';
+    for(const c of (t.columnas || [])){
+      out += '--   ' + (c.nombre||'').padEnd(24) + ' ' + (c.tipo||'')
+           + (c.nulo === 'NO' ? '  NOT NULL' : '')
+           + (c.default ? '  DEFAULT ' + c.default : '') + '\n';
+    }
+    out += '\n';
+  }
+  return out;
+}
+
 // Genera y descarga el ZIP de JSON
-async function _bkZipJson(JSZip, data, tablas, fecha){
+async function _bkZipJson(JSZip, data, tablas, fecha, esquema){
   const z = new JSZip();
   for(const t of tablas) z.file(t + '.json', JSON.stringify(data[t] || [], null, 1));
+  const sql = _bkEsquemaSQL(esquema);
+  if(sql){
+    z.file('_esquema.sql', sql);
+    z.file('_esquema.json', JSON.stringify(esquema, null, 1));
+  }
+  z.file('_LEEME.txt',
+    'BACKUP DE SGV — ' + fecha + '\n\n'
+  + 'Contiene los DATOS de todas las tablas (un archivo por tabla) y, si está\n'
+  + 'disponible, el esquema en _esquema.sql con las funciones de Postgres.\n\n'
+  + 'IMPORTANTE: este respaldo NO incluye índices, claves foráneas ni permisos.\n'
+  + 'Para reconstruir la base desde cero hace falta el backup de Supabase\n'
+  + '(Dashboard → Database → Backups), que conviene bajar cada tanto y guardar\n'
+  + 'fuera de la nube.\n');
   const blob = await z.generateAsync({ type:'blob', compression:'DEFLATE' });
   _bkDownload(blob, 'SGV_backup_JSON_' + fecha + '.zip');
 }
@@ -92,11 +141,12 @@ async function hacerBackup(){
 
   // 3) Traer los datos
   if(typeof toast==='function') toast('⏳ Generando backup…');
-  let data;
+  let data, esquema = null;
   try{
     const r = await apiGet('/backup/data');
     if(!r || !r.ok || !r.tables) throw new Error('respuesta inválida');
     data = r.tables;
+    esquema = r.esquema || null;
   }catch(e){
     console.error('backup:', e);
     if(typeof toast==='function') toast('Error al traer los datos del backup','err');
@@ -108,7 +158,7 @@ async function hacerBackup(){
 
   // 4) Generar solo el/los ZIP elegidos
   if(fmt==='json' || fmt==='both'){
-    try{ await _bkZipJson(JSZip, data, tablas, fecha); }
+    try{ await _bkZipJson(JSZip, data, tablas, fecha, esquema); }
     catch(e){ console.error('zip json:', e); if(typeof toast==='function') toast('Error armando el ZIP JSON','err'); }
   }
   if(fmt==='both') await new Promise(res=>setTimeout(res, 600));   // pausa entre 2 descargas
@@ -117,5 +167,7 @@ async function hacerBackup(){
     catch(e){ console.error('zip csv:', e); if(typeof toast==='function') toast('Error armando el ZIP CSV','err'); }
   }
 
-  if(typeof toast==='function') toast('✅ Backup descargado (' + tablas.length + ' tablas)');
+  const conEsq = esquema && (esquema.funciones||[]).length;
+  if(typeof toast==='function') toast('✅ Backup descargado (' + tablas.length + ' tablas'
+    + (conEsq ? ' + esquema' : '') + ')');
 }
