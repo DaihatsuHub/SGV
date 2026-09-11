@@ -67,7 +67,7 @@ function reteBaja() {
   const r = getReteRows()[reteSelIdx];
   confirm2(`¿Dar de baja "${r.codigo}"?`, `"${r.descripcion||''}" será eliminada.`, async () => {
     try {
-      await sbDelete('retenciones', { codigo: r.codigo });
+      await apiPost('/retenciones/borrar', { codigo: r.codigo });
       const idx = RETES.findIndex(x => x.codigo===r.codigo);
       if (idx>=0) RETES.splice(idx,1);
       reteSelIdx = null; renderRete(); toast('Retención eliminada','scs');
@@ -81,7 +81,7 @@ async function saveRete() {
   if (window._rte==='A' && RETES.find(r => r.codigo===cod)) { toast('Ese código ya existe','err'); return; }
   const data = { codigo: cod, descripcion: desc };
   try {
-    await sbUpsertOnConflict('retenciones', data, 'codigo');
+    await apiPost('/retenciones/guardar', data);
     const idx = RETES.findIndex(r => r.codigo===cod);
     if (idx>=0) RETES[idx] = data; else RETES.push(data);
     closeOv('ov-rete'); reteSelIdx = null; renderRete();

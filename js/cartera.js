@@ -228,7 +228,7 @@ async function saveCheq(){
   const fsal=document.getElementById('cf-fsalida').value||null;
   const obs=document.getElementById('cf-obs').value.trim()||null;
   try{
-    await sbUpsert('cheques',{ id:_cheqOrig.id, estado, fecha_salida:fsal, observaciones:obs });
+    await apiPost('/cheques/estado',{ id:_cheqOrig.id, estado, fecha_salida:fsal, observaciones:obs });
     _cheqOrig.estado=estado; _cheqOrig.fecha_salida=fsal; _cheqOrig.observaciones=obs;
     closeOv('ov-cart'); renderCart(); toast('Cheque actualizado','scs');
   }catch(e){ console.error('saveCheq:', e); toast('Error al guardar','err'); }
@@ -254,7 +254,7 @@ async function saveCheqBulk(){
   const obs=document.getElementById('cb-obs').value.trim()||null;
   try{
     for(const id of ids){
-      await sbUpsert('cheques',{ id, estado, fecha_salida:fsal, observaciones:obs });
+      await apiPost('/cheques/estado',{ id, estado, fecha_salida:fsal, observaciones:obs });
       const c=CHEQUES.find(x=>x.id===id);
       if(c){ c.estado=estado; c.fecha_salida=fsal; c.observaciones=obs; }
     }

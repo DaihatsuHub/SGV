@@ -22,14 +22,11 @@ function taloNextNumero(emp, tipo) {
   const t = taloFind(emp, tipo);
   return t ? (Number(t.ultimo_nro) || 0) + 1 : 1;
 }
-async function taloSetUltimo(emp, tipo, nro) {
+// El último número lo mueve EL SERVER al grabar el recibo. Acá sólo se
+// refresca la copia en memoria para que la pantalla muestre el próximo.
+function taloSetUltimo(emp, tipo, nro) {
   const t = taloFind(emp, tipo);
-  if (!t) return;
-  t.ultimo_nro = nro;
-  try {
-    await sbUpsertOnConflict('talonarios',
-      { empresa: emp, tipo, descripcion: t.descripcion || null, ultimo_nro: nro }, 'empresa,tipo');
-  } catch(e) { console.error('taloSetUltimo:', e); }
+  if (t) t.ultimo_nro = nro;
 }
 
 // ── Listado ────────────────────────────────────────────────
@@ -93,7 +90,7 @@ function taloBaja() {
   const t = getTaloRows()[taloSelIdx];
   confirm2(`¿Dar de baja el talonario ${t.empresa}/${t.tipo}?`, `"${t.descripcion||''}" será eliminado.`, async () => {
     try {
-      await sbDelete('talonarios', { empresa: t.empresa, tipo: t.tipo });
+      await apiPost('/talonarios/borrar', { empresa: t.empresa, tipo: t.tipo });
       const idx = TALOS.findIndex(x => x.empresa===t.empresa && x.tipo===t.tipo);
       if (idx>=0) TALOS.splice(idx,1);
       taloSelIdx = null; renderTalo(); toast('Talonario eliminado','scs');
@@ -109,7 +106,10 @@ async function saveTalo() {
   if (window._tle==='A' && taloFind(emp,tipo)) { toast('Ya existe ese talonario','err'); return; }
   const data = { empresa: emp, tipo, descripcion: desc||null, ultimo_nro: ult };
   try {
-    await sbUpsertOnConflict('talonarios', data, 'empresa,tipo');
+    const res = await apiPost('/talonarios/guardar', data);
+    if (res && res.ok === false) { toast(res.error||'No se pudo guardar','err'); return; }
+    // El server devuelve el número que quedó: en modificación NO se toca.
+    if (res && res.ultimo_nro !== undefined) data.ultimo_nro = res.ultimo_nro;
     const idx = TALOS.findIndex(t => t.empresa===emp && t.tipo===tipo);
     if (idx>=0) TALOS[idx] = data; else TALOS.push(data);
     closeOv('ov-talo'); taloSelIdx = null; renderTalo();
