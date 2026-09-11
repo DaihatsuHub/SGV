@@ -627,6 +627,9 @@ async function renderFacDetalle(f, vista) {
   // Anulación: banner si ya está anulada, botón si se puede anular
   const _puedeBajaFac = (typeof puedeh==='function') ? puedeh('fac','baja') : false;
   const _saldoIgual = Math.abs((Number(f.fac_saldo)||0)-(Number(f.fac_total)||0))<0.01;
+  // Un comprobante NO CONTABLE (flag `contable` del tipo) no es fiscal: no se
+  // imprime con formato de factura ni lleva letra. Sólo sale como borrador.
+  const _esContable = ctip2 ? !!ctip2.contable : true;
   const _puedeAnular = _puedeBajaFac && !f.fac_anul && !f.fac_cae && _saldoIgual;
   // ELIMINAR: borra el registro y libera el número, por eso sólo dentro del mes
   // de la factura. Mismas condiciones que anular (sin CAE, sin cobros) más la
@@ -643,12 +646,12 @@ async function renderFacDetalle(f, vista) {
   const caeInfo=f.fac_anul?'':f.fac_cae
     ?`<div style="background:#1a3a1a;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:#4ade80;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
         <span>✅ CAE: ${f.fac_cae} &nbsp;·&nbsp; Vto: ${f.fac_cae_vto||'—'}</span>
-        <button onclick="facImprimir('afip')" class="btn scs" style="padding:3px 10px;font-size:11px">🖨 Imprimir</button>
+        ${_esContable?`<button onclick="facImprimir('afip')" class="btn scs" style="padding:3px 10px;font-size:11px">🖨 Imprimir</button>`:''}
       </div>`
     :esBorrador
       ?`<div style="background:#2a2a1a;border-radius:6px;padding:8px 12px;font-size:11px;color:#facc15;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
           <span>⚠️ Borrador — pendiente de autorización AFIP</span>
-          <button onclick="facImprimir('afip')" class="btn" style="padding:3px 10px;font-size:11px" title="Ver el formato factura antes de autorizar. Sale marcado SIN VALOR FISCAL.">🖨 Ver formato factura</button>
+          ${_esContable?`<button onclick="facImprimir('afip')" class="btn" style="padding:3px 10px;font-size:11px" title="Ver el formato factura antes de autorizar. Sale marcado SIN VALOR FISCAL.">🖨 Ver formato factura</button>`:''}
           <button onclick="facAutorizarAfip('${f.fac_nro}')" class="btn pri" style="padding:3px 10px;font-size:11px;background:#b45309;border-color:#b45309">⚡ Autorizar AFIP</button>
         </div>`
       :'';
@@ -938,6 +941,15 @@ async function facImprimir(modo) {
   if(facSelIdx===null){toast('Seleccioná una factura','err');return;}
   const f = filtFacs()[facSelIdx];
   if(!f){toast('Factura no encontrada','err');return;}
+  // Un comprobante NO CONTABLE no es fiscal: nunca se imprime como factura,
+  // sale siempre como borrador (aunque se llame a esta función con 'afip').
+  if(modo==='afip'){
+    const _ct=CTIPS.find(c=>c.prefijo===facGetPrefijo(f.fac_nro));
+    if(_ct && !_ct.contable){
+      toast('Este comprobante no es contable: se imprime como borrador','err');
+      modo='real';
+    }
+  }
   const cli = facFindCli(f.fac_cli);
   const emp = f.fac_empresa || (f.fac_nro||'').substring(0,1);
   const ed  = EMP_DATA[emp] || EMP_DATA['H'];
