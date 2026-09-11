@@ -2392,7 +2392,13 @@ function nfCalcTotales() {
 
   // Percepciones sobre el neto DECLARADO en pesos
   totalPercep = 0;
-  NF_PERCEP.forEach(p=>{ p.importe=r2(netoAfip*(Number(p.pct)||0)/100); totalPercep+=p.importe; });
+  // Las percepciones NO corresponden si el comprobante no baja depósito o el
+  // talonario es X: ahí no hay cálculo de impuestos. Misma condición que el IVA
+  // (esA), así que el server calcula igual y no rechaza por diferencia.
+  NF_PERCEP.forEach(p=>{
+    p.importe = esA ? r2(netoAfip*(Number(p.pct)||0)/100) : 0;
+    totalPercep += p.importe;
+  });
   const percepAfip = r2(totalPercep);
   const totalAfip  = r2(netoAfip + ivaAfip + percepAfip);   // fac_total_afip
 
