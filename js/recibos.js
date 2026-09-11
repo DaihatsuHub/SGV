@@ -804,79 +804,138 @@ async function saveReci(){
 
 // ══════════════════════════════════════════════════════════
 //  IMPRESIÓN DE RECIBO
-//  Se arma desde los datos en memoria (_reciHdr, _reciDeud, _reciACuenta,
-//  _reciCheques, _reciTransf, _reciRetenc), no leyendo el DOM: así sale igual
-//  en pantalla y en papel, y no depende de qué se esté mostrando.
+//  Se arma desde los datos en memoria, no leyendo el DOM.
+//
+//  DOS RECIBOS DISTINTOS (Ricardo, Sep 2026):
+//    "R" (OFICIAL)  → lleva el MEMBRETE de la empresa y va TODO en importes
+//                     CONTABLES: lo aplicado a cada comprobante y, en valores
+//                     recibidos, la parte de cada instrumento imputada al
+//                     contable (`imputa_afip`). Así el recibo cierra solo: no
+//                     puede declarar que entraron 20.000 si aplicó 12.096,98.
+//    "X" (INTERNO)  → SIN encabezado de la empresa y con los importes REALES.
 // ══════════════════════════════════════════════════════════
+// Imprime el recibo SELECCIONADO en la grilla, sin abrir el editor: carga sus
+// datos en memoria, imprime y deja todo como estaba.
+// Efectivo y ajuste para imprimir sin el formulario abierto (null = leer del DOM)
+let _reciPrintEfe=null, _reciPrintAju=null;
+
+async function reciImprimirSel(){
+  const hdrPrev=_reciHdr, deudPrev=_reciDeud, acPrev=_reciACuenta,
+        trPrev=_reciTransf, chPrev=_reciCheques, retPrev=_reciRetenc,
+        roPrev=_reciReadonly;
+  try{
+    _reciReadonly=true;
+    const ok=await _reciOpenEditor();          // carga los datos del seleccionado
+    if(ok===false) return;
+    // Guardar efectivo y ajuste ANTES de cerrar: después el DOM queda vacío
+    _reciPrintEfe=reciParseNum(document.getElementById('rf-efectivo')?.value||'0');
+    _reciPrintAju=reciParseNum(document.getElementById('rf-ajuste')?.value||'0');
+    closeOv('ov-reci');                        // no queremos el editor abierto
+    reciImprimir();
+  }catch(e){
+    console.error('reciImprimirSel:', e);
+    toast('No se pudo preparar la impresión','err');
+  }finally{
+    _reciHdr=hdrPrev; _reciDeud=deudPrev; _reciACuenta=acPrev;
+    _reciTransf=trPrev; _reciCheques=chPrev; _reciRetenc=retPrev;
+    _reciReadonly=roPrev;
+    _reciPrintEfe=null; _reciPrintAju=null;
+  }
+}
+
 function reciImprimir(){
   const h=_reciHdr||{};
   if(!h.cliente){ toast('Abrí o cargá un recibo primero','err'); return; }
+  const oficial = !_reciEsX();
   const cli=(CLIS||[]).find(c=>(c.CLI_CODIGO||'').trim()===(h.cliente||'').trim());
   const nro=`${h.empresa||''}${h.talonario||''} ${String(h.numero||'').padStart(6,'0')}`;
   const fmt=v=>(Number(v)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
   const fec=d=>{ const p=(d||'').substring(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:(d||''); };
+  const E=(typeof EMP_DATA!=='undefined'?EMP_DATA[h.empresa||'H']:null)||{};
   const esc2=v=>esc(v==null?'':String(v));
 
-  // ── Comprobantes cancelados ──
-  const items=(_reciDeud||[]).filter(d=>(d.abona||0)>0);
-  const hayCont=items.some(d=>(d.abona_afip||0)>0);
+  // ── Comprobantes: en el oficial el importe es el CONTABLE ──
+  const items=(_reciDeud||[]).filter(d=>((oficial?d.abona_afip:d.abona)||0)>0);
+  const impDe = d => oficial ? (d.abona_afip||0) : (d.abona||0);
   let filas=items.map(d=>`<tr>
       <td>${esc2(d.fac_nro)}</td>
       <td>${fec(d.fac_fec)}</td>
-      <td class="r">${esc2(d.simbolo)} ${fmt(d.saldo_orig)}</td>
-      <td class="r">${esc2(d.simbolo)} ${fmt(d.abona_orig)}</td>
-      <td class="r">$ ${fmt(d.abona)}</td>
-      ${hayCont?`<td class="r">${(d.abona_afip||0)>0?'$ '+fmt(d.abona_afip):''}</td>`:''}
+      <td class="r">$ ${fmt(impDe(d))}</td>
     </tr>`).join('');
-  (_reciACuenta||[]).filter(a=>(a.abona||0)>0).forEach(a=>{
-    filas+=`<tr><td colspan="2"><i>A/Cuenta</i></td>
-      <td class="r"></td><td class="r">${esc2(a.simbolo)} ${fmt(a.importe)}</td>
-      <td class="r">$ ${fmt(a.abona)}</td>${hayCont?'<td></td>':''}</tr>`;
-  });
-  const totAplic=items.reduce((s2,d)=>s2+(d.abona||0),0)
-                + (_reciACuenta||[]).reduce((s2,a)=>s2+(a.abona||0),0);
-  const totCont=items.reduce((s2,d)=>s2+(d.abona_afip||0),0);
+  if(!oficial){
+    (_reciACuenta||[]).filter(a=>(a.abona||0)>0).forEach(a=>{
+      filas+=`<tr><td colspan="2"><i>A/Cuenta</i></td><td class="r">$ ${fmt(a.abona)}</td></tr>`;
+    });
+  }
+  const totAplic=items.reduce((s2,d)=>s2+impDe(d),0)
+    + (oficial?0:(_reciACuenta||[]).reduce((s2,a)=>s2+(a.abona||0),0));
 
   // ── Valores recibidos ──
-  let val='';
-  const efe=reciParseNum(document.getElementById('rf-efectivo')?.value||'0');
-  if(efe>0) val+=`<tr><td>Efectivo</td><td></td><td class="r">$ ${fmt(efe)}</td></tr>`;
-  (_reciTransf||[]).forEach(t=>{ if((t.importe||0)>0)
-    val+=`<tr><td>Transferencia</td><td>${fec(t.fecha)}</td><td class="r">$ ${fmt(t.importe)}</td></tr>`; });
-  (_reciCheques||[]).forEach(c=>{ if((c.importe||0)>0)
-    val+=`<tr><td>Cheque ${c.fisico?'':'ECheq '}N° ${esc2(c.numero)}</td><td>${fec(c.fecha)}</td><td class="r">$ ${fmt(c.importe)}</td></tr>`; });
+  // En el oficial, cada instrumento entra por la parte imputada al contable,
+  // repartida con la MISMA prioridad que usa el server: retenciones, cheques,
+  // y al final transferencias y efectivo.
+  let porImputar = oficial ? totAplic : Infinity;
+  const tomar = imp => {
+    const v=Number(imp)||0;
+    if(!oficial) return v;
+    const usa=Math.min(porImputar, v);
+    porImputar=round2(porImputar-usa);
+    return usa;
+  };
+  let val='', totVal=0;
+  const add=(concepto,fecha,imp)=>{
+    const v=round2(tomar(imp));
+    if(v<=0.005) return;
+    totVal+=v;
+    val+=`<tr><td>${concepto}</td><td>${fecha||''}</td><td class="r">$ ${fmt(v)}</td></tr>`;
+  };
   (_reciRetenc||[]).forEach(r=>{ if((r.importe||0)>0)
-    val+=`<tr><td>Retención ${esc2(r.codigo)}${typeof reteDesc==='function'&&reteDesc(r.codigo)?' — '+esc2(reteDesc(r.codigo)):''}</td><td></td><td class="r">$ ${fmt(r.importe)}</td></tr>`; });
-  const aju=reciParseNum(document.getElementById('rf-ajuste')?.value||'0');
-  if(Math.abs(aju)>0.001) val+=`<tr><td>Ajuste</td><td></td><td class="r">$ ${fmt(aju)}</td></tr>`;
-  const totVal=reciTotInstrumentos();
+    add(`Retención ${esc2(r.codigo)}${typeof reteDesc==='function'&&reteDesc(r.codigo)?' — '+esc2(reteDesc(r.codigo)):''}`,'',r.importe); });
+  (_reciCheques||[]).forEach(c=>{ if((c.importe||0)>0)
+    add(`Cheque ${c.fisico?'':'ECheq '}N° ${esc2(c.numero)}`, fec(c.fecha), c.importe); });
+  (_reciTransf||[]).forEach(t=>{ if((t.importe||0)>0)
+    add('Transferencia', fec(t.fecha), t.importe); });
+  // Del formulario si está abierto; si no, de lo que dejó reciImprimirSel
+  const efe = (_reciPrintEfe!==null) ? _reciPrintEfe
+            : reciParseNum(document.getElementById('rf-efectivo')?.value||'0');
+  if(efe>0) add('Efectivo','',efe);
+  if(!oficial){
+    const aju = (_reciPrintAju!==null) ? _reciPrintAju
+              : reciParseNum(document.getElementById('rf-ajuste')?.value||'0');
+    if(Math.abs(aju)>0.001){ totVal+=aju;
+      val+=`<tr><td>Ajuste</td><td></td><td class="r">$ ${fmt(aju)}</td></tr>`; }
+  }
+
+  const membrete = oficial ? `
+    <div class="rec-emp">
+      <div class="rec-emp-n">${esc2(E.razon||'')}</div>
+      <div class="rec-sub">${esc2(E.domic||'')} — ${esc2(E.ciudad||'')}</div>
+      <div class="rec-sub">${esc2(E.tel||'')}</div>
+      <div class="rec-sub">CUIT: ${esc2(E.cuit||'')} · ING.BRUTOS: ${esc2(E.iibb||'')} · ${esc2(E.iva||'')}</div>
+    </div>` : '';
 
   const cuerpo=`
+    ${membrete}
     <div class="rec-cab">
       <div>
         <div class="rec-cli">${esc2(cli?.CLI_RAZON||h.cliente)}</div>
         <div class="rec-sub">${esc2((h.cliente||'').trim())}</div>
         <div class="rec-sub">${esc2(cli?.CLI_DOMIC||'')}</div>
         <div class="rec-sub">${esc2(cli?.CLI_LOCAL||'')} ${esc2(PCIA[cli?.CLI_PROVIN]||cli?.CLI_PROVIN||'')}</div>
+        ${cli?.CLI_CUIT?`<div class="rec-sub">CUIT: ${esc2(cli.CLI_CUIT)}</div>`:''}
       </div>
       <div class="rec-der">
-        <div><b>Recibo N° ${esc2(nro)}</b></div>
+        <div class="rec-nro">RECIBO N° ${esc2(nro)}</div>
         <div class="rec-sub">Fecha: ${fec(h.fecha)}</div>
-        ${cli?.CLI_CUIT?`<div class="rec-sub">CUIT: ${esc2(cli.CLI_CUIT)}</div>`:''}
       </div>
     </div>
 
     <h3>Comprobantes cancelados</h3>
     <table>
-      <thead><tr>
-        <th>Comprobante</th><th>Fecha</th>
-        <th class="r">Saldo</th><th class="r">Abona</th><th class="r">Importe $</th>
-        ${hayCont?'<th class="r">Contable $</th>':''}
-      </tr></thead>
-      <tbody>${filas||'<tr><td colspan="6"><i>Sin comprobantes</i></td></tr>'}
-        <tr class="fin"><td colspan="4"><b>Total aplicado</b></td>
-          <td class="r"><b>$ ${fmt(totAplic)}</b></td>
-          ${hayCont?`<td class="r"><b>$ ${fmt(totCont)}</b></td>`:''}</tr>
+      <thead><tr><th>Comprobante</th><th>Fecha</th><th class="r">Aplicado</th></tr></thead>
+      <tbody>${filas||'<tr><td colspan="3"><i>Sin comprobantes</i></td></tr>'}
+        <tr class="fin"><td colspan="2"><b>Total aplicado</b></td>
+          <td class="r"><b>$ ${fmt(totAplic)}</b></td></tr>
       </tbody>
     </table>
 
@@ -900,11 +959,15 @@ function reciImprimir(){
     subtitulo:`${esc2(cli?.CLI_RAZON||h.cliente)} — ${fec(h.fecha)}`,
     cuerpo:cuerpo,
     estilos:`
+      table{width:100%}
+      .rec-emp{border:1px solid #000;padding:8px;margin-bottom:8px}
+      .rec-emp-n{font-size:14px;font-weight:700}
       .rec-cab{display:flex;justify-content:space-between;gap:16px;margin-bottom:10px;
                border:1px solid #000;padding:8px}
       .rec-cli{font-size:13px;font-weight:700}
       .rec-sub{font-size:10px;color:#333}
       .rec-der{text-align:right}
+      .rec-nro{font-size:13px;font-weight:700}
       h3{font-size:11px;margin:10px 0 4px;text-transform:uppercase;letter-spacing:.5px}
       .rec-firma{margin-top:26px;text-align:right}
       .rec-linea{border-top:1px solid #000;width:60mm;margin:16px 0 3px auto}
