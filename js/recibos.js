@@ -954,12 +954,15 @@ function reciImprimir(){
     </div>
   `;
 
+  // Sin título ni subtítulo de sgvPrint: repetirían lo que ya está en el
+  // recuadro. Un recibo no es un listado, es un comprobante.
   sgvPrint({
-    titulo:`Recibo ${nro}`,
-    subtitulo:`${esc2(cli?.CLI_RAZON||h.cliente)} — ${fec(h.fecha)}`,
+    titulo:'',
+    subtitulo:'',
     cuerpo:cuerpo,
     estilos:`
       table{width:100%}
+
       .rec-emp{border:1px solid #000;padding:8px;margin-bottom:8px}
       .rec-emp-n{font-size:14px;font-weight:700}
       .rec-cab{display:flex;justify-content:space-between;gap:16px;margin-bottom:10px;
