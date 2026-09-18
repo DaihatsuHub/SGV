@@ -117,6 +117,7 @@
         <button class="dd-item" id="ddi-cli" onclick="showSubPage('cli','cli')">📋 Maestro de Clientes</button>
         <button class="dd-item" id="ddi-ficha" onclick="showSubPage('cli','ficha')">🪪 Ficha del Cliente</button>
         <button class="dd-item" id="ddi-ctacte" onclick="showSubPage('cli','ctacte')">📄 Cuenta Corriente</button>
+        <button class="dd-item" id="ddi-comp" onclick="showSubPage('cli','comp')">🧾 Composición de Saldo</button>
         <div style="height:1px;background:rgba(255,255,255,0.15);margin:6px 12px"></div>
         <button class="dd-item" id="ddi-cpag" onclick="showSubPage('cli','cpag')">💳 Tabla Condiciones de Pago</button>
         <button class="dd-item" id="ddi-vend" onclick="showSubPage('cli','vend')">👤 Tabla de Vendedores</button>
@@ -869,6 +870,28 @@
       <span style="text-align:right">Efectivo</span><span style="text-align:right">Transfer.</span><span style="text-align:right">Cheques</span><span style="text-align:right">Retenc.</span><span style="text-align:right">Ajuste</span><span style="text-align:right">Total</span>
     </div>
     <div class="tbl-body" id="lcob-body"><div class="empty" style="margin-top:40px">Elegí un período y tocá Consultar</div></div>
+  </div>
+</div>
+
+<div class="page" id="page-comp">
+  <div class="toolbar">
+    <span style="font-weight:600;font-size:14px;color:var(--acc);margin-right:4px">🧾 Composición de Saldo</span>
+    <input class="finp" id="comp-cli" list="comp-cli-list" placeholder="Cliente…" style="width:280px" onfocus="this.select()">
+    <datalist id="comp-cli-list"></datalist>
+    <button class="btn" style="padding:2px 7px;font-size:11px" onclick="compLimpiarCli()" title="Limpiar">✕</button>
+    <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--t2);cursor:pointer">
+      <input type="checkbox" id="comp-pend" style="accent-color:var(--acc);cursor:pointer"> Solo pendientes
+    </label>
+    <button class="btn" id="btn-comp-cont" onclick="compToggleContable()" title="OFF: importes reales · ON: importes declarados">📗 Contable: OFF</button>
+    <button class="btn pri" onclick="compConsultar()">🔍 Consultar</button>
+    <button class="btn" onclick="compPrint()">🖨 Imprimir</button>
+    <button class="btn" onclick="compExcel()">⬇ Excel</button>
+    <div class="spacer"></div>
+    <span style="font-size:11px;color:var(--t3)">Una fila por cancelación — pensado para auditar en Excel</span>
+  </div>
+  <div class="tbl-wrap">
+    <div id="comp-head"></div>
+    <div id="comp-body" class="tbl-body"></div>
   </div>
 </div>
 
@@ -1814,6 +1837,7 @@
 <script src="js/listcob.js"></script>
 <script src="js/subdiariocob.js"></script>
 <script src="js/ctacte.js"></script>
+<script src="js/composicion.js"></script>
 <script src="js/antiguedad.js"></script>
 <script src="js/ranking.js"></script>
 <script src="js/dashboard.js"></script>
