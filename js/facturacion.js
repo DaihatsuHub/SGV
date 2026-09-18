@@ -2704,11 +2704,12 @@ async function ncAbrirAplicar(ncNro){
   // resto de lo real, o al revés, así que el importe es editable.
   const ncAfip = Number(nc.fac_saldo_afip)||0;
   const hayCont = !!nc.fac_tab_fact && ncAfip>0 && deudores.some(c=>c.fac_tab_fact && (Number(c.fac_saldo_afip)||0)>0);
-  // Anchos fijos para el comprobante y los importes: con `1fr` el número se
-  // partía en dos líneas y las columnas de la derecha quedaban fuera del popup.
+  // Anchos fijos: con `1fr` el número se partía en dos líneas y las columnas de
+  // la derecha quedaban afuera. Los campos donde se carga el importe llevan el
+  // doble de espacio que el resto, que es donde se mira.
   const gridNC = hayCont
-    ? '118px 74px 104px 104px 108px 158px 120px'
-    : '118px 74px 110px 110px 158px';
+    ? '30px 118px 74px 96px 96px 104px 142px 142px'
+    : '30px 118px 74px 104px 104px 142px';
   const filas = deudores.length ? deudores.map((c,i)=>{
     const sug=Math.min(Number(nc.fac_saldo)||0, Number(c.fac_saldo)||0);
     const cAfip=Number(c.fac_saldo_afip)||0;
@@ -2721,21 +2722,22 @@ async function ncAbrirAplicar(ncNro){
     // Los importes arrancan en CERO, como en recibos: hacer clic en la fila
     // propone lo que se puede aplicar, y recién el botón lo aplica. Así no
     // queda un número cargado que parece aplicado sin estarlo.
-    return `<div onclick="ncProponerFila(${i},${sug},${sugAfip})" title="Clic para proponer el importe a aplicar" style="display:grid;grid-template-columns:${gridNC};gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid var(--b1);font-size:12px;cursor:pointer">
+    return `<div id="ncrow-${i}" onclick="ncMarcarFila(${i})" title="Clic para marcar este comprobante" style="display:grid;grid-template-columns:${gridNC};gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid var(--b1);font-size:12px;cursor:pointer">
+      <input type="checkbox" id="ncsel-${i}" onclick="event.stopPropagation();ncMarcarFila(${i},this.checked)" style="accent-color:var(--acc);cursor:pointer">
       <span style="font-family:var(--mono);color:var(--acc);white-space:nowrap;font-size:11px">${esc(c.fac_nro)}</span>
       <span style="color:var(--t3);font-size:11px;white-space:nowrap">${fec}</span>
       <span style="text-align:right;color:var(--t2);white-space:nowrap;font-family:var(--mono);font-size:11px">${mon} ${fmtN(c.fac_total,2)}</span>
       <span style="text-align:right;color:var(--red);white-space:nowrap;font-family:var(--mono);font-size:11px">${mon} ${fmtN(c.fac_saldo,2)}</span>
       ${hayCont?`<span style="text-align:right;color:#c4b5fd;font-family:var(--mono);white-space:nowrap;font-size:11px">${contFila?'$ '+fmtN(cAfip,2):'—'}</span>`:''}
-      <span style="display:flex;gap:4px;align-items:center;justify-content:flex-end">
-        <input id="ncimp-${i}" class="finp" type="text" value="0,00" data-sug="${sug}" data-sugafip="${sugAfip}" data-fila="${i}"
-               onclick="event.stopPropagation();this.select()" onchange="ncImpInput(${i},${cAfip})"
-               style="width:80px;text-align:right;font-size:11px">
-        <button class="btn scs" style="padding:3px 8px;font-size:11px" onclick="event.stopPropagation();ncAplicarComp('${ncNro}','${c.fac_nro}','ncimp-${i}','${contFila?'ncafip-'+i:''}')">Aplicar</button>
-      </span>
-      ${hayCont?`<span style="text-align:right">${contFila
-        ?`<input id="ncafip-${i}" class="finp" type="text" value="0,00" title="Contable a aplicar" onclick="event.stopPropagation();this.select()" onchange="this.dataset.manual='1'" style="width:112px;text-align:right;font-size:11px;background:#3b2a5c;color:#e9d5ff;border-color:#6d28d9">`
-        :'<span style="color:var(--t3)">—</span>'}</span>`:''}
+      <input id="ncimp-${i}" class="finp" type="text" value="0,00" disabled
+             data-sug="${sug}" data-sugafip="${sugAfip}" data-fila="${i}" data-comp="${esc(c.fac_nro)}" data-cafip="${cAfip}"
+             onclick="event.stopPropagation();this.select()" onchange="ncImpInput(${i},${cAfip})"
+             style="width:100%;text-align:right;font-size:12px;font-family:var(--mono)">
+      ${hayCont?(contFila
+        ?`<input id="ncafip-${i}" class="finp" type="text" value="0,00" disabled title="Contable a aplicar"
+                 onclick="event.stopPropagation();this.select()" onchange="this.dataset.manual='1';ncRecalcTotales()"
+                 style="width:100%;text-align:right;font-size:12px;font-family:var(--mono);background:#3b2a5c;color:#e9d5ff;border-color:#6d28d9">`
+        :'<span style="text-align:right;color:var(--t3)">—</span>'):''}
     </div>`;
   }).join('') : '<div style="padding:20px;text-align:center;color:var(--t3);font-size:12px">No hay comprobantes deudores (misma empresa, moneda y condición) con saldo pendiente.</div>';
 
@@ -2771,9 +2773,19 @@ async function ncAbrirAplicar(ncNro){
     </div>
     ${(Number(nc.fac_saldo)||0)>0 ? `
     <div style="display:grid;grid-template-columns:${gridNC};gap:8px;padding:5px 8px;font-size:10px;color:var(--t3);text-transform:uppercase;border-bottom:1px solid var(--b1);letter-spacing:1px">
-      <span>Comprobante</span><span>Fecha</span><span style="text-align:right">Total</span><span style="text-align:right">Saldo</span>${hayCont?'<span style="text-align:right;color:#c4b5fd">Saldo cont.</span>':''}<span style="text-align:right">Importe a aplicar</span>${hayCont?'<span style="text-align:right;color:#c4b5fd">Aplica cont.</span>':''}
+      <span><input type="checkbox" id="ncsel-todos" onclick="ncMarcarTodos(this.checked)" title="Marcar todos" style="accent-color:var(--acc);cursor:pointer"></span><span>Comprobante</span><span>Fecha</span><span style="text-align:right">Total</span><span style="text-align:right">Saldo</span>${hayCont?'<span style="text-align:right;color:#c4b5fd">Saldo cont.</span>':''}<span style="text-align:right">Importe a aplicar</span>${hayCont?'<span style="text-align:right;color:#c4b5fd">Aplica cont.</span>':''}
     </div>
-    <div style="max-height:280px;overflow:auto">${filas}</div>` : `<div style="padding:10px;text-align:center;color:var(--t3);font-size:12px;background:var(--s2);border-radius:6px">NC totalmente aplicada (sin saldo). Podés cancelar aplicaciones abajo para liberar saldo.</div>`}
+    <div style="max-height:280px;overflow:auto">${filas}</div>
+    <div id="nc-pie" style="display:grid;grid-template-columns:${gridNC};gap:8px;padding:8px;background:var(--s2);border-top:2px solid var(--acc);font-size:12px;font-family:var(--mono);font-weight:600">
+      <span></span><span style="font-family:inherit">Total a aplicar</span><span></span><span></span><span></span>
+      ${hayCont?'<span></span>':''}
+      <span id="nc-tot-imp" style="text-align:right">0,00</span>
+      ${hayCont?'<span id="nc-tot-afip" style="text-align:right;color:#c4b5fd">0,00</span>':''}
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn" onclick="closeOv('ov-ncap')">Cancelar</button>
+      <button class="btn pri" onclick="ncAplicarMarcados('${ncNro}')">✓ Aceptar</button>
+    </div>` : `<div style="padding:10px;text-align:center;color:var(--t3);font-size:12px;background:var(--s2);border-radius:6px">NC totalmente aplicada (sin saldo). Podés cancelar aplicaciones abajo para liberar saldo.</div>`}
     ${bloqueAplic}
   </div>`;
   ov.classList.add('open');
@@ -2805,13 +2817,85 @@ async function ncCancelarTodas(ncNro){
   if(f) renderFacDetalle(f);
 }
 
-// Clic en la fila: propone lo que se puede aplicar, real y contable. Igual que
-// en recibos, donde hacer clic ofrece el saldo o lo que falte por aplicar.
-function ncProponerFila(i, sug, sugAfip){
+// ── SELECCIÓN DE COMPROBANTES ────────────────────────────
+// Se marcan los que se quieren cancelar, se revisan los importes y recién
+// Aceptar los aplica todos juntos. Antes cada fila tenía su propio botón, que
+// aplicaba al instante y no dejaba ver el conjunto.
+function ncMarcarFila(i, estado){
+  const chk=document.getElementById('ncsel-'+i); if(!chk) return;
+  if(estado===undefined) chk.checked=!chk.checked; else chk.checked=estado;
   const el=document.getElementById('ncimp-'+i);
-  if(el){ el.value=fmtN(sug,2); el.focus(); el.select(); }
   const ea=document.getElementById('ncafip-'+i);
-  if(ea && ea.dataset.manual!=='1') ea.value=fmtN(sugAfip,2);
+  const row=document.getElementById('ncrow-'+i);
+  if(chk.checked){
+    if(el){ el.disabled=false; if(nfParseNum(el.value||'0')<=0) el.value=fmtN(Number(el.dataset.sug)||0,2); }
+    if(ea){ ea.disabled=false; if(ea.dataset.manual!=='1' && nfParseNum(ea.value||'0')<=0)
+      ea.value=fmtN(Number(el?.dataset.sugafip)||0,2); }
+    if(row) row.style.background='var(--s3)';
+  }else{
+    if(el){ el.value='0,00'; el.disabled=true; }
+    if(ea){ ea.value='0,00'; ea.disabled=true; delete ea.dataset.manual; }
+    if(row) row.style.background='';
+  }
+  ncRecalcTotales();
+}
+
+function ncMarcarTodos(on){
+  document.querySelectorAll('[id^="ncsel-"]').forEach(c=>{
+    if(c.id==='ncsel-todos') return;
+    const i=c.id.replace('ncsel-','');
+    ncMarcarFila(Number(i), on);
+  });
+}
+
+function ncRecalcTotales(){
+  let t=0, ta=0;
+  document.querySelectorAll('[id^="ncimp-"]').forEach(el=>{
+    if(!el.disabled) t+=nfParseNum(el.value||'0');
+  });
+  document.querySelectorAll('[id^="ncafip-"]').forEach(el=>{
+    if(!el.disabled) ta+=nfParseNum(el.value||'0');
+  });
+  const a=document.getElementById('nc-tot-imp'); if(a) a.textContent=fmtN(t,2);
+  const b=document.getElementById('nc-tot-afip'); if(b) b.textContent=fmtN(ta,2);
+}
+
+// Aplica de una todos los comprobantes marcados, con una sola confirmación.
+async function ncAplicarMarcados(ncNro){
+  const marcados=[];
+  document.querySelectorAll('[id^="ncimp-"]').forEach(el=>{
+    if(el.disabled) return;
+    const imp=nfParseNum(el.value||'0');
+    if(imp<=0) return;
+    const i=el.dataset.fila;
+    const ea=document.getElementById('ncafip-'+i);
+    marcados.push({ comp:el.dataset.comp, importe:imp,
+      importe_afip: (ea && !ea.disabled) ? nfParseNum(ea.value||'0') : undefined });
+  });
+  if(!marcados.length){ toast('Marcá al menos un comprobante','err'); return; }
+
+  const tot=marcados.reduce((s2,m)=>s2+m.importe,0);
+  const det=marcados.map(m=>`• ${m.comp}: ${fmtN(m.importe,2)}`).join('\n');
+  if(!confirm(`¿Aplicar la NC ${ncNro} a ${marcados.length} comprobante(s)?\n\n${det}\n\nTotal: ${fmtN(tot,2)}`)) return;
+
+  let ok=0, errores=[];
+  for(const m of marcados){
+    try{
+      const res=await apiPost('/nc/aplicar',{ nc_nro:ncNro, comp_nro:m.comp,
+        importe:m.importe, importe_afip:m.importe_afip });
+      if(res && res.ok){
+        ok++;
+        const f=FACS.find(x=>x.fac_nro===ncNro); if(f && res.ncSaldo!=null) f.fac_saldo=res.ncSaldo;
+        const cf=FACS.find(x=>x.fac_nro===m.comp); if(cf && res.compSaldo!=null) cf.fac_saldo=res.compSaldo;
+        if(f && res.ncSaldoAfip!=null) f.fac_saldo_afip=res.ncSaldoAfip;
+        if(cf && res.compSaldoAfip!=null) cf.fac_saldo_afip=res.compSaldoAfip;
+      }else errores.push(`${m.comp}: ${(res&&res.error)||'error'}`);
+    }catch(e){ errores.push(`${m.comp}: ${e.message}`); }
+  }
+  if(errores.length) toast(`${ok} aplicada(s). Con problemas: ${errores.join(' · ')}`,'err');
+  else toast(`✓ ${ok} comprobante(s) aplicado(s)`,'scs');
+  ncAbrirAplicar(ncNro);
+  const f=FACS.find(x=>x.fac_nro===ncNro); if(f) renderFacDetalle(f);
 }
 
 // Al cambiar el importe real, el contable lo sigue en proporción, salvo que se
@@ -2824,35 +2908,6 @@ function ncImpInput(i, saldoAfip){
   const imp=nfParseNum(el.value||'0');
   const v = sug>0 ? Math.min(saldoAfip||0, Math.round(sugAfip*(imp/sug)*100)/100) : 0;
   ea.value=fmtN(Math.max(0,v),2);
+  ncRecalcTotales();
 }
 
-async function ncAplicarComp(ncNro, compNro, inpId, afipId){
-  const el=document.getElementById(inpId);
-  const imp=nfParseNum(el?.value||'0');
-  // Con el importe en cero, el botón PROPONE en vez de aplicar: evita el error
-  // "ingresá un importe" cuando lo que hace falta es cargar el sugerido.
-  if(imp<=0){
-    const i=el?.dataset.fila;
-    if(i!==undefined){ ncProponerFila(Number(i), Number(el.dataset.sug)||0, Number(el.dataset.sugafip)||0);
-      toast('Importe propuesto — tocá Aplicar para confirmar'); return; }
-    toast('Ingresá un importe válido','err'); return;
-  }
-  // Importe CONTABLE, si esta fila lo tiene. Va aparte del real: puede
-  // cancelarse todo lo contable y quedar resto real, o al revés.
-  const elA = afipId ? document.getElementById(afipId) : null;
-  const impAfip = elA ? nfParseNum(elA.value||'0') : null;
-  let res;
-  try { res=await apiPost('/nc/aplicar',{ nc_nro:ncNro, comp_nro:compNro, importe:imp,
-        importe_afip: (impAfip===null?undefined:impAfip) }); }
-  catch(e){ toast('Error al aplicar','err'); return; }
-  if(!res || !res.ok){ toast((res&&res.error)||'No se pudo aplicar','err'); return; }
-  toast('Saldo aplicado','scs');
-  // Actualizar saldos en memoria
-  const upd=(nro,saldo)=>{ const f=FACS.find(x=>x.fac_nro===nro); if(f) f.fac_saldo=saldo; };
-  upd(ncNro,res.ncSaldo); upd(compNro,res.compSaldo);
-  // Si a la NC no le queda saldo, cierro; si no, refresco la lista
-  if((res.ncSaldo||0)<=0){ document.getElementById('ov-ncap')?.classList.remove('open'); }
-  else { ncAbrirAplicar(ncNro); }
-  // Refrescar el detalle si está viendo esta NC
-  const f=FACS.find(x=>x.fac_nro===ncNro); if(f) renderFacDetalle(f);
-}
