@@ -719,6 +719,16 @@ async function renderFacDetalle(f, vista) {
           </div>
         </div>
       </div>
+      ${f.fac_leyenda ? `
+      <div style="font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:4px;letter-spacing:1px">DETALLE</div>
+      <div style="background:var(--s2);border-radius:6px;padding:12px;margin-bottom:12px">
+        <div style="font-size:13px;line-height:1.6;white-space:pre-wrap;color:var(--txt)">${esc(f.fac_leyenda)}</div>
+        <div style="display:flex;gap:20px;margin-top:12px;padding-top:10px;border-top:1px solid var(--b1);font-size:12px;font-family:var(--mono)">
+          ${(Number(f.fac_ley_neto)||0)>0?`<span style="color:var(--t2)">Neto gravado <b style="color:var(--txt)">${fmtN(f.fac_ley_neto,2)}</b></span>`:''}
+          ${(Number(f.fac_ley_exento)||0)>0?`<span style="color:var(--t2)">Exento <b style="color:var(--txt)">${fmtN(f.fac_ley_exento,2)}</b></span>`:''}
+          ${(Number(f.fac_ley_alic)||0)>0?`<span style="color:var(--t2)">IVA <b style="color:var(--txt)">${fmtN(f.fac_ley_alic,2)}%</b></span>`:''}
+        </div>
+      </div>` : `
       <div style="font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:4px;letter-spacing:1px">ÍTEMS (${items.length})</div>
       <div style="background:var(--s2);border-radius:6px;overflow:hidden;margin-bottom:12px">
         <div style="display:grid;grid-template-columns:100px 1fr 90px 55px 85px 85px 55px;gap:4px;padding:6px 10px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase">
@@ -739,7 +749,7 @@ async function renderFacDetalle(f, vista) {
           </div>`;
         }).join(''):'<div style="padding:12px;text-align:center;color:var(--t3);font-size:12px">Sin ítems</div>'}
         </div>
-      </div>
+      </div>`}
       <div style="background:var(--s2);border-radius:6px;padding:10px 14px">
         ${(f.fac_iva||0)>0?`
           <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Subtotal neto</span><span>${mon} ${fmt(((f.fac_sub||0)-(f.fac_iva||0))*_fac)}</span></div>
@@ -1000,6 +1010,9 @@ async function facImprimir(modo) {
 <meta charset="UTF-8">
 <title>${tipoLabel} ${f.fac_nro||''}</title>
 <style>
+
+  /* NC/ND por leyenda: el detalle va en texto, ocupando toda la tabla */
+  td.leyenda{white-space:pre-wrap;line-height:1.6;padding:6px 4px;font-size:10px;text-align:left}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:Arial,sans-serif;font-size:11px;color:#000;background:#fff}
   .page{width:210mm;min-height:297mm;margin:0 auto;padding:10mm 10mm}
@@ -1109,6 +1122,7 @@ async function facImprimir(modo) {
       </tr>
     </thead>
     <tbody>
+      ${f.fac_leyenda ? `<tr><td colspan="6" class="leyenda">${esc(f.fac_leyenda)}</td></tr>` : ''}
       ${items.map(it=>{
         const art=ARTS.find(a=>(a.ART_COD||'').trim()===(it.ite_art||'').trim());
         const desArt=art?art.ART_DES:(it.ite_desp||'');
@@ -1410,6 +1424,7 @@ function renderFacModal(fecha, empresa, cliCod) {
             <div id="nf-fila-neto" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>Subtotal neto</span><span id="nf-tot-neto">$ 0,00</span></div>
             <div id="nf-fila-iva21" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>IVA 21%</span><span id="nf-tot-iva21">$ 0,00</span></div>
             <div id="nf-fila-iva105" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>IVA 10.5%</span><span id="nf-tot-iva105">$ 0,00</span></div>
+            <div id="nf-fila-exento" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>Exento</span><span id="nf-tot-exento">$ 0,00</span></div>
             <div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>Subtotal</span><span id="nf-tot-sub">$ 0,00</span></div>
             <div id="nf-fila-dto" style="display:none;justify-content:space-between;font-size:12px;color:rgba(255,255,255,0.6);padding:2px 0"><span>Descuento</span><span id="nf-tot-dto">—</span></div>
             <div class="nf-percep-cont" style="color:rgba(255,255,255,0.8)"></div>
@@ -1629,6 +1644,7 @@ function renderFacForm(fecha, empresa, cliCod) {
         <div style="background:var(--s2);border-radius:6px;padding:10px 14px">
           <div id="nf-fila-neto" style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Subtotal neto</span><span id="nf-tot-neto">$ 0,00</span></div>
           <div id="nf-fila-iva"  style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>IVA</span><span id="nf-tot-iva">$ 0,00</span></div>
+          <div id="nf-fila-exento" style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Exento</span><span id="nf-tot-exento">$ 0,00</span></div>
           <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Subtotal</span><span id="nf-tot-sub">$ 0,00</span></div>
           <div id="nf-fila-dto"  style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Descuento</span><span id="nf-tot-dto">—</span></div>
           <div id="nf-percep-cont" class="nf-percep-cont" style="color:var(--t2)"></div>
@@ -2389,11 +2405,21 @@ function nfCalcTotalesLeyenda(){
   const ivaAfip=esA?r2(netoAfip*alic/100):0;
   const totalAfip=r2(netoAfip+ivaAfip+exentoAfip);
 
-  const set=(sel,v)=>document.querySelectorAll(sel).forEach(e=>{ e.textContent=v; });
-  set('.nf-tot-neto', `${mon} ${fmtN(neto,2)}`);
-  set('.nf-tot-sub',  `${mon} ${fmtN(total,2)}`);
-  set('.nf-tot-total',`${mon} ${fmtN(total,2)}`);
-  set('.nf-tot-iva',  `${mon} ${fmtN(iva,2)}`);
+  // El panel de totales usa IDs (no clases): se escriben uno por uno.
+  const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  const ver=(id,on)=>{ const e=document.getElementById(id); if(e) e.style.display = on?'flex':'none'; };
+  set('nf-tot-neto',  `${mon} ${fmtN(neto,2)}`);
+  set('nf-tot-sub',   `${mon} ${fmtN(total,2)}`);
+  set('nf-tot-total', `${mon} ${fmtN(total,2)}`);
+  set('nf-tot-iva',   `${mon} ${fmtN(iva,2)}`);
+  set('nf-tot-iva21', `${mon} ${fmtN(iva,2)}`);
+  set('nf-tot-exento',`${mon} ${fmtN(exento,2)}`);
+  // Se muestran sólo las filas que tienen algo que decir
+  ver('nf-fila-neto',  neto>0.005);
+  ver('nf-fila-iva',   esA && iva>0.005);
+  ver('nf-fila-iva21', esA && iva>0.005);
+  ver('nf-fila-iva105', false);
+  ver('nf-fila-exento', exento>0.005);
   document.querySelectorAll('.nf-tot-afip').forEach(e=>{ e.textContent=`$ ${fmtN(totalAfip,2)}`; });
   document.querySelectorAll('.nf-fila-afip').forEach(e=>{ e.style.display = dto!==0||cotiz!==1 ? 'flex' : 'none'; });
 
