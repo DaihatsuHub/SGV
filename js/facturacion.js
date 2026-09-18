@@ -2699,18 +2699,36 @@ async function ncAbrirAplicar(ncNro){
   if(!data || !data.ok){ toast((data&&data.error)||'Error','err'); return; }
   const nc=data.nc, deudores=data.deudores||[];
   const mon=nc.fac_moneda==='P'?'$':'u$s';
+  // La PARTE CONTABLE sólo se muestra si LOS DOS comprobantes bajan depósito.
+  // No va atada a la proporción: se puede cancelar todo lo contable y dejar un
+  // resto de lo real, o al revés, así que el importe es editable.
+  const ncAfip = Number(nc.fac_saldo_afip)||0;
+  const hayCont = !!nc.fac_tab_fact && ncAfip>0 && deudores.some(c=>c.fac_tab_fact && (Number(c.fac_saldo_afip)||0)>0);
+  const gridNC = hayCont
+    ? '1fr 66px 84px 84px 92px 150px 118px'
+    : '1fr 70px 90px 90px 150px';
   const filas = deudores.length ? deudores.map((c,i)=>{
     const sug=Math.min(Number(nc.fac_saldo)||0, Number(c.fac_saldo)||0);
+    const cAfip=Number(c.fac_saldo_afip)||0;
+    const contFila = hayCont && c.fac_tab_fact && cAfip>0;
+    // Se propone la proporción, pero se puede cambiar
+    const sugAfip = contFila && (Number(nc.fac_saldo)||0)>0
+      ? Math.min(ncAfip, cAfip, Math.round(ncAfip*(sug/(Number(nc.fac_saldo)||1))*100)/100)
+      : 0;
     const fec=c.fac_fec?c.fac_fec.substring(0,10).split('-').reverse().join('/'):'—';
-    return `<div style="display:grid;grid-template-columns:1fr 70px 90px 90px 150px;gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid var(--b1);font-size:12px">
+    return `<div style="display:grid;grid-template-columns:${gridNC};gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid var(--b1);font-size:12px">
       <span style="font-family:var(--mono);color:var(--acc)">${esc(c.fac_nro)}</span>
       <span style="color:var(--t3);font-size:11px">${fec}</span>
       <span style="text-align:right;color:var(--t2)">${mon} ${fmtN(c.fac_total,2)}</span>
       <span style="text-align:right;color:var(--red)">${mon} ${fmtN(c.fac_saldo,2)}</span>
+      ${hayCont?`<span style="text-align:right;color:#c4b5fd;font-family:var(--mono)">${contFila?'$ '+fmtN(cAfip,2):'—'}</span>`:''}
       <span style="display:flex;gap:4px;align-items:center;justify-content:flex-end">
         <input id="ncimp-${i}" class="finp" type="text" value="${fmtN(sug,2)}" style="width:80px;text-align:right;font-size:11px" onclick="this.select()">
-        <button class="btn scs" style="padding:3px 8px;font-size:11px" onclick="ncAplicarComp('${ncNro}','${c.fac_nro}','ncimp-${i}')">Aplicar</button>
+        <button class="btn scs" style="padding:3px 8px;font-size:11px" onclick="ncAplicarComp('${ncNro}','${c.fac_nro}','ncimp-${i}','${contFila?'ncafip-'+i:''}')">Aplicar</button>
       </span>
+      ${hayCont?`<span style="text-align:right">${contFila
+        ?`<input id="ncafip-${i}" class="finp" type="text" value="${fmtN(sugAfip,2)}" title="Contable a aplicar" style="width:96px;text-align:right;font-size:11px;background:#3b2a5c;color:#e9d5ff;border-color:#6d28d9" onclick="this.select()">`
+        :'<span style="color:var(--t3)">—</span>'}</span>`:''}
     </div>`;
   }).join('') : '<div style="padding:20px;text-align:center;color:var(--t3);font-size:12px">No hay comprobantes deudores (misma empresa, moneda y condición) con saldo pendiente.</div>';
 
@@ -2745,8 +2763,8 @@ async function ncAbrirAplicar(ncNro){
       &nbsp;·&nbsp; Empresa <strong>${esc(nc.fac_empresa||'')}</strong> &nbsp;·&nbsp; Moneda <strong>${nc.fac_moneda==='P'?'Pesos':nc.fac_moneda}</strong>
     </div>
     ${(Number(nc.fac_saldo)||0)>0 ? `
-    <div style="display:grid;grid-template-columns:1fr 70px 90px 90px 150px;gap:8px;padding:5px 8px;font-size:10px;color:var(--t3);text-transform:uppercase;border-bottom:1px solid var(--b1);letter-spacing:1px">
-      <span>Comprobante</span><span>Fecha</span><span style="text-align:right">Total</span><span style="text-align:right">Saldo</span><span style="text-align:right">Importe a aplicar</span>
+    <div style="display:grid;grid-template-columns:${gridNC};gap:8px;padding:5px 8px;font-size:10px;color:var(--t3);text-transform:uppercase;border-bottom:1px solid var(--b1);letter-spacing:1px">
+      <span>Comprobante</span><span>Fecha</span><span style="text-align:right">Total</span><span style="text-align:right">Saldo</span>${hayCont?'<span style="text-align:right;color:#c4b5fd">Saldo cont.</span>':''}<span style="text-align:right">Importe a aplicar</span>${hayCont?'<span style="text-align:right;color:#c4b5fd">Aplica cont.</span>':''}
     </div>
     <div style="max-height:280px;overflow:auto">${filas}</div>` : `<div style="padding:10px;text-align:center;color:var(--t3);font-size:12px;background:var(--s2);border-radius:6px">NC totalmente aplicada (sin saldo). Podés cancelar aplicaciones abajo para liberar saldo.</div>`}
     ${bloqueAplic}
@@ -2780,11 +2798,16 @@ async function ncCancelarTodas(ncNro){
   if(f) renderFacDetalle(f);
 }
 
-async function ncAplicarComp(ncNro, compNro, inpId){
+async function ncAplicarComp(ncNro, compNro, inpId, afipId){
   const imp=nfParseNum(document.getElementById(inpId)?.value||'0');
   if(imp<=0){ toast('Ingresá un importe válido','err'); return; }
+  // Importe CONTABLE, si esta fila lo tiene. Va aparte del real: puede
+  // cancelarse todo lo contable y quedar resto real, o al revés.
+  const elA = afipId ? document.getElementById(afipId) : null;
+  const impAfip = elA ? nfParseNum(elA.value||'0') : null;
   let res;
-  try { res=await apiPost('/nc/aplicar',{ nc_nro:ncNro, comp_nro:compNro, importe:imp }); }
+  try { res=await apiPost('/nc/aplicar',{ nc_nro:ncNro, comp_nro:compNro, importe:imp,
+        importe_afip: (impAfip===null?undefined:impAfip) }); }
   catch(e){ toast('Error al aplicar','err'); return; }
   if(!res || !res.ok){ toast((res&&res.error)||'No se pudo aplicar','err'); return; }
   toast('Saldo aplicado','scs');
