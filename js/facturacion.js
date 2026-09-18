@@ -2704,9 +2704,11 @@ async function ncAbrirAplicar(ncNro){
   // resto de lo real, o al revés, así que el importe es editable.
   const ncAfip = Number(nc.fac_saldo_afip)||0;
   const hayCont = !!nc.fac_tab_fact && ncAfip>0 && deudores.some(c=>c.fac_tab_fact && (Number(c.fac_saldo_afip)||0)>0);
+  // Anchos fijos para el comprobante y los importes: con `1fr` el número se
+  // partía en dos líneas y las columnas de la derecha quedaban fuera del popup.
   const gridNC = hayCont
-    ? '1fr 66px 84px 84px 92px 150px 118px'
-    : '1fr 70px 90px 90px 150px';
+    ? '118px 74px 104px 104px 108px 158px 120px'
+    : '118px 74px 110px 110px 158px';
   const filas = deudores.length ? deudores.map((c,i)=>{
     const sug=Math.min(Number(nc.fac_saldo)||0, Number(c.fac_saldo)||0);
     const cAfip=Number(c.fac_saldo_afip)||0;
@@ -2720,11 +2722,11 @@ async function ncAbrirAplicar(ncNro){
     // propone lo que se puede aplicar, y recién el botón lo aplica. Así no
     // queda un número cargado que parece aplicado sin estarlo.
     return `<div onclick="ncProponerFila(${i},${sug},${sugAfip})" title="Clic para proponer el importe a aplicar" style="display:grid;grid-template-columns:${gridNC};gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid var(--b1);font-size:12px;cursor:pointer">
-      <span style="font-family:var(--mono);color:var(--acc)">${esc(c.fac_nro)}</span>
-      <span style="color:var(--t3);font-size:11px">${fec}</span>
-      <span style="text-align:right;color:var(--t2)">${mon} ${fmtN(c.fac_total,2)}</span>
-      <span style="text-align:right;color:var(--red)">${mon} ${fmtN(c.fac_saldo,2)}</span>
-      ${hayCont?`<span style="text-align:right;color:#c4b5fd;font-family:var(--mono)">${contFila?'$ '+fmtN(cAfip,2):'—'}</span>`:''}
+      <span style="font-family:var(--mono);color:var(--acc);white-space:nowrap;font-size:11px">${esc(c.fac_nro)}</span>
+      <span style="color:var(--t3);font-size:11px;white-space:nowrap">${fec}</span>
+      <span style="text-align:right;color:var(--t2);white-space:nowrap;font-family:var(--mono);font-size:11px">${mon} ${fmtN(c.fac_total,2)}</span>
+      <span style="text-align:right;color:var(--red);white-space:nowrap;font-family:var(--mono);font-size:11px">${mon} ${fmtN(c.fac_saldo,2)}</span>
+      ${hayCont?`<span style="text-align:right;color:#c4b5fd;font-family:var(--mono);white-space:nowrap;font-size:11px">${contFila?'$ '+fmtN(cAfip,2):'—'}</span>`:''}
       <span style="display:flex;gap:4px;align-items:center;justify-content:flex-end">
         <input id="ncimp-${i}" class="finp" type="text" value="0,00" data-sug="${sug}" data-sugafip="${sugAfip}" data-fila="${i}"
                onclick="event.stopPropagation();this.select()" onchange="ncImpInput(${i},${cAfip})"
@@ -2732,7 +2734,7 @@ async function ncAbrirAplicar(ncNro){
         <button class="btn scs" style="padding:3px 8px;font-size:11px" onclick="event.stopPropagation();ncAplicarComp('${ncNro}','${c.fac_nro}','ncimp-${i}','${contFila?'ncafip-'+i:''}')">Aplicar</button>
       </span>
       ${hayCont?`<span style="text-align:right">${contFila
-        ?`<input id="ncafip-${i}" class="finp" type="text" value="0,00" title="Contable a aplicar" onclick="event.stopPropagation();this.select()" onchange="this.dataset.manual='1'" style="width:96px;text-align:right;font-size:11px;background:#3b2a5c;color:#e9d5ff;border-color:#6d28d9">`
+        ?`<input id="ncafip-${i}" class="finp" type="text" value="0,00" title="Contable a aplicar" onclick="event.stopPropagation();this.select()" onchange="this.dataset.manual='1'" style="width:112px;text-align:right;font-size:11px;background:#3b2a5c;color:#e9d5ff;border-color:#6d28d9">`
         :'<span style="color:var(--t3)">—</span>'}</span>`:''}
     </div>`;
   }).join('') : '<div style="padding:20px;text-align:center;color:var(--t3);font-size:12px">No hay comprobantes deudores (misma empresa, moneda y condición) con saldo pendiente.</div>';
@@ -2758,7 +2760,7 @@ async function ncAbrirAplicar(ncNro){
 
   let ov=document.getElementById('ov-ncap');
   if(!ov){ ov=document.createElement('div'); ov.id='ov-ncap'; ov.className='ov'; document.body.appendChild(ov); }
-  ov.innerHTML=`<div class="modal" style="max-width:680px;width:94%">
+  ov.innerHTML=`<div class="modal" style="max-width:${hayCont?'1020px':'680px'};width:96%">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <strong style="font-size:14px">📌 Aplicar saldo · NC ${esc(ncNro)}</strong>
       <button class="btn" onclick="document.getElementById('ov-ncap').classList.remove('open')" style="padding:3px 9px">✕</button>
