@@ -751,9 +751,13 @@ async function renderFacDetalle(f, vista) {
         </div>
       </div>`}
       <div style="background:var(--s2);border-radius:6px;padding:10px 14px">
-        ${(f.fac_iva||0)>0?`
+        ${f.fac_leyenda ? `
+          ${(Number(f.fac_ley_neto)||0)>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Subtotal neto</span><span>${mon} ${fmt((Number(f.fac_ley_neto)||0)*_fac)}</span></div>`:''}
+          ${(f.fac_iva||0)>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>IVA ${fmt(f.fac_ley_alic||21)}%</span><span>${mon} ${fmt((f.fac_iva||0)*_fac)}</span></div>`:''}
+          ${(Number(f.fac_ley_exento)||0)>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Exento</span><span>${mon} ${fmt((Number(f.fac_ley_exento)||0)*_fac)}</span></div>`:''}
+        ` : ((f.fac_iva||0)>0?`
           <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Subtotal neto</span><span>${mon} ${fmt(((f.fac_sub||0)-(f.fac_iva||0))*_fac)}</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>IVA 21%</span><span>${mon} ${fmt((f.fac_iva||0)*_fac)}</span></div>`:''}
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>IVA 21%</span><span>${mon} ${fmt((f.fac_iva||0)*_fac)}</span></div>`:'')}
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Subtotal</span><span>${mon} ${fmt((f.fac_sub||0)*_fac)}</span></div>
         ${(Array.isArray(f.fac_percep_det)&&f.fac_percep_det.length)
           ? f.fac_percep_det.map(p=>`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>${esc(p.detalle||'Percepción')} (${fmt(p.pct)}%)</span><span>${mon} ${fmt((Number(p.importe)||0)*_fac)}</span></div>`).join('')
@@ -992,11 +996,17 @@ async function facImprimir(modo) {
   const _conDto = _esAfip && (Number(f.fac_monpor)||0) !== 0;
   // Sin descuento el neto declarado sale de dividir el precio (que trae IVA);
   // con descuento, `fac_neto_afip` ya viene calculado como precio×cotiz×(1−dto).
-  const _netoSinDto = (items||[]).reduce((a,it)=>
+  // En una NC/ND POR LEYENDA el neto y el exento vienen cargados a mano: no se
+  // deducen de los ítems ni de restar el IVA al subtotal.
+  const _esLey = !!f.fac_leyenda;
+  const _leyNeto = _esLey ? (Number(f.fac_ley_neto)||0)*_factor : 0;
+  const _leyExento = _esLey ? (Number(f.fac_ley_exento)||0)*_factor : 0;
+  const _netoSinDto = _esLey ? _leyNeto : (items||[]).reduce((a,it)=>
     a + ((Number(it.ite_uni)||0)*_factor)/(1+(Number(it.ite_iva_porc)||21)/100)*(Number(it.ite_can)||0), 0);
-  const _vNeto   = _esAfip
-    ? (_conDto ? (Number(f.fac_neto_afip)>0 ? Number(f.fac_neto_afip) : subtotalNeto*_factor) : _netoSinDto)
-    : subtotalNeto;
+  const _vNeto   = _esLey ? _leyNeto
+    : (_esAfip
+      ? (_conDto ? (Number(f.fac_neto_afip)>0 ? Number(f.fac_neto_afip) : subtotalNeto*_factor) : _netoSinDto)
+      : subtotalNeto);
   const _vIva    = _esAfip
     ? (_conDto ? (Number(f.fac_iva_afip)>0 ? Number(f.fac_iva_afip) : (f.fac_iva||0)*_factor)
                : (f.fac_iva||0)*_factor)
@@ -1156,6 +1166,7 @@ async function facImprimir(modo) {
     <div class="totales">
       ${tieneIva?`
         <div class="tot-row"><span class="tot-lbl">Subtotal neto</span><span class="tot-val">${_monImp} ${fmt(_vNeto)}</span></div>
+        ${_leyExento>0.005?`<div class="tot-row"><span class="tot-lbl">Exento</span><span class="tot-val">${_monImp} ${fmt(_leyExento)}</span></div>`:''}
         ${(()=>{
           // IVA discriminado por alícuota. El IMPORTE TOTAL es el declarado
           // (`_vIva`): los ítems guardan `ite_iva_imp` calculado sobre el neto
