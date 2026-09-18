@@ -1433,10 +1433,34 @@ function renderFacModal(fecha, empresa, cliCod) {
           <button id="nf-btn-grupo" class="btn" onclick="nfAbrirCargaGrupo()" style="padding:3px 10px;font-size:11px">📦 Grupo</button>
           <button id="nf-btn-resumir" class="btn" onclick="nfResumirItems()" style="padding:3px 10px;font-size:11px;color:var(--t2)">✂ Resumir</button>
           <button id="nf-btn-agregar" class="btn pri" onclick="nfAbrirBusqArt()" style="padding:3px 10px;font-size:11px">＋ Agregar</button>
+          <button id="nf-btn-leyenda" class="btn" onclick="nfLeyendaOn()" style="padding:3px 10px;font-size:11px;display:none">📝 Leyenda</button>
+          <button id="nf-btn-leyenda-off" class="btn" onclick="nfLeyendaOff()" style="padding:3px 10px;font-size:11px;display:none;color:var(--red)">✕ Quitar leyenda</button>
         </div>
         <!-- header fijo + body con scroll -->
         <div id="nf-items-hdr" style="flex-shrink:0"></div>
         <div id="nf-items-body" style="flex:1;overflow-y:auto"></div>
+        <!-- NC/ND POR LEYENDA: sin mercadería, texto libre + importes a mano -->
+        <div id="nf-leyenda-box" style="display:none;flex:1;padding:12px;overflow-y:auto">
+          <label style="font-size:12px;color:var(--t2);display:block;margin-bottom:4px">Detalle del comprobante</label>
+          <textarea id="nf-leyenda" rows="7" placeholder="Ej.: Cheque N° 1234 del Banco X rechazado por falta de fondos, más gastos bancarios." style="width:100%;resize:vertical;font-size:13px;line-height:1.5;padding:8px;background:var(--s3);color:var(--txt);border:1px solid var(--b1);border-radius:6px;font-family:inherit"></textarea>
+          <div style="display:grid;grid-template-columns:1fr 1fr 90px;gap:10px;margin-top:12px">
+            <div>
+              <label style="font-size:11px;color:var(--t2);display:block;margin-bottom:3px">Neto gravado (sin IVA)</label>
+              <input id="nf-ley-neto" class="finp" type="text" value="0,00" onchange="nfCalcTotales()" onclick="this.select()" style="width:100%;text-align:right;font-family:var(--mono)">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--t2);display:block;margin-bottom:3px">Exento</label>
+              <input id="nf-ley-exento" class="finp" type="text" value="0,00" onchange="nfCalcTotales()" onclick="this.select()" style="width:100%;text-align:right;font-family:var(--mono)">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--t2);display:block;margin-bottom:3px">% IVA</label>
+              <input id="nf-ley-alic" class="finp" type="text" value="21" onchange="nfCalcTotales()" onclick="this.select()" style="width:100%;text-align:right;font-family:var(--mono)">
+            </div>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--t3);line-height:1.5">
+            El IVA y el total se calculan solos. El exento no lleva IVA — sirve, por ejemplo, para el valor de un cheque rechazado, donde sólo los gastos están gravados.
+          </div>
+        </div>
 
         <!-- Popup buscar artículo — centrado en panel derecho -->
         <div id="nf-art-popup" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:560px;max-width:90%;background:var(--s1);border:1px solid var(--acc);border-radius:8px;z-index:1000;box-shadow:0 8px 32px rgba(0,0,0,.5)">
@@ -1919,6 +1943,8 @@ async function nfOnCtipChange() {
 function nfOnCliCodInput() {
   // Limpia razón social y datos mientras escribe el código
   const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
+  _nfLeyenda=false;
+  s('nf-leyenda',''); s('nf-ley-neto','0,00'); s('nf-ley-exento','0,00'); s('nf-ley-alic','21');
   s('nf-cli-busq',''); s('nf-razon',''); s('nf-tiva',''); s('nf-tiva-cod','');
   s('nf-conpag',''); s('nf-vend',''); s('nf-transp','');
 }
@@ -2335,6 +2361,103 @@ function nfOnMonedaChange(){
 // El descuento se carga DESPUÉS de elegir el comprobante, así que esto se
 // vuelve a evaluar cada vez que se toca el campo: al poner un descuento se
 // libera la moneda, y al volverlo a cero se bloquea y vuelve a Pesos.
+// Totales de una NC/ND por leyenda: los importes se cargan a mano y el IVA y
+// el total se calculan. El EXENTO no lleva IVA (ej.: el valor de un cheque
+// rechazado; sólo los gastos bancarios están gravados).
+function nfCalcTotalesLeyenda(){
+  const r2=x=>Math.round((Number(x)||0)*100)/100;
+  const g=id=>nfParseNum(document.getElementById(id)?.value||'0');
+  const neto=r2(g('nf-ley-neto'));
+  const exento=r2(g('nf-ley-exento'));
+  let alic=Number(String(document.getElementById('nf-ley-alic')?.value||'21').replace(',','.'))||0;
+  if(alic<0) alic=0; if(alic>100) alic=100;
+  const esA=nfEsFacturaA();
+  const iva=esA?r2(neto*alic/100):0;
+
+  const dto=parseFloat(document.getElementById('nf-dto')?.value||0)||0;
+  const factor=1-dto/100;
+  const monSel=document.getElementById('nf-moneda')?.value||'P';
+  const monObj=(TABLAS['MONE']||[]).find(m=>m.CODIGO===monSel);
+  const mon=monObj?monObj.STRING1:'$';
+  const cotiz=monSel==='P'?1:(parseFloat(monObj?.STRING2)||1);
+
+  // REAL: lo que se debe, en la moneda elegida y sin descuento
+  const total=r2(neto+iva+exento);
+  // DECLARADO: en pesos, con cotización y descuento
+  const netoAfip=r2(neto*cotiz*factor);
+  const exentoAfip=r2(exento*cotiz*factor);
+  const ivaAfip=esA?r2(netoAfip*alic/100):0;
+  const totalAfip=r2(netoAfip+ivaAfip+exentoAfip);
+
+  const set=(sel,v)=>document.querySelectorAll(sel).forEach(e=>{ e.textContent=v; });
+  set('.nf-tot-neto', `${mon} ${fmtN(neto,2)}`);
+  set('.nf-tot-sub',  `${mon} ${fmtN(total,2)}`);
+  set('.nf-tot-total',`${mon} ${fmtN(total,2)}`);
+  set('.nf-tot-iva',  `${mon} ${fmtN(iva,2)}`);
+  document.querySelectorAll('.nf-tot-afip').forEach(e=>{ e.textContent=`$ ${fmtN(totalAfip,2)}`; });
+  document.querySelectorAll('.nf-fila-afip').forEach(e=>{ e.style.display = dto!==0||cotiz!==1 ? 'flex' : 'none'; });
+
+  window._nfTotales={ neto, iva, iva21:iva, iva105:0, subtotal:total, total, totalReal:total,
+    exento, alic, dtoImp:0, totalPercep:0,
+    netoAfip, ivaAfip, percepAfip:0, totalAfip, exentoAfip,
+    factor, dto, cotiz, monSel, esLeyenda:true };
+}
+
+// ── NC/ND POR LEYENDA ────────────────────────────────────
+// Hay NC y ND que no son por mercadería: bonificaciones, diferencias de cambio,
+// un cheque rechazado con sus gastos. Ante AFIP son el MISMO comprobante que
+// las de mercadería, así que usan el mismo prefijo y numerador — lo que cambia
+// es el contenido (Ricardo, Sep 2026).
+//
+// Los dos modos son EXCLUYENTES: o lleva ítems o lleva leyenda. Por eso el
+// botón Leyenda desaparece cuando hay ítems cargados, y los de ítems
+// desaparecen cuando se está en modo leyenda.
+let _nfLeyenda = false;
+
+// El botón sólo tiene sentido en NC y ND (no en facturas) y sin ítems cargados
+function nfLeyendaSync(){
+  const val=document.getElementById('nf-ctip')?.value||'';
+  const tipo=(val.split('|')[1]||'').toUpperCase();
+  const esNCND = tipo==='C' || tipo==='D';
+  const hayItems = (FAC_ITEMS_NUEVA||[]).length>0;
+
+  const b=document.getElementById('nf-btn-leyenda');
+  const bOff=document.getElementById('nf-btn-leyenda-off');
+  const box=document.getElementById('nf-leyenda-box');
+  const hdr=document.getElementById('nf-items-hdr');
+  const body=document.getElementById('nf-items-body');
+  const bAdd=document.getElementById('nf-btn-agregar');
+  const bGrp=document.getElementById('nf-btn-grupo');
+  const bRes=document.getElementById('nf-btn-resumir');
+
+  if(b)   b.style.display   = (esNCND && !_nfLeyenda && !hayItems) ? '' : 'none';
+  if(bOff)bOff.style.display= _nfLeyenda ? '' : 'none';
+  if(box) box.style.display = _nfLeyenda ? '' : 'none';
+  if(hdr) hdr.style.display = _nfLeyenda ? 'none' : '';
+  if(body)body.style.display= _nfLeyenda ? 'none' : '';
+  [bAdd,bGrp,bRes].forEach(x=>{ if(x) x.style.display = _nfLeyenda ? 'none' : ''; });
+}
+
+function nfLeyendaOn(){
+  if((FAC_ITEMS_NUEVA||[]).length){
+    toast('Ya hay artículos cargados: una NC es por mercadería o por leyenda, no las dos','err');
+    return;
+  }
+  _nfLeyenda=true;
+  nfLeyendaSync(); nfCalcTotales();
+  document.getElementById('nf-leyenda')?.focus();
+}
+
+function nfLeyendaOff(){
+  const txt=(document.getElementById('nf-leyenda')?.value||'').trim();
+  if(txt && !confirm('¿Quitar la leyenda? Se borra el detalle cargado.')) return;
+  _nfLeyenda=false;
+  ['nf-leyenda'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  ['nf-ley-neto','nf-ley-exento'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value='0,00'; });
+  const a=document.getElementById('nf-ley-alic'); if(a) a.value='21';
+  nfLeyendaSync(); nfCalcTotales();
+}
+
 function nfSyncMoneda(){
   const monEl=document.getElementById('nf-moneda'); if(!monEl) return;
   const val=document.getElementById('nf-ctip')?.value||'';
@@ -2351,6 +2474,8 @@ function nfSyncMoneda(){
 
 function nfCalcTotales() {
   nfSyncMoneda();
+  nfLeyendaSync();
+  if(_nfLeyenda) return nfCalcTotalesLeyenda();
   const esA=nfEsFacturaA();
   const dto=parseFloat(document.getElementById('nf-dto')?.value||0)||0;
   let neto=0, iva21=0, iva105=0, ivaOtro=0;
@@ -2498,7 +2623,13 @@ async function nfGuardar() {
   if(!ctipVal){toast('Seleccioná un tipo de comprobante','err');return;}
   if(!cliCod){toast('Ingresá un código de cliente','err');return;}
   if(!fecha){toast('Ingresá la fecha','err');return;}
-  if(!FAC_ITEMS_NUEVA.length){toast('Agregá al menos un ítem','err');return;}
+  if(_nfLeyenda){
+    const txt=(document.getElementById('nf-leyenda')?.value||'').trim();
+    if(!txt){ toast('Escribí el detalle del comprobante','err'); return; }
+    const t=window._nfTotales||{};
+    if(((t.neto||0)+(t.exento||0))<=0){ toast('Cargá el neto gravado o el exento','err'); return; }
+  }
+  else if(!FAC_ITEMS_NUEVA.length){toast('Agregá al menos un ítem','err');return;}
   const cli=facFindCli(cliCod);
   if(!cli){toast(`Cliente ${cliCod} no encontrado`,'err');return;}
   // No se puede facturar una letra que no corresponde a la condición de IVA del
@@ -2538,6 +2669,11 @@ async function nfGuardar() {
     // Cotización usada al emitir: sin esto no se puede reconstruir después cómo
     // se llegó al importe declarado (la tabla monedas guarda la ACTUAL).
     fac_cotiz:tot.cotiz||1,
+    // NC/ND por leyenda: sin ítems, con el detalle en texto y los importes a mano
+    fac_leyenda: tot.esLeyenda ? (document.getElementById('nf-leyenda')?.value||'').trim() : null,
+    fac_ley_neto: tot.esLeyenda ? (tot.neto||0) : 0,
+    fac_ley_exento: tot.esLeyenda ? (tot.exento||0) : 0,
+    fac_ley_alic: tot.esLeyenda ? (tot.alic||0) : 0,
     // Saldo CONTABLE vivo, en pesos. Baja en PROPORCIÓN a lo que se cobre del
     // real: si paga la mitad del real, se cancela la mitad del contable.
     // Sólo los comprobantes que BAJAN DEPÓSITO tienen parte contable
