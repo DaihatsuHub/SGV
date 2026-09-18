@@ -52,7 +52,9 @@ async function sdConsultar(){
 function _sdTpl(){
   const A=(_sdData?.alicuotas||[]).map(()=>'115px 105px').join(' ');
   const P=(_sdData?.percepciones||[]).map(()=>'110px').join(' ');
-  return `display:grid;grid-template-columns:75px 125px minmax(190px,1fr) 120px 45px ${A} ${P} 125px;gap:6px;align-items:center;min-width:max-content`;
+  // La columna EXENTO sólo aparece si hay algo exento en el período
+  const EX=_sdData?.hayExento?' 110px':'';
+  return `display:grid;grid-template-columns:75px 125px minmax(190px,1fr) 120px 45px ${A}${EX} ${P} 125px;gap:6px;align-items:center;min-width:max-content`;
 }
 
 function renderSd(){
@@ -66,6 +68,7 @@ function renderSd(){
       <span>Fecha</span><span>Comprobante</span><span>Cliente</span>
       <span>CUIT</span><span>IVA</span>
       ${AL.map(a=>`<span class="sd-num">Neto ${_sdAlic(a)}</span><span class="sd-num">IVA ${_sdAlic(a)}</span>`).join('')}
+      ${_sdData.hayExento?'<span class="sd-num">Exento</span>':''}
       ${PE.map(p=>`<span class="sd-num" title="${_sdEsc(p.detalle)}">${_sdEsc(p.detalle.replace(/^PERCEP\.\s*IIBB\s*/i,''))}</span>`).join('')}
       <span class="sd-num">Total</span>
     </div>`;
@@ -77,6 +80,7 @@ function renderSd(){
       <span class="sd-mono">${_sdEsc(r.cuit)}</span>
       <span style="font-size:11px;color:var(--t2)">${_sdEsc(_sdIvaDesc(r.iva))}</span>
       ${AL.map(a=>`<span class="sd-num">${_sdFmt(r.porAlic[a]?.neto)}</span><span class="sd-num">${_sdFmt(r.porAlic[a]?.iva)}</span>`).join('')}
+      ${_sdData.hayExento?`<span class="sd-num">${_sdFmt(r.exento)}</span>`:''}
       ${PE.map(p=>`<span class="sd-num">${_sdFmt(r.perc[p.cod])}</span>`).join('')}
       <span class="sd-num sd-tot">${_sdFmt(r.total)}</span>
     </div>`).join('');
@@ -86,6 +90,7 @@ function renderSd(){
       <span style="font-size:11px;color:var(--t2)">${F.length} comprobante${F.length===1?'':'s'}</span>
       <span></span><span></span>
       ${AL.map(a=>`<span class="sd-num"><b>${_sdFmt0(T.porAlic?.[a]?.neto)}</b></span><span class="sd-num"><b>${_sdFmt0(T.porAlic?.[a]?.iva)}</b></span>`).join('')}
+      ${_sdData.hayExento?`<span class="sd-num"><b>${_sdFmt0(T.exento)}</b></span>`:''}
       ${PE.map(p=>`<span class="sd-num"><b>${_sdFmt0(T.perc?.[p.cod])}</b></span>`).join('')}
       <span class="sd-num sd-tot"><b>${_sdFmt0(T.total)}</b></span>
     </div>`;
@@ -153,17 +158,20 @@ function sdPrint(){
 
   const cab=`<tr><th>Fecha</th><th>Comprobante</th><th>Cliente</th><th>CUIT</th><th>IVA</th>`
     + AL.map(a=>`<th class="n">Neto ${_sdAlic(a)}</th><th class="n">IVA ${_sdAlic(a)}</th>`).join('')
+    + (_sdData.hayExento?'<th class="n">Exento</th>':'')
     + PE.map(p=>`<th class="n">${_sdEsc(p.detalle.replace(/^PERCEP\.\s*IIBB\s*/i,''))}</th>`).join('')
     + `<th class="n">Total</th></tr>`;
 
   const cuerpo=F.map(r=>`<tr><td>${_sdFecha(r.fec)}</td><td${r.sinCae?' class="sincae"':''}>${_sdEsc(r.comp)}</td>
       <td>${_sdEsc(sgvCorta(r.razon, 30))}</td><td>${_sdEsc(r.cuit)}</td><td>${_sdEsc(_sdIvaDesc(r.iva))}</td>`
     + AL.map(a=>`<td class="n">${_sdFmt(r.porAlic[a]?.neto)}</td><td class="n">${_sdFmt(r.porAlic[a]?.iva)}</td>`).join('')
+    + (_sdData.hayExento?`<td class="n">${_sdFmt(r.exento)}</td>`:'')
     + PE.map(p=>`<td class="n">${_sdFmt(r.perc[p.cod])}</td>`).join('')
     + `<td class="n">${_sdFmt(r.total)}</td></tr>`).join('');
 
   const pie=`<tr class="tot"><td colspan="5">TOTALES (${F.length} comprobantes)</td>`
     + AL.map(a=>`<td class="n">${_sdFmt0(T.porAlic?.[a]?.neto)}</td><td class="n">${_sdFmt0(T.porAlic?.[a]?.iva)}</td>`).join('')
+    + (_sdData.hayExento?`<td class="n">${_sdFmt0(T.exento)}</td>`:'')
     + PE.map(p=>`<td class="n">${_sdFmt0(T.perc?.[p.cod])}</td>`).join('')
     + `<td class="n">${_sdFmt0(T.total)}</td></tr>`;
 
@@ -210,6 +218,7 @@ async function sdExcel(){
 
   const hr=ws.addRow(['Fecha','Comprobante','CAE','Cliente','CUIT','IVA',
     ...AL.flatMap(a=>['Neto '+_sdAlic(a),'IVA '+_sdAlic(a)]),
+    ...(_sdData.hayExento?['Exento']:[]),
     ...PE.map(p=>p.detalle), 'Total']);
   hr.eachCell(c=>{ c.font={bold:true}; c.alignment={horizontal:'center',wrapText:true}; c.border={bottom:{style:'medium'}}; });
 
@@ -217,6 +226,7 @@ async function sdExcel(){
   F.forEach(r=>{
     const row=ws.addRow([_sdFecha(r.fec), r.comp, r.sinCae?'SIN CAE':r.cae, r.razon, r.cuit, _sdIvaDesc(r.iva),
       ...AL.flatMap(a=>[r.porAlic[a]?.neto||null, r.porAlic[a]?.iva||null]),
+      ...(_sdData.hayExento?[r.exento||null]:[]),
       ...PE.map(p=>r.perc[p.cod]||null), r.total]);
     for(let i=primerNum;i<=nCols;i++) row.getCell(i).numFmt=NUM;
     if(r.sinCae){
@@ -228,6 +238,7 @@ async function sdExcel(){
 
   const fr=ws.addRow(['','','','TOTALES ('+F.length+')','','',
     ...AL.flatMap(a=>[T.porAlic?.[a]?.neto||0, T.porAlic?.[a]?.iva||0]),
+    ...(_sdData.hayExento?[T.exento||0]:[]),
     ...PE.map(p=>T.perc?.[p.cod]||0), T.total||0]);
   fr.font={bold:true}; fr.eachCell(c=>{ c.border={top:{style:'double'}}; });
   for(let i=primerNum;i<=nCols;i++) fr.getCell(i).numFmt=NUM;
