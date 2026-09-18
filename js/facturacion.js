@@ -2703,7 +2703,11 @@ async function ncAbrirAplicar(ncNro){
   // No va atada a la proporción: se puede cancelar todo lo contable y dejar un
   // resto de lo real, o al revés, así que el importe es editable.
   const ncAfip = Number(nc.fac_saldo_afip)||0;
-  const hayCont = !!nc.fac_tab_fact && ncAfip>0 && deudores.some(c=>c.fac_tab_fact && (Number(c.fac_saldo_afip)||0)>0);
+  // Las columnas contables se muestran si LA NC tiene saldo contable, aunque
+  // ningún comprobante lo tenga: en esas filas sale un guión, y así se entiende
+  // por qué no se puede aplicar (antes la columna desaparecía y parecía un
+  // error, cuando en realidad la factura ya tenía el contable cancelado).
+  const hayCont = !!nc.fac_tab_fact && ncAfip>0;
   // Anchos fijos: con `1fr` el número se partía en dos líneas y las columnas de
   // la derecha quedaban afuera. Los campos donde se carga el importe llevan el
   // doble de espacio que el resto, que es donde se mira.
@@ -2776,6 +2780,10 @@ async function ncAbrirAplicar(ncNro){
       <span><input type="checkbox" id="ncsel-todos" onclick="ncMarcarTodos(this.checked)" title="Marcar todos" style="accent-color:var(--acc);cursor:pointer"></span><span>Comprobante</span><span>Fecha</span><span style="text-align:right">Total</span><span style="text-align:right">Saldo</span>${hayCont?'<span style="text-align:right;color:#c4b5fd">Saldo cont.</span>':''}<span style="text-align:right">Importe a aplicar</span>${hayCont?'<span style="text-align:right;color:#c4b5fd">Aplica cont.</span>':''}
     </div>
     <div style="max-height:280px;overflow:auto">${filas}</div>
+    ${hayCont && !deudores.some(c=>c.fac_tab_fact && (Number(c.fac_saldo_afip)||0)>0)
+      ? `<div style="margin:8px 0;padding:7px 10px;background:var(--s2);border-left:3px solid #6d28d9;border-radius:4px;font-size:11px;color:var(--t2)">
+           La NC tiene $ ${fmtN(ncAfip,2)} de saldo contable, pero ninguno de estos comprobantes tiene parte contable pendiente: ya fue cancelada.
+         </div>` : ''}
     <div id="nc-pie" style="display:grid;grid-template-columns:${gridNC};gap:8px;padding:8px;background:var(--s2);border-top:2px solid var(--acc);font-size:12px;font-family:var(--mono);font-weight:600">
       <span></span><span style="font-family:inherit">Total a aplicar</span><span></span><span></span><span></span>
       ${hayCont?'<span></span>':''}
