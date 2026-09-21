@@ -1390,7 +1390,10 @@ function renderFacModal(fecha, empresa, cliCod) {
         <!-- título -->
         <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:rgba(0,0,0,0.2)">
           <span style="font-size:14px;font-weight:700;color:var(--acc)">📄 Nueva Factura</span>
-          <button class="btn" onclick="facCancelar()" style="padding:3px 10px;font-size:12px">✕ Cancelar</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn" onclick="facCancelar()" style="padding:3px 10px;font-size:12px">✕ Cancelar</button>
+            <button class="btn pri nf-grabar-btn" onclick="nfGuardar()" style="padding:3px 12px;font-size:12px">💾 Guardar</button>
+          </div>
         </div>
         <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;flex:1">
           <!-- Empresa / Tipo / Número -->
@@ -1490,6 +1493,11 @@ function renderFacModal(fecha, empresa, cliCod) {
         <div style="padding:8px 12px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:6px;flex-shrink:0;background:var(--s2)">
           <span style="font-size:12px;font-weight:600;color:var(--acc);font-family:var(--mono)">ÍTEMS</span>
           <div style="flex:1"></div>
+          <span id="nf-busq-wrap" style="margin-right:4px;white-space:nowrap">
+            <input id="nf-busq-item" class="finp" autocomplete="off" placeholder="Buscar ítem…" style="width:170px;padding:3px 8px;font-size:11px"
+                   onfocus="this.select()" onclick="this.select()" oninput="nfBuscarItem()" onkeydown="if(event.key==='Enter'){event.preventDefault();nfBuscarItem(true)}">
+            <button class="btn" style="padding:2px 7px;font-size:11px" onclick="nfBuscarItemLimpiar()" title="Limpiar">✕</button>
+          </span>
           <button id="nf-btn-grupo" class="btn" onclick="nfAbrirCargaGrupo()" style="padding:3px 10px;font-size:11px">📦 Grupo</button>
           <button id="nf-btn-resumir" class="btn" onclick="nfResumirItems()" style="padding:3px 10px;font-size:11px;color:var(--t2)">✂ Resumir</button>
           <button id="nf-btn-dtos" class="btn" onclick="nfDtosTodos()" title="Aplicar descuentos a todos los ítems cargados" style="padding:3px 10px;font-size:11px">% Dto</button>
@@ -1967,6 +1975,37 @@ function nfDtosTodos(){
   setTimeout(()=>document.getElementById('nfdt-1')?.focus(),50);
 }
 
+// Buscador de ítems: incremental, POSICIONA sin filtrar (la grilla queda
+// entera). Busca por código o descripción: primero lo que empieza con el
+// texto, después lo que lo contiene. Enter pasa al siguiente que coincida.
+let _nfBusqIdx=-1;
+function nfBuscarItem(siguiente){
+  const q=(document.getElementById('nf-busq-item')?.value||'').trim().toUpperCase();
+  document.querySelectorAll('#nf-items-body .nf-item-row').forEach(r=>{ r.style.outline=''; });
+  if(!q){ _nfBusqIdx=-1; return; }
+  const txt=it=>((it.ite_art||'')+' '+(it.ite_desp_art||'')).toUpperCase();
+  const lista=FAC_ITEMS_NUEVA||[];
+  let hits=lista.map((it,i)=>({i,t:txt(it),c:(it.ite_art||'').toUpperCase()}))
+    .filter(x=>x.c.startsWith(q)).map(x=>x.i);
+  if(!hits.length) hits=lista.map((it,i)=>({i,t:txt(it)})).filter(x=>x.t.includes(q)).map(x=>x.i);
+  if(!hits.length){ _nfBusqIdx=-1; return; }
+  // Enter: el siguiente después del actual (vuelve al principio al final)
+  if(siguiente && _nfBusqIdx>=0){
+    const n=hits.find(i=>i>_nfBusqIdx);
+    _nfBusqIdx = (n!==undefined) ? n : hits[0];
+  } else _nfBusqIdx=hits[0];
+  const row=document.querySelector(`#nf-items-body .nf-item-row[data-idx="${_nfBusqIdx}"]`);
+  if(row){
+    row.scrollIntoView({block:'center'});
+    row.style.outline='2px solid var(--acc)';
+  }
+}
+function nfBuscarItemLimpiar(){
+  const i=document.getElementById('nf-busq-item'); if(i){ i.value=''; i.focus(); }
+  _nfBusqIdx=-1;
+  document.querySelectorAll('#nf-items-body .nf-item-row').forEach(r=>{ r.style.outline=''; });
+}
+
 function nfAplicarDtos(precio, d1, d2, d3, d4) {
   let p=precio;
   if(d1>0) p=p*(1-d1/100);
@@ -2405,13 +2444,13 @@ function nfRenderItems() {
     body.innerHTML=`<div style="text-align:center;color:var(--t3);font-size:12px;padding:24px 16px;line-height:1.8">
       🔒 Completá <strong>Empresa</strong>, <strong>Tipo de Comprobante</strong> y <strong>Cliente</strong><br>para habilitar la carga de ítems.
     </div>`;
-    ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar','nf-btn-dtos'].forEach(id=>{
+    ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar','nf-btn-dtos','nf-busq-wrap'].forEach(id=>{
       const el=document.getElementById(id);if(el)el.style.display='none';
     });
     return;
   }
   // En modo cheque rechazado o leyenda no hay ítems: los botones quedan ocultos
-  ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar','nf-btn-dtos'].forEach(id=>{
+  ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar','nf-btn-dtos','nf-busq-wrap'].forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.style.display = (nfEsCheque()||_nfLeyenda) ? 'none' : '';
   });
@@ -2422,14 +2461,14 @@ function nfRenderItems() {
       🔒 Completá <strong>Empresa</strong>, <strong>Tipo de Comprobante</strong> y <strong>Cliente</strong><br>para habilitar la carga de ítems.
     </div>`;
     // Ocultar botones de items
-    ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar','nf-btn-dtos'].forEach(id=>{
+    ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar','nf-btn-dtos','nf-busq-wrap'].forEach(id=>{
       const el=document.getElementById(id);if(el)el.style.display='none';
     });
     return;
   }
   // Mostrar botones
   // En modo cheque rechazado o leyenda no hay ítems: los botones quedan ocultos
-  ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar','nf-btn-dtos'].forEach(id=>{
+  ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar','nf-btn-dtos','nf-busq-wrap'].forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.style.display = (nfEsCheque()||_nfLeyenda) ? 'none' : '';
   });
@@ -2800,6 +2839,7 @@ function nfSyncMoneda(){
 }
 
 function nfCalcTotales() {
+  setTimeout(nfActualizarGrabar, 0);
   nfSyncMoneda();
   nfLeyendaSync();
   if(nfEsCheque()) return nfCalcTotalesCheque();
@@ -2934,6 +2974,54 @@ function nfCalcTotales() {
   window._nfTotales={neto,iva21,iva105,iva,subtotal,dtoImp,totalPercep,total,totalReal,netoAfip,ivaAfip,percepAfip,totalAfip,factor,dto,cotiz,monSel};
 }
 
+// ¿Se puede grabar? Devuelve '' si sí, o el motivo si no. Los botones de
+// guardar se habilitan sólo cuando está todo; el motivo queda en el tooltip,
+// así se ve qué falta sin tener que intentar grabar.
+function nfMotivoNoGrabar(){
+  const g=id=>(document.getElementById(id)?.value||'').trim();
+  if(!g('nf-empresa')) return 'Falta la empresa';
+  if(!g('nf-ctip'))    return 'Falta el tipo de comprobante';
+  if(!g('nf-cli-cod')) return 'Falta el cliente';
+  if(!g('nf-fecha'))   return 'Falta la fecha';
+  const inc=(typeof nfLetraIncompatible==='function')?nfLetraIncompatible():'';
+  if(inc) return inc;
+  if(nfEsCheque()){
+    const c=nfChequeDatos();
+    if(!c.banco)          return 'Falta el banco del cheque';
+    if(!c.numero)         return 'Falta el número de cheque';
+    if(!(c.importe>0))    return 'Falta el importe del cheque';
+    return '';
+  }
+  if(_nfLeyenda){
+    if(!g('nf-leyenda')) return 'Falta el detalle de la leyenda';
+    const t=window._nfTotales||{};
+    if(((t.neto||0)+(t.exento||0))<=0) return 'Falta el neto gravado o el exento';
+    return '';
+  }
+  const conCant=(FAC_ITEMS_NUEVA||[]).filter(it=>(it.ite_can||0)>0&&(it.ite_uni||0)>0);
+  if(!conCant.length) return 'Cargá al menos un ítem con cantidad';
+  return '';
+}
+
+// Cualquier cambio dentro del formulario reevalúa el botón (algunos campos,
+// como el número de cheque o el texto de la leyenda, no recalculan totales).
+['input','change'].forEach(ev=>document.addEventListener(ev, e=>{
+  if(e.target && e.target.closest && e.target.closest('#ov-nf')) {
+    clearTimeout(window._nfGrabT); window._nfGrabT=setTimeout(nfActualizarGrabar,120);
+  }
+}));
+
+function nfActualizarGrabar(){
+  const motivo=nfMotivoNoGrabar();
+  document.querySelectorAll('.nf-grabar-btn').forEach(b=>{
+    if(b._txt!==undefined) return;             // grabando: no se toca
+    b.disabled=!!motivo;
+    b.style.opacity = motivo ? '0.45' : '';
+    b.style.cursor  = motivo ? 'not-allowed' : '';
+    b.title = motivo || 'Guardar el comprobante';
+  });
+}
+
 function nfGrabarEstado(saving){
   document.querySelectorAll('.nf-grabar-btn').forEach(b=>{
     if(saving){
@@ -2945,6 +3033,7 @@ function nfGrabarEstado(saving){
       b.style.opacity=''; b.style.cursor=''; b.style.background='';
     }
   });
+  if(!saving) nfActualizarGrabar();
 }
 async function nfGuardar() {
   const empresa=document.getElementById('nf-empresa')?.value||'';
