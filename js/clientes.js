@@ -126,8 +126,10 @@ function updCliFilts(){
 function selCli(i){cliSelIdx=i;renderClis();}
 function setCliFilt(v){
   cliFilt=v;
-  ['todos','ok','inc','nov'].forEach(k=>document.getElementById('cf-'+k)?.classList.remove('on'));
-  document.getElementById('cf-'+v)?.classList.add('on');
+  // Los botones del filtro usan el prefijo `cfil-`: con `cf-` chocaban con los
+  // campos del formulario (cf-inc estaba dos veces en la página).
+  ['todos','ok','inc','nov'].forEach(k=>document.getElementById('cfil-'+k)?.classList.remove('on'));
+  document.getElementById('cfil-'+v)?.classList.add('on');
   renderClis();
 }
 
