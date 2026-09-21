@@ -444,9 +444,16 @@ function reciLoadDeudores(){
       //   los demás  → los CONTABLES y, si entre ellos hay alguno que TAMBIÉN
       //                BAJA STOCK, también los NO CONTABLES que bajan stock,
       //                para poder asentar esos pagos en el mismo recibo.
+      // En el recibo fiscal, si el cliente tiene alguna contable que baja stock,
+      // también entran los CHEQUES RECHAZADOS (tipo R): son deuda real no
+      // contable, así que se cobran en el mismo recibo pero no aparecen en el
+      // recibo impreso, que sólo muestra la parte contable.
+      const esChqRech = tipo==='R';
       const okTipo = _reciEsX()
         ? !f.fac_tab_fact
-        : (!!f.fac_tab_fact || (hayContableConStock && !!f.fac_tab_stk && !f.fac_tab_fact));
+        : (!!f.fac_tab_fact
+           || (hayContableConStock && !!f.fac_tab_stk && !f.fac_tab_fact)
+           || (hayContableConStock && esChqRech));
       if((f.fac_cli||'').trim()===cod.trim() && mismaEmp && esDeudor && okTipo && (f.fac_saldo||0)>0){
         const info=reciMonInfo(f.fac_moneda,_reciHdr);
         const saldoOrig=round2(f.fac_saldo||0);

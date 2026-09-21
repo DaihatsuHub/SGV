@@ -1475,7 +1475,14 @@ function renderFacModal(fecha, empresa, cliCod) {
             <div style="display:flex;gap:14px;align-items:flex-end;padding-bottom:12px;border-bottom:1px solid #9fc5de">
               <div style="flex:1;min-width:0">
                 <div class="chq-lbl">Banco</div>
-                <select id="nf-chq-banco" class="finp chq-inp" style="width:100%"></select>
+                <div style="display:flex;gap:4px">
+                  <input id="nf-chq-banco-busq" list="nf-chq-banco-list" class="finp chq-inp" autocomplete="off"
+                         placeholder="Número o nombre del banco…" style="flex:1;min-width:0"
+                         onfocus="this.select()" oninput="nfChequeBanco()" onchange="nfChequeBanco()">
+                  <datalist id="nf-chq-banco-list"></datalist>
+                  <button class="btn" style="padding:2px 8px;font-size:11px" onclick="nfChequeBancoLimpiar()" title="Limpiar">✕</button>
+                </div>
+                <input type="hidden" id="nf-chq-banco">
               </div>
               <div style="width:160px">
                 <div class="chq-lbl">Fecha de pago</div>
@@ -2308,8 +2315,10 @@ function nfRenderItems() {
     });
     return;
   }
+  // En modo cheque rechazado o leyenda no hay ítems: los botones quedan ocultos
   ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.style.display='';
+    const el=document.getElementById(id);
+    if(el) el.style.display = (nfEsCheque()||_nfLeyenda) ? 'none' : '';
   });
   // Bloquear items hasta tener empresa, tipo y cliente
   if(!nfItemsHabilitados()) {
@@ -2324,8 +2333,10 @@ function nfRenderItems() {
     return;
   }
   // Mostrar botones
+  // En modo cheque rechazado o leyenda no hay ítems: los botones quedan ocultos
   ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.style.display='';
+    const el=document.getElementById(id);
+    if(el) el.style.display = (nfEsCheque()||_nfLeyenda) ? 'none' : '';
   });
   const esA=nfEsFacturaA();
   const cols=`90px 1fr 50px 100px 65px 90px 45px 90px 90px 28px`;
@@ -2536,10 +2547,25 @@ function nfEsCheque(){
   return (val.split('|')[1]||'').toUpperCase()==='R';
 }
 
+// Banco con búsqueda incremental: se puede tipear el número del BCRA (el que
+// viene impreso en el cheque) o el nombre. El código queda en un campo oculto.
 function nfChequeFillBancos(){
-  const sel=document.getElementById('nf-chq-banco'); if(!sel||sel.options.length>1) return;
-  sel.innerHTML='<option value="">— elegí el banco —</option>'
-    + ((TABLAS&&TABLAS['BANC'])||[]).map(b=>`<option value="${esc(b.CODIGO)}">${esc(b.CODIGO)} — ${esc(b.DETALLE)}</option>`).join('');
+  const dl=document.getElementById('nf-chq-banco-list'); if(!dl||dl.options.length) return;
+  dl.innerHTML=((TABLAS&&TABLAS['BANC'])||[])
+    .map(b=>`<option value="${esc(b.CODIGO)} — ${esc(b.DETALLE)}">`).join('');
+}
+function nfChequeBanco(){
+  const v=(document.getElementById('nf-chq-banco-busq')?.value||'').trim();
+  const cod=(v.split('—')[0]||'').trim();
+  const bs=(TABLAS&&TABLAS['BANC'])||[];
+  // Por código exacto (con o sin ceros adelante) o por nombre exacto
+  let b=bs.find(x=>x.CODIGO===cod) || bs.find(x=>x.CODIGO===cod.padStart(3,'0'))
+     || bs.find(x=>(x.DETALLE||'').toUpperCase()===v.toUpperCase());
+  const h=document.getElementById('nf-chq-banco'); if(h) h.value = b ? b.CODIGO : '';
+}
+function nfChequeBancoLimpiar(){
+  const i=document.getElementById('nf-chq-banco-busq'); if(i){ i.value=''; i.focus(); }
+  const h=document.getElementById('nf-chq-banco'); if(h) h.value='';
 }
 
 // El texto que queda impreso en el comprobante: se arma con los datos del
@@ -2569,7 +2595,7 @@ function nfChequeDatos(){
 }
 
 function nfChequeLimpiar(){
-  ['nf-chq-banco','nf-chq-fecha','nf-chq-local','nf-chq-nro','nf-chq-librador','nf-chq-cuenta','nf-chq-concepto']
+  ['nf-chq-banco','nf-chq-banco-busq','nf-chq-fecha','nf-chq-local','nf-chq-nro','nf-chq-librador','nf-chq-cuenta','nf-chq-concepto']
     .forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
   ['nf-chq-importe','nf-chq-gasto'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value='0,00'; });
 }
