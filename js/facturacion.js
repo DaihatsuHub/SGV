@@ -615,7 +615,7 @@ async function renderFacDetalle(f, vista) {
   const det=document.getElementById('fac-detalle');
   const fec=f.fac_fec?f.fac_fec.substring(0,10).split('-').reverse().join('/'):'—';
   const cli=facFindCli(f.fac_cli);
-  const mon=f.fac_moneda==='P'?'$':'u$s';
+  const mon=nfMonSimbolo(f.fac_moneda);   // el símbolo real: U$C, U$T… (antes decía siempre u$s)
   const items=await sbLoadItemsFac(f.fac_nro);
   const tipoChar=facGetTipo(f.fac_nro);
   const prefijo2=facGetPrefijo(f.fac_nro);
@@ -941,7 +941,7 @@ async function facImprimir(modo) {
   const cli = facFindCli(f.fac_cli);
   const emp = f.fac_empresa || (f.fac_nro||'').substring(0,1);
   const ed  = EMP_DATA[emp] || EMP_DATA['H'];
-  const mon = f.fac_moneda==='P'?'$':'u$s';
+  const mon = nfMonSimbolo(f.fac_moneda);
   const fec = f.fac_fec?f.fac_fec.substring(0,10).split('-').reverse().join('/'):'—';
   const tipoChar = facGetTipo(f.fac_nro);
   const tipoLabel = TIPO_LABEL[tipoChar] || 'Factura';
@@ -1227,7 +1227,7 @@ async function facImprimirBorrador() {
   const f = filtFacs()[facSelIdx];
   if(!f){toast('Factura no encontrada','err');return;}
   const cli = facFindCli(f.fac_cli);
-  const mon = f.fac_moneda==='P'?'$':'u$s';
+  const mon = nfMonSimbolo(f.fac_moneda);
   const fec = f.fac_fec?f.fac_fec.substring(0,10).split('-').reverse().join('/'):'—';
   const items = await sbLoadItemsFac(f.fac_nro);
 
@@ -3139,7 +3139,7 @@ async function ncAbrirAplicar(ncNro){
   catch(e){ toast('No se pudieron traer los comprobantes','err'); return; }
   if(!data || !data.ok){ toast((data&&data.error)||'Error','err'); return; }
   const nc=data.nc, deudores=data.deudores||[];
-  const mon=nc.fac_moneda==='P'?'$':'u$s';
+  const mon=nfMonSimbolo(nc.fac_moneda);
   // La PARTE CONTABLE sólo se muestra si LOS DOS comprobantes bajan depósito.
   // No va atada a la proporción: se puede cancelar todo lo contable y dejar un
   // resto de lo real, o al revés, así que el importe es editable.

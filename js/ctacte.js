@@ -109,7 +109,8 @@ function _ccMonLabel(m){
   const map={ P:'Pesos', U:'Dólares', C:'Dólar Casio', T:'Dólar Tressa', D:'Dólares' };
   return map[m] || (m||'—');
 }
-function _ccMonSimbolo(m){ return m==='P' ? '$' : 'u$s'; }
+// Símbolo real de la moneda, de la tabla MONE (U$C, U$T…), no un "u$s" fijo
+function _ccMonSimbolo(m){ const o=((typeof TABLAS!=='undefined'&&TABLAS['MONE'])||[]).find(x=>x.CODIGO===(m||'P')); return o&&o.STRING1?o.STRING1:(m==='P'?'$':m); }
 
 // Llena el datalist de clientes (al abrir la página)
 function ctacteFillClientes(){

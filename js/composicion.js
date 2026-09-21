@@ -15,7 +15,8 @@ function _cpEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp
 function _cpFmt(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function _cpFmtS(n){ const v=Number(n); return (n===null||n===undefined||isNaN(v))?'':_cpFmt(v); }
 function _cpFecha(f){ const p=(f||'').substring(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0].slice(-2)}`:(f||''); }
-function _cpSimb(m){ return m==='P'?'$':(m==='C'?'U$C':(m==='T'?'U$T':'u$s')); }
+// Símbolo real de la moneda, de la tabla MONE
+function _cpSimb(m){ const o=((typeof TABLAS!=='undefined'&&TABLAS['MONE'])||[]).find(x=>x.CODIGO===(m||'P')); return o&&o.STRING1?o.STRING1:(m==='P'?'$':m); }
 
 const CP_GRID='104px 62px 92px 40px 104px 104px 104px 132px 62px 110px 110px';
 
