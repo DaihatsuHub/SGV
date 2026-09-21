@@ -3066,6 +3066,21 @@ async function nfGuardar() {
   // cliente (ej. "A" a un monotributista). Es un error fiscal: se bloquea.
   const _incomp=nfLetraIncompatible();
   if(_incomp){ toast(_incomp,'err'); nfChequearLetra(); return; }
+
+  // Renglones en $0 (cantidad o precio en cero, típico al cargar un Grupo):
+  // se avisa y, con el OK, se SACAN antes de validar — así no frenan la
+  // grabación por falta de despacho ni por precio, porque no se van a grabar.
+  if(!nfEsCheque() && !_nfLeyenda){
+    const conImp=FAC_ITEMS_NUEVA.filter(it=>(it.ite_can||0)>0&&(it.ite_uni||0)>0);
+    const enCero=FAC_ITEMS_NUEVA.length-conImp.length;
+    if(enCero>0){
+      if(!conImp.length){ toast('No hay ningún ítem con importe para grabar','err'); return; }
+      if(!confirm(`Hay ${enCero} ítem(s) con total $ 0 (sin cantidad o sin precio).\n\n`
+                + `Sólo se van a grabar los ${conImp.length} ítem(s) con importe.\n\n¿Continuar?`)) return;
+      FAC_ITEMS_NUEVA=conImp;
+      nfRenderItems(); nfCalcTotales();
+    }
+  }
   for(let i=0;i<FAC_ITEMS_NUEVA.length;i++){
     const it=FAC_ITEMS_NUEVA[i];
     if(!it.ite_art?.trim()){toast(`Ítem ${i+1}: falta el código de artículo`,'err');return;}
