@@ -218,7 +218,7 @@ function cheqEdit(){
   document.getElementById('cf-estado').innerHTML =
     Object.keys(CHEQ_ESTADOS).map(k=>`<option value="${k}"${(c.estado||'cartera')===k?' selected':''}>${CHEQ_ESTADOS[k]}</option>`).join('');
   document.getElementById('cf-fsalida').value=(c.fecha_salida||'').substring(0,10);
-  document.getElementById('cf-obs').value=c.observaciones||'';
+  document.getElementById('cart-obs').value=c.observaciones||'';
   document.getElementById('cart-mtit').textContent=`Cheque Nº ${c.numero||''}`;
   document.getElementById('ov-cart').classList.add('open');
 }
@@ -226,7 +226,7 @@ async function saveCheq(){
   if(!_cheqOrig) return;
   const estado=document.getElementById('cf-estado').value;
   const fsal=document.getElementById('cf-fsalida').value||null;
-  const obs=document.getElementById('cf-obs').value.trim()||null;
+  const obs=document.getElementById('cart-obs').value.trim()||null;
   try{
     await apiPost('/cheques/estado',{ id:_cheqOrig.id, estado, fecha_salida:fsal, observaciones:obs });
     _cheqOrig.estado=estado; _cheqOrig.fecha_salida=fsal; _cheqOrig.observaciones=obs;

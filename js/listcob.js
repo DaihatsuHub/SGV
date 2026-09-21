@@ -18,12 +18,6 @@ function _lcobRetVal(ins, key){ return key==='__TOT__' ? (ins.retenc||0) : (ins.
 // Al cambiar el check no hace falta recalcular: solo redibujar
 function lcobToggleRetTot(){ if(_lcobRows.length) _lcobPintar(); }
 
-// Vendedor del cliente del recibo (los recibos no lo guardan: sale de la ficha)
-function _lcobVend(cod){
-  const c=(typeof CLIS!=='undefined')?CLIS.find(k=>(k.CLI_CODIGO||'').trim()===(cod||'').trim()):null;
-  return c ? (c.CLI_VEND||'').trim() : '';
-}
-
 // Plantilla de columnas: se arma según cuántas retenciones haya
 function _lcobTpl(){
   const rets=_lcobRetCols().map(()=>'95px').join(' ');

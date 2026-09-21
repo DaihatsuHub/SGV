@@ -1661,182 +1661,6 @@ function renderFacModal(fecha, empresa, cliCod) {
   nfCalcTotales();
 }
 
-function renderFacForm(fecha, empresa, cliCod) {
-  const det=document.getElementById('fac-detalle');
-  const monesOpts=(TABLAS['MONE']||[]).map(m=>`<option value="${m.CODIGO}">${m.STRING1} ${m.DETALLE}</option>`).join('')||'<option value="P">$ Pesos</option>';
-  const ctipOpts=CTIPS.filter(c=>c.empresa===empresa&&['F','C','D','R'].includes(c.tipo))
-    .map(c=>`<option value="${c.prefijo}|${c.tipo}">${c.prefijo} — ${TIPO_LABEL[c.tipo]||c.tipo}</option>`).join('');
-  const cpagOpts='<option value="">— Sin especificar —</option>'+(TABLAS['CPAG']||[]).map(c=>`<option value="${c.CODIGO}">${c.CODIGO} — ${c.DETALLE}</option>`).join('');
-  const exprOpts='<option value="">— Sin especificar —</option>'+(TABLAS['EXPR']||[]).map(e=>`<option value="${e.CODIGO}">${e.CODIGO} — ${e.DETALLE}</option>`).join('');
-  const vendOpts='<option value="">— Sin especificar —</option>'+(TABLAS['VEND']||[]).map(v=>`<option value="${v.CODIGO}">${v.CODIGO} — ${v.DETALLE}</option>`).join('');
-  const marcOpts='<option value="">— Todas —</option>'+(TABLAS['MARC']||[]).map(m=>`<option value="${m.CODIGO}">${m.CODIGO} — ${m.DETALLE}</option>`).join('');
-  const rubrOpts='<option value="">— Todos —</option>'+(TABLAS['RUBR']||[]).map(r=>`<option value="${r.CODIGO}">${r.CODIGO} — ${r.DETALLE}</option>`).join('');
-  const srubOpts='<option value="">— Todos —</option>'+(TABLAS['SRUB']||[]).map(s=>`<option value="${s.CODIGO}">${s.CODIGO} — ${s.DETALLE}</option>`).join('');
-
-  det.innerHTML=`
-    <div style="padding:14px;height:100%;overflow-y:auto;box-sizing:border-box;display:flex;flex-direction:column;gap:10px">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:2px solid var(--acc)">
-        <div style="font-size:15px;font-weight:700;color:var(--acc)">📄 Nueva Factura</div>
-        <button class="btn" onclick="facCancelar()" style="padding:3px 10px;font-size:12px">✕ Cancelar</button>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-        <div>
-          <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Empresa *</label>
-          <select class="finp" id="nf-empresa" onchange="nfOnEmpresaChange()" style="width:100%">
-            <option value="H" ${empresa==='H'?'selected':''}>H — Hatsu Electronics SA</option>
-            <option value="T" ${empresa==='T'?'selected':''}>T — Tressa Argentina SA</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Tipo Comprobante *</label>
-          <select class="finp" id="nf-ctip" onchange="nfOnCtipChange()" style="width:100%">
-            <option value="">— Seleccionar —</option>
-            ${ctipOpts}
-          </select>
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Número</label>
-          <span id="nf-preview-nro" style="font-family:var(--mono);font-size:13px;color:var(--acc);background:var(--s3);padding:5px 10px;border-radius:4px;display:block">—</span>
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Fecha *</label>
-          <input class="finp" id="nf-fecha" type="date" value="${fecha}" style="width:100%">
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Moneda</label>
-          <select class="finp" id="nf-moneda" onchange="nfOnMonedaChange()" style="width:100%">${monesOpts}</select>
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Descuento %</label>
-          <input class="finp" id="nf-dto" type="number" min="0" max="100" step="0.1" value="0" oninput="nfCalcTotales()" onclick="this.select()" style="width:100%">
-        </div>
-      </div>
-      <div style="background:var(--s2);border-radius:6px;padding:10px 12px">
-        <div style="font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Cliente</div>
-        <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;margin-bottom:8px">
-          <div>
-            <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Código *</label>
-            <input class="finp" id="nf-cli-cod" maxlength="6" style="text-transform:uppercase;width:100%" placeholder="Código" oninput="nfOnCliCodInput()" onblur="nfOnCliCodChange()" onkeydown="if(event.key==='Enter'){this.blur();}">
-          </div>
-          <div style="position:relative">
-            <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Buscar por Razón Social</label>
-            <div style="position:relative;display:flex;align-items:center">
-              <input class="finp" id="nf-cli-busq" placeholder="Escribí para buscar..." style="width:100%;padding-right:28px"
-                oninput="nfOnCliBusqInput()"
-                onblur="setTimeout(()=>{const s=document.getElementById('nf-cli-sug');if(s)s.style.display='none'},200)">
-              <button onclick="nfLimpiarBusqCli()" style="position:absolute;right:6px;background:none;border:none;color:var(--t3);cursor:pointer;font-size:14px;padding:0;line-height:1" title="Limpiar">✕</button>
-            </div>
-            <div id="nf-cli-sug" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--s1);border:1px solid var(--acc);border-radius:0 0 6px 6px;z-index:200;max-height:180px;overflow-y:auto"></div>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 80px 130px 130px 130px;gap:8px">
-          <div>
-            <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Razón Social</label>
-            <input class="finp" id="nf-razon" readonly style="color:var(--t2);background:var(--s3);width:100%" placeholder="—">
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">IVA</label>
-            <input class="finp" id="nf-tiva" readonly style="color:var(--t2);background:var(--s3);width:100%" placeholder="—"><input type="hidden" id="nf-tiva-cod">
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Cond. de Pago</label>
-            <select class="finp" id="nf-conpag" style="width:100%">${cpagOpts}</select>
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Transporte</label>
-            <select class="finp" id="nf-transp" style="width:100%">${exprOpts}</select>
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Vendedor</label>
-            <select class="finp" id="nf-vend" style="width:100%">${vendOpts}</select>
-          </div>
-        </div>
-      </div>
-      <div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:6px;flex-wrap:wrap">
-          <span style="font-size:11px;color:var(--t3);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px">Ítems</span>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button id="nf-btn-grupo" class="btn" onclick="nfAbrirCargaGrupo()" style="padding:3px 10px;font-size:12px">📦 Cargar grupo</button>
-            <button id="nf-btn-resumir" class="btn" onclick="nfResumirItems()" style="padding:3px 10px;font-size:12px;color:var(--t2)">✂ Resumir</button>
-            <button id="nf-btn-dtos" class="btn" onclick="nfDtosTodos()" title="Aplicar descuentos a todos los ítems cargados" style="padding:3px 10px;font-size:12px">% Dto</button>
-            <button id="nf-btn-agregar" class="btn pri" onclick="nfAbrirBusqArt()" style="padding:3px 10px;font-size:12px">＋ Agregar</button>
-          </div>
-        </div>
-        <div style="background:var(--s2);border-radius:6px;overflow:hidden">
-          <div id="nf-items-hdr"></div>
-          <div id="nf-items-body"></div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end">
-        <div style="background:var(--s2);border-radius:6px;padding:10px 14px">
-          <div id="nf-fila-neto" style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Subtotal neto</span><span id="nf-tot-neto">$ 0,00</span></div>
-          <div id="nf-fila-iva"  style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>IVA</span><span id="nf-tot-iva">$ 0,00</span></div>
-          <div id="nf-fila-exento" style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Exento</span><span id="nf-tot-exento">$ 0,00</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Subtotal</span><span id="nf-tot-sub">$ 0,00</span></div>
-          <div id="nf-fila-dto"  style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:2px 0"><span>Descuento</span><span id="nf-tot-dto">—</span></div>
-          <div id="nf-percep-cont" class="nf-percep-cont" style="color:var(--t2)"></div>
-          <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:var(--txt);padding:6px 0 2px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL</span><span id="nf-tot-total">$ 0,00</span></div>
-          <div class="nf-fila-afip" style="display:none;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0;font-style:italic"><span class="nf-afip-lbl">Comprobante</span><span class="nf-tot-afip">—</span></div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <button class="btn pri nf-grabar-btn" onclick="nfGuardar()" style="padding:8px 18px;font-size:13px">💾 Guardar borrador</button>
-          <button class="btn" onclick="facCancelar()" style="padding:8px 18px;font-size:13px">Cancelar</button>
-        </div>
-      </div>
-    </div>
-    <div id="nf-art-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:600px;max-width:95vw;background:var(--s1);border:1px solid var(--acc);border-radius:8px;z-index:1000;box-shadow:0 8px 32px rgba(0,0,0,.5)">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--b1)">
-        <span style="font-weight:600;color:var(--acc)">🔍 Buscar Artículo</span>
-        <button onclick="nfCerrarBusqArt()" style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:18px">✕</button>
-      </div>
-      <div style="padding:10px 16px;border-bottom:1px solid var(--b1)">
-        <input class="finp" id="nf-art-q" placeholder="Código o descripción..." style="width:100%"
-          oninput="nfFiltrarPopupArt(this.value)" autofocus>
-      </div>
-      <div id="nf-art-lista" style="max-height:340px;overflow-y:auto">
-        <div style="text-align:center;color:var(--t3);padding:20px;font-size:12px">Escribí para buscar artículos</div>
-      </div>
-    </div>
-    <div id="nf-art-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999" onclick="nfCerrarBusqArt()"></div>
-    <div id="nf-grupo-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:520px;max-width:95vw;background:var(--s1);border:1px solid var(--acc);border-radius:8px;z-index:1000;box-shadow:0 8px 32px rgba(0,0,0,.5)">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--b1)">
-        <span style="font-weight:600;color:var(--acc)">📦 Cargar por Grupo</span>
-        <button onclick="nfCerrarCargaGrupo()" style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:18px">✕</button>
-      </div>
-      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div><label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Marca</label><select class="finp" id="ng-marc" style="width:100%">${marcOpts}</select></div>
-          <div><label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Rubro</label><select class="finp" id="ng-rubr" style="width:100%">${rubrOpts}</select></div>
-          <div><label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Sub-Rubro</label><select class="finp" id="ng-srub" style="width:100%">${srubOpts}</select></div>
-          <div><label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Solo con stock</label>
-            <select class="finp" id="ng-stock" style="width:100%">
-              <option value="1">Sí (solo con stock)</option>
-              <option value="0">No (todos)</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Descuentos encadenados</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
-            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 1 %</label><input class="finp" id="ng-dto1" type="number" min="0" max="100" value="0" onfocus="this.select()" onclick="this.select()" style="width:100%"></div>
-            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 2 %</label><input class="finp" id="ng-dto2" type="number" min="0" max="100" value="0" onfocus="this.select()" onclick="this.select()" style="width:100%"></div>
-            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 3 %</label><input class="finp" id="ng-dto3" type="number" min="0" max="100" value="0" onfocus="this.select()" onclick="this.select()" style="width:100%"></div>
-            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 4 %</label><input class="finp" id="ng-dto4" type="number" min="0" max="100" value="0" onfocus="this.select()" onclick="this.select()" style="width:100%"></div>
-          </div>
-        </div>
-        <div id="ng-preview" style="font-size:11px;color:var(--t3);min-height:16px"></div>
-        <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button class="btn" onclick="nfCerrarCargaGrupo()">Cancelar</button>
-          <button class="btn pri" onclick="nfCargarGrupo()">📦 Cargar artículos</button>
-        </div>
-      </div>
-    </div>
-
-  `;
-  nfRenderItems();
-  nfCalcTotales();
-}
-
 function nfLimpiarBusqCli() {
   const busqEl=document.getElementById('nf-cli-busq');
   const codEl=document.getElementById('nf-cli-cod');
@@ -2057,6 +1881,21 @@ async function nfCargarGrupo() {
       (rows||[]).forEach(d=>{ (despsPorArt[d.dep_art]||(despsPorArt[d.dep_art]=[])).push(d); });
     }
   }catch(e){ console.error('nfCargarGrupo desps:',e); }
+  // "Solo con stock" se decide por el stock de los DESPACHOS, no por el de la
+  // ficha del artículo: hay artículos con stock en la ficha y sin despachos
+  // que lo respalden, y esos no se pueden facturar (la venta sale de un
+  // despacho). Se aplica acá, después de traer los despachos.
+  let sinDesp=0;
+  if(stock){
+    const antes=arts.length;
+    arts=arts.filter(a=>(despsPorArt[a.ART_COD]||[]).some(d=>nfDispDesp(d)>0));
+    sinDesp=antes-arts.length;
+  }
+  if(!arts.length){
+    if(btnG){ btnG.disabled=false; btnG.textContent=txtBtn; }
+    toast(sinDesp ? `Ninguno de los ${sinDesp} artículo(s) tiene despachos con stock` : 'No hay artículos con ese filtro','err');
+    return;
+  }
   aviso('⏳ Armando los ítems…');
 
   for(const a of arts){
@@ -2099,6 +1938,7 @@ async function nfCargarGrupo() {
     });
   }
   if(btnG){ btnG.disabled=false; btnG.textContent=txtBtn; }
+  if(sinDesp) toast(`${sinDesp} artículo(s) con stock en la ficha quedaron afuera: sus despachos no tienen stock`,'err');
   nfCerrarCargaGrupo();
   nfRenderItems();
   nfCalcTotales();
@@ -2947,7 +2787,6 @@ function nfCalcTotales() {
   setFlex('nf-fila-neto', esA);
   setFlex('nf-fila-iva21', esA&&iva21>0);
   setFlex('nf-fila-iva105',esA&&iva105>0);
-  // Panel con fila única de IVA (el que arma renderFacForm)
   set('nf-tot-iva', `${mon} ${fmtN(iva,2)}`);
   setFlex('nf-fila-iva', esA&&iva>0);
   setFlex('nf-fila-dto', false);                 // el descuento ya no reduce el total real
