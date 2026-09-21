@@ -337,6 +337,7 @@ function despGastoModal(desp, items){
   const totUnid = items.reduce((s,it)=>s+(Number(it.dep_ent)||0),0);
   const totFob  = items.reduce((s,it)=>s+((Number(it.dep_fob)||0)*(Number(it.dep_ent)||0)),0);
   const gasActual = Number(items[0]?.dep_gas2)||0;
+  const cotActual = Number(items[0]?.dep_cotiz)||0;
   const monCod = items[0]?.dep_moneda || 'P';
   const mm=(TABLAS['MONE']||[]).find(m=>m.CODIGO===monCod);
   const mon = mm?(mm.STRING1||mm.CODIGO):'$';
@@ -348,10 +349,13 @@ function despGastoModal(desp, items){
       <button class="btn" onclick="document.getElementById('ov-desp-gasto').classList.remove('open')" style="padding:3px 9px">✕</button>
     </div>
     <div style="display:flex;gap:14px;align-items:flex-end;margin-bottom:12px">
-      <div class="fgrp" style="max-width:180px"><label class="flbl2">% de Gasto a aplicar</label>
+      <div class="fgrp" style="max-width:160px"><label class="flbl2">% de Gasto a aplicar</label>
         <input id="di-gasto" class="finp" type="text" value="${fmtN(gasActual,2)}" onclick="this.select()" style="width:100%;text-align:right;font-size:15px;font-weight:700">
       </div>
-      <div style="font-size:12px;color:var(--t2);padding-bottom:6px">Se recalcula <strong>Costo = FOB × (1 + %/100)</strong> en los ${items.length} artículos del despacho.</div>
+      <div class="fgrp" style="max-width:160px"><label class="flbl2">Cotización del despacho</label>
+        <input id="di-cotiz" class="finp" type="text" value="${cotActual?fmtN(cotActual,2):''}" placeholder="0,00" onclick="this.select()" style="width:100%;text-align:right;font-size:15px;font-weight:700">
+      </div>
+      <div style="font-size:12px;color:var(--t2);padding-bottom:6px">Se recalcula <strong>Costo = FOB × (1 + %/100)</strong> en los ${items.length} artículos. La <strong>cotización</strong> —la del día que entró la mercadería— lleva ese costo a pesos en los informes de resultado.</div>
     </div>
     <div style="max-height:300px;overflow:auto;border:1px solid var(--b1);border-radius:6px">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -393,16 +397,23 @@ function despGastoModal(desp, items){
 }
 
 async function despGastoConfirmar(desp){
-  const pct = parseFloat(String(document.getElementById('di-gasto').value||'').replace(',','.'))||0;
+  // Formato es-AR: "1.500,00" → 1500
+  const num = id => parseFloat(String(document.getElementById(id)?.value||'').replace(/\./g,'').replace(',','.'))||0;
+  const pct   = num('di-gasto');
+  const cotiz = num('di-cotiz');
+  // Los dos son obligatorios: sin gasto o sin cotización el costo queda
+  // incompleto y los informes de resultado no lo pueden usar.
+  if(pct<=0){ toast('El % de gasto no puede ser 0','err'); document.getElementById('di-gasto')?.focus(); return; }
+  if(cotiz<=0){ toast('Cargá la cotización del despacho','err'); document.getElementById('di-cotiz')?.focus(); return; }
   const btn=document.getElementById('di-gasto-conf');
   if(btn){ btn.disabled=true; btn.textContent='⏳ Aplicando…'; }
   procesandoOn('Aplicando % de gasto…');
   syncSaving();
   try {
-    const res = await apiPost('/despachos/aplicar-gasto', { desp, pct });
+    const res = await apiPost('/despachos/aplicar-gasto', { desp, pct, cotiz });
     if(!res.ok){ syncErr(); procesandoOff(); toast(res.error||'Error','err'); if(btn){btn.disabled=false;btn.textContent='✓ Aplicar';} return; }
     // actualizar DESPS en memoria
-    DESPS.forEach(d=>{ if(d.dep_desp===desp){ d.dep_gas2=res.pct; d.dep_costo=Math.round((Number(d.dep_fob)||0)*(1+res.pct/100)*100)/100; } });
+    DESPS.forEach(d=>{ if(d.dep_desp===desp){ d.dep_gas2=res.pct; d.dep_cotiz=res.cotiz; d.dep_costo=Math.round((Number(d.dep_fob)||0)*(1+res.pct/100)*100)/100; } });
     syncOk(); procesandoOff();
     document.getElementById('ov-desp-gasto').classList.remove('open');
     renderDesp();
