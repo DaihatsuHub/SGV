@@ -3027,7 +3027,11 @@ async function nfGuardar() {
     fac_tab_stk:!!ct.tab_stk, fac_tab_fact:!!ct.tab_fact,
     fac_afip_st:'pendiente',fac_cae:null,fac_cae_vto:null
   };
-  const itemsAGrabar=FAC_ITEMS_NUEVA.filter(it=>(it.ite_can||0)>0&&(it.ite_imp||0)>0).map(it=>{
+  // Se graban los renglones con CANTIDAD y PRECIO, no los que tienen `ite_imp`
+  // > 0: ese campo no siempre se recalcula al cambiar la cantidad (ej. ítems
+  // cargados por Grupo en 0 y después completados), y se descartaban en
+  // silencio. La pantalla los sumaba y el server no los recibía.
+  const itemsAGrabar=FAC_ITEMS_NUEVA.filter(it=>(it.ite_can||0)>0&&(it.ite_uni||0)>0).map(it=>{
     const div=1+(it.ite_iva_porc||0)/100;
     const neto=esA?it.ite_uni/div:it.ite_uni;
     return {
