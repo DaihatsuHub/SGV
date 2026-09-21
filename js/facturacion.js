@@ -1465,6 +1465,71 @@ function renderFacModal(fecha, empresa, cliCod) {
         <!-- header fijo + body con scroll -->
         <div id="nf-items-hdr" style="flex-shrink:0"></div>
         <div id="nf-items-body" style="flex:1;overflow-y:auto"></div>
+        <!-- CHEQUE RECHAZADO (comprobante tipo R): se dibuja un cheque y se carga
+             sobre él. Débito XX interno, sin IVA. -->
+        <div id="nf-cheque-box" style="display:none;flex:1;padding:12px;overflow-y:auto">
+          <div style="border:1px solid #7fb3d5;border-radius:6px;padding:16px 18px;
+                      background-color:#e3f2fb;
+                      background-image:repeating-linear-gradient(45deg,#cfe6f4 0px,#cfe6f4 1px,transparent 1px,transparent 9px);
+                      color:#1b2a36">
+            <div style="display:flex;gap:14px;align-items:flex-end;padding-bottom:12px;border-bottom:1px solid #9fc5de">
+              <div style="flex:1;min-width:0">
+                <div class="chq-lbl">Banco</div>
+                <select id="nf-chq-banco" class="finp chq-inp" style="width:100%"></select>
+              </div>
+              <div style="width:160px">
+                <div class="chq-lbl">Fecha de pago</div>
+                <input id="nf-chq-fecha" type="date" class="finp chq-inp" style="width:100%">
+              </div>
+            </div>
+            <div style="display:flex;gap:14px;margin-top:12px">
+              <div style="flex:1;min-width:0">
+                <div class="chq-lbl">Localidad</div>
+                <input id="nf-chq-local" class="finp chq-inp" style="width:100%" onclick="this.select()">
+              </div>
+              <div style="width:200px">
+                <div class="chq-lbl">N° de cheque</div>
+                <input id="nf-chq-nro" class="finp chq-inp" style="width:100%;font-family:var(--mono)" onclick="this.select()">
+              </div>
+            </div>
+            <div style="display:flex;gap:14px;margin-top:12px;align-items:flex-end">
+              <div style="flex:1;min-width:0">
+                <div class="chq-lbl">Librador</div>
+                <input id="nf-chq-librador" class="finp chq-inp" style="width:100%" onclick="this.select()">
+              </div>
+              <div style="width:200px">
+                <div class="chq-lbl">Importe</div>
+                <div style="display:flex;align-items:center;gap:6px;border:2px solid #1b2a36;border-radius:5px;padding:0 9px;background:#fff">
+                  <span style="font-size:15px">$</span>
+                  <input id="nf-chq-importe" type="text" value="0,00" onchange="nfCalcTotales()" onclick="this.select()"
+                         style="border:none;background:transparent;text-align:right;font-family:var(--mono);font-size:15px;height:32px;flex:1;min-width:0;color:#1b2a36">
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:14px;margin-top:12px;align-items:flex-end">
+              <div style="flex:1;min-width:0">
+                <div class="chq-lbl">N° de cuenta</div>
+                <input id="nf-chq-cuenta" class="finp chq-inp" style="width:100%;font-family:var(--mono)" onclick="this.select()">
+              </div>
+              <div style="width:200px">
+                <div class="chq-lbl">Gasto</div>
+                <div style="display:flex;align-items:center;gap:6px;border:1px solid #7fb3d5;border-radius:5px;padding:0 9px;background:#fff">
+                  <span style="font-size:14px">$</span>
+                  <input id="nf-chq-gasto" type="text" value="0,00" onchange="nfCalcTotales()" onclick="this.select()"
+                         style="border:none;background:transparent;text-align:right;font-family:var(--mono);font-size:14px;height:30px;flex:1;min-width:0;color:#1b2a36">
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:12px">
+              <div class="chq-lbl">Concepto</div>
+              <input id="nf-chq-concepto" class="finp chq-inp" style="width:100%" placeholder="Ej.: rechazado sin fondos suficientes" onclick="this.select()">
+            </div>
+          </div>
+          <style>
+            .chq-lbl{font-size:11px;color:#3d5a70;margin-bottom:3px}
+            .chq-inp{background:#fff !important;color:#1b2a36 !important;border-color:#9fc5de !important}
+          </style>
+        </div>
         <!-- NC/ND POR LEYENDA: sin mercadería, texto libre + importes a mano -->
         <div id="nf-leyenda-box" style="display:none;flex:1;padding:12px;overflow-y:auto">
           <label style="font-size:12px;color:var(--t2);display:block;margin-bottom:4px">Detalle del comprobante</label>
@@ -1942,6 +2007,8 @@ async function nfOnCtipChange() {
   const emp=document.getElementById('nf-empresa').value;
   nfSyncMoneda();
   setTimeout(nfChequearLetra, 0);
+  // Al cambiar el tipo hay que decidir qué panel va: grilla, leyenda o cheque (R)
+  nfLeyendaSync(); nfCalcTotales();
   const ct=CTIPS.find(c=>c.empresa===emp&&c.prefijo===prefijo&&c.tipo===tipo);
   if(!ct){if(el)el.value='';return;}
   // Bloqueo atómico en el server (lee estado fresco + bloquea si está libre o es mío)
@@ -1971,6 +2038,7 @@ function nfOnCliCodInput() {
   // Limpia razón social y datos mientras escribe el código
   const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
   _nfLeyenda=false;
+  nfChequeLimpiar();
   s('nf-leyenda',''); s('nf-ley-neto','0,00'); s('nf-ley-exento','0,00'); s('nf-ley-alic','21');
   s('nf-cli-busq',''); s('nf-razon',''); s('nf-tiva',''); s('nf-tiva-cod','');
   s('nf-conpag',''); s('nf-vend',''); s('nf-transp','');
@@ -2388,6 +2456,25 @@ function nfOnMonedaChange(){
 // El descuento se carga DESPUÉS de elegir el comprobante, así que esto se
 // vuelve a evaluar cada vez que se toca el campo: al poner un descuento se
 // libera la moneda, y al volverlo a cero se bloquea y vuelve a Pesos.
+// Totales del cheque rechazado: importe + gasto, todo EXENTO porque es un
+// débito X sin IVA. Va por el camino de la leyenda en el server.
+function nfCalcTotalesCheque(){
+  const r2=x=>Math.round((Number(x)||0)*100)/100;
+  const imp=r2(nfParseNum(document.getElementById('nf-chq-importe')?.value||'0'));
+  const gas=r2(nfParseNum(document.getElementById('nf-chq-gasto')?.value||'0'));
+  const total=r2(imp+gas);
+  const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  const ver=(id,on)=>{ const e=document.getElementById(id); if(e) e.style.display = on?'flex':'none'; };
+  set('nf-tot-sub',  `$ ${fmtN(total,2)}`);
+  set('nf-tot-total',`$ ${fmtN(total,2)}`);
+  ['nf-fila-neto','nf-fila-iva','nf-fila-iva21','nf-fila-iva105','nf-fila-exento'].forEach(id=>ver(id,false));
+  document.querySelectorAll('.nf-fila-afip').forEach(e=>{ e.style.display='none'; });
+  window._nfTotales={ neto:0, iva:0, iva21:0, iva105:0, subtotal:total, total, totalReal:total,
+    exento:total, alic:0, dtoImp:0, totalPercep:0,
+    netoAfip:0, ivaAfip:0, percepAfip:0, totalAfip:total, exentoAfip:total,
+    factor:1, dto:0, cotiz:1, monSel:'P', esLeyenda:true, esCheque:true };
+}
+
 // Totales de una NC/ND por leyenda: los importes se cargan a mano y el IVA y
 // el total se calculan. El EXENTO no lleva IVA (ej.: el valor de un cheque
 // rechazado; sólo los gastos bancarios están gravados).
@@ -2440,6 +2527,53 @@ function nfCalcTotalesLeyenda(){
     factor, dto, cotiz, monSel, esLeyenda:true };
 }
 
+// ── CHEQUE RECHAZADO (comprobante tipo R) ────────────────
+// Débito XX interno: el valor del cheque más los gastos bancarios, SIN IVA.
+// Se carga sobre un cheque dibujado, y los datos se guardan en su propia
+// tabla (cheques_rechazados) para consultarlos después.
+function nfEsCheque(){
+  const val=document.getElementById('nf-ctip')?.value||'';
+  return (val.split('|')[1]||'').toUpperCase()==='R';
+}
+
+function nfChequeFillBancos(){
+  const sel=document.getElementById('nf-chq-banco'); if(!sel||sel.options.length>1) return;
+  sel.innerHTML='<option value="">— elegí el banco —</option>'
+    + ((TABLAS&&TABLAS['BANC'])||[]).map(b=>`<option value="${esc(b.CODIGO)}">${esc(b.CODIGO)} — ${esc(b.DETALLE)}</option>`).join('');
+}
+
+// El texto que queda impreso en el comprobante: se arma con los datos del
+// cheque, así la leyenda no se tipea dos veces.
+function nfChequeLeyenda(){
+  const g=id=>(document.getElementById(id)?.value||'').trim();
+  const bco=((TABLAS&&TABLAS['BANC'])||[]).find(b=>b.CODIGO===g('nf-chq-banco'));
+  const imp=nfParseNum(g('nf-chq-importe')), gas=nfParseNum(g('nf-chq-gasto'));
+  const fec=g('nf-chq-fecha') ? g('nf-chq-fecha').split('-').reverse().join('/') : '';
+  let t=`Cheque rechazado N° ${g('nf-chq-nro')}`;
+  if(bco) t+=` — ${bco.DETALLE}`;
+  if(g('nf-chq-local')) t+=`, ${g('nf-chq-local').toUpperCase()}`;
+  if(fec) t+=` — fecha de pago ${fec}`;
+  if(g('nf-chq-librador')) t+=`\nLibrador: ${g('nf-chq-librador').toUpperCase()}`;
+  if(g('nf-chq-cuenta')) t+=` — Cuenta ${g('nf-chq-cuenta')}`;
+  t+=`\nValor del cheque: $ ${fmtN(imp,2)}`;
+  if(gas>0) t+=`\nGastos bancarios: $ ${fmtN(gas,2)}`;
+  if(g('nf-chq-concepto')) t+=`\n${g('nf-chq-concepto')}`;
+  return t;
+}
+
+function nfChequeDatos(){
+  const g=id=>(document.getElementById(id)?.value||'').trim();
+  return { banco:g('nf-chq-banco'), localidad:g('nf-chq-local'), numero:g('nf-chq-nro'),
+    fecha_pago:g('nf-chq-fecha')||null, librador:g('nf-chq-librador'), cuenta:g('nf-chq-cuenta'),
+    importe:nfParseNum(g('nf-chq-importe')), gasto:nfParseNum(g('nf-chq-gasto')), concepto:g('nf-chq-concepto') };
+}
+
+function nfChequeLimpiar(){
+  ['nf-chq-banco','nf-chq-fecha','nf-chq-local','nf-chq-nro','nf-chq-librador','nf-chq-cuenta','nf-chq-concepto']
+    .forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  ['nf-chq-importe','nf-chq-gasto'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value='0,00'; });
+}
+
 // ── NC/ND POR LEYENDA ────────────────────────────────────
 // Hay NC y ND que no son por mercadería: bonificaciones, diferencias de cambio,
 // un cheque rechazado con sus gastos. Ante AFIP son el MISMO comprobante que
@@ -2467,12 +2601,19 @@ function nfLeyendaSync(){
   const bGrp=document.getElementById('nf-btn-grupo');
   const bRes=document.getElementById('nf-btn-resumir');
 
-  if(b)   b.style.display   = (esNCND && !_nfLeyenda && !hayItems) ? '' : 'none';
+  // Con un comprobante R (cheque rechazado) la grilla se reemplaza por el cheque
+  const esChq = nfEsCheque();
+  const chq=document.getElementById('nf-cheque-box');
+  if(esChq){ nfChequeFillBancos(); _nfLeyenda=false; }
+  if(chq) chq.style.display = esChq ? '' : 'none';
+  const sinGrilla = _nfLeyenda || esChq;
+
+  if(b)   b.style.display   = (esNCND && !_nfLeyenda && !hayItems && !esChq) ? '' : 'none';
   if(bOff)bOff.style.display= _nfLeyenda ? '' : 'none';
   if(box) box.style.display = _nfLeyenda ? '' : 'none';
-  if(hdr) hdr.style.display = _nfLeyenda ? 'none' : '';
-  if(body)body.style.display= _nfLeyenda ? 'none' : '';
-  [bAdd,bGrp,bRes].forEach(x=>{ if(x) x.style.display = _nfLeyenda ? 'none' : ''; });
+  if(hdr) hdr.style.display = sinGrilla ? 'none' : '';
+  if(body)body.style.display= sinGrilla ? 'none' : '';
+  [bAdd,bGrp,bRes].forEach(x=>{ if(x) x.style.display = sinGrilla ? 'none' : ''; });
 }
 
 function nfLeyendaOn(){
@@ -2512,6 +2653,7 @@ function nfSyncMoneda(){
 function nfCalcTotales() {
   nfSyncMoneda();
   nfLeyendaSync();
+  if(nfEsCheque()) return nfCalcTotalesCheque();
   if(_nfLeyenda) return nfCalcTotalesLeyenda();
   const esA=nfEsFacturaA();
   const dto=parseFloat(document.getElementById('nf-dto')?.value||0)||0;
@@ -2660,7 +2802,14 @@ async function nfGuardar() {
   if(!ctipVal){toast('Seleccioná un tipo de comprobante','err');return;}
   if(!cliCod){toast('Ingresá un código de cliente','err');return;}
   if(!fecha){toast('Ingresá la fecha','err');return;}
-  if(_nfLeyenda){
+  if(nfEsCheque()){
+    const c=nfChequeDatos();
+    if(!c.banco){ toast('Elegí el banco del cheque','err'); return; }
+    if(!c.numero){ toast('Falta el número de cheque','err'); return; }
+    if(!(c.importe>0)){ toast('Falta el importe del cheque','err'); return; }
+    if(c.gasto<0){ toast('El gasto no puede ser negativo','err'); return; }
+  }
+  else if(_nfLeyenda){
     const txt=(document.getElementById('nf-leyenda')?.value||'').trim();
     if(!txt){ toast('Escribí el detalle del comprobante','err'); return; }
     const t=window._nfTotales||{};
@@ -2707,7 +2856,8 @@ async function nfGuardar() {
     // se llegó al importe declarado (la tabla monedas guarda la ACTUAL).
     fac_cotiz:tot.cotiz||1,
     // NC/ND por leyenda: sin ítems, con el detalle en texto y los importes a mano
-    fac_leyenda: tot.esLeyenda ? (document.getElementById('nf-leyenda')?.value||'').trim() : null,
+    fac_leyenda: tot.esCheque ? nfChequeLeyenda()
+               : (tot.esLeyenda ? (document.getElementById('nf-leyenda')?.value||'').trim() : null),
     fac_ley_neto: tot.esLeyenda ? (tot.neto||0) : 0,
     fac_ley_exento: tot.esLeyenda ? (tot.exento||0) : 0,
     fac_ley_alic: tot.esLeyenda ? (tot.alic||0) : 0,
@@ -2760,8 +2910,10 @@ async function nfGuardar() {
       nfGrabarEstado(false); syncErr();
       toast(chk.error||'No se pudo verificar el stock','err'); return;
     }
-    const res=await apiPost('/facturas/guardar',{ ctId:ct.id, prefijo, tipo, empresa, numero:numeroManual, facData, items:itemsAGrabar });
+    const res=await apiPost('/facturas/guardar',{ ctId:ct.id, prefijo, tipo, empresa, numero:numeroManual, facData,
+      items:itemsAGrabar, cheque: nfEsCheque() ? nfChequeDatos() : undefined });
     if(!res.ok){ syncErr(); nfGrabarEstado(false); toast(res.error||'No se pudo guardar','err'); return; }
+    if(res.chequeWarn) toast(res.chequeWarn,'err');
     // Aplicar el movimiento de stock a los datos en memoria (para verlo al instante)
     if(res.stockDebug){
       res.stockDebug.forEach(d=>{
