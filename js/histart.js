@@ -81,7 +81,7 @@ async function renderHistArt() {
     const items = [];
     let offset = 0;
     while(true) {
-      const res = await apiGet(`/read/fac_items?ite_art=eq.${encodeURIComponent(cod)}&select=ite_nro,ite_art,ite_can,ite_uni,ite_imp&limit=1000&offset=${offset}`);
+      const res = await apiGet(`/read/fac_items?ite_art=eq.${encodeURIComponent(cod)}&select=ite_nro,ite_art,ite_can,ite_uni,ite_imp,ite_desp&limit=1000&offset=${offset}`);
       const pg = res.rows || [];
       if(!pg.length) break;
       items.push(...pg);
@@ -110,8 +110,9 @@ async function renderHistArt() {
       if(emp && empDesp !== emp) return;
       filas.push({
         fec:   d.dep_fec||'',
-        comp:  'DESP ' + (d.dep_desp||'') + (d.dep_sub?' '+d.dep_sub:''),
+        comp:  'Ingreso despacho',
         det:   '',
+        desp:  (d.dep_desp||'') + (d.dep_sub?' '+d.dep_sub:''),
         ing:   d.dep_ent||0,
         egr:   0,
         imp:   null,
@@ -132,6 +133,7 @@ async function renderHistArt() {
         fec:  fac.fac_fec||'',
         comp: fac.fac_nro||'',
         det:  cli?cli.CLI_RAZON:fac.fac_cli||'',
+        desp: it.ite_desp||'',
         ing:  esNC ? (it.ite_can||0) : 0,
         egr:  esNC ? 0 : (it.ite_can||0),
         imp:  it.ite_uni||0,
@@ -152,10 +154,33 @@ async function renderHistArt() {
       return;
     }
 
-    // Calcular stock acumulado
+    // Calcular stock acumulado sobre TODO el histórico
     let stk = 0;
     filas.forEach(f => { stk += f.ing - f.egr; f.stk = stk; });
-    _histFilas = filas; _histInfo = { cod, des: artDes };
+
+    // PERÍODO: "Desde" en blanco = histórico completo; "Hasta" = hoy si está
+    // vacío. Si hay "Desde", lo anterior se resume en un renglón de SALDO
+    // ANTERIOR y el stock sigue corriendo desde ahí.
+    const desde=(document.getElementById('histart-desde')?.value||'').trim();
+    const hastaEl=document.getElementById('histart-hasta');
+    if(hastaEl && !hastaEl.value) hastaEl.value=new Date().toISOString().substring(0,10);
+    const hasta=(hastaEl?.value||'').trim();
+    const antes = desde ? filas.filter(f=>(f.fec||'').substring(0,10) < desde) : [];
+    let vis = filas.filter(f=>{
+      const d=(f.fec||'').substring(0,10);
+      return (!desde || d>=desde) && (!hasta || d<=hasta);
+    });
+    if(desde){
+      const saldoAnt = antes.length ? antes[antes.length-1].stk : 0;
+      vis = [{ fec:'', comp:'Saldo anterior', det:'al '+desde.split('-').reverse().join('/'), desp:'',
+               ing:0, egr:0, stk:saldoAnt, imp:null, mon:'', cotiz:null, tipo:'saldo' }, ...vis];
+    }
+    if(!vis.length){
+      body.innerHTML = '<div class="empty" style="margin-top:40px">Sin movimientos en el período</div>';
+      _histFilas=[]; return;
+    }
+    filas.length=0; filas.push(...vis);
+    _histFilas = filas; _histInfo = { cod, des: artDes, desde, hasta };
 
     // Render tabla
     const fmtN2 = v => v===0||v===null||v===undefined?'':Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -166,13 +191,14 @@ async function renderHistArt() {
     if(thHdr) {
       thHdr.innerHTML = `<table style="width:calc(100% - 0px);border-collapse:collapse;font-size:12px;table-layout:fixed">
         <colgroup>
-          <col style="width:90px"><col style="width:160px"><col><col style="width:70px">
+          <col style="width:90px"><col style="width:160px"><col><col style="width:120px"><col style="width:70px">
           <col style="width:70px"><col style="width:70px"><col style="width:120px"><col style="width:84px">
         </colgroup>
         <tr style="background:var(--s3)">
           <th style="text-align:left;padding:6px 10px">Fecha</th>
           <th style="text-align:left;padding:6px 10px">Comprobante</th>
           <th style="text-align:left;padding:6px 10px">Detalle</th>
+          <th style="text-align:left;padding:6px 8px">Despacho</th>
           <th style="text-align:right;padding:6px 8px">Ingreso</th>
           <th style="text-align:right;padding:6px 8px">Egreso</th>
           <th style="text-align:right;padding:6px 8px">Stock</th>
@@ -184,19 +210,21 @@ async function renderHistArt() {
 
     let html = `<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed">
       <colgroup>
-        <col style="width:90px"><col style="width:160px"><col><col style="width:70px">
+        <col style="width:90px"><col style="width:160px"><col><col style="width:120px"><col style="width:70px">
         <col style="width:70px"><col style="width:70px"><col style="width:120px"><col style="width:84px">
       </colgroup>
       <tbody>`;
 
     filas.forEach((f,i) => {
-      const bg = i%2===0?'':'background:rgba(255,255,255,0.03)';
+      const bg = f.tipo==='saldo' ? 'background:var(--s3);font-style:italic;font-weight:600'
+               : (i%2===0?'':'background:rgba(255,255,255,0.03)');
       const stkColor = f.stk<=0?'color:var(--red)':'color:var(--grn)';
       const compColor = f.tipo==='desp'?'color:var(--acc)':f.tipo==='nc'?'color:var(--red)':'color:var(--txt)';
       html += `<tr style="${bg}">
         <td style="padding:4px 10px;font-family:var(--mono);font-size:11px;color:var(--t2)">${fmtFec(f.fec)}</td>
         <td style="padding:4px 10px;font-family:var(--mono);font-size:11px;${compColor}">${esc(f.comp)}</td>
         <td style="padding:4px 10px;font-size:11px;color:var(--t2)">${esc(f.det)}</td>
+        <td style="padding:4px 8px;font-family:var(--mono);font-size:11px;color:var(--t2)">${esc(f.desp||'')}</td>
         <td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px;color:var(--grn)">${f.ing||''}</td>
         <td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px;color:var(--red)">${f.egr||''}</td>
         <td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px;font-weight:600;${stkColor}">${f.stk}</td>
@@ -228,7 +256,7 @@ function printHistArt() {
 
   const cuerpo = _histFilas.map(f=>{
     const cls = f.tipo==='desp' ? ' class="desp"' : (f.tipo==='nc' ? ' class="nc"' : '');
-    return `<tr><td>${_histFmtFec(f.fec)}</td><td${cls}>${_e(f.comp)}</td><td>${_e(sgvCorta(f.det))}</td>`+
+    return `<tr><td>${_histFmtFec(f.fec)}</td><td${cls}>${_e(f.comp)}</td><td>${_e(sgvCorta(f.det))}</td><td>${_e(f.desp||'')}</td>`+
       `<td class="n ing">${f.ing||''}</td><td class="n egr">${f.egr||''}</td>`+
       `<td class="n stk">${f.stk}</td><td class="n">${f.imp!==null?(f.mon||'$')+' '+_histFmt2(f.imp):''}</td><td class="n">${f.cotiz?_histFmt2(f.cotiz):''}</td></tr>`;
   }).join('');
@@ -239,7 +267,7 @@ function printHistArt() {
 
   sgvPrint({
     titulo:`Historia por Artículo — ${_e(_histInfo.cod)} ${_e(_histInfo.des)}`,
-    subtitulo:`Daihatsu Electronics — ${hoy} · ${_histFilas.length} movimiento(s)`,
+    subtitulo:`Período ${_histInfo.desde?_histFmtFec(_histInfo.desde):'histórico'} a ${_histFmtFec(_histInfo.hasta||'')||'hoy'} · ${_histFilas.filter(f=>f.tipo!=='saldo').length} movimiento(s)`,
     estilos:`
       td.ing{color:#166534}
       td.egr{color:#991b1b}
@@ -248,10 +276,10 @@ function printHistArt() {
       td.nc{color:#991b1b}
     `,
     cuerpo:`<table>
-      <thead><tr><th>Fecha</th><th>Comprobante</th><th>Detalle</th>
+      <thead><tr><th>Fecha</th><th>Comprobante</th><th>Detalle</th><th>Despacho</th>
         <th class="n">Ingreso</th><th class="n">Egreso</th><th class="n">Stock</th><th class="n">Importe</th><th class="n">Cotiz.</th></tr></thead>
       <tbody>${cuerpo}
-        <tr class="tot"><td colspan="3">TOTALES</td>
+        <tr class="tot"><td colspan="4">TOTALES</td>
           <td class="n">${totIng||''}</td><td class="n">${totEgr||''}</td>
           <td class="n">${totFin}</td><td></td></tr>
       </tbody>
@@ -273,27 +301,30 @@ async function excelHistArt(){
   if(!_histFilas.length){ toast('Primero consultá la historia','err'); return; }
   let ExcelJS; try{ ExcelJS=await _histLoadExcelJS(); }catch(e){ toast('No se pudo cargar Excel','err'); return; }
   const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('Historia');
-  ws.columns=[{width:12},{width:20},{width:34},{width:11},{width:11},{width:11},{width:8},{width:14},{width:11}];
+  ws.columns=[{width:12},{width:20},{width:34},{width:16},{width:11},{width:11},{width:11},{width:8},{width:14},{width:11}];
 
   ws.mergeCells('A1:G1');
   const t=ws.getCell('A1');
   t.value=`Historia por Artículo — ${_histInfo.cod} ${_histInfo.des}`;
   t.font={bold:true,size:14}; t.alignment={horizontal:'center'};
-  const st=ws.addRow([new Date().toLocaleDateString('es-AR')+'  ·  '+_histFilas.length+' movimiento(s)']);
+  const st=ws.addRow(['Período '+(_histInfo.desde?_histFmtFec(_histInfo.desde):'histórico')+' a '+(_histFmtFec(_histInfo.hasta||'')||'hoy')
+    +'  ·  '+_histFilas.filter(f=>f.tipo!=='saldo').length+' movimiento(s)']);
   st.font={italic:true,color:{argb:'FF666666'}}; ws.mergeCells(st.number,1,st.number,7);
   ws.addRow([]);
 
-  const hr=ws.addRow(['Fecha','Comprobante','Detalle','Ingreso','Egreso','Stock','Moneda','Importe','Cotización']);
+  const hr=ws.addRow(['Fecha','Comprobante','Detalle','Despacho','Ingreso','Egreso','Stock','Moneda','Importe','Cotización']);
   hr.font={bold:true}; hr.alignment={horizontal:'center'};
   hr.eachCell(c=>{ c.border={bottom:{style:'medium'}}; });
 
   _histFilas.forEach(f=>{
-    const r=ws.addRow([_histFmtFec(f.fec), f.comp||'', f.det||'',
-      f.ing||null, f.egr||null, f.stk, f.mon||'$', (f.imp!==null&&f.imp!==undefined)?f.imp:null, f.cotiz||null]);
-    [4,5,6].forEach(i=>r.getCell(i).numFmt='#,##0');
-    r.getCell(7).alignment={horizontal:'center'};     // moneda
-    r.getCell(8).numFmt='#,##0.00';                    // importe
-    r.getCell(9).numFmt='#,##0.00';                    // cotización
+    const esSaldo=f.tipo==='saldo';
+    const r=ws.addRow([_histFmtFec(f.fec), f.comp||'', f.det||'', f.desp||'',
+      f.ing||null, f.egr||null, f.stk, esSaldo?null:(f.mon||'$'), (f.imp!==null&&f.imp!==undefined)?f.imp:null, esSaldo?null:(f.cotiz||1)]);
+    [5,6,7].forEach(i=>r.getCell(i).numFmt='#,##0');
+    r.getCell(8).alignment={horizontal:'center'};     // moneda
+    r.getCell(9).numFmt='#,##0.00';                    // importe
+    r.getCell(10).numFmt='#,##0.00';                   // cotización
+    if(esSaldo) r.font={italic:true,bold:true};
     if(f.tipo==='desp') r.getCell(2).font={color:{argb:'FF0A58CA'}};
     if(f.tipo==='nc')   r.getCell(2).font={color:{argb:'FF991B1B'}};
   });
@@ -301,9 +332,9 @@ async function excelHistArt(){
   const totIng=_histFilas.reduce((a,f)=>a+(f.ing||0),0);
   const totEgr=_histFilas.reduce((a,f)=>a+(f.egr||0),0);
   const totFin=_histFilas[_histFilas.length-1].stk;
-  const tr=ws.addRow(['','','TOTALES', totIng||null, totEgr||null, totFin, null, null, null]);
+  const tr=ws.addRow(['','','TOTALES','', totIng||null, totEgr||null, totFin, null, null, null]);
   tr.font={bold:true}; tr.eachCell(c=>{ c.border={top:{style:'double'}}; });
-  [4,5,6].forEach(i=>tr.getCell(i).numFmt='#,##0');
+  [5,6,7].forEach(i=>tr.getCell(i).numFmt='#,##0');
 
   ws.views=[{state:'frozen', ySplit:4}];
   const buf=await wb.xlsx.writeBuffer();
