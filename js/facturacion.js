@@ -2851,8 +2851,14 @@ function nfCalcTotales() {
   //     cumple la funcion de sacar el IVA, que va POR ENCIMA.
   //     ej. 41 x 1550 x 0,50 = 31.775 de neto, mas IVA
   const conDto = dto !== 0;
+  // Misma regla que el server (facRecalcular):
+  //   · comprobante que NO discrimina IVA (X, o no baja depósito) → el total ES
+  //     el precio, no se divide
+  //   · A o B sin descuento → el precio trae IVA incluido, se divide
+  //   · A o B con descuento → precio × cotiz × (1−dto) ya es el neto
   const netoDeItem = it => {
     const bruto = (it.ite_uni||0)*(it.ite_can||0)*cotiz*factor;
+    if(!esA) return bruto;
     return conDto ? bruto : bruto/(1+(it.ite_iva_porc||21)/100);
   };
   const netoAfip = r2(FAC_ITEMS_NUEVA.reduce((a,it)=>a+netoDeItem(it), 0));
