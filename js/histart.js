@@ -95,7 +95,7 @@ async function renderHistArt() {
       // En lotes de 50
       for(let i=0; i<nros.length; i+=50) {
         const lote = nros.slice(i,i+50).map(n=>`"${n}"`).join(',');
-        const rf = await apiGet(`/read/facturas?fac_nro=in.(${encodeURIComponent(lote)})&select=fac_nro,fac_fec,fac_cli`);
+        const rf = await apiGet(`/read/facturas?fac_nro=in.(${encodeURIComponent(lote)})&select=fac_nro,fac_fec,fac_cli,fac_moneda,fac_cotiz`);
         const pf = rf.rows || [];
         if(pf.length) pf.forEach(f=>facsMap[f.fac_nro]=f);
       }
@@ -135,6 +135,9 @@ async function renderHistArt() {
         ing:  esNC ? (it.ite_can||0) : 0,
         egr:  esNC ? 0 : (it.ite_can||0),
         imp:  it.ite_uni||0,
+        // Moneda y cotización DEL COMPROBANTE: el precio está en esa moneda
+        mon:  _histSimb(fac.fac_moneda),
+        cotiz:(fac.fac_moneda && fac.fac_moneda!=='P') ? (Number(fac.fac_cotiz)||null) : null,
         tipo: esNC ? 'nc' : 'fac'
       });
     });
@@ -162,7 +165,7 @@ async function renderHistArt() {
       thHdr.innerHTML = `<table style="width:calc(100% - 0px);border-collapse:collapse;font-size:12px;table-layout:fixed">
         <colgroup>
           <col style="width:90px"><col style="width:160px"><col><col style="width:70px">
-          <col style="width:70px"><col style="width:70px"><col style="width:100px">
+          <col style="width:70px"><col style="width:70px"><col style="width:120px"><col style="width:84px">
         </colgroup>
         <tr style="background:var(--s3)">
           <th style="text-align:left;padding:6px 10px">Fecha</th>
@@ -172,6 +175,7 @@ async function renderHistArt() {
           <th style="text-align:right;padding:6px 8px">Egreso</th>
           <th style="text-align:right;padding:6px 8px">Stock</th>
           <th style="text-align:right;padding:6px 8px">Importe</th>
+          <th style="text-align:right;padding:6px 8px">Cotiz.</th>
         </tr>
       </table>`;
     }
@@ -179,7 +183,7 @@ async function renderHistArt() {
     let html = `<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed">
       <colgroup>
         <col style="width:90px"><col style="width:160px"><col><col style="width:70px">
-        <col style="width:70px"><col style="width:70px"><col style="width:100px">
+        <col style="width:70px"><col style="width:70px"><col style="width:120px"><col style="width:84px">
       </colgroup>
       <tbody>`;
 
@@ -194,7 +198,8 @@ async function renderHistArt() {
         <td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px;color:var(--grn)">${f.ing||''}</td>
         <td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px;color:var(--red)">${f.egr||''}</td>
         <td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px;font-weight:600;${stkColor}">${f.stk}</td>
-        <td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px">${f.imp!==null?fmtN2(f.imp):''}</td>
+        <td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px">${f.imp!==null?`<span style="color:var(--t3)">${esc(f.mon||'$')}</span> ${fmtN2(f.imp)}`:''}</td>
+        <td style="text-align:right;padding:4px 8px;font-family:var(--mono);font-size:11px;color:var(--t2)">${f.cotiz?fmtN2(f.cotiz):''}</td>
       </tr>`;
     });
 
@@ -209,6 +214,8 @@ async function renderHistArt() {
 }
 
 // Impresión y Excel se arman desde _histFilas, no leyendo el DOM
+// Símbolo real de la moneda (U$C, U$T…), de la tabla MONE
+function _histSimb(m){ const o=((typeof TABLAS!=='undefined'&&TABLAS['MONE'])||[]).find(x=>x.CODIGO===(m||'P')); return o&&o.STRING1?o.STRING1:(!m||m==='P'?'$':m); }
 function _histFmtFec(s){ return s ? s.substring(0,10).split('-').reverse().join('/') : ''; }
 function _histFmt2(v){ return (v===0||v===null||v===undefined) ? '' : Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
@@ -221,7 +228,7 @@ function printHistArt() {
     const cls = f.tipo==='desp' ? ' class="desp"' : (f.tipo==='nc' ? ' class="nc"' : '');
     return `<tr><td>${_histFmtFec(f.fec)}</td><td${cls}>${_e(f.comp)}</td><td>${_e(sgvCorta(f.det))}</td>`+
       `<td class="n ing">${f.ing||''}</td><td class="n egr">${f.egr||''}</td>`+
-      `<td class="n stk">${f.stk}</td><td class="n">${f.imp!==null?_histFmt2(f.imp):''}</td></tr>`;
+      `<td class="n stk">${f.stk}</td><td class="n">${f.imp!==null?(f.mon||'$')+' '+_histFmt2(f.imp):''}</td><td class="n">${f.cotiz?_histFmt2(f.cotiz):''}</td></tr>`;
   }).join('');
 
   const totIng = _histFilas.reduce((a,f)=>a+(f.ing||0),0);
@@ -240,7 +247,7 @@ function printHistArt() {
     `,
     cuerpo:`<table>
       <thead><tr><th>Fecha</th><th>Comprobante</th><th>Detalle</th>
-        <th class="n">Ingreso</th><th class="n">Egreso</th><th class="n">Stock</th><th class="n">Importe</th></tr></thead>
+        <th class="n">Ingreso</th><th class="n">Egreso</th><th class="n">Stock</th><th class="n">Importe</th><th class="n">Cotiz.</th></tr></thead>
       <tbody>${cuerpo}
         <tr class="tot"><td colspan="3">TOTALES</td>
           <td class="n">${totIng||''}</td><td class="n">${totEgr||''}</td>
@@ -264,7 +271,7 @@ async function excelHistArt(){
   if(!_histFilas.length){ toast('Primero consultá la historia','err'); return; }
   let ExcelJS; try{ ExcelJS=await _histLoadExcelJS(); }catch(e){ toast('No se pudo cargar Excel','err'); return; }
   const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('Historia');
-  ws.columns=[{width:12},{width:20},{width:34},{width:11},{width:11},{width:11},{width:14}];
+  ws.columns=[{width:12},{width:20},{width:34},{width:11},{width:11},{width:11},{width:8},{width:14},{width:11}];
 
   ws.mergeCells('A1:G1');
   const t=ws.getCell('A1');
@@ -274,15 +281,17 @@ async function excelHistArt(){
   st.font={italic:true,color:{argb:'FF666666'}}; ws.mergeCells(st.number,1,st.number,7);
   ws.addRow([]);
 
-  const hr=ws.addRow(['Fecha','Comprobante','Detalle','Ingreso','Egreso','Stock','Importe']);
+  const hr=ws.addRow(['Fecha','Comprobante','Detalle','Ingreso','Egreso','Stock','Moneda','Importe','Cotización']);
   hr.font={bold:true}; hr.alignment={horizontal:'center'};
   hr.eachCell(c=>{ c.border={bottom:{style:'medium'}}; });
 
   _histFilas.forEach(f=>{
     const r=ws.addRow([_histFmtFec(f.fec), f.comp||'', f.det||'',
-      f.ing||null, f.egr||null, f.stk, (f.imp!==null&&f.imp!==undefined)?f.imp:null]);
+      f.ing||null, f.egr||null, f.stk, f.mon||'$', (f.imp!==null&&f.imp!==undefined)?f.imp:null, f.cotiz||null]);
     [4,5,6].forEach(i=>r.getCell(i).numFmt='#,##0');
-    r.getCell(7).numFmt='#,##0.00';
+    r.getCell(7).alignment={horizontal:'center'};     // moneda
+    r.getCell(8).numFmt='#,##0.00';                    // importe
+    r.getCell(9).numFmt='#,##0.00';                    // cotización
     if(f.tipo==='desp') r.getCell(2).font={color:{argb:'FF0A58CA'}};
     if(f.tipo==='nc')   r.getCell(2).font={color:{argb:'FF991B1B'}};
   });
@@ -290,7 +299,7 @@ async function excelHistArt(){
   const totIng=_histFilas.reduce((a,f)=>a+(f.ing||0),0);
   const totEgr=_histFilas.reduce((a,f)=>a+(f.egr||0),0);
   const totFin=_histFilas[_histFilas.length-1].stk;
-  const tr=ws.addRow(['','','TOTALES', totIng||null, totEgr||null, totFin, null]);
+  const tr=ws.addRow(['','','TOTALES', totIng||null, totEgr||null, totFin, null, null, null]);
   tr.font={bold:true}; tr.eachCell(c=>{ c.border={top:{style:'double'}}; });
   [4,5,6].forEach(i=>tr.getCell(i).numFmt='#,##0');
 
