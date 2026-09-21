@@ -1338,7 +1338,7 @@ function facCancelar() {
 // ══════════════════════════════════════════════════════════
 function renderFacModal(fecha, empresa, cliCod) {
   const monesOpts=(TABLAS['MONE']||[]).map(m=>`<option value="${m.CODIGO}">${m.STRING1} ${m.DETALLE}</option>`).join('')||'<option value="P">$ Pesos</option>';
-  const ctipOpts=CTIPS.filter(c=>c.empresa===empresa&&['F','C','D'].includes(c.tipo))
+  const ctipOpts=CTIPS.filter(c=>c.empresa===empresa&&['F','C','D','R'].includes(c.tipo))
     .map(c=>`<option value="${c.prefijo}|${c.tipo}">${c.prefijo} — ${TIPO_LABEL[c.tipo]||c.tipo}</option>`).join('');
   const cpagOpts='<option value="">— Sin especificar —</option>'+(TABLAS['CPAG']||[]).map(c=>`<option value="${c.CODIGO}">${c.CODIGO} — ${c.DETALLE}</option>`).join('');
   const exprOpts='<option value="">— Sin especificar —</option>'+(TABLAS['EXPR']||[]).map(e=>`<option value="${e.CODIGO}">${e.CODIGO} — ${e.DETALLE}</option>`).join('');
@@ -1614,7 +1614,7 @@ function renderFacModal(fecha, empresa, cliCod) {
 function renderFacForm(fecha, empresa, cliCod) {
   const det=document.getElementById('fac-detalle');
   const monesOpts=(TABLAS['MONE']||[]).map(m=>`<option value="${m.CODIGO}">${m.STRING1} ${m.DETALLE}</option>`).join('')||'<option value="P">$ Pesos</option>';
-  const ctipOpts=CTIPS.filter(c=>c.empresa===empresa&&['F','C','D'].includes(c.tipo))
+  const ctipOpts=CTIPS.filter(c=>c.empresa===empresa&&['F','C','D','R'].includes(c.tipo))
     .map(c=>`<option value="${c.prefijo}|${c.tipo}">${c.prefijo} — ${TIPO_LABEL[c.tipo]||c.tipo}</option>`).join('');
   const cpagOpts='<option value="">— Sin especificar —</option>'+(TABLAS['CPAG']||[]).map(c=>`<option value="${c.CODIGO}">${c.CODIGO} — ${c.DETALLE}</option>`).join('');
   const exprOpts='<option value="">— Sin especificar —</option>'+(TABLAS['EXPR']||[]).map(e=>`<option value="${e.CODIGO}">${e.CODIGO} — ${e.DETALLE}</option>`).join('');
@@ -1977,7 +1977,7 @@ function nfOnEmpresaChange() {
   const emp=document.getElementById('nf-empresa').value;
   const sel=document.getElementById('nf-ctip');
   if(!sel) return;
-  const lista=CTIPS.filter(c=>c.empresa===emp&&['F','C','D'].includes(c.tipo));
+  const lista=CTIPS.filter(c=>c.empresa===emp&&['F','C','D','R'].includes(c.tipo));
   sel.innerHTML='<option value="">— Seleccionar —</option>'+
     lista.map(c=>`<option value="${c.prefijo}|${c.tipo}">${c.prefijo} — ${TIPO_LABEL[c.tipo]||c.tipo}</option>`).join('');
   nfOnCtipChange();
