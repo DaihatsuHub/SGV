@@ -137,10 +137,10 @@ function pintarDash(){
     return (D.desde||'').substring(0,7)===(D.hasta||'').substring(0,7) && f[1] ? ms[+f[1]-1] : 'el período'; })();
 
   const cards=`<div class="dash-cards">
-    ${tarjeta('ventas','shopping-cart','Vendido hoy',V.hoy,`${V.compHoy||0} comprobante${V.compHoy===1?'':'s'}`)}
-    ${tarjeta('ventas','chart-bar','Vendido en '+nomMes,V.periodo,`${V.compPeriodo||0} comprobante${V.compPeriodo===1?'':'s'}`,barVend)}
+    ${tarjeta('ventas','shopping-cart','Vendido hoy',V.hoy,`${V.compHoy||0} comprobante${V.compHoy===1?'':'s'}`,_dPorMoneda(V.monHoy))}
+    ${tarjeta('ventas','chart-bar','Vendido en '+nomMes,V.periodo,`${V.compPeriodo||0} comprobante${V.compPeriodo===1?'':'s'}`,_dPorMoneda(V.monPeriodo)+barVend)}
     ${tarjeta('cobro','cash','Cobrado hoy',CO.hoy,`${_dAbrev(CO.periodo)} en ${nomMes==='el período'?'el período':'el mes'}`)}
-    ${tarjeta('deuda','receipt','Por cobrar',C.deuda, C.vencida>0?`${_dAbrev(C.vencida)} con +90 días`:'sin deuda vencida', barDeuda, C.vencida>0?'#A32D2D':null)}
+    ${tarjeta('deuda','receipt','Por cobrar',C.deuda, C.vencida>0?`${_dAbrev(C.vencida)} con +90 días`:'sin deuda vencida', _dPorMoneda(C.porMoneda)+barDeuda, C.vencida>0?'#A32D2D':null)}
     ${tarjeta('cartera','wallet','Cheques en cartera',CH.cartera, CH.vencenPronto?`${CH.vencenPronto} vence${CH.vencenPronto===1?'':'n'} esta semana`:'ninguno vence esta semana', '', CH.vencenPronto?'#854F0B':null)}
   </div>`;
 
@@ -216,6 +216,8 @@ function _dashStyle(){
     .dash-lbl i{font-size:18px}
     .dash-val{font-size:24px;font-weight:600;color:var(--txt);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .dash-pie{font-size:12px;margin-top:4px}
+    .dash-mon{display:flex;flex-wrap:wrap;gap:1px 12px;margin-top:4px;font-size:11px;color:var(--t2);font-family:var(--mono)}
+    .dash-mon i{color:var(--t3);font-style:normal;margin-right:2px}
     .dash-bar2{display:flex;height:5px;border-radius:3px;overflow:hidden;margin-top:7px;background:rgba(0,0,0,.06)}
     .dash-fila{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:10px}
     .dash-panel{background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:12px 16px}
