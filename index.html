@@ -142,6 +142,7 @@
         <button class="dd-item" id="ddi-fac" onclick="showSubPage('ven','fac')">📄 Facturación</button>
         <button class="dd-item" id="ddi-vmes" onclick="showSubPage('ven','vmes')">📅 Ventas mensuales x Artículos</button>
         <button class="dd-item" id="ddi-dash" onclick="showSubPage('ven','dash')">📊 Dashboard</button>
+        <button class="dd-item" id="ddi-rcc" onclick="showSubPage('ven','rcc')">📈 Resultado por Centro de Costos</button>
         <button class="dd-item" id="ddi-rank" onclick="showSubPage('ven','rank')">🏆 Ranking de Artículos</button>
         <button class="dd-item" id="ddi-subd" onclick="showSubPage('ven','subd')">📒 Subdiario de IVA</button>
         <button class="dd-item" id="ddi-saldo" onclick="showSubPage('ven','saldo')">📊 Saldos por Mes</button>
@@ -823,6 +824,25 @@
   </div>
   <div class="tbl-wrap">
     <div id="sd-body" class="tbl-body"><div class="empty" style="margin-top:40px">Elegí el período y tocá Consultar</div></div>
+  </div>
+</div>
+
+<div class="page" id="page-rcc">
+  <div class="toolbar">
+    <span style="font-weight:600;font-size:14px;color:var(--acc);margin-right:4px">📈 Resultado por Centro de Costos</span>
+    <label style="font-size:12px;color:var(--t2)">Desde</label>
+    <input type="date" class="finp" id="rcc-desde" style="width:140px">
+    <label style="font-size:12px;color:var(--t2)">Hasta</label>
+    <input type="date" class="finp" id="rcc-hasta" style="width:140px">
+    <button class="btn pri" onclick="rccConsultar()">🔍 Consultar</button>
+    <button class="btn" onclick="rccPrint()">🖨 Imprimir</button>
+    <button class="btn" onclick="rccExcel()">⬇ Excel</button>
+    <div class="spacer"></div>
+    <span style="font-size:11px;color:var(--t3)">En pesos · comprobantes reales</span>
+  </div>
+  <div class="tbl-wrap">
+    <div id="rcc-head"></div>
+    <div id="rcc-body" class="tbl-body"></div>
   </div>
 </div>
 
@@ -1901,6 +1921,7 @@
 <script src="js/antiguedad.js"></script>
 <script src="js/ranking.js"></script>
 <script src="js/dashboard.js"></script>
+<script src="js/resultccos.js"></script>
 <script src="js/subdiario.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/vmes.js"></script>

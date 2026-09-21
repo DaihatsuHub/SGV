@@ -75,6 +75,7 @@ function showSubPage(menu, sub) {
   else if (sub==='vmes') { if(typeof vmesRenderMarcas==='function') vmesRenderMarcas();
                            if(typeof vmesFillFiltros==='function') vmesFillFiltros(); }
   else if (sub==='dash') { if(typeof renderDashboard==='function') renderDashboard(); }
+  else if (sub==='rcc') { if(typeof renderResultadoCcos==='function') renderResultadoCcos(); }
   else if (sub==='rank') { if(typeof renderRanking==='function') renderRanking(); }
   else if (sub==='subd') { if(typeof renderSubdiario==='function') renderSubdiario(); }
   else if (sub==='antig') { if(typeof renderAntiguedad==='function') renderAntiguedad(); }
