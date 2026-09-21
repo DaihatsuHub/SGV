@@ -51,6 +51,8 @@ function showSubPage(menu, sub) {
   else if (sub==='rubr') renderTabGral('RUBR');
   else if (sub==='ccos') renderTabGral('CCOS');
   else if (sub==='banc') renderTabGral('BANC');
+  else if (sub==='cgas') renderTabGral('CGAS');
+  else if (sub==='gast') { if(typeof renderGastos==='function') renderGastos(); }
   else if (sub==='prov') renderTabGral('PROV');
   else if (sub==='desp') renderDesp();
   else if (sub==='cli')  renderClis();

@@ -21,6 +21,7 @@ const TAB_CONFIG = {
   // Código del BCRA (3 dígitos, el que viene impreso en el cheque) + nombre.
   // Sin campos extra: `sinExtras` oculta Dato 1 y Dato 2 del formulario.
   BANC: { label:'Bancos',             lbl1:'', lbl2:'', sinExtras:true },
+  CGAS: { label:'Conceptos de Gasto', lbl1:'', lbl2:'', sinExtras:true },
 };
 
 
@@ -102,7 +103,7 @@ function setTabLabels() {
 }
 function saveTab() {
   // Si viene de subtabla (MARC/RUBR), usar _tabEditTipo
-  if (_tabEditTipo && ['MARC','RUBR','CCOS','PROV','VEND','CPAG','PCIA','GRUP','CATE','EXPR','SRUB','MONE','PERC','BANC'].includes(_tabEditTipo)) {
+  if (_tabEditTipo && ['MARC','RUBR','CCOS','PROV','VEND','CPAG','PCIA','GRUP','CATE','EXPR','SRUB','MONE','PERC','BANC','CGAS'].includes(_tabEditTipo)) {
     const cod = document.getElementById('tf-cod').value.trim().toUpperCase();
     const det = document.getElementById('tf-det').value.trim().toUpperCase();
     if (!cod||!det) { toast('Código y detalle son obligatorios','err'); return; }

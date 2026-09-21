@@ -132,6 +132,8 @@
       <div class="dd-menu" id="dd-cmp">
         <button class="dd-item" id="ddi-oc" onclick="showSubPage('cmp','oc');renderOC()">📋 Ordenes de Compra</button>
         <button class="dd-item" id="ddi-desp" onclick="showSubPage('cmp','desp')">🚢 Despachos</button>
+        <button class="dd-item" id="ddi-gast" onclick="showSubPage('cmp','gast')">💸 Gastos Generales</button>
+        <button class="dd-item" id="ddi-cgas" onclick="showSubPage('cmp','cgas')">🏷 Conceptos de Gasto</button>
       </div>
     </div>
     <div class="dd-wrap">
@@ -335,6 +337,45 @@
 </div>
 
 <!-- ══════ CENTROS DE COSTOS ══════ -->
+<div class="page" id="page-gast">
+  <div class="toolbar">
+    <label style="font-size:12px;color:var(--t2)">Desde</label>
+    <input type="date" class="finp" id="gast-desde" style="width:140px">
+    <label style="font-size:12px;color:var(--t2)">Hasta</label>
+    <input type="date" class="finp" id="gast-hasta" style="width:140px">
+    <select class="fsel" id="gast-f-ccos" style="width:180px"><option value="">Todos los centros</option></select>
+    <select class="fsel" id="gast-f-conc" style="width:180px"><option value="">Todos los conceptos</option></select>
+    <button class="btn pri" onclick="gastConsultar()">🔍 Consultar</button>
+    <button class="btn" onclick="gastDuplicar()" title="Copia el gasto seleccionado con la fecha de hoy">⧉ Duplicar</button>
+    <button class="btn dng" onclick="gastBorrar()">✕ Borrar</button>
+    <button class="btn" onclick="gastPrint()">🖨 Imprimir</button>
+    <button class="btn" onclick="gastExcel()">⬇ Excel</button>
+    <div class="spacer"></div>
+    <span style="font-size:13px;color:var(--t2)"><b id="gast-count">0</b> gasto(s) · <b id="gast-total" style="font-family:var(--mono);color:var(--txt)">$ 0,00</b></span>
+  </div>
+  <div class="tbl-wrap">
+    <div id="gast-head"><span>Fecha</span><span>Centro de costos</span><span>Concepto</span><span class="r">Importe</span><span>Detalle</span><span></span></div>
+    <div id="gast-body" class="tbl-body"></div>
+  </div>
+</div>
+
+<div class="page" id="page-cgas">
+  <div class="toolbar">
+    <button class="btn pri" id="btn-cgas-alta" onclick="tabAlta('CGAS')">＋ Alta</button>
+    <button class="btn" id="btn-cgas-modif" onclick="tabModif('CGAS')">✏️ Modificar</button>
+    <button class="btn dng" id="btn-cgas-baja" onclick="tabBaja('CGAS')">✕ Baja</button>
+    <div class="spacer"></div>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="cgas-q" placeholder="Buscar..." oninput="renderTabGral('CGAS')">
+      <button class="srch-clr" onclick="clrSrch('cgas-q',function(){renderTabGral('CGAS')})" title="Limpiar">✕</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <div class="th-tab"><span>Código</span><span>Concepto</span><span></span><span></span></div>
+    <div class="tbl-body" id="cgas-body"></div>
+  </div>
+</div>
+
 <div class="page" id="page-banc">
   <div class="toolbar">
     <button class="btn pri" id="btn-banc-alta" onclick="tabAlta('BANC')">＋ Alta</button>
@@ -1856,6 +1897,7 @@
 <script src="js/subdiariocob.js"></script>
 <script src="js/ctacte.js"></script>
 <script src="js/composicion.js"></script>
+<script src="js/gastos.js"></script>
 <script src="js/antiguedad.js"></script>
 <script src="js/ranking.js"></script>
 <script src="js/dashboard.js"></script>
