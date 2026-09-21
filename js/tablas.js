@@ -87,10 +87,17 @@ function tBaja() {
   if (tabSelIdx===null) { toast('Seleccioná un registro','err'); return; }
   const r = getTabRows()[tabSelIdx];
   confirm2('¿Dar de baja "'+r.CODIGO+'"?', '"'+r.DETALLE+'" será eliminado.', ()=>{
-    const idx = TABLAS[tabActiva].findIndex(x=>x.CODIGO===r.CODIGO);
-    if (idx>=0) TABLAS[tabActiva].splice(idx,1);
-    tabSelIdx=null; deleteTabRow(tabActiva, r.CODIGO); renderTab();
-    toast('Registro eliminado','scs');
+    // Se borra en la pantalla SÓLO si el server confirma
+    const tipo=tabActiva;
+    apiPost('/tablas/borrar',{ tabla:tipo, codigo:r.CODIGO })
+      .then(res=>{
+        if(!res || res.ok===false){ toast('No se borró: '+((res&&res.error)||'error del servidor'),'err'); return; }
+        const idx = TABLAS[tipo].findIndex(x=>x.CODIGO===r.CODIGO);
+        if (idx>=0) TABLAS[tipo].splice(idx,1);
+        tabSelIdx=null; renderTab();
+        toast('Registro eliminado','scs');
+      })
+      .catch(e=>toast('No se borró: '+e.message,'err'));
   });
 }
 function clrTabForm() {
@@ -116,19 +123,29 @@ function saveTab() {
       STRING2:s2val,STRING3:'',FECHA1:''};
     if(_tabEditTipo==='VEND'){ d.STRING1=String(parseFloat(document.getElementById('tf-com').value)||0); d.STRING2=document.getElementById('tf-ger').checked?'S':''; }
     if (!TABLAS[_tabEditTipo]) TABLAS[_tabEditTipo]=[];
-    if (_tabEditMode==='A') {
-      if (TABLAS[_tabEditTipo].find(r=>r.CODIGO===cod)) { toast('Código ya existe','err'); return; }
-      TABLAS[_tabEditTipo].push(d);
-      TABLAS[_tabEditTipo].sort((a,b)=>a.CODIGO.localeCompare(b.CODIGO));
-      toast('Registro dado de alta','scs');
-    } else {
-      const idx=(TABLAS[_tabEditTipo]||[]).findIndex(r=>r.CODIGO===cod);
-      if(idx>=0) TABLAS[_tabEditTipo][idx]=d;
-      toast('Registro modificado','scs');
-    }
-    saveTablas(); saveTabRow(d); closeOv('ov-tab');
-    renderTabGral(_tabEditTipo);
-    _tabEditTipo='';
+    if (_tabEditMode==='A' && TABLAS[_tabEditTipo].find(r=>r.CODIGO===cod)) { toast('Código ya existe','err'); return; }
+    // PRIMERO se graba en el server y SÓLO si confirma se actualiza la pantalla.
+    // Antes era al revés y sin esperar la respuesta: si el server rechazaba el
+    // alta, el registro aparecía igual y se perdía al recargar la página.
+    const tipo=_tabEditTipo, modo=_tabEditMode;
+    apiPost('/tablas/guardar',{ tabla:tipo, codigo:d.CODIGO, detalle:d.DETALLE, string1:d.STRING1, string2:d.STRING2 })
+      .then(res=>{
+        if(!res || res.ok===false){ toast('No se grabó: '+((res&&res.error)||'error del servidor'),'err'); return; }
+        if (modo==='A') {
+          TABLAS[tipo].push(d);
+          TABLAS[tipo].sort((a,b)=>a.CODIGO.localeCompare(b.CODIGO));
+          toast('Registro dado de alta','scs');
+        } else {
+          const idx=(TABLAS[tipo]||[]).findIndex(r=>r.CODIGO===cod);
+          if(idx>=0) TABLAS[tipo][idx]=d;
+          toast('Registro modificado','scs');
+        }
+        if(typeof saveTablas==='function') saveTablas();
+        closeOv('ov-tab');
+        renderTabGral(tipo);
+        _tabEditTipo='';
+      })
+      .catch(e=>toast('No se grabó: '+e.message,'err'));
     return;
   }
   const cod = document.getElementById('tf-cod').value.trim().toUpperCase();
@@ -142,17 +159,25 @@ function saveTab() {
   };
   if(tabActiva==='VEND'){ d.STRING1=String(parseFloat(document.getElementById('tf-com').value)||0); d.STRING2=document.getElementById('tf-ger').checked?'S':''; }
   if (!TABLAS[tabActiva]) TABLAS[tabActiva] = [];
-  if (window._te==='A') {
-    if (TABLAS[tabActiva].find(r=>r.CODIGO===cod)) { toast('Código ya existe','err'); return; }
-    TABLAS[tabActiva].push(d);
-    TABLAS[tabActiva].sort((a,b)=>a.CODIGO.localeCompare(b.CODIGO));
-    toast('Registro dado de alta','scs');
-  } else {
-    const idx = TABLAS[tabActiva].findIndex(r=>r.CODIGO===cod);
-    if (idx>=0) TABLAS[tabActiva][idx] = d;
-    toast('Registro modificado','scs');
-  }
-  saveTablas(); saveTabRow(d); closeOv('ov-tab'); renderTab();
+  if (window._te==='A' && TABLAS[tabActiva].find(r=>r.CODIGO===cod)) { toast('Código ya existe','err'); return; }
+  // PRIMERO el server; la pantalla se actualiza SÓLO si confirma
+  const tipo=tabActiva, modo=window._te;
+  apiPost('/tablas/guardar',{ tabla:tipo, codigo:d.CODIGO, detalle:d.DETALLE, string1:d.STRING1, string2:d.STRING2 })
+    .then(res=>{
+      if(!res || res.ok===false){ toast('No se grabó: '+((res&&res.error)||'error del servidor'),'err'); return; }
+      if (modo==='A') {
+        TABLAS[tipo].push(d);
+        TABLAS[tipo].sort((a,b)=>a.CODIGO.localeCompare(b.CODIGO));
+        toast('Registro dado de alta','scs');
+      } else {
+        const idx = TABLAS[tipo].findIndex(r=>r.CODIGO===cod);
+        if (idx>=0) TABLAS[tipo][idx] = d;
+        toast('Registro modificado','scs');
+      }
+      if(typeof saveTablas==='function') saveTablas();
+      closeOv('ov-tab'); renderTab();
+    })
+    .catch(e=>toast('No se grabó: '+e.message,'err'));
 }
 
 
@@ -297,10 +322,16 @@ function tabBaja(tipo) {
   const r = getTabGralRows(tipo)[idx];
   if (!r) { toast('Seleccioná un registro','err'); return; }
   confirm2('¿Dar de baja "'+r.CODIGO+'"?', '"'+r.DETALLE+'" será eliminado.', ()=>{
-    const i = (TABLAS[tipo]||[]).findIndex(x=>x.CODIGO===r.CODIGO);
-    if (i>=0) TABLAS[tipo].splice(i,1);
-    _tabGralSel[tipo]=null; deleteTabRow(tipo, r.CODIGO); renderTabGral(tipo);
-    toast('Registro eliminado','scs');
+    // Se borra en la pantalla SÓLO si el server confirma
+    apiPost('/tablas/borrar',{ tabla:tipo, codigo:r.CODIGO })
+      .then(res=>{
+        if(!res || res.ok===false){ toast('No se borró: '+((res&&res.error)||'error del servidor'),'err'); return; }
+        const i = (TABLAS[tipo]||[]).findIndex(x=>x.CODIGO===r.CODIGO);
+        if (i>=0) TABLAS[tipo].splice(i,1);
+        _tabGralSel[tipo]=null; renderTabGral(tipo);
+        toast('Registro eliminado','scs');
+      })
+      .catch(e=>toast('No se borró: '+e.message,'err'));
   });
 }
 
