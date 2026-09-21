@@ -137,7 +137,9 @@ async function renderHistArt() {
         imp:  it.ite_uni||0,
         // Moneda y cotización DEL COMPROBANTE: el precio está en esa moneda
         mon:  _histSimb(fac.fac_moneda),
-        cotiz:(fac.fac_moneda && fac.fac_moneda!=='P') ? (Number(fac.fac_cotiz)||null) : null,
+        // En pesos la cotización es 1, y se MUESTRA: en Excel una celda vacía
+        // multiplica como 0, y la columna tiene que servir para calcular
+        cotiz:(!fac.fac_moneda || fac.fac_moneda==='P') ? 1 : (Number(fac.fac_cotiz)||1),
         tipo: esNC ? 'nc' : 'fac'
       });
     });
