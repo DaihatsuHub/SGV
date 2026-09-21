@@ -1230,6 +1230,30 @@ async function facImprimirBorrador() {
   const mon = f.fac_moneda==='P'?'$':'u$s';
   const fec = f.fac_fec?f.fac_fec.substring(0,10).split('-').reverse().join('/'):'—';
   const items = await sbLoadItemsFac(f.fac_nro);
+
+  // CHEQUE RECHAZADO (tipo R): se imprime el cheque con los datos tal cual se
+  // cargaron, en vez de una grilla de ítems que no tiene.
+  const _bChq = (f.fac_nro||'').trim().slice(-1).toUpperCase()==='R';
+  let _bChqHtml = '';
+  if(_bChq){
+    let c=null;
+    try{ const r=await apiGet('/cheques-rechazados/'+encodeURIComponent(f.fac_nro)); c=r&&r.cheque; }catch(_){}
+    if(c){
+      const bco=((TABLAS&&TABLAS['BANC'])||[]).find(b=>b.CODIGO===c.banco);
+      const fp=c.fecha_pago?String(c.fecha_pago).substring(0,10).split('-').reverse().join('/'):'';
+      const cel=(lbl,val,extra)=>`<div class="cq-c" ${extra||''}><div class="cq-l">${lbl}</div><div class="cq-v">${val||'&nbsp;'}</div></div>`;
+      _bChqHtml = `
+      <div class="cq">
+        <div class="cq-f">${cel('Banco', esc((c.banco||'')+(bco?' — '+bco.DETALLE:'')), 'style="flex:1"')}${cel('Fecha de pago', fp, 'style="width:45mm"')}</div>
+        <div class="cq-f">${cel('Localidad', esc(c.localidad||''), 'style="flex:1"')}${cel('N° de cheque', esc(c.numero||''), 'style="width:45mm"')}</div>
+        <div class="cq-f">${cel('Librador', esc(c.librador||''), 'style="flex:1"')}${cel('Importe', '$ '+fmtN(c.importe||0,2), 'style="width:45mm" class="cq-imp"')}</div>
+        <div class="cq-f">${cel('N° de cuenta', esc(c.cuenta||''), 'style="flex:1"')}${cel('Gasto', '$ '+fmtN(c.gasto||0,2), 'style="width:45mm"')}</div>
+        ${c.concepto?`<div class="cq-f">${cel('Concepto', esc(c.concepto), 'style="flex:1"')}</div>`:''}
+      </div>`;
+    } else {
+      _bChqHtml = f.fac_leyenda ? `<div class="ley">${esc(f.fac_leyenda)}</div>` : '';
+    }
+  }
   const esPesos = f.fac_moneda==='P';
   const filas = items.map((it,i)=>{
     const art=ARTS.find(a=>(a.ART_COD||'').trim()===(it.ite_art||'').trim());
@@ -1272,17 +1296,27 @@ async function facImprimirBorrador() {
   table.tot tr.sep td{border-top:1.5px solid #000;padding-top:0}
   table.tot tr.total td{font-size:14px;font-weight:700;padding-top:2mm}
   .noprint{margin-bottom:6mm}
+  .ley{white-space:pre-wrap;line-height:1.6;font-size:12px;padding:3mm 0;border-bottom:1px solid #999;margin-bottom:3mm}
+  .cq{border:1px solid #7fb3d5;border-radius:3mm;padding:4mm 5mm;margin:3mm 0 5mm;
+      background:#e3f2fb repeating-linear-gradient(45deg,#cfe6f4 0,#cfe6f4 1px,transparent 1px,transparent 9px);
+      -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .cq-f{display:flex;gap:5mm;margin-bottom:3mm}
+  .cq-f:last-child{margin-bottom:0}
+  .cq-l{font-size:9px;color:#3d5a70;margin-bottom:1mm}
+  .cq-v{font-size:12px;border-bottom:1px solid #9fc5de;padding-bottom:1mm;min-height:4mm}
+  .cq-imp .cq-v{font-weight:700;font-size:13px;border:2px solid #1b2a36;padding:1mm 2mm;background:#fff}
   @media print{.noprint{display:none}body{padding:0}}
 </style></head><body>
   <div class="noprint"><button onclick="window.print()" style="padding:6px 16px;background:#1a56db;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px">🖨 Imprimir</button></div>
   <div class="top"><span class="nro">${esc(f.fac_nro)}</span><span class="fec">Fecha: ${fec}</span></div>
   <div class="cli"><strong>Cliente:</strong> ${esc((f.fac_cli||'').trim())} — ${esc(cli?cli.CLI_RAZON:'')}</div>
+  ${_bChq ? _bChqHtml : (f.fac_leyenda ? `<div class="ley">${esc(f.fac_leyenda)}</div>` : `
   <table class="it">
     <thead><tr>
       <th>Cód</th><th>Descripción</th><th class="r">Cant</th><th class="r">P.Unit</th><th class="r">Importe</th>
     </tr></thead>
     <tbody>${filas}</tbody>
-  </table>
+  </table>`)}
   <div class="tot-wrap">
     <table class="tot">
       <tr class="tt"><td class="tl">Subtotal</td><td class="tr">${mon} ${fmtN(f.fac_sub||0,2)}</td></tr>
@@ -1478,7 +1512,7 @@ function renderFacModal(fecha, empresa, cliCod) {
                 <div style="display:flex;gap:4px">
                   <input id="nf-chq-banco-busq" list="nf-chq-banco-list" class="finp chq-inp" autocomplete="off"
                          placeholder="Número o nombre del banco…" style="flex:1;min-width:0"
-                         onfocus="this.select()" oninput="nfChequeBanco()" onchange="nfChequeBanco()">
+                         onfocus="nfChequeBancoFocus()" oninput="nfChequeBanco()" onblur="nfChequeBancoBlur()">
                   <datalist id="nf-chq-banco-list"></datalist>
                   <button class="btn" style="padding:2px 8px;font-size:11px" onclick="nfChequeBancoLimpiar()" title="Limpiar">✕</button>
                 </div>
@@ -1926,6 +1960,28 @@ async function nfCargarGrupo() {
     return true;
   });
   if(!arts.length){toast('No hay artículos con ese filtro','err');return;}
+
+  // Los despachos de TODOS los artículos en pocas consultas, no una por
+  // artículo: antes eran N viajes al server uno detrás de otro (con 80
+  // artículos, medio minuto sin ningún aviso).
+  const btnG=document.querySelector('#nf-grupo-popup .btn.pri, button[onclick="nfCargarGrupo()"]');
+  const txtBtn=btnG?btnG.textContent:'';
+  const aviso=(t)=>{ if(btnG){ btnG.disabled=true; btnG.textContent=t; } };
+  aviso(`⏳ Buscando despachos de ${arts.length} artículo(s)…`);
+  const despsPorArt={};
+  try{
+    const cods=arts.filter(a=>!FAC_ITEMS_NUEVA.find(it=>it.ite_art===a.ART_COD)).map(a=>a.ART_COD);
+    for(let i=0;i<cods.length;i+=40){
+      const lote=cods.slice(i,i+40);
+      aviso(`⏳ Despachos ${Math.min(i+40,cods.length)} de ${cods.length}…`);
+      // Entre comillas: los códigos traen guiones y barras
+      const lista=lote.map(c=>'"'+String(c).replace(/"/g,'')+'"').join(',');
+      const rows=await sbGet('despachos',`dep_art=in.(${encodeURIComponent(lista)})&order=dep_fec.desc`);
+      (rows||[]).forEach(d=>{ (despsPorArt[d.dep_art]||(despsPorArt[d.dep_art]=[])).push(d); });
+    }
+  }catch(e){ console.error('nfCargarGrupo desps:',e); }
+  aviso('⏳ Armando los ítems…');
+
   for(const a of arts){
     const yaExiste=FAC_ITEMS_NUEVA.find(it=>it.ite_art===a.ART_COD);
     if(yaExiste) continue;
@@ -1943,7 +1999,7 @@ async function nfCargarGrupo() {
     // Buscar despacho automático
     let despNro='', despFec='', despId=null, despsArr=null, depStk=null, depCostk=null;
     try {
-      const desps=await sbGet('despachos',`dep_art=eq.${encodeURIComponent(a.ART_COD)}&order=dep_fec.desc`);
+      const desps=despsPorArt[a.ART_COD]||[];
       const despsFilt=desps.filter(d=>nfDispDesp(d)>0);
       despsArr=despsFilt;
       if(despsFilt.length===1){
@@ -1965,6 +2021,7 @@ async function nfCargarGrupo() {
       _desps:despsArr, _desp_id:despId
     });
   }
+  if(btnG){ btnG.disabled=false; btnG.textContent=txtBtn; }
   nfCerrarCargaGrupo();
   nfRenderItems();
   nfCalcTotales();
@@ -2563,6 +2620,30 @@ function nfChequeBanco(){
      || bs.find(x=>(x.DETALLE||'').toUpperCase()===v.toUpperCase());
   const h=document.getElementById('nf-chq-banco'); if(h) h.value = b ? b.CODIGO : '';
 }
+// Al entrar se vacía el texto para que el desplegable muestre la TABLA
+// COMPLETA (el datalist filtra por lo escrito); el banco actual queda como
+// guía en el placeholder.
+function nfChequeBancoFocus(){
+  const i=document.getElementById('nf-chq-banco-busq'); if(!i) return;
+  i.dataset.prev=i.value;
+  if(i.value){ i.placeholder=i.value; i.value=''; }
+}
+// Al salir, sólo vale un banco de la tabla: si lo escrito no coincide con
+// ninguno, vuelve al que estaba. No se puede inventar un nombre a mano.
+function nfChequeBancoBlur(){
+  const i=document.getElementById('nf-chq-banco-busq'); if(!i) return;
+  nfChequeBanco();
+  const cod=document.getElementById('nf-chq-banco')?.value||'';
+  const b=((TABLAS&&TABLAS['BANC'])||[]).find(x=>x.CODIGO===cod);
+  if(b){ i.value=`${b.CODIGO} — ${b.DETALLE}`; }
+  else if(i.value.trim()){
+    i.value=i.dataset.prev||''; nfChequeBanco();
+    toast('Elegí un banco de la lista','err');
+  }
+  else { i.value=i.dataset.prev||''; nfChequeBanco(); }
+  i.placeholder='Número o nombre del banco…';
+}
+
 function nfChequeBancoLimpiar(){
   const i=document.getElementById('nf-chq-banco-busq'); if(i){ i.value=''; i.focus(); }
   const h=document.getElementById('nf-chq-banco'); if(h) h.value='';
@@ -2628,11 +2709,15 @@ function nfLeyendaSync(){
   const bRes=document.getElementById('nf-btn-resumir');
 
   // Con un comprobante R (cheque rechazado) la grilla se reemplaza por el cheque
+  // Sin cliente no se muestra el cheque: queda el aviso de "completá empresa,
+  // tipo y cliente", igual que para cargar ítems.
   const esChq = nfEsCheque();
+  const hayCli = !!(document.getElementById('nf-cli-cod')?.value||'').trim();
+  const verChq = esChq && hayCli;
   const chq=document.getElementById('nf-cheque-box');
   if(esChq){ nfChequeFillBancos(); _nfLeyenda=false; }
-  if(chq) chq.style.display = esChq ? '' : 'none';
-  const sinGrilla = _nfLeyenda || esChq;
+  if(chq) chq.style.display = verChq ? '' : 'none';
+  const sinGrilla = _nfLeyenda || verChq;
 
   if(b)   b.style.display   = (esNCND && !_nfLeyenda && !hayItems && !esChq) ? '' : 'none';
   if(bOff)bOff.style.display= _nfLeyenda ? '' : 'none';
