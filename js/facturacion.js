@@ -3067,7 +3067,21 @@ async function nfGuardar() {
     }
     const res=await apiPost('/facturas/guardar',{ ctId:ct.id, prefijo, tipo, empresa, numero:numeroManual, facData,
       items:itemsAGrabar, cheque: nfEsCheque() ? nfChequeDatos() : undefined });
-    if(!res.ok){ syncErr(); nfGrabarEstado(false); toast(res.error||'No se pudo guardar','err'); return; }
+    if(!res.ok){
+      syncErr(); nfGrabarEstado(false);
+      // Si el server rechaza por diferencia de totales, se muestra el detalle:
+      // qué calculó la pantalla y qué calculó el server, campo por campo.
+      if(Array.isArray(res.detalle) && res.detalle.length){
+        console.warn('Totales distintos:', res.detalle, facData);
+        alert('Los importes no coinciden con el cálculo del servidor.\n\n'
+          + 'Pantalla ≠ Servidor:\n  ' + res.detalle.join('\n  ')
+          + '\n\nComprobante ' + prefijo + ' ' + tipo
+          + ' · moneda ' + (facData.fac_moneda||'P') + ' · cotiz ' + (facData.fac_cotiz||1)
+          + ' · dto ' + (facData.fac_monpor||0) + '%'
+          + (facData.fac_leyenda ? ' · por leyenda' : ''));
+      } else toast(res.error||'No se pudo guardar','err');
+      return;
+    }
     if(res.chequeWarn) toast(res.chequeWarn,'err');
     // Aplicar el movimiento de stock a los datos en memoria (para verlo al instante)
     if(res.stockDebug){
