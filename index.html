@@ -152,6 +152,7 @@
         <button class="dd-item" id="ddi-reci" onclick="showSubPage('cob','reci')">🧾 Recibos</button>
         <button class="dd-item" id="ddi-talo" onclick="showSubPage('cob','talo')">📓 Talonarios</button>
         <button class="dd-item" id="ddi-rete" onclick="showSubPage('cob','rete')">🧮 Tipo de Retenciones</button>
+        <button class="dd-item" id="ddi-banc" onclick="showSubPage('cob','banc')">🏦 Bancos</button>
         <button class="dd-item" id="ddi-cart" onclick="showSubPage('cob','cart')">💼 Cartera de Valores</button>
         <button class="dd-item" id="ddi-sdcob" onclick="showSubPage('cob','sdcob')">📗 Subdiario de Cobranzas</button>
         <button class="dd-item" id="ddi-listcob" onclick="showSubPage('cob','listcob')">📋 Listado de Cobranzas</button>
@@ -334,6 +335,23 @@
 </div>
 
 <!-- ══════ CENTROS DE COSTOS ══════ -->
+<div class="page" id="page-banc">
+  <div class="toolbar">
+    <button class="btn pri" id="btn-banc-alta" onclick="tabAlta('BANC')">＋ Alta</button>
+    <button class="btn" id="btn-banc-modif" onclick="tabModif('BANC')">✏️ Modificar</button>
+    <button class="btn dng" id="btn-banc-baja" onclick="tabBaja('BANC')">✕ Baja</button>
+    <div class="spacer"></div>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="banc-q" placeholder="Buscar..." oninput="renderTabGral('BANC')">
+      <button class="srch-clr" onclick="clrSrch('banc-q',function(){renderTabGral('BANC')})" title="Limpiar">✕</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <div class="th-tab"><span>Código</span><span>Banco</span><span></span><span></span></div>
+    <div class="tbl-body" id="banc-body"></div>
+  </div>
+</div>
+
 <div class="page" id="page-ccos">
   <div class="toolbar">
     <button class="btn pri" id="btn-ccos-alta" onclick="tabAlta('CCOS')">＋ Alta</button>

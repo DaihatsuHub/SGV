@@ -18,6 +18,9 @@ const TAB_CONFIG = {
   MONE: { label:'Monedas',           lbl1:'Signo',      lbl2:'',           lblNum:'Cotización' },
   PCIA: { label:'Provincias',         lbl1:'Alícuota IB', lbl2:'' },
   PERC: { label:'Percepciones',       lbl1:'Porcentaje', lbl2:'' },
+  // Código del BCRA (3 dígitos, el que viene impreso en el cheque) + nombre.
+  // Sin campos extra: `sinExtras` oculta Dato 1 y Dato 2 del formulario.
+  BANC: { label:'Bancos',             lbl1:'', lbl2:'', sinExtras:true },
 };
 
 
@@ -99,7 +102,7 @@ function setTabLabels() {
 }
 function saveTab() {
   // Si viene de subtabla (MARC/RUBR), usar _tabEditTipo
-  if (_tabEditTipo && ['MARC','RUBR','CCOS','PROV','VEND','CPAG','PCIA','GRUP','CATE','EXPR','SRUB','MONE','PERC'].includes(_tabEditTipo)) {
+  if (_tabEditTipo && ['MARC','RUBR','CCOS','PROV','VEND','CPAG','PCIA','GRUP','CATE','EXPR','SRUB','MONE','PERC','BANC'].includes(_tabEditTipo)) {
     const cod = document.getElementById('tf-cod').value.trim().toUpperCase();
     const det = document.getElementById('tf-det').value.trim().toUpperCase();
     if (!cod||!det) { toast('Código y detalle son obligatorios','err'); return; }
@@ -220,6 +223,15 @@ function _tabVendUI(tipo, r){
   }
 }
 
+// Tablas que son sólo código + detalle (ej. Bancos): se ocultan Dato 1 y 2
+function _tabSinExtras(tipo){
+  if(!(TAB_CONFIG[tipo]||{}).sinExtras) return;
+  ['tf-s1','tf-s2'].forEach(id=>{
+    const g=document.getElementById(id)?.closest('.fgrp');
+    if(g) g.style.display='none';
+  });
+}
+
 function tabAlta(tipo) {
   _tabEditTipo = tipo; _tabEditMode = 'A';
   clrTabForm();
@@ -232,6 +244,7 @@ function tabAlta(tipo) {
   document.getElementById('tf-s2').type = 'text';
   document.getElementById('tf-s2').closest('.fgrp').style.display = (tipo==='RUBR'||tipo==='MONE'||tipo==='PERC'||tipo==='VEND')?'none':'flex';
   _tabVendUI(tipo, null);
+  _tabSinExtras(tipo);
   // Campo numérico
   const numGrp = document.getElementById('tf-num-grp');
   const cfgNum = TAB_CONFIG[tipo]||{};
@@ -263,6 +276,7 @@ function tabModif(tipo) {
   document.getElementById('tf-lbl2').textContent = cfgM.lbl2||'';
   document.getElementById('tf-s2').closest('.fgrp').style.display = (tipo==='RUBR'||tipo==='MONE'||tipo==='PERC'||tipo==='VEND')?'none':'flex';
   _tabVendUI(tipo, r);
+  _tabSinExtras(tipo);
   // Campo numérico
   const numGrpM = document.getElementById('tf-num-grp');
   const cfgNumM = TAB_CONFIG[tipo]||{};
