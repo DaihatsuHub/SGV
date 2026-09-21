@@ -36,13 +36,13 @@ async function rccConsultar(){
 
 // Aviso de calidad del dato: unidades sin costo (el margen sale inflado) y
 // unidades con costo convertido a la cotización vigente (estimado)
-function _rcAviso(f){
-  if(f.sinCosto>0) return `<span class="rc-warn" title="${_rcFmt0(f.sinCosto)} unidad(es) sin costo: el resultado y el margen salen inflados">⚠</span>`;
+function _rcAviso(f,i){
+  if(f.sinCosto>0) return `<span class="rc-warn" onclick="rccDetalle(${i})" title="${_rcFmt0(f.sinCosto)} unidad(es) sin costo — clic para ver cuáles">⚠</span>`;
   if(f.estimados>0) return `<span class="rc-est" title="${_rcFmt0(f.estimados)} unidad(es) con el costo convertido a la cotización vigente (estimado)">≈</span>`;
   return '';
 }
 
-function _rcFila(f, total){
+function _rcFila(f, total, i){
   const cls = total ? ' rc-tot' : (f.sinAsignar ? ' rc-sin' : '');
   const neg = v => v<0 ? ' rc-neg' : '';
   return `<div class="rc-row${cls}" style="grid-template-columns:${RCC_GRID}">
@@ -54,7 +54,7 @@ function _rcFila(f, total){
     <span class="r">${_rcFmt(f.otros)}</span>
     <span class="r rc-res${neg(f.resultado)}">${_rcFmt(f.resultado)}</span>
     <span class="r${neg(f.margen)}">${f.margen===null||f.margen===undefined?'—':_rcFmt(f.margen)+' %'}</span>
-    <span class="c">${_rcAviso(f)}</span>
+    <span class="c">${total?'':_rcAviso(f,i)}</span>
   </div>`;
 }
 
@@ -70,16 +70,48 @@ function _rcPintar(){
   const F=_rccData.filas||[], T=_rccData.totales||{};
   if(!F.length){ body.innerHTML='<div class="empty" style="margin-top:30px">Sin movimientos en el período</div>'; return; }
 
-  let aviso='';
-  if((T.sinCosto||0)>0){
-    const pct=T.unidades>0?Math.round(T.sinCosto/T.unidades*100):0;
-    aviso=`<div class="rc-banner">⚠ <b>${_rcFmt0(T.sinCosto)} de ${_rcFmt0(T.unidades)} unidades (${pct}%) no tienen costo</b> —
-      sus despachos no tienen costo cargado o les falta la moneda—. El resultado y el margen de los centros marcados salen <b>inflados</b>.</div>`;
-  }
-  if((T.estimados||0)>0){
-    aviso+=`<div class="rc-banner rc-banner-est">≈ ${_rcFmt0(T.estimados)} unidad(es) con el costo convertido a la cotización vigente, porque el despacho está en otra moneda que la factura.</div>`;
-  }
-  body.innerHTML=aviso + F.map(f=>_rcFila(f,false)).join('') + _rcFila(T,true);
+  body.innerHTML=F.map((f,i)=>_rcFila(f,false,i)).join('') + _rcFila(T,true);
+}
+
+// Detalle de los artículos SIN COSTO de un centro: son los que inflan su
+// resultado. Muestra el motivo, para saber qué hay que corregir en el despacho.
+function rccDetalle(i){
+  const f=(_rccData?.filas||[])[i]; if(!f) return;
+  const lista=f.detSinCosto||[];
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999';
+  const filas=lista.map(x=>`<tr>
+      <td style="font-family:var(--mono);color:var(--acc);white-space:nowrap">${_rcEsc(x.art)}</td>
+      <td>${_rcEsc(x.des)}</td>
+      <td style="text-align:right;font-family:var(--mono)">${_rcFmt0(x.unidades)}</td>
+      <td style="color:#854F0B">${_rcEsc(x.motivo||'')}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--t2)">${x.comps.map(_rcEsc).join('<br>')}</td>
+    </tr>`).join('');
+  ov.innerHTML=`<div class="modal" style="max-width:860px;width:94%;max-height:80vh;display:flex;flex-direction:column">
+    <div class="mhd" style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-weight:600;color:var(--acc)">⚠ Sin costo — ${_rcEsc(f.sinAsignar?'Sin asignar':f.ccos+' '+f.detalle)}</span>
+      <button class="btn" id="rcd-x" style="padding:2px 9px">✕</button>
+    </div>
+    <div style="padding:6px 16px 4px;font-size:12px;color:var(--t2)">${_rcFmt0(f.sinCosto)} unidad(es) vendidas sin costo: por eso el resultado de este centro sale más alto de lo real.</div>
+    <div style="overflow:auto;padding:0 16px 14px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="text-align:left;color:var(--t2)">
+          <th style="padding:6px 6px;border-bottom:1px solid var(--b1)">Artículo</th>
+          <th style="padding:6px 6px;border-bottom:1px solid var(--b1)">Descripción</th>
+          <th style="padding:6px 6px;border-bottom:1px solid var(--b1);text-align:right">Unid.</th>
+          <th style="padding:6px 6px;border-bottom:1px solid var(--b1)">Motivo</th>
+          <th style="padding:6px 6px;border-bottom:1px solid var(--b1)">Comprobantes</th>
+        </tr></thead>
+        <tbody>${filas||'<tr><td colspan="5" style="padding:10px">Sin detalle</td></tr>'}</tbody>
+      </table>
+    </div></div>`;
+  ov.querySelectorAll('tbody td').forEach(td=>{ td.style.padding='6px'; td.style.borderBottom='1px solid var(--b1)'; td.style.verticalAlign='top'; });
+  document.body.appendChild(ov);
+  const cerrar=()=>{ if(ov.parentNode) document.body.removeChild(ov); document.removeEventListener('keydown',esc); };
+  const esc=e=>{ if(e.key==='Escape') cerrar(); };
+  document.addEventListener('keydown',esc);
+  ov.querySelector('#rcd-x').onclick=cerrar;
+  ov.onclick=e=>{ if(e.target===ov) cerrar(); };
 }
 
 /* ─────────── Imprimir ─────────── */
@@ -147,7 +179,8 @@ function _rcStyle(){
     .rc-neg{color:var(--red)}
     .rc-sin{color:var(--t2);background:rgba(0,0,0,.02)}
     .rc-tot{background:var(--s2);border-top:2px solid var(--acc);font-weight:600}
-    .rc-warn{color:#B45309;cursor:help;font-size:15px}
+    .rc-warn{color:#B45309;cursor:pointer;font-size:15px}
+    .rc-warn:hover{color:#854F0B}
     .rc-est{color:var(--t2);cursor:help;font-size:15px}
     .rc-banner{margin:10px 12px 4px;padding:8px 12px;border-radius:6px;font-size:12px;line-height:1.5;
       background:rgba(239,159,39,.14);color:#854F0B;border-left:3px solid #EF9F27}
