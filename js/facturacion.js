@@ -1492,6 +1492,7 @@ function renderFacModal(fecha, empresa, cliCod) {
           <div style="flex:1"></div>
           <button id="nf-btn-grupo" class="btn" onclick="nfAbrirCargaGrupo()" style="padding:3px 10px;font-size:11px">📦 Grupo</button>
           <button id="nf-btn-resumir" class="btn" onclick="nfResumirItems()" style="padding:3px 10px;font-size:11px;color:var(--t2)">✂ Resumir</button>
+          <button id="nf-btn-dtos" class="btn" onclick="nfDtosTodos()" title="Aplicar descuentos a todos los ítems cargados" style="padding:3px 10px;font-size:11px">% Dto</button>
           <button id="nf-btn-agregar" class="btn pri" onclick="nfAbrirBusqArt()" style="padding:3px 10px;font-size:11px">＋ Agregar</button>
           <button id="nf-btn-leyenda" class="btn" onclick="nfLeyendaOn()" style="padding:3px 10px;font-size:11px;display:none">📝 Leyenda</button>
           <button id="nf-btn-leyenda-off" class="btn" onclick="nfLeyendaOff()" style="padding:3px 10px;font-size:11px;display:none;color:var(--red)">✕ Quitar leyenda</button>
@@ -1630,10 +1631,10 @@ function renderFacModal(fecha, empresa, cliCod) {
         <div>
           <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Descuentos encadenados</label>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
-            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 1 %</label><input class="finp" id="ng-dto1" type="number" min="0" max="100" value="0" style="width:100%"></div>
-            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 2 %</label><input class="finp" id="ng-dto2" type="number" min="0" max="100" value="0" style="width:100%"></div>
-            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 3 %</label><input class="finp" id="ng-dto3" type="number" min="0" max="100" value="0" style="width:100%"></div>
-            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 4 %</label><input class="finp" id="ng-dto4" type="number" min="0" max="100" value="0" style="width:100%"></div>
+            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 1 %</label><input class="finp" id="ng-dto1" type="number" min="0" max="100" value="0" onfocus="this.select()" onclick="this.select()" style="width:100%"></div>
+            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 2 %</label><input class="finp" id="ng-dto2" type="number" min="0" max="100" value="0" onfocus="this.select()" onclick="this.select()" style="width:100%"></div>
+            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 3 %</label><input class="finp" id="ng-dto3" type="number" min="0" max="100" value="0" onfocus="this.select()" onclick="this.select()" style="width:100%"></div>
+            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 4 %</label><input class="finp" id="ng-dto4" type="number" min="0" max="100" value="0" onfocus="this.select()" onclick="this.select()" style="width:100%"></div>
           </div>
         </div>
         <div id="ng-preview" style="font-size:11px;color:var(--t3);min-height:16px"></div>
@@ -1749,6 +1750,7 @@ function renderFacForm(fecha, empresa, cliCod) {
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button id="nf-btn-grupo" class="btn" onclick="nfAbrirCargaGrupo()" style="padding:3px 10px;font-size:12px">📦 Cargar grupo</button>
             <button id="nf-btn-resumir" class="btn" onclick="nfResumirItems()" style="padding:3px 10px;font-size:12px;color:var(--t2)">✂ Resumir</button>
+            <button id="nf-btn-dtos" class="btn" onclick="nfDtosTodos()" title="Aplicar descuentos a todos los ítems cargados" style="padding:3px 10px;font-size:12px">% Dto</button>
             <button id="nf-btn-agregar" class="btn pri" onclick="nfAbrirBusqArt()" style="padding:3px 10px;font-size:12px">＋ Agregar</button>
           </div>
         </div>
@@ -1808,10 +1810,10 @@ function renderFacForm(fecha, empresa, cliCod) {
         <div>
           <label style="font-size:11px;color:var(--t3);display:block;margin-bottom:3px">Descuentos encadenados</label>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
-            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 1 %</label><input class="finp" id="ng-dto1" type="number" min="0" max="100" value="0" style="width:100%"></div>
-            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 2 %</label><input class="finp" id="ng-dto2" type="number" min="0" max="100" value="0" style="width:100%"></div>
-            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 3 %</label><input class="finp" id="ng-dto3" type="number" min="0" max="100" value="0" style="width:100%"></div>
-            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 4 %</label><input class="finp" id="ng-dto4" type="number" min="0" max="100" value="0" style="width:100%"></div>
+            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 1 %</label><input class="finp" id="ng-dto1" type="number" min="0" max="100" value="0" onfocus="this.select()" onclick="this.select()" style="width:100%"></div>
+            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 2 %</label><input class="finp" id="ng-dto2" type="number" min="0" max="100" value="0" onfocus="this.select()" onclick="this.select()" style="width:100%"></div>
+            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 3 %</label><input class="finp" id="ng-dto3" type="number" min="0" max="100" value="0" onfocus="this.select()" onclick="this.select()" style="width:100%"></div>
+            <div><label style="font-size:10px;color:var(--t3);display:block">Dto 4 %</label><input class="finp" id="ng-dto4" type="number" min="0" max="100" value="0" onfocus="this.select()" onclick="this.select()" style="width:100%"></div>
           </div>
         </div>
         <div id="ng-preview" style="font-size:11px;color:var(--t3);min-height:16px"></div>
@@ -1929,6 +1931,42 @@ function nfCerrarCargaGrupo() {
   document.getElementById('nf-grupo-popup').style.display='none';
   document.getElementById('nf-grupo-overlay').style.display='none';
 }
+// Descuentos encadenados a TODOS los ítems ya cargados. Se aplican sobre el
+// precio ORIGINAL de cada ítem (ite_preori), no sobre el actual: así aplicar
+// dos veces no acumula, y poner todo en 0 vuelve al precio de lista.
+function nfDtosTodos(){
+  if(!(FAC_ITEMS_NUEVA||[]).length){ toast('No hay ítems cargados','err'); return; }
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999';
+  const inp=k=>`<div><label style="font-size:10px;color:var(--t3);display:block">Dto ${k} %</label>
+    <input class="finp" id="nfdt-${k}" type="number" min="0" max="100" value="0" onfocus="this.select()" onclick="this.select()" style="width:100%"></div>`;
+  ov.innerHTML=`<div class="modal" style="max-width:440px;width:92%">
+    <div class="mhd"><span style="font-weight:600;color:var(--acc)">% Descuento a todos los ítems</span></div>
+    <div style="padding:14px 16px">
+      <div style="font-size:12px;color:var(--t2);margin-bottom:10px">Se aplica sobre el precio de lista de cada uno de los ${FAC_ITEMS_NUEVA.length} ítem(s). Con todo en 0 vuelven al precio original.</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">${[1,2,3,4].map(inp).join('')}</div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;padding:0 16px 14px">
+      <button class="btn" id="nfdt-cancel">Cancelar</button>
+      <button class="btn pri" id="nfdt-ok">Aplicar</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+  const cerrar=()=>{ if(ov.parentNode) document.body.removeChild(ov); };
+  ov.querySelector('#nfdt-cancel').onclick=cerrar;
+  ov.onclick=e=>{ if(e.target===ov) cerrar(); };
+  ov.querySelector('#nfdt-ok').onclick=()=>{
+    const d=[1,2,3,4].map(k=>Math.min(100,Math.max(0,parseFloat(document.getElementById('nfdt-'+k).value)||0)));
+    FAC_ITEMS_NUEVA.forEach(it=>{
+      const base=Number(it.ite_preori)||Number(it.ite_uni)||0;
+      it.ite_uni=nfAplicarDtos(base, d[0], d[1], d[2], d[3]);
+    });
+    cerrar();
+    nfRenderItems(); nfCalcTotales();
+    toast('Descuento aplicado a '+FAC_ITEMS_NUEVA.length+' ítem(s)','scs');
+  };
+  setTimeout(()=>document.getElementById('nfdt-1')?.focus(),50);
+}
+
 function nfAplicarDtos(precio, d1, d2, d3, d4) {
   let p=precio;
   if(d1>0) p=p*(1-d1/100);
@@ -2367,13 +2405,13 @@ function nfRenderItems() {
     body.innerHTML=`<div style="text-align:center;color:var(--t3);font-size:12px;padding:24px 16px;line-height:1.8">
       🔒 Completá <strong>Empresa</strong>, <strong>Tipo de Comprobante</strong> y <strong>Cliente</strong><br>para habilitar la carga de ítems.
     </div>`;
-    ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar'].forEach(id=>{
+    ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar','nf-btn-dtos'].forEach(id=>{
       const el=document.getElementById(id);if(el)el.style.display='none';
     });
     return;
   }
   // En modo cheque rechazado o leyenda no hay ítems: los botones quedan ocultos
-  ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar'].forEach(id=>{
+  ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar','nf-btn-dtos'].forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.style.display = (nfEsCheque()||_nfLeyenda) ? 'none' : '';
   });
@@ -2384,14 +2422,14 @@ function nfRenderItems() {
       🔒 Completá <strong>Empresa</strong>, <strong>Tipo de Comprobante</strong> y <strong>Cliente</strong><br>para habilitar la carga de ítems.
     </div>`;
     // Ocultar botones de items
-    ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar'].forEach(id=>{
+    ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar','nf-btn-dtos'].forEach(id=>{
       const el=document.getElementById(id);if(el)el.style.display='none';
     });
     return;
   }
   // Mostrar botones
   // En modo cheque rechazado o leyenda no hay ítems: los botones quedan ocultos
-  ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar'].forEach(id=>{
+  ['nf-btn-grupo','nf-btn-resumir','nf-btn-agregar','nf-btn-dtos'].forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.style.display = (nfEsCheque()||_nfLeyenda) ? 'none' : '';
   });
