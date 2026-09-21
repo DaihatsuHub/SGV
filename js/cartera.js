@@ -219,6 +219,17 @@ function cheqEdit(){
     Object.keys(CHEQ_ESTADOS).map(k=>`<option value="${k}"${(c.estado||'cartera')===k?' selected':''}>${CHEQ_ESTADOS[k]}</option>`).join('');
   document.getElementById('cf-fsalida').value=(c.fecha_salida||'').substring(0,10);
   document.getElementById('cart-obs').value=c.observaciones||'';
+  // Elegir "cartera" vacía la salida y la observación, que ya no aplican
+  const selE=document.getElementById('cf-estado');
+  if(selE && !selE._vuelve){
+    selE._vuelve=true;
+    selE.addEventListener('change',()=>{
+      if(selE.value==='cartera'){
+        const f=document.getElementById('cf-fsalida'); if(f) f.value='';
+        const o=document.getElementById('cart-obs'); if(o) o.value='';
+      }
+    });
+  }
   document.getElementById('cart-mtit').textContent=`Cheque Nº ${c.numero||''}`;
   document.getElementById('ov-cart').classList.add('open');
 }
@@ -229,7 +240,11 @@ async function saveCheq(){
   const obs=document.getElementById('cart-obs').value.trim()||null;
   try{
     await apiPost('/cheques/estado',{ id:_cheqOrig.id, estado, fecha_salida:fsal, observaciones:obs });
-    _cheqOrig.estado=estado; _cheqOrig.fecha_salida=fsal; _cheqOrig.observaciones=obs;
+    // Si vuelve a cartera, el server blanquea salida y observación: acá también
+    const vuelve = estado==='cartera';
+    _cheqOrig.estado=estado;
+    _cheqOrig.fecha_salida = vuelve ? null : fsal;
+    _cheqOrig.observaciones = vuelve ? null : obs;
     closeOv('ov-cart'); renderCart(); toast('Cheque actualizado','scs');
   }catch(e){ console.error('saveCheq:', e); toast('Error al guardar','err'); }
 }
@@ -253,11 +268,15 @@ async function saveCheqBulk(){
   const fsal=document.getElementById('cb-fsalida').value||null;
   const obs=document.getElementById('cb-obs').value.trim()||null;
   try{
-    for(const id of ids){
-      await apiPost('/cheques/estado',{ id, estado, fecha_salida:fsal, observaciones:obs });
+    // Una sola llamada con todos los cheques (antes era una por cheque)
+    const res=await apiPost('/cheques/estado',{ ids, estado, fecha_salida:fsal, observaciones:obs });
+    if(res && res.ok===false){ toast(res.error||'No se pudo actualizar','err'); return; }
+    // Si vuelven a cartera, el server blanquea salida y observación
+    const vuelve = estado==='cartera';
+    ids.forEach(id=>{
       const c=CHEQUES.find(x=>x.id===id);
-      if(c){ c.estado=estado; c.fecha_salida=fsal; c.observaciones=obs; }
-    }
+      if(c){ c.estado=estado; c.fecha_salida=vuelve?null:fsal; c.observaciones=vuelve?null:obs; }
+    });
     selectedCheqIds.clear();
     closeOv('ov-cartbulk'); renderCart();
     toast(`${ids.length} valor(es) actualizado(s)`,'scs');
