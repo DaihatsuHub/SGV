@@ -159,16 +159,18 @@ function rccSinAsignar(i){
 // le cargaron en el período.
 function rccDetCentro(i){
   const f=(_rccData?.filas||[])[i]; if(!f) return;
-  const comps=f.detComp||[], gastos=f.detGastos||[];
+  const arts=f.detArt||[], gastos=f.detGastos||[];
   const ov=document.createElement('div');
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999';
-  const fc=comps.map(x=>`<tr>
-      <td style="white-space:nowrap">${_rcFecha(x.fecha)}</td>
-      <td style="font-family:var(--mono);color:var(--acc);white-space:nowrap">${_rcEsc(x.comp)}</td>
+  // Resumen por MODELO, alfabético
+  const fc=arts.map(x=>`<tr>
+      <td style="font-family:var(--mono);color:var(--acc);white-space:nowrap">${_rcEsc(x.art)}</td>
+      <td>${_rcEsc(x.des)}</td>
       <td style="text-align:right;font-family:var(--mono)">${_rcFmt0(x.unidades)}</td>
       <td style="text-align:right;font-family:var(--mono)${x.ventas<0?';color:var(--red)':''}">${_rcFmt(x.ventas)}</td>
       <td style="text-align:right;font-family:var(--mono)">${_rcFmt(x.costos)}</td>
       <td style="text-align:right;font-family:var(--mono);font-weight:600${x.resultado<0?';color:var(--red)':''}">${_rcFmt(x.resultado)}</td>
+      <td style="text-align:right;font-family:var(--mono)${x.margen!==null&&x.margen<0?';color:var(--red)':''}">${x.margen===null?'—':_rcFmt(x.margen)+' %'}</td>
     </tr>`).join('');
   const fg=gastos.map(x=>`<tr>
       <td style="white-space:nowrap">${_rcFecha(x.fecha)}</td>
@@ -187,12 +189,12 @@ function rccDetCentro(i){
       <b style="color:var(--txt)">Resultado ${_rcFmt(f.resultado)}</b>
     </div>
     <div style="overflow:auto;padding:0 16px 14px">
-      <div style="font-size:12px;font-weight:600;margin:6px 0">Comprobantes (${comps.length})</div>
+      <div style="font-size:12px;font-weight:600;margin:6px 0">Modelos (${arts.length})</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr><th ${th}>Fecha</th><th ${th}>Comprobante</th><th ${th} style="text-align:right">Unid.</th>
+        <thead><tr><th ${th}>Modelo</th><th ${th}>Descripción</th><th ${th} style="text-align:right">Unid.</th>
           <th ${th} style="text-align:right">Ventas</th><th ${th} style="text-align:right">Costos</th>
-          <th ${th} style="text-align:right">Resultado</th></tr></thead>
-        <tbody>${fc||'<tr><td colspan="6" style="padding:8px;color:var(--t3)">Sin comprobantes</td></tr>'}</tbody>
+          <th ${th} style="text-align:right">Resultado</th><th ${th} style="text-align:right">Margen</th></tr></thead>
+        <tbody>${fc||'<tr><td colspan="7" style="padding:8px;color:var(--t3)">Sin modelos</td></tr>'}</tbody>
       </table>
       ${gastos.length?`<div style="font-size:12px;font-weight:600;margin:14px 0 6px">Gastos (${gastos.length})</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
