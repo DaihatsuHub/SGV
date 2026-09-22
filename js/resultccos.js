@@ -11,6 +11,7 @@ let _rccData = null;
 function _rcEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function _rcFmt(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function _rcFmt0(n){ return (Number(n)||0).toLocaleString('es-AR',{maximumFractionDigits:2}); }
+function _rcSimb(m){ if(!m) return ''; const o=((typeof TABLAS!=='undefined'&&TABLAS['MONE'])||[]).find(x=>x.CODIGO===m); return o&&o.STRING1?o.STRING1:(m==='P'?'$':m); }
 function _rcFecha(f){ const p=(f||'').substring(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:(f||''); }
 const RCC_GRID='minmax(170px,1.4fr) 80px 130px 130px 120px 120px 130px 84px 26px';
 
@@ -163,12 +164,17 @@ function rccDetCentro(i){
   const ov=document.createElement('div');
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999';
   // Resumen por MODELO, alfabético
+  // Venta en la moneda del comprobante y costo en la del despacho, como están
+  // cargados. El resultado y el margen van en pesos, porque ahí se mezclan.
+  const org=(v,m)=>`<span style="color:var(--t3)">${_rcEsc(_rcSimb(m))}</span> ${_rcFmt(v)}`;
   const fc=arts.map(x=>`<tr>
       <td style="font-family:var(--mono);color:var(--acc);white-space:nowrap">${_rcEsc(x.art)}</td>
-      <td>${_rcEsc(x.des)}</td>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_rcEsc(x.des)}</td>
       <td style="text-align:right;font-family:var(--mono)">${_rcFmt0(x.unidades)}</td>
-      <td style="text-align:right;font-family:var(--mono)${x.ventas<0?';color:var(--red)':''}">${_rcFmt(x.ventas)}</td>
-      <td style="text-align:right;font-family:var(--mono)">${_rcFmt(x.costos)}</td>
+      <td style="text-align:right;font-family:var(--mono);white-space:nowrap${x.vtaOrig<0?';color:var(--red)':''}">${org(x.vtaOrig,x.monVta)}</td>
+      <td style="text-align:right;font-family:var(--mono);white-space:nowrap">${org(x.cosOrig,x.monCos)}</td>
+      <td style="text-align:right;font-family:var(--mono);color:var(--t2)">${_rcFmt(x.ventas)}</td>
+      <td style="text-align:right;font-family:var(--mono);color:var(--t2)">${_rcFmt(x.costos)}</td>
       <td style="text-align:right;font-family:var(--mono);font-weight:600${x.resultado<0?';color:var(--red)':''}">${_rcFmt(x.resultado)}</td>
       <td style="text-align:right;font-family:var(--mono)${x.margen!==null&&x.margen<0?';color:var(--red)':''}">${x.margen===null?'—':_rcFmt(x.margen)+' %'}</td>
     </tr>`).join('');
@@ -179,7 +185,7 @@ function rccDetCentro(i){
       <td style="text-align:right;font-family:var(--mono)">${_rcFmt(x.importe)}</td>
     </tr>`).join('');
   const th='style="text-align:left;color:var(--t2);font-weight:500"';
-  ov.innerHTML=`<div class="modal" style="max-width:900px;width:95%;max-height:84vh;display:flex;flex-direction:column">
+  ov.innerHTML=`<div class="modal" style="max-width:1080px;width:96%;max-height:84vh;display:flex;flex-direction:column">
     <div class="mhd" style="display:flex;align-items:center;justify-content:space-between">
       <span style="font-weight:600;color:var(--acc)">${_rcEsc(f.ccos)} ${_rcEsc(f.detalle)}</span>
       <button class="btn" id="rcc-x" style="padding:2px 9px">✕</button>
@@ -192,9 +198,10 @@ function rccDetCentro(i){
       <div style="font-size:12px;font-weight:600;margin:6px 0">Modelos (${arts.length})</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr><th ${th}>Modelo</th><th ${th}>Descripción</th><th ${th} style="text-align:right">Unid.</th>
-          <th ${th} style="text-align:right">Ventas</th><th ${th} style="text-align:right">Costos</th>
-          <th ${th} style="text-align:right">Resultado</th><th ${th} style="text-align:right">Margen</th></tr></thead>
-        <tbody>${fc||'<tr><td colspan="7" style="padding:8px;color:var(--t3)">Sin modelos</td></tr>'}</tbody>
+          <th ${th} style="text-align:right">Venta</th><th ${th} style="text-align:right">Costo</th>
+          <th ${th} style="text-align:right">Ventas $</th><th ${th} style="text-align:right">Costos $</th>
+          <th ${th} style="text-align:right">Resultado $</th><th ${th} style="text-align:right">Margen</th></tr></thead>
+        <tbody>${fc||'<tr><td colspan="9" style="padding:8px;color:var(--t3)">Sin modelos</td></tr>'}</tbody>
       </table>
       ${gastos.length?`<div style="font-size:12px;font-weight:600;margin:14px 0 6px">Gastos (${gastos.length})</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
