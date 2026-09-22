@@ -207,6 +207,7 @@ function clrDespForm() {
   document.getElementById('df-ent').value = 0;
   document.getElementById('df-fob').value = 0;
   document.getElementById('df-gas2').value = 0;
+  const cotEl0=document.getElementById('df-cotiz'); if(cotEl0) cotEl0.value='';
   const monEl=document.getElementById('df-moneda'); if(monEl) fillDespMoneda('P');
   ['df-sal','df-stk','df-coent','df-cosal','df-costk'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=0;});
 }
@@ -226,6 +227,7 @@ function fillDespForm(d) {
   document.getElementById('df-proc').value  = d.dep_proc||'';
   document.getElementById('df-fob').value   = d.dep_fob||0;
   document.getElementById('df-gas2').value  = d.dep_gas2||0;
+  const cotEl=document.getElementById('df-cotiz'); if(cotEl) cotEl.value = d.dep_cotiz||'';
   document.getElementById('df-ent').value   = d.dep_ent||0;
   fillDespMoneda(d.dep_moneda);
   { const es=document.getElementById('df-sal'); if(es)es.value=d.dep_sal||0;
@@ -277,6 +279,9 @@ async function saveDesp() {
   const ent   = parseInt(document.getElementById('df-ent').value)||0;
   const fob   = parseFloat(document.getElementById('df-fob').value)||0;
   const gas2  = parseFloat(document.getElementById('df-gas2').value)||0;
+  // Cotización del despacho: con ella el costo en dólares pasa a pesos en los
+  // informes de resultado y en el ranking
+  const cotiz = parseFloat(document.getElementById('df-cotiz')?.value)||0;
   const adua  = document.getElementById('df-adua').value.trim().toUpperCase();
   const proc  = document.getElementById('df-proc').value.trim().toUpperCase();
   const mone  = document.getElementById('df-moneda').value;
@@ -300,7 +305,7 @@ async function saveDesp() {
   syncSaving();
   try {
     const res = await apiPost('/despachos/guardar', {
-      modo: window._de, desp, sub, fec, art, ent, fob, gas2, adua, proc, mone, coent, cosal, costk, sal, stk
+      modo: window._de, desp, sub, fec, art, ent, fob, gas2, cotiz, adua, proc, mone, coent, cosal, costk, sal, stk
     });
     aplicarStockMemoria(res.stock);
     if(window._de==='A') {
