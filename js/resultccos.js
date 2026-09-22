@@ -46,14 +46,16 @@ function _rcFila(f, total, i){
   const cls = total ? ' rc-tot' : (f.sinAsignar ? ' rc-sin' : '');
   const neg = v => v<0 ? ' rc-neg' : '';
   return `<div class="rc-row${cls}" style="grid-template-columns:${RCC_GRID}">
-    <span class="rc-cc">${total?'<b>Total</b>':(f.sinAsignar?'<i>Sin asignar</i>':`<b>${_rcEsc(f.ccos)}</b> ${_rcEsc(f.detalle)}`)}</span>
+    <span class="rc-cc">${total?'<b>Total</b>'
+      :(f.sinAsignar?`<i class="rc-link" onclick="rccSinAsignar(${i})" title="Ver qué cayó acá">Sin asignar</i>`
+      :`<span class="rc-link" onclick="rccDetCentro(${i})" title="Ver los comprobantes y gastos de este centro"><b>${_rcEsc(f.ccos)}</b> ${_rcEsc(f.detalle)}</span>`)}</span>
     <span class="r">${_rcFmt0(f.unidades)}</span>
     <span class="r${neg(f.ventas)}">${_rcFmt(f.ventas)}</span>
     <span class="r">${_rcFmt(f.costos)}</span>
     <span class="r">${_rcFmt(f.impuestos)}</span>
     <span class="r">${_rcFmt(f.otros)}</span>
     <span class="r rc-res${neg(f.resultado)}">${_rcFmt(f.resultado)}</span>
-    <span class="r${neg(f.margen)}">${f.margen===null||f.margen===undefined?'—':_rcFmt(f.margen)+' %'}</span>
+    <span class="r${neg(f.margen)}">${(f.sinAsignar||f.margen===null||f.margen===undefined)?'—':_rcFmt(f.margen)+' %'}</span>
     <span class="c">${total?'':_rcAviso(f,i)}</span>
   </div>`;
 }
@@ -111,6 +113,100 @@ function rccDetalle(i){
   const esc=e=>{ if(e.key==='Escape') cerrar(); };
   document.addEventListener('keydown',esc);
   ov.querySelector('#rcd-x').onclick=cerrar;
+  ov.onclick=e=>{ if(e.target===ov) cerrar(); };
+}
+
+// Qué cayó en "Sin asignar": notas de crédito sin aplicar, aplicaciones que no
+// se pudieron repartir, artículos sin centro de costos y gastos sin centro.
+function rccSinAsignar(i){
+  const f=(_rccData?.filas||[])[i]; if(!f) return;
+  const lista=f.detSinAsignar||[];
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999';
+  const filas=lista.map(x=>`<tr>
+      <td style="white-space:nowrap">${_rcFecha(x.fecha)||''}</td>
+      <td style="font-family:var(--mono);color:var(--acc);white-space:nowrap">${_rcEsc(x.comp)}</td>
+      <td style="color:#854F0B">${_rcEsc(x.motivo)}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--t2)">${_rcEsc(x.extra||'')}</td>
+      <td style="text-align:right;font-family:var(--mono)${x.importe<0?';color:var(--red)':''}">${_rcFmt(x.importe)}</td>
+    </tr>`).join('');
+  ov.innerHTML=`<div class="modal" style="max-width:840px;width:94%;max-height:80vh;display:flex;flex-direction:column">
+    <div class="mhd" style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-weight:600;color:var(--acc)">Sin asignar — qué cayó acá</span>
+      <button class="btn" id="rcs-x" style="padding:2px 9px">✕</button>
+    </div>
+    <div style="padding:6px 16px 4px;font-size:12px;color:var(--t2)">
+      Total ${_rcFmt(f.ventas)}. Son importes que no se pudieron atribuir a un centro de costos.
+    </div>
+    <div style="overflow:auto;padding:0 16px 14px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="text-align:left;color:var(--t2)">
+          <th>Fecha</th><th>Comprobante</th><th>Motivo</th><th>Detalle</th><th style="text-align:right">Importe</th>
+        </tr></thead>
+        <tbody>${filas||'<tr><td colspan="5" style="padding:10px">Sin detalle</td></tr>'}</tbody>
+      </table>
+    </div></div>`;
+  ov.querySelectorAll('th,td').forEach(td=>{ td.style.padding='6px'; td.style.borderBottom='1px solid var(--b1)'; td.style.verticalAlign='top'; });
+  document.body.appendChild(ov);
+  const cerrar=()=>{ if(ov.parentNode) document.body.removeChild(ov); document.removeEventListener('keydown',esc); };
+  const esc=e=>{ if(e.key==='Escape') cerrar(); };
+  document.addEventListener('keydown',esc);
+  ov.querySelector('#rcs-x').onclick=cerrar;
+  ov.onclick=e=>{ if(e.target===ov) cerrar(); };
+}
+
+// Detalle de un centro: los comprobantes que lo formaron y los gastos que se
+// le cargaron en el período.
+function rccDetCentro(i){
+  const f=(_rccData?.filas||[])[i]; if(!f) return;
+  const comps=f.detComp||[], gastos=f.detGastos||[];
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999';
+  const fc=comps.map(x=>`<tr>
+      <td style="white-space:nowrap">${_rcFecha(x.fecha)}</td>
+      <td style="font-family:var(--mono);color:var(--acc);white-space:nowrap">${_rcEsc(x.comp)}</td>
+      <td style="text-align:right;font-family:var(--mono)">${_rcFmt0(x.unidades)}</td>
+      <td style="text-align:right;font-family:var(--mono)${x.ventas<0?';color:var(--red)':''}">${_rcFmt(x.ventas)}</td>
+      <td style="text-align:right;font-family:var(--mono)">${_rcFmt(x.costos)}</td>
+      <td style="text-align:right;font-family:var(--mono);font-weight:600${x.resultado<0?';color:var(--red)':''}">${_rcFmt(x.resultado)}</td>
+    </tr>`).join('');
+  const fg=gastos.map(x=>`<tr>
+      <td style="white-space:nowrap">${_rcFecha(x.fecha)}</td>
+      <td style="font-family:var(--mono)">${_rcEsc(x.concepto)}${x.impuesto?' <span style="font-size:10px;color:#854F0B">imp.</span>':''}</td>
+      <td>${_rcEsc(x.detalle||'')}</td>
+      <td style="text-align:right;font-family:var(--mono)">${_rcFmt(x.importe)}</td>
+    </tr>`).join('');
+  const th='style="text-align:left;color:var(--t2);font-weight:500"';
+  ov.innerHTML=`<div class="modal" style="max-width:900px;width:95%;max-height:84vh;display:flex;flex-direction:column">
+    <div class="mhd" style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-weight:600;color:var(--acc)">${_rcEsc(f.ccos)} ${_rcEsc(f.detalle)}</span>
+      <button class="btn" id="rcc-x" style="padding:2px 9px">✕</button>
+    </div>
+    <div style="padding:6px 16px;font-size:12px;color:var(--t2)">
+      Ventas ${_rcFmt(f.ventas)} · Costos ${_rcFmt(f.costos)} · Gastos ${_rcFmt((f.impuestos||0)+(f.otros||0))} ·
+      <b style="color:var(--txt)">Resultado ${_rcFmt(f.resultado)}</b>
+    </div>
+    <div style="overflow:auto;padding:0 16px 14px">
+      <div style="font-size:12px;font-weight:600;margin:6px 0">Comprobantes (${comps.length})</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr><th ${th}>Fecha</th><th ${th}>Comprobante</th><th ${th} style="text-align:right">Unid.</th>
+          <th ${th} style="text-align:right">Ventas</th><th ${th} style="text-align:right">Costos</th>
+          <th ${th} style="text-align:right">Resultado</th></tr></thead>
+        <tbody>${fc||'<tr><td colspan="6" style="padding:8px;color:var(--t3)">Sin comprobantes</td></tr>'}</tbody>
+      </table>
+      ${gastos.length?`<div style="font-size:12px;font-weight:600;margin:14px 0 6px">Gastos (${gastos.length})</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr><th ${th}>Fecha</th><th ${th}>Concepto</th><th ${th}>Detalle</th>
+          <th ${th} style="text-align:right">Importe</th></tr></thead>
+        <tbody>${fg}</tbody>
+      </table>`:''}
+    </div></div>`;
+  ov.querySelectorAll('th,td').forEach(c=>{ c.style.padding='5px 6px'; c.style.borderBottom='1px solid var(--b1)'; });
+  document.body.appendChild(ov);
+  const cerrar=()=>{ if(ov.parentNode) document.body.removeChild(ov); document.removeEventListener('keydown',esc); };
+  const esc=e=>{ if(e.key==='Escape') cerrar(); };
+  document.addEventListener('keydown',esc);
+  ov.querySelector('#rcc-x').onclick=cerrar;
   ov.onclick=e=>{ if(e.target===ov) cerrar(); };
 }
 
@@ -180,6 +276,8 @@ function _rcStyle(){
     .rc-sin{color:var(--t2);background:rgba(0,0,0,.02)}
     .rc-tot{background:var(--s2);border-top:2px solid var(--acc);font-weight:600}
     .rc-warn{color:#B45309;cursor:pointer;font-size:15px}
+    .rc-link{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+    .rc-link:hover{color:var(--acc)}
     .rc-warn:hover{color:#854F0B}
     .rc-est{color:var(--t2);cursor:help;font-size:15px}
     .rc-banner{margin:10px 12px 4px;padding:8px 12px;border-radius:6px;font-size:12px;line-height:1.5;
