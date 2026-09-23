@@ -166,17 +166,22 @@ function rccDetCentro(i){
   // Resumen por MODELO, alfabético
   // Venta en la moneda del comprobante y costo en la del despacho, como están
   // cargados. El resultado y el margen van en pesos, porque ahí se mezclan.
-  const org=(v,m)=>`<span style="color:var(--t3)">${_rcEsc(_rcSimb(m))}</span> ${_rcFmt(v)}`;
+  // Una línea por moneda: si un modelo se vendió en pesos y en dólares, los
+  // importes NO se suman entre sí (mezclar monedas no significa nada).
+  const org=lista=>!lista||!lista.length ? '—'
+    : lista.map(e=>`<div style="white-space:nowrap${e.v<0?';color:var(--red)':''}"><span style="color:var(--t3)">${_rcEsc(_rcSimb(e.m))}</span> ${_rcFmt(e.v)}</div>`).join('');
+  const NUM='text-align:right;font-family:var(--mono)';
+  const PES=NUM+';background:rgba(55,138,221,.07)';     // columnas convertidas a pesos
   const fc=arts.map(x=>`<tr>
       <td style="font-family:var(--mono);color:var(--acc);white-space:nowrap">${_rcEsc(x.art)}</td>
       <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_rcEsc(x.des)}</td>
-      <td style="text-align:right;font-family:var(--mono)">${_rcFmt0(x.unidades)}</td>
-      <td style="text-align:right;font-family:var(--mono);white-space:nowrap${x.vtaOrig<0?';color:var(--red)':''}">${org(x.vtaOrig,x.monVta)}</td>
-      <td style="text-align:right;font-family:var(--mono);white-space:nowrap">${org(x.cosOrig,x.monCos)}</td>
-      <td style="text-align:right;font-family:var(--mono);color:var(--t2)">${_rcFmt(x.ventas)}</td>
-      <td style="text-align:right;font-family:var(--mono);color:var(--t2)">${_rcFmt(x.costos)}</td>
-      <td style="text-align:right;font-family:var(--mono);font-weight:600${x.resultado<0?';color:var(--red)':''}">${_rcFmt(x.resultado)}</td>
-      <td style="text-align:right;font-family:var(--mono)${x.margen!==null&&x.margen<0?';color:var(--red)':''}">${x.margen===null?'—':_rcFmt(x.margen)+' %'}</td>
+      <td style="${NUM}">${_rcFmt0(x.unidades)}</td>
+      <td style="${NUM}">${org(x.vtaMon)}</td>
+      <td style="${NUM}">${org(x.cosMon)}</td>
+      <td style="${PES};color:var(--t2)">${_rcFmt(x.ventas)}</td>
+      <td style="${PES};color:var(--t2)">${_rcFmt(x.costos)}</td>
+      <td style="${PES};font-weight:600${x.resultado<0?';color:var(--red)':''}">${_rcFmt(x.resultado)}</td>
+      <td style="${PES}${x.margen!==null&&x.margen<0?';color:var(--red)':''}">${x.margen===null?'—':_rcFmt(x.margen)+' %'}</td>
     </tr>`).join('');
   const fg=gastos.map(x=>`<tr>
       <td style="white-space:nowrap">${_rcFecha(x.fecha)}</td>
@@ -184,7 +189,12 @@ function rccDetCentro(i){
       <td>${_rcEsc(x.detalle||'')}</td>
       <td style="text-align:right;font-family:var(--mono)">${_rcFmt(x.importe)}</td>
     </tr>`).join('');
-  const th='style="text-align:left;color:var(--t2);font-weight:500"';
+  // Un solo atributo style por celda: antes había dos y el navegador ignoraba
+  // el segundo, por eso los títulos numéricos quedaban a la izquierda.
+  const TH='color:var(--t2);font-weight:500;text-align:left';
+  const thI=t=>`<th style="${TH}">${t}</th>`;
+  const thD=t=>`<th style="${TH};text-align:right">${t}</th>`;
+  const thP=t=>`<th style="${TH};text-align:right;background:rgba(55,138,221,.10)">${t}</th>`;
   ov.innerHTML=`<div class="modal" style="max-width:1080px;width:96%;max-height:84vh;display:flex;flex-direction:column">
     <div class="mhd" style="display:flex;align-items:center;justify-content:space-between">
       <span style="font-weight:600;color:var(--acc)">${_rcEsc(f.ccos)} ${_rcEsc(f.detalle)}</span>
@@ -197,16 +207,14 @@ function rccDetCentro(i){
     <div style="overflow:auto;padding:0 16px 14px">
       <div style="font-size:12px;font-weight:600;margin:6px 0">Modelos (${arts.length})</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr><th ${th}>Modelo</th><th ${th}>Descripción</th><th ${th} style="text-align:right">Unid.</th>
-          <th ${th} style="text-align:right">Venta</th><th ${th} style="text-align:right">Costo</th>
-          <th ${th} style="text-align:right">Ventas $</th><th ${th} style="text-align:right">Costos $</th>
-          <th ${th} style="text-align:right">Resultado $</th><th ${th} style="text-align:right">Margen</th></tr></thead>
+        <thead><tr>${thI('Modelo')}${thI('Descripción')}${thD('Unid.')}
+          ${thD('Venta')}${thD('Costo')}
+          ${thP('Ventas $')}${thP('Costos $')}${thP('Resultado $')}${thP('Margen')}</tr></thead>
         <tbody>${fc||'<tr><td colspan="9" style="padding:8px;color:var(--t3)">Sin modelos</td></tr>'}</tbody>
       </table>
       ${gastos.length?`<div style="font-size:12px;font-weight:600;margin:14px 0 6px">Gastos (${gastos.length})</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr><th ${th}>Fecha</th><th ${th}>Concepto</th><th ${th}>Detalle</th>
-          <th ${th} style="text-align:right">Importe</th></tr></thead>
+        <thead><tr>${thI('Fecha')}${thI('Concepto')}${thI('Detalle')}${thD('Importe')}</tr></thead>
         <tbody>${fg}</tbody>
       </table>`:''}
     </div></div>`;
