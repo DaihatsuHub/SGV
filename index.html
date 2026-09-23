@@ -106,6 +106,7 @@
         <button class="dd-item" id="ddi-histart" onclick="showSubPage('art','histart')">📈 Historia por Artículo</button>
         <button class="dd-item" id="ddi-marc" onclick="showSubPage('art','marc')">🏷️ Tabla de Marcas</button>
         <button class="dd-item" id="ddi-rubr" onclick="showSubPage('art','rubr')">📦 Tabla de Rubros</button>
+        <button class="dd-item" id="ddi-estu" onclick="showSubPage('art','estu')">🎁 Estuches</button>
         <button class="dd-item" id="ddi-ccos" onclick="showSubPage('art','ccos')">🏢 Centros de Costos</button>
         <button class="dd-item" id="ddi-prov" onclick="showSubPage('art','prov')">🏭 Tabla de Proveedores</button>
         <button class="dd-item" id="ddi-mone" onclick="showSubPage('art','mone')">💱 Monedas</button>
@@ -375,6 +376,24 @@
   <div class="tbl-wrap">
     <div class="th-tab"><span>Código</span><span>Concepto</span><span></span><span></span></div>
     <div class="tbl-body" id="cgas-body"></div>
+  </div>
+</div>
+
+<div class="page" id="page-estu">
+  <div class="toolbar">
+    <button class="btn pri" id="btn-estu-alta" onclick="tabAlta('ESTU')">＋ Alta</button>
+    <button class="btn" id="btn-estu-modif" onclick="tabModif('ESTU')">✏️ Modificar</button>
+    <button class="btn dng" id="btn-estu-baja" onclick="tabBaja('ESTU')">✕ Baja</button>
+    <div class="spacer"></div>
+    <span style="font-size:11px;color:var(--t3);margin-right:8px">Se usan en el rubro TREP</span>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="estu-q" placeholder="Buscar..." oninput="renderTabGral('ESTU')">
+      <button class="srch-clr" onclick="clrSrch('estu-q',function(){renderTabGral('ESTU')})" title="Limpiar">✕</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <div class="th-tab"><span>Código</span><span>Estuche</span><span></span><span></span></div>
+    <div class="tbl-body" id="estu-body"></div>
   </div>
 </div>
 
@@ -1316,7 +1335,7 @@
         <div class="fgrp"><label class="flbl2">Sexo</label>
           <select class="finp" id="af-sex"><option value="">—</option><option value="M">Masculino</option><option value="F">Femenino</option><option value="U">Unisex</option></select>
         </div>
-        <div class="fgrp"><label class="flbl2">Estuche</label><input class="finp" id="af-estu" maxlength="1" style="text-transform:uppercase" placeholder="S/N"></div>
+        <div class="fgrp" id="af-estu-grp"><label class="flbl2">Estuche</label><select class="finp" id="af-estu"></select></div>
       </div>
       <div class="fsec">Precio y Stock</div>
       <div class="fg3">

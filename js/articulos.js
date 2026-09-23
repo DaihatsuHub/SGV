@@ -230,7 +230,8 @@ function artDetail(idx){
     ['Stock Tressa', sT===0?'—':sT],
     ['Depósito Hatsu', sDH===0?'—':sDH],
     ['Depósito Tressa',sDT===0?'—':sDT],
-    ['Grupo',a.ART_GRUP||'—'],['Sexo',a.ART_SEX||'—'],['Estuche',a.ART_ESTU||'—'],
+    ['Grupo',a.ART_GRUP||'—'],['Sexo',a.ART_SEX||'—'],['Estuche',(()=>{ const x=((typeof TABLAS!=='undefined'&&TABLAS['ESTU'])||[]).find(e=>e.CODIGO===a.ART_ESTU);
+     return a.ART_ESTU ? (a.ART_ESTU+(x?' — '+x.DETALLE:'')) : '—'; })()],
     ['Activo',a.ART_ACT==='S'?'Sí':'No'],['Cód.Casio',a.CODCASIO||'—'],
   ].map(([l,v])=>`<div class="dpi"><span class="dpi-lbl">${l}</span><span class="dpi-val">${esc(String(v))}</span></div>`).join('');
   document.getElementById('art-dp').classList.add('open');
@@ -309,8 +310,11 @@ function fillArtSelects(selMarc, selRub, selSrub, selProv, selMone='P', selCcos=
 
 function clrArtForm(){
   ['af-cod','af-des','af-grup','af-sex','af-estu','af-codcasio'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
+  const rubSel=document.getElementById('af-rub');
+  if(rubSel && !rubSel._estu){ rubSel._estu=true; rubSel.addEventListener('change', artEstucheSync); }
   ['af-pre','af-stk','af-stkt','af-deph','af-dept'].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=0; });
   artMascaraPrecio();
+  artEstucheOpts(''); artEstucheSync();
   const ivaEl=document.getElementById('af-iva'); if(ivaEl) ivaEl.value='21';
   const ivaInp=document.getElementById('af-iva-otro'); if(ivaInp){ ivaInp.value=''; ivaInp.style.display='none'; }
   const act = document.getElementById('af-act'); if(act) act.value='S';
@@ -323,11 +327,12 @@ function fillArtForm(a){
   document.getElementById('af-des').value     = a.ART_DES||'';
   document.getElementById('af-pre').value     = a.ART_PRE||0;
   artMascaraPrecio();
+  artEstucheSync();
   document.getElementById('af-stk').value     = a.ART_STK||0;
   document.getElementById('af-stkt').value    = a.ART_STKT||0;
   document.getElementById('af-deph').value    = a.ART_DEPH||0;
   document.getElementById('af-dept').value    = a.ART_DEPT||0;
-  document.getElementById('af-estu').value    = a.ART_ESTU||'';
+  artEstucheOpts(a.ART_ESTU||'');
   document.getElementById('af-grup').value    = a.ART_GRUP||'';
   document.getElementById('af-sex').value     = a.ART_SEX||'';
   const cc = document.getElementById('af-codcasio'); if(cc) cc.value = a.CODCASIO||'';
@@ -485,6 +490,28 @@ function artPrecioSimbolo(){
   const cod = document.getElementById('af-moneda')?.value || 'P';
   const m = ((typeof TABLAS!=='undefined' && TABLAS['MONE'])||[]).find(x=>x.CODIGO===cod);
   return m ? (m.STRING1||'$') : '$';
+}
+
+// ── ESTUCHE ──────────────────────────────────────────────
+// El estuche sale de la tabla ESTUCHES y sólo se usa en el rubro TREP: en los
+// demás rubros el campo ni se muestra (Ricardo, Sep 2026).
+const ART_RUBRO_ESTUCHE = 'TREP';
+
+function artEstucheOpts(sel){
+  const e=document.getElementById('af-estu'); if(!e) return;
+  e.innerHTML='<option value="">— sin estuche —</option>'
+    + ((typeof TABLAS!=='undefined' && TABLAS['ESTU'])||[])
+      .map(x=>`<option value="${esc(x.CODIGO)}"${x.CODIGO===sel?' selected':''}>${esc(x.CODIGO)} — ${esc(x.DETALLE)}</option>`).join('');
+  if(sel) e.value=sel;
+}
+
+// Se muestra u oculta según el rubro elegido
+function artEstucheSync(){
+  const rub=(document.getElementById('af-rub')?.value||'').trim().toUpperCase();
+  const g=document.getElementById('af-estu-grp');
+  const es = rub===ART_RUBRO_ESTUCHE;
+  if(g) g.style.display = es ? '' : 'none';
+  if(!es){ const e=document.getElementById('af-estu'); if(e) e.value=''; }
 }
 
 function artMascaraPrecio(){

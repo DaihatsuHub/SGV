@@ -1255,6 +1255,21 @@ async function facImprimirBorrador() {
     }
   }
   const esPesos = f.fac_moneda==='P';
+  // ESTUCHES: un estuche POR UNIDAD del artículo, sumados por tipo. Van en el
+  // borrador y el presupuesto, después de los ítems; en la factura oficial no
+  // (Ricardo, Sep 2026). Sólo los artículos que tienen estuche cargado.
+  const _estu={};
+  items.forEach(it=>{
+    const a=(ARTS||[]).find(x=>(x.ART_COD||'').trim()===(it.ite_art||'').trim());
+    const cod=(a?.ART_ESTU||'').trim(); if(!cod) return;
+    _estu[cod]=(_estu[cod]||0)+(Number(it.ite_can)||0);
+  });
+  const _estuFilas=Object.entries(_estu).sort((a,b)=>a[0].localeCompare(b[0])).map(([cod,can])=>{
+    const t=((typeof TABLAS!=='undefined'&&TABLAS['ESTU'])||[]).find(x=>x.CODIGO===cod);
+    return `<tr><td class="cod">${esc(cod)}</td><td class="des">${esc(t?t.DETALLE:'')}</td><td class="r">${can}</td></tr>`;
+  }).join('');
+  const _estuTot=Object.values(_estu).reduce((a,b)=>a+b,0);
+
   const filas = items.map((it,i)=>{
     const art=ARTS.find(a=>(a.ART_COD||'').trim()===(it.ite_art||'').trim());
     const desArt=art?art.ART_DES:(it.ite_desp||'');
@@ -1287,6 +1302,9 @@ async function facImprimirBorrador() {
   table.it td.r{text-align:right;font-family:monospace}
   table.it td.cod{font-family:monospace;font-size:10px;white-space:nowrap}
   table.it td.des{font-size:11px}
+  .estu{margin-top:5mm}
+  .estu-tit{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:1.5mm}
+  .estu table.it{max-width:110mm}
   .tot-wrap{display:flex;justify-content:flex-end;margin-top:4mm}
   table.tot{border-collapse:collapse;min-width:70mm}
   table.tot td{padding:1.4mm 2mm;font-size:12px}
@@ -1317,6 +1335,16 @@ async function facImprimirBorrador() {
     </tr></thead>
     <tbody>${filas}</tbody>
   </table>`)}
+  ${_estuFilas ? `
+  <div class="estu">
+    <div class="estu-tit">Estuches</div>
+    <table class="it">
+      <thead><tr><th>Código</th><th>Estuche</th><th class="r">Cantidad</th></tr></thead>
+      <tbody>${_estuFilas}
+        <tr><td colspan="2"><b>Total</b></td><td class="r"><b>${_estuTot}</b></td></tr>
+      </tbody>
+    </table>
+  </div>` : ''}
   <div class="tot-wrap">
     <table class="tot">
       <tr class="tt"><td class="tl">Subtotal</td><td class="tr">${mon} ${fmtN(f.fac_sub||0,2)}</td></tr>
