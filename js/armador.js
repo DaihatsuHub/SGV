@@ -92,7 +92,12 @@ function _amFrase(){
   let s='Ventas';
   s += (d||h) ? ` del ${_amFecha(d)||'inicio'} al ${_amFecha(h)||'hoy'}` : ' de todo el histórico';
   const fs=[];
-  const nom=(id,pre)=>{ const v=_amVal(id); if(v) fs.push(pre+' '+v.split('—')[1]?.trim()||v); };
+  // El texto de la opción elegida, no el valor: "CASIO — CASIO" → "CASIO"
+  const nom=(id,pre)=>{
+    const el=document.getElementById(id); if(!el||!el.value) return;
+    const t=(el.selectedOptions?.[0]?.textContent||el.value).split('—')[1]||el.value;
+    fs.push(pre+' '+t.trim());
+  };
   if(_amCod('am-cli'))  fs.push('del cliente '+(_amVal('am-cli').split('—')[0]||'').trim());
   nom('am-vend','del vendedor'); nom('am-marca','de la marca'); nom('am-rubro','del rubro');
   nom('am-grupo','del grupo'); nom('am-ccos','del centro'); nom('am-prov','de');
