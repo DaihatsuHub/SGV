@@ -143,6 +143,7 @@
         <button class="dd-item" id="ddi-vmes" onclick="showSubPage('ven','vmes')">📅 Ventas mensuales x Artículos</button>
         <button class="dd-item" id="ddi-dash" onclick="showSubPage('ven','dash')">📊 Dashboard</button>
         <button class="dd-item" id="ddi-rcc" onclick="showSubPage('ven','rcc')">📈 Resultado por Centro de Costos</button>
+        <button class="dd-item" id="ddi-arm" onclick="showSubPage('ven','arm')">🧩 Armá tu informe</button>
         <button class="dd-item" id="ddi-rank" onclick="showSubPage('ven','rank')">🏆 Ranking de Artículos</button>
         <button class="dd-item" id="ddi-subd" onclick="showSubPage('ven','subd')">📒 Subdiario de IVA</button>
         <button class="dd-item" id="ddi-saldo" onclick="showSubPage('ven','saldo')">📊 Saldos por Mes</button>
@@ -828,6 +829,77 @@
   </div>
   <div class="tbl-wrap">
     <div id="sd-body" class="tbl-body"><div class="empty" style="margin-top:40px">Elegí el período y tocá Consultar</div></div>
+  </div>
+</div>
+
+<div class="page" id="page-arm">
+  <div class="toolbar">
+    <span style="font-weight:600;font-size:14px;color:var(--acc)">🧩 Armá tu informe</span>
+    <span style="font-size:12px;color:var(--t3)">Ventas</span>
+    <div class="spacer"></div>
+    <button class="btn pri" onclick="armConsultar()">🔍 Ver informe</button>
+    <button class="btn" onclick="armPrint()">🖨 Imprimir</button>
+    <button class="btn" onclick="armExcel()">⬇ Excel</button>
+    <button class="btn" onclick="armLimpiar()">↺ Volver a empezar</button>
+  </div>
+
+  <div class="am-wrap">
+    <div class="am-lbl">1 · Período</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+      <button class="btn am-per pri" data-p="mes"  onclick="armPeriodo('mes')"  style="padding:3px 10px;font-size:12px">Este mes</button>
+      <button class="btn am-per"     data-p="ant"  onclick="armPeriodo('ant')"  style="padding:3px 10px;font-size:12px">Mes anterior</button>
+      <button class="btn am-per"     data-p="anio" onclick="armPeriodo('anio')" style="padding:3px 10px;font-size:12px">Este año</button>
+      <input type="date" class="finp" id="am-desde" style="width:140px" onchange="armPeriodo('libre')">
+      <span style="font-size:12px;color:var(--t3)">a</span>
+      <input type="date" class="finp" id="am-hasta" style="width:140px" onchange="armPeriodo('libre')">
+    </div>
+
+    <div class="am-paso">
+      <div class="am-lbl">2 · Filtros <small>— lo que dejes vacío no filtra</small></div>
+      <div class="am-filtros">
+        <input class="finp" id="am-cli" list="am-cli-list" placeholder="Cliente…" autocomplete="off" onchange="_amFrase()">
+        <datalist id="am-cli-list"></datalist>
+        <select class="fsel" id="am-vend"   onchange="_amFrase()"><option value="">Todos los vendedores</option></select>
+        <select class="fsel" id="am-marca"  onchange="_amFrase()"><option value="">Todas las marcas</option></select>
+        <select class="fsel" id="am-rubro"  onchange="_amFrase()"><option value="">Todos los rubros</option></select>
+        <select class="fsel" id="am-grupo"  onchange="_amFrase()"><option value="">Todos los grupos</option></select>
+        <select class="fsel" id="am-ccos"   onchange="_amFrase()"><option value="">Todos los centros</option></select>
+        <select class="fsel" id="am-prov"   onchange="_amFrase()"><option value="">Todas las provincias</option></select>
+        <select class="fsel" id="am-moneda" onchange="_amFrase()"><option value="">Todas las monedas</option></select>
+        <select class="fsel" id="am-empresa" onchange="_amFrase()">
+          <option value="">Ambas empresas</option><option value="H">Hatsu</option><option value="T">Tressa</option>
+        </select>
+        <input class="finp" id="am-art" list="am-art-list" placeholder="Artículo…" autocomplete="off" onchange="_amFrase()">
+        <datalist id="am-art-list"></datalist>
+      </div>
+    </div>
+
+    <div class="am-paso">
+      <div class="am-lbl">3 · Agrupar por</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <select class="fsel" id="am-g1" style="min-width:170px" onchange="_amFrase()"></select>
+        <span style="font-size:12px;color:var(--t3)">y dentro por</span>
+        <select class="fsel" id="am-g2" style="min-width:170px" onchange="_amFrase()"></select>
+        <span style="font-size:12px;color:var(--t3);margin-left:10px">Ordenar</span>
+        <select class="fsel" id="am-orden" style="min-width:150px" onchange="_amFrase()">
+          <option value="importe">Mayor importe</option>
+          <option value="unidades">Mayor cantidad</option>
+          <option value="margen">Mayor margen</option>
+          <option value="nombre">Nombre</option>
+        </select>
+        <select class="fsel" id="am-limite" style="min-width:130px" onchange="_amFrase()">
+          <option value="">Todos</option><option value="10">Primeros 10</option>
+          <option value="20">Primeros 20</option><option value="50">Primeros 50</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="am-frase" id="am-frase"></div>
+  </div>
+
+  <div class="tbl-wrap">
+    <div id="am-head"></div>
+    <div id="am-body" class="tbl-body"><div class="empty" style="margin-top:30px">Elegí lo que querés ver y tocá Ver informe</div></div>
   </div>
 </div>
 
@@ -1927,6 +1999,7 @@
 <script src="js/ranking.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/resultccos.js"></script>
+<script src="js/armador.js"></script>
 <script src="js/subdiario.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/vmes.js"></script>
