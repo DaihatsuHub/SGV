@@ -170,6 +170,8 @@ function rccDetCentro(i){
   // importes NO se suman entre sí (mezclar monedas no significa nada).
   // Un solo importe, en la moneda del artículo. Es EXACTO: lo facturado en otra
   // moneda se convierte con la cotización que guardó cada renglón al vender.
+  // La venta va en la moneda del ARTÍCULO y el costo en la del DESPACHO, que
+  // es donde está cargado y no siempre coinciden.
   const org=(v,m)=>`<span style="white-space:nowrap${v<0?';color:var(--red)':''}">`
     + `<span style="color:var(--t3)">${_rcEsc(_rcSimb(m))}</span> ${_rcFmt(v)}</span>`;
   const NUM='text-align:right;font-family:var(--mono)';
@@ -179,7 +181,7 @@ function rccDetCentro(i){
       <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_rcEsc(x.des)}</td>
       <td style="${NUM}">${_rcFmt0(x.unidades)}</td>
       <td style="${NUM}">${org(x.vtaArt,x.moneda)}</td>
-      <td style="${NUM}">${org(x.cosArt,x.moneda)}</td>
+      <td style="${NUM}">${org(x.cosArt,x.monCos)}</td>
       <td style="${PES};color:var(--t2)">${_rcFmt(x.ventas)}</td>
       <td style="${PES};color:var(--t2)">${_rcFmt(x.costos)}</td>
       <td style="${PES};font-weight:600${x.resultado<0?';color:var(--red)':''}">${_rcFmt(x.resultado)}</td>
