@@ -92,14 +92,20 @@ async function renderFicha(){
     : 'Comprobantes con saldo';
   let totP=0, totT=0, totC=0, lrows='';
   (D.comprobantes||[]).forEach(f=>{
-    const key=reciMonKey(f.moneda), v=f.saldo||0;
+    const key=reciMonKey(f.moneda);
+    // Una NOTA DE CRÉDITO resta del saldo: antes se sumaba como cualquier
+    // comprobante y el cliente aparecía debiendo de más.
+    const esNC = f.tipo==='C';
+    const v0 = f.saldo||0, v = esNC ? -v0 : v0;
     if(key==='pesos') totP+=v; else if(key==='tressa') totT+=v; else totC+=v;
     const fec=(f.fec||'').split('-').reverse().join('/');
-    lrows+=`<div style="display:grid;grid-template-columns:${LGRID};gap:6px;font-size:12px;font-family:var(--mono);padding:2px 0">
-      <span style="color:var(--t3)">${fec}</span><span style="color:var(--acc)">${esc(f.nro||'')}</span>
-      <span style="text-align:right">${key==='pesos'?reciFmt(v):''}</span>
-      <span style="text-align:right">${key==='tressa'?reciFmt(v):''}</span>
-      <span style="text-align:right">${key==='casio'?reciFmt(v):''}</span></div>`;
+    const cell = esNC ? '- '+reciFmt(v0) : reciFmt(v0);
+    const est = esNC ? 'color:var(--red);font-weight:700' : '';
+    lrows+=`<div style="display:grid;grid-template-columns:${LGRID};gap:6px;font-size:12px;font-family:var(--mono);padding:2px 0;${est}">
+      <span style="${esNC?'':'color:var(--t3)'}">${fec}</span><span style="${esNC?'':'color:var(--acc)'}">${esc(f.nro||'')}</span>
+      <span style="text-align:right">${key==='pesos'?cell:''}</span>
+      <span style="text-align:right">${key==='tressa'?cell:''}</span>
+      <span style="text-align:right">${key==='casio'?cell:''}</span></div>`;
   });
   (D.acuenta||[]).forEach(a=>{
     const key=reciMonKey(a.moneda), v=a.importe||0;
