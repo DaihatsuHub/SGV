@@ -315,7 +315,12 @@ async function _reciOpenEditor(){
     const efe=pagos.find(p=>p.tipo==='efectivo'); document.getElementById('rf-efectivo').value=reciFmt(efe?efe.importe:0);
     const aju=pagos.find(p=>p.tipo==='ajuste');   document.getElementById('rf-ajuste').value=reciFmt(aju?aju.importe:0);
     const chs=await sbGet('cheques',`recibo_id=eq.${rc.id}`);
-    _reciCheques=chs.map(c=>({fecha:c.fecha,numero:c.numero,importe:c.importe||0,fisico:!!c.fisico,propio:!!c.propio}));
+    // El ESTADO viene del cheque: si YA NO ESTÁ EN CARTERA (se depositó, se
+    // entregó, rebotó) no se puede tocar desde el recibo — habría que deshacer
+    // también ese movimiento (Ricardo, Sep 2026).
+    _reciCheques=chs.map(c=>({fecha:c.fecha,numero:c.numero,importe:c.importe||0,
+      fisico:!!c.fisico,propio:!!c.propio,
+      estado:(c.estado||'cartera'), bloqueado:(c.estado||'cartera')!=='cartera'}));
   }catch(e){ console.error('reciModif load:',e); _reciDeud=[];_reciACuenta=[];_reciTransf=[];_reciCheques=[];_reciRetenc=[]; }
   renderReciDeud(); renderReciACuenta(); renderReciTransf(); renderReciCheques(); renderReciRetenc(); reciReconcile();
   document.getElementById('reci-mtit').textContent=`${_reciReadonly?'Ver':'Modificar'} Recibo ${rc.empresa}${rc.talonario} ${rc.numero}`;
@@ -677,8 +682,11 @@ function renderReciTransf(){
   const s=document.getElementById('rf-transf-sub'); if(s) s.textContent='$ '+reciFmt(_reciTransf.reduce((a,x)=>a+(x.importe||0),0));
 }
 function reciAddCheque(){ _reciCheques.push({fecha:_reciHdr.fecha,numero:'',importe:0,fisico:true,propio:false}); renderReciCheques(); reciReconcile(); }
-function reciDelCheque(i){ _reciCheques.splice(i,1); renderReciCheques(); reciReconcile(); }
+function reciDelCheque(i){
+  if(_reciCheques[i]?.bloqueado){ toast('El cheque ya salió de cartera: no se puede quitar','err'); return; }
+  _reciCheques.splice(i,1); renderReciCheques(); reciReconcile(); }
 function reciChequeInput(i,campo,val,checked){
+  if(_reciCheques[i]?.bloqueado){ toast('El cheque ya salió de cartera: no se puede modificar','err'); renderReciCheques(); return; }
   const c=_reciCheques[i]; if(!c) return;
   if(campo==='importe') c.importe=reciParseNum(val);
   else if(campo==='fisico') c.fisico=checked;
@@ -689,14 +697,19 @@ function reciChequeInput(i,campo,val,checked){
 }
 function renderReciCheques(){
   const b=document.getElementById('rf-cheq-body'); if(!b) return;
-  b.innerHTML=_reciCheques.map((c,i)=>`<div style="display:grid;grid-template-columns:1.1fr 0.7fr 1fr 40px 40px 22px;gap:6px;align-items:center;padding:3px 0">
-    <input type="date" value="${c.fecha||''}" onchange="reciChequeInput(${i},'fecha',this.value)" style="height:24px;font-size:12px">
-    <input type="text" maxlength="4" value="${esc(c.numero||'')}" placeholder="0000" onchange="reciChequeInput(${i},'numero',this.value)" style="height:24px;font-size:12px;font-family:var(--mono)">
-    <input type="text" value="${reciFmt(c.importe)}" onchange="reciChequeInput(${i},'importe',this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="height:24px;text-align:right;font-family:var(--mono);font-size:12px">
-    <input type="checkbox" ${c.fisico?'checked':''} onchange="reciChequeInput(${i},'fisico',null,this.checked)" title="Físico">
-    <input type="checkbox" ${c.propio?'checked':''} onchange="reciChequeInput(${i},'propio',null,this.checked)" title="Propio">
-    <button class="mcls" onclick="reciDelCheque(${i})" title="Quitar">✕</button>
-  </div>`).join('');
+  b.innerHTML=_reciCheques.map((c,i)=>{
+    // Cheque que ya salió de cartera: se muestra, pero no se toca
+    const bl=!!c.bloqueado, dis=bl?' disabled':'';
+    const tit=bl?` title="El cheque está ${esc(c.estado)}: no se modifica desde el recibo"`:'';
+    return `<div style="display:grid;grid-template-columns:1.1fr 0.7fr 1fr 40px 40px 22px;gap:6px;align-items:center;padding:3px 0${bl?';opacity:.65':''}"${tit}>
+    <input type="date" value="${c.fecha||''}" onchange="reciChequeInput(${i},'fecha',this.value)" style="height:24px;font-size:12px"${dis}>
+    <input type="text" maxlength="4" value="${esc(c.numero||'')}" placeholder="0000" onchange="reciChequeInput(${i},'numero',this.value)" style="height:24px;font-size:12px;font-family:var(--mono)"${dis}>
+    <input type="text" value="${reciFmt(c.importe)}" onchange="reciChequeInput(${i},'importe',this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="height:24px;text-align:right;font-family:var(--mono);font-size:12px"${dis}>
+    <input type="checkbox" ${c.fisico?'checked':''} onchange="reciChequeInput(${i},'fisico',null,this.checked)" title="Físico"${dis}>
+    <input type="checkbox" ${c.propio?'checked':''} onchange="reciChequeInput(${i},'propio',null,this.checked)" title="Propio"${dis}>
+    ${bl ? '<span title="Fuera de cartera" style="text-align:center;color:var(--t3)">🔒</span>'
+         : `<button class="mcls" onclick="reciDelCheque(${i})" title="Quitar">✕</button>`}
+  </div>`;}).join('');
   const s=document.getElementById('rf-cheq-sub'); if(s) s.textContent='$ '+reciFmt(_reciCheques.reduce((a,x)=>a+(x.importe||0),0));
 }
 function reciAddRetenc(){ _reciRetenc.push({codigo:(RETES[0]?.codigo||''),importe:0}); renderReciRetenc(); reciReconcile(); }
@@ -786,7 +799,7 @@ async function saveReci(){
     pagos:{ efectivo:round2(efe), ajuste:round2(aju),
           transferencias:_reciTransf.filter(t=>(t.importe||0)>0).map(t=>({fecha:t.fecha||null,importe:round2(t.importe)})),
           retenciones:_reciRetenc.filter(r=>(r.importe||0)>0).map(r=>({codigo:r.codigo||null,importe:round2(r.importe)})) },
-    cheques:_reciCheques.filter(c=>(c.importe||0)>0).map(c=>({fecha:c.fecha||null,numero:c.numero||null,importe:round2(c.importe),fisico:!!c.fisico,propio:!!c.propio}))
+    cheques:_reciCheques.filter(c=>(c.importe||0)>0).map(c=>({fecha:c.fecha||null,numero:c.numero||null,importe:round2(c.importe),fisico:!!c.fisico,propio:!!c.propio,bloqueado:!!c.bloqueado}))
   };
 
   syncSaving();
