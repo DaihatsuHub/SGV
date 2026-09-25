@@ -37,7 +37,7 @@ function filtArts(){
   // Filtros ACUMULATIVOS: se combinan entre sí y con la búsqueda. La lista que
   // queda es la que sale por impresora y por Excel (Ricardo, Sep 2026).
   const fv = id => (document.getElementById(id)?.value||'').trim();
-  const fMarca=fv('af-marca'), fRubro=fv('af-rubro'), fSrub=fv('af-srub'), fGrupo=fv('af-grupo');
+  const fMarca=fv('af-marca'), fRubro=fv('af-rubro'), fSrub=fv('aflt-srub'), fGrupo=fv('af-grupo');
   let list = ARTS.filter(a => {
     const mq = !q || a.ART_COD.toLowerCase().includes(q) || a.ART_DES.toLowerCase().includes(q);
     const ms = !artSoloStock || ((a.ART_STK||0) + (a.ART_STKT||0)) !== 0;
@@ -70,7 +70,7 @@ function artFillFiltros(){
   };
   put('af-marca','MARC','Todas las marcas');
   put('af-rubro','RUBR','Todos los rubros');
-  put('af-srub','SRUB','Todos los sub-rubros');
+  put('aflt-srub','SRUB','Todos los sub-rubros');
   put('af-grupo','GRUP','Todos los grupos');
 }
 
@@ -454,7 +454,7 @@ async function excelArt(){
               {width:14},{width:11},{width:11},{width:11},{width:11}];
   ws.addRow(['Listado de Artículos']).font={bold:true,size:13};
   const fv=id=>{ const e=document.getElementById(id); return e&&e.value ? (e.selectedOptions?.[0]?.textContent||e.value) : ''; };
-  const filtros=[fv('af-marca'),fv('af-rubro'),fv('af-srub'),fv('af-grupo'),
+  const filtros=[fv('af-marca'),fv('af-rubro'),fv('aflt-srub'),fv('af-grupo'),
                  (typeof artSoloStock!=='undefined'&&artSoloStock)?'Con stock':'',
                  (typeof artSoloFact!=='undefined'&&artSoloFact)?'Con stock p/facturar':'',
                  (document.getElementById('art-q')?.value||'')].filter(Boolean);

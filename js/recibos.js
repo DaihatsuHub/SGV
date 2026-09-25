@@ -221,6 +221,7 @@ function reciAlta(){
   ensureFacturas();  // arranca la carga de facturas (la necesita reciLoadDeudores al elegir cliente)
   const _wrapCre=document.getElementById('rf-creado-wrap'); if(_wrapCre) _wrapCre.hidden=true;  // recibo nuevo: sin creador aún
   _reciMode='A'; _reciOrig=null; reciResetEnabled();
+  reciCerrarInst();   // por si quedó un detalle abierto del recibo anterior
   _reciDeud=[]; _reciACuenta=[]; _reciTransf=[]; _reciCheques=[]; _reciRetenc=[];
   const emp='H';
   _reciHdr={ empresa:emp, talonario:'', numero:'', fecha:new Date().toISOString().substring(0,10),
@@ -733,6 +734,53 @@ function reciTotAbonado(){ return round2(_reciDeud.reduce((s,d)=>s+(d.abona||0),
 function reciTotACuenta(){ return round2(_reciACuenta.reduce((s,a)=>s+(a.abona||0),0)); }
 // Lo aplicado total = repartido en facturas + A/Cuenta (ambos consumen instrumentos)
 function reciTotAplicado(){ return round2(reciTotAbonado()+reciTotACuenta()); }
+
+// ── CON QUÉ PAGA: una fila de tarjetas con el total de cada instrumento ──
+// El detalle se abre en un popup: el bloque vive oculto en `rf-guarda` y se
+// MUEVE al popup al abrirlo, así los render siguen apuntando a los mismos ids
+// y no hay que duplicar nada (Ricardo, Sep 2026).
+const RECI_INST = {
+  transf: { tit:'Transferencias', box:'rf-box-transf', tot:()=>_reciTransf.reduce((a,x)=>a+(x.importe||0),0), n:()=>_reciTransf.length },
+  cheq:   { tit:'Cheques',        box:'rf-box-cheq',   tot:()=>_reciCheques.reduce((a,x)=>a+(x.importe||0),0), n:()=>_reciCheques.length },
+  reten:  { tit:'Retenciones',    box:'rf-box-reten',  tot:()=>_reciRetenc.reduce((a,x)=>a+(x.importe||0),0),  n:()=>_reciRetenc.length },
+  acta:   { tit:'A/Cuenta',       box:'rf-box-acta',   tot:()=>reciTotACuenta(), n:()=>(_reciACuenta||[]).length }
+};
+let _reciInstAbierto = null;
+
+function reciAbrirInst(k){
+  const d=RECI_INST[k]; if(!d) return;
+  const box=document.getElementById(d.box), body=document.getElementById('inst-body');
+  if(!box||!body) return;
+  body.innerHTML=''; body.appendChild(box); box.style.display='';
+  document.getElementById('inst-tit').textContent=d.tit;
+  document.getElementById('inst-tot').textContent='$ '+reciFmt(d.tot());
+  _reciInstAbierto=k;
+  document.getElementById('ov-inst').classList.add('open');
+}
+function reciCerrarInst(){
+  const d=RECI_INST[_reciInstAbierto];
+  if(d){
+    const box=document.getElementById(d.box), guarda=document.getElementById('rf-guarda');
+    if(box&&guarda) guarda.appendChild(box);
+  }
+  _reciInstAbierto=null;
+  closeOv('ov-inst');
+  reciReconcile();
+}
+
+// Cantidad de renglones de cada instrumento y total de la fila
+function reciInstSync(){
+  for(const k in RECI_INST){
+    const n=RECI_INST[k].n(), e=document.getElementById('rf-n-'+k);
+    if(e) e.textContent = n>0 ? n : '';
+  }
+  const tot=document.getElementById('rf-paga-tot');
+  if(tot) tot.textContent='$ '+reciFmt(reciTotInstrumentos());
+  if(_reciInstAbierto){
+    const t=document.getElementById('inst-tot');
+    if(t) t.textContent='$ '+reciFmt(RECI_INST[_reciInstAbierto].tot());
+  }
+}
 function reciTotInstrumentos(){
   const efe=reciParseNum(document.getElementById('rf-efectivo')?.value||'0');
   const aju=reciParseNum(document.getElementById('rf-ajuste')?.value||'0');
@@ -742,6 +790,7 @@ function reciTotInstrumentos(){
   return round2(efe+aju+t+c+r);
 }
 function reciReconcile(){
+  setTimeout(reciInstSync, 0);
   const abonado = reciTotInstrumentos();   // total del recibo = instrumentos
   const aplicado = reciTotAplicado();       // repartido en comprobantes + A/Cuenta
   const saldoAplicar = round2(abonado - aplicado);
