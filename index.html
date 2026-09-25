@@ -201,8 +201,13 @@
     <button class="btn dng" id="btn-art-baja" onclick="aBaja()">✕ Baja</button>
     <button class="btn" id="btn-art-dup" onclick="aDuplicar()" title="Duplicar el artículo seleccionado">⧉ Duplicar</button>
     <button class="btn scs" onclick="printArt()">🖨 Imprimir</button>
+    <button class="btn scs" onclick="excelArt()">⬇ Excel</button>
     <button class="btn scs" onclick="abrirResumen()">📊 Resumen</button>
     <button class="btn" id="btn-cfg-art" style="display:none" onclick="openColCfg('art')" title="Configurar columnas">⚙️ Columnas</button>
+    <select class="fsel" id="af-marca" style="width:135px;margin-left:4px" onchange="artOnFiltro()" title="Marca"><option value="">Todas las marcas</option></select>
+    <select class="fsel" id="af-rubro" style="width:135px" onchange="artOnFiltro()" title="Rubro"><option value="">Todos los rubros</option></select>
+    <select class="fsel" id="af-srub"  style="width:135px" onchange="artOnFiltro()" title="Sub-rubro"><option value="">Todos los sub-rubros</option></select>
+    <select class="fsel" id="af-grupo" style="width:135px" onchange="artOnFiltro()" title="Grupo"><option value="">Todos los grupos</option></select>
     <button class="chip" id="af-stock" onclick="togArtStock()" style="margin-left:4px">📦 Con Stock</button>
     <button class="chip" id="af-fact" onclick="togArtFact()" style="margin-left:4px">🧾 Con Stock p/Facturar</button>
     <div class="spacer"></div>
@@ -708,6 +713,16 @@
       <option value="fec-asc">📅 Fecha ↑</option>
       <option value="nro-asc">Nro ↑</option>
       <option value="nro-desc">Nro ↓</option>
+    </select>
+    <select class="fsel" id="desp-emp" style="width:130px" onchange="renderDesp()" title="Empresa del despacho">
+      <option value="">Ambas empresas</option>
+      <option value="H">Hatsu</option>
+      <option value="T">Tressa</option>
+    </select>
+    <select class="fsel" id="desp-stk" style="width:130px" onchange="renderDesp()" title="Stock del despacho">
+      <option value="">Todos</option>
+      <option value="S">Con stock</option>
+      <option value="N">Sin stock</option>
     </select>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" onfocus="this.select()" onclick="this.select()" id="desp-qart" placeholder="Buscar artículo" oninput="despQArt()">
