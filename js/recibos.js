@@ -990,12 +990,22 @@ function reciImprimir(){
       val+=`<tr><td>Ajuste</td><td></td><td class="r">$ ${fmt(aju)}</td></tr>`; }
   }
 
+  // El NÚMERO y la FECHA van en el recuadro de la EMPRESA, no en el del
+  // cliente (Ricardo, Sep 2026)
+  const datosRec = `
+      <div class="rec-der">
+        <div class="rec-nro">RECIBO N° ${esc2(nro)}</div>
+        <div class="rec-sub">Fecha: ${fec(h.fecha)}</div>
+      </div>`;
   const membrete = oficial ? `
-    <div class="rec-emp">
-      <div class="rec-emp-n">${esc2(E.razon||'')}</div>
-      <div class="rec-sub">${esc2(E.domic||'')} — ${esc2(E.ciudad||'')}</div>
-      <div class="rec-sub">${esc2(E.tel||'')}</div>
-      <div class="rec-sub">CUIT: ${esc2(E.cuit||'')} · ING.BRUTOS: ${esc2(E.iibb||'')} · ${esc2(E.iva||'')}</div>
+    <div class="rec-emp" style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px">
+      <div>
+        <div class="rec-emp-n">${esc2(E.razon||'')}</div>
+        <div class="rec-sub">${esc2(E.domic||'')} — ${esc2(E.ciudad||'')}</div>
+        <div class="rec-sub">${esc2(E.tel||'')}</div>
+        <div class="rec-sub">CUIT: ${esc2(E.cuit||'')} · ING.BRUTOS: ${esc2(E.iibb||'')} · ${esc2(E.iva||'')}</div>
+      </div>
+      ${datosRec}
     </div>` : '';
 
   const cuerpo=`
@@ -1008,10 +1018,7 @@ function reciImprimir(){
         <div class="rec-sub">${esc2(cli?.CLI_LOCAL||'')} ${esc2(PCIA[cli?.CLI_PROVIN]||cli?.CLI_PROVIN||'')}</div>
         ${cli?.CLI_CUIT?`<div class="rec-sub">CUIT: ${esc2(cli.CLI_CUIT)}</div>`:''}
       </div>
-      <div class="rec-der">
-        <div class="rec-nro">RECIBO N° ${esc2(nro)}</div>
-        <div class="rec-sub">Fecha: ${fec(h.fecha)}</div>
-      </div>
+      ${oficial ? '' : datosRec}
     </div>
 
     <h3>Comprobantes cancelados</h3>
