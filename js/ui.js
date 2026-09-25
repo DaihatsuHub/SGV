@@ -32,78 +32,69 @@ function toast(msg,type='scs'){
 // la pisaba. No volver a definirla en este archivo.
 
 // ── CAMPOS FECHA: TIPEAR DE CORRIDO ────────────────────────────────
-// REGLA (Ricardo, Sep 2026): en TODOS los campos fecha se puede escribir la
-// fecha seguida, sin barras y con el año de 2 dígitos: 210926 → 21/09/2026.
-// También acepta 8 dígitos (21092026). El calendario sigue estando.
+// REGLA (Ricardo, Sep 2026): en TODOS los campos fecha se escribe la fecha
+// seguida, sin barras y con el año de 2 dígitos: 210926 → 21/09/2026.
 //
-// El campo `type=date` nativo NO permite esto: pide el año de 4 dígitos y cada
-// segmento por separado. Por eso se capturan las teclas y se arma la fecha acá.
-// Vale para los campos que ya existen y para los que se creen después, porque
-// el enganche es a nivel documento.
+// Se ve EN EL CAMPO mientras se escribe, no en un globo aparte. Para que eso
+// sea posible, lo que todavía no se tipeó se completa con lo que el campo YA
+// TENÍA cargado (o con la fecha de hoy si estaba vacío): así la fecha siempre
+// es válida y el campo la puede mostrar.
+//   Ej.: el campo dice 25/09/26, se escribe "27" → queda 27/09/2026.
+//        Sigue con "10" → 27/10/2026. Y con "27" → 27/10/2027.
+// Enter cierra la carga. Backspace vuelve a lo que había.
 (function(){
   const esFecha = el => el && el.tagName === 'INPUT' && el.type === 'date' && !el.disabled && !el.readOnly;
+  const dosDig = n => String(n).padStart(2, '0');
 
-  // OJO: NO interceptar el mousedown para "reposicionar el cursor". Se probó y
-  // ROMPE el tipeo: al hacer preventDefault el campo queda sin ningún segmento
-  // activo y el teclado deja de responder. El clic tiene que ser el normal.
-  document.addEventListener('focusin', e => { if (esFecha(e.target)) { e.target._fbuf = ''; _pista(e.target); } });
-  document.addEventListener('focusout', e => { if (esFecha(e.target)) { e.target._fbuf = ''; _pista(e.target); } });
-
-  // El campo `type=date` NO acepta fechas a medias: o está entera o vacía. Por
-  // eso, mientras se tipea, lo que se lleva escrito se muestra en un globito
-  // gris al lado del campo — si no, parece que no responde hasta el 6º dígito.
-  function _pista(i) {
-    let g = document.getElementById('fecha-pista');
-    const b = i && i._fbuf;
-    if (!b) { if (g) g.remove(); return; }
-    if (!g) {
-      g = document.createElement('div');
-      g.id = 'fecha-pista';
-      g.style.cssText = 'position:fixed;z-index:9999;background:#1f2937;color:#fff;font-family:monospace;'
-        + 'font-size:12px;padding:3px 8px;border-radius:5px;pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,.3)';
-      document.body.appendChild(g);
-    }
-    const t = (b + '________').slice(0, 8);
-    g.textContent = t.slice(0, 2) + '/' + t.slice(2, 4) + '/' + t.slice(4, b.length > 6 ? 8 : 6);
-    const r = i.getBoundingClientRect();
-    g.style.left = Math.round(r.left) + 'px';
-    g.style.top  = Math.round(r.bottom + 4) + 'px';
+  function base(i) {
+    // Lo que el campo tiene cargado; si está vacío, hoy
+    const v = (i.value || '').split('-');
+    if (v.length === 3) return { a: v[0], m: v[1], d: v[2] };
+    const h = new Date();
+    return { a: String(h.getFullYear()), m: dosDig(h.getMonth() + 1), d: dosDig(h.getDate()) };
   }
+
+  document.addEventListener('focusin',  e => { if (esFecha(e.target)) { e.target._fbuf = ''; e.target._fbase = base(e.target); } });
+  document.addEventListener('focusout', e => { if (esFecha(e.target)) e.target._fbuf = ''; });
 
   document.addEventListener('keydown', e => {
     const i = e.target;
-    if (!esFecha(i)) return;
-    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    if (!esFecha(i) || e.ctrlKey || e.altKey || e.metaKey) return;
 
     if (/^[0-9]$/.test(e.key)) {
       e.preventDefault();
-      i._fbuf = ((i._fbuf || '') + e.key).slice(0, 8);
-      const b = i._fbuf;
-      _pista(i);
-      // Se arma al llegar a 6 (ddmmaa) o a 8 dígitos (ddmmaaaa)
-      if (b.length === 6 || b.length === 8) {
-        const d = b.slice(0, 2), m = b.slice(2, 4);
-        let a = b.slice(4);
-        if (a.length === 2) a = '20' + a;
-        const dd = +d, mm = +m;
-        if (dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12) {
-          i.value = `${a}-${m}-${d}`;
-          i.dispatchEvent(new Event('input',  { bubbles: true }));
-          i.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        i._fbuf = '';
-        _pista(i);
+      if (!i._fbase) i._fbase = base(i);
+      const b = i._fbuf = ((i._fbuf || '') + e.key).slice(0, 8);
+      const B = i._fbase;
+
+      // Día desde el 1er dígito, mes desde el 4º, año desde el 6º. Lo que
+      // falta se toma de lo que había, así la fecha siempre es completa.
+      const d = b.length >= 2 ? b.slice(0, 2) : dosDig(b);
+      const m = b.length >= 4 ? b.slice(2, 4) : B.m;
+      const a = b.length >= 8 ? b.slice(4, 8) : (b.length >= 6 ? '20' + b.slice(4, 6) : B.a);
+
+      const dd = +d, mm = +m;
+      if (dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12) {
+        i.value = `${a}-${m}-${d}`;
+        i.dispatchEvent(new Event('input',  { bubbles: true }));
+        i.dispatchEvent(new Event('change', { bubbles: true }));
       }
+      if (b.length === 8) i._fbuf = '';   // completa: la próxima empieza de nuevo
       return;
     }
+
+    if (e.key === 'Enter') { i._fbuf = ''; i._fbase = base(i); return; }   // sigue su curso
+
     if (e.key === 'Backspace' || e.key === 'Delete') {
       e.preventDefault();
-      i._fbuf = (i._fbuf || '').slice(0, -1);
-      if (!i._fbuf) { i.value = ''; i.dispatchEvent(new Event('change', { bubbles: true })); }
-      _pista(i);
+      // Vuelve a lo que había antes de empezar a escribir; si no había nada, vacía
+      i._fbuf = '';
+      const B = i._fbase;
+      i.value = (B && B.a) ? `${B.a}-${B.m}-${B.d}` : '';
+      i.dispatchEvent(new Event('change', { bubbles: true }));
       return;
     }
-    if (e.key === 'Escape') { i._fbuf = ''; _pista(i); }
+    if (e.key === 'Escape') i._fbuf = '';
   }, true);
 })();
 
