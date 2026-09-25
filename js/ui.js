@@ -46,7 +46,29 @@ function toast(msg,type='scs'){
   // OJO: NO interceptar el mousedown para "reposicionar el cursor". Se probó y
   // ROMPE el tipeo: al hacer preventDefault el campo queda sin ningún segmento
   // activo y el teclado deja de responder. El clic tiene que ser el normal.
-  document.addEventListener('focusin', e => { if (esFecha(e.target)) e.target._fbuf = ''; });
+  document.addEventListener('focusin', e => { if (esFecha(e.target)) { e.target._fbuf = ''; _pista(e.target); } });
+  document.addEventListener('focusout', e => { if (esFecha(e.target)) { e.target._fbuf = ''; _pista(e.target); } });
+
+  // El campo `type=date` NO acepta fechas a medias: o está entera o vacía. Por
+  // eso, mientras se tipea, lo que se lleva escrito se muestra en un globito
+  // gris al lado del campo — si no, parece que no responde hasta el 6º dígito.
+  function _pista(i) {
+    let g = document.getElementById('fecha-pista');
+    const b = i && i._fbuf;
+    if (!b) { if (g) g.remove(); return; }
+    if (!g) {
+      g = document.createElement('div');
+      g.id = 'fecha-pista';
+      g.style.cssText = 'position:fixed;z-index:9999;background:#1f2937;color:#fff;font-family:monospace;'
+        + 'font-size:12px;padding:3px 8px;border-radius:5px;pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,.3)';
+      document.body.appendChild(g);
+    }
+    const t = (b + '________').slice(0, 8);
+    g.textContent = t.slice(0, 2) + '/' + t.slice(2, 4) + '/' + t.slice(4, b.length > 6 ? 8 : 6);
+    const r = i.getBoundingClientRect();
+    g.style.left = Math.round(r.left) + 'px';
+    g.style.top  = Math.round(r.bottom + 4) + 'px';
+  }
 
   document.addEventListener('keydown', e => {
     const i = e.target;
@@ -57,6 +79,7 @@ function toast(msg,type='scs'){
       e.preventDefault();
       i._fbuf = ((i._fbuf || '') + e.key).slice(0, 8);
       const b = i._fbuf;
+      _pista(i);
       // Se arma al llegar a 6 (ddmmaa) o a 8 dígitos (ddmmaaaa)
       if (b.length === 6 || b.length === 8) {
         const d = b.slice(0, 2), m = b.slice(2, 4);
@@ -69,6 +92,7 @@ function toast(msg,type='scs'){
           i.dispatchEvent(new Event('change', { bubbles: true }));
         }
         i._fbuf = '';
+        _pista(i);
       }
       return;
     }
@@ -76,9 +100,10 @@ function toast(msg,type='scs'){
       e.preventDefault();
       i._fbuf = (i._fbuf || '').slice(0, -1);
       if (!i._fbuf) { i.value = ''; i.dispatchEvent(new Event('change', { bubbles: true })); }
+      _pista(i);
       return;
     }
-    if (e.key === 'Escape') i._fbuf = '';
+    if (e.key === 'Escape') { i._fbuf = ''; _pista(i); }
   }, true);
 })();
 
