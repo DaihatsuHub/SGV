@@ -43,12 +43,9 @@ function toast(msg,type='scs'){
 (function(){
   const esFecha = el => el && el.tagName === 'INPUT' && el.type === 'date' && !el.disabled && !el.readOnly;
 
-  // Al hacer clic, el cursor va SIEMPRE al principio (si no, se empieza a
-  // escribir en el segmento donde se tocó y la fecha entra cambiada)
-  document.addEventListener('mousedown', e => {
-    const i = e.target;
-    if (esFecha(i) && document.activeElement !== i) { e.preventDefault(); i.focus(); i._fbuf = ''; }
-  }, true);
+  // OJO: NO interceptar el mousedown para "reposicionar el cursor". Se probó y
+  // ROMPE el tipeo: al hacer preventDefault el campo queda sin ningún segmento
+  // activo y el teclado deja de responder. El clic tiene que ser el normal.
   document.addEventListener('focusin', e => { if (esFecha(e.target)) e.target._fbuf = ''; });
 
   document.addEventListener('keydown', e => {
