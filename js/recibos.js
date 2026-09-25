@@ -634,10 +634,22 @@ function reciAddACuenta(){
     +'<div style="display:flex;gap:8px;justify-content:flex-end"><button id="ac-cancel" class="btn">Cancelar</button><button id="ac-ok" class="btn pri">Agregar</button></div>';
   ov.appendChild(box); document.body.appendChild(ov);
   const selMon=box.querySelector('#ac-mon'), inpCot=box.querySelector('#ac-cot'), inpImp=box.querySelector('#ac-imp'), lblPesos=box.querySelector('#ac-pesos');
+  // Se PROPONE el saldo que todavía no se aplicó (instrumentos − lo repartido),
+  // convertido a la moneda elegida. Los instrumentos siempre son pesos, así que
+  // el saldo se divide por la cotización (Ricardo, Sep 2026).
+  const sinAplicar = () => Math.max(0, round2(reciTotInstrumentos() - reciTotAplicado()));
   const recalc=()=>{ const c=reciParseNum(inpCot.value), im=reciParseNum(inpImp.value); lblPesos.textContent='En pesos: $ '+reciFmt(round2(im*c)); };
-  const setCot=()=>{ inpCot.value=reciFmt(reciMonInfo(selMon.value,_reciHdr).cotiz); recalc(); };
-  selMon.onchange=setCot; inpCot.oninput=recalc; inpImp.oninput=recalc; inpImp.onfocus=function(){this.select()};
+  const proponer=()=>{
+    const c=Math.max(1, reciParseNum(inpCot.value));
+    inpImp.value=reciFmt(round2(sinAplicar()/c));
+    recalc();
+  };
+  const setCot=()=>{ inpCot.value=reciFmt(reciMonInfo(selMon.value,_reciHdr).cotiz); proponer(); };
+  selMon.onchange=setCot;
+  inpCot.oninput=()=>{ proponer(); };          // al cambiar la cotización se recalcula el importe
+  inpImp.oninput=recalc; inpImp.onfocus=function(){this.select()};
   setCot();
+  setTimeout(()=>{ inpImp.focus(); inpImp.select(); }, 30);
   const cerrar=()=>{ if(ov.parentNode) document.body.removeChild(ov); };
   box.querySelector('#ac-cancel').onclick=cerrar;
   ov.onclick=(e)=>{ if(e.target===ov) cerrar(); };
