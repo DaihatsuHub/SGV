@@ -34,11 +34,19 @@ function artClear(id){
 
 function filtArts(){
   const q = document.getElementById('art-q').value.toLowerCase();
+  // Filtros ACUMULATIVOS: se combinan entre sí y con la búsqueda. La lista que
+  // queda es la que sale por impresora y por Excel (Ricardo, Sep 2026).
+  const fv = id => (document.getElementById(id)?.value||'').trim();
+  const fMarca=fv('af-marca'), fRubro=fv('af-rubro'), fSrub=fv('af-srub'), fGrupo=fv('af-grupo');
   let list = ARTS.filter(a => {
     const mq = !q || a.ART_COD.toLowerCase().includes(q) || a.ART_DES.toLowerCase().includes(q);
     const ms = !artSoloStock || ((a.ART_STK||0) + (a.ART_STKT||0)) !== 0;
     const mf = !artSoloFact  || ((a.ART_DEPH||0) + (a.ART_DEPT||0)) !== 0;
-    return mq && ms && mf;
+    const mm = !fMarca || (a.ART_MARCA||'').trim() === fMarca;
+    const mr = !fRubro || (a.ART_RUB||'').trim()   === fRubro;
+    const mb = !fSrub  || (a.ART_SRUB||'').trim()  === fSrub;
+    const mg = !fGrupo || (a.ART_GRUP||'').trim()  === fGrupo;
+    return mq && ms && mf && mm && mr && mb && mg;
   });
   const s = SORT_STATE['art'];
   if (s && s.col) {
@@ -53,7 +61,21 @@ function filtArts(){
   return list;
 }
 
+// Los combos de filtro se llenan una vez, con las tablas
+function artFillFiltros(){
+  const put=(id,k,lbl)=>{
+    const sel=document.getElementById(id); if(!sel||sel.options.length>1) return;
+    sel.innerHTML=`<option value="">${lbl}</option>`
+      + (((typeof TABLAS!=='undefined'&&TABLAS[k])||[]).map(x=>`<option value="${esc(x.CODIGO)}">${esc(x.CODIGO)} — ${esc(x.DETALLE)}</option>`).join(''));
+  };
+  put('af-marca','MARC','Todas las marcas');
+  put('af-rubro','RUBR','Todos los rubros');
+  put('af-srub','SRUB','Todos los sub-rubros');
+  put('af-grupo','GRUP','Todos los grupos');
+}
+
 function renderArts(){
+  artFillFiltros();
   if (typeof _artsLoaded !== 'undefined' && !_artsLoaded) { ensureArts().then(renderArts); return; }
   const list = filtArts();
   const body = document.getElementById('art-body');
@@ -413,6 +435,52 @@ function printArt(){
     <th>CÓDIGO</th><th>DESCRIPCIÓN</th><th>RUBRO</th><th>PRECIO</th>
     <th>STK HAT</th><th>STK TRE</th><th>DEP HAT</th><th>DEP TRE</th>
   </tr></thead><tbody>${rows}</tbody></table>`,list.length);
+}
+
+// ── EXCEL ─────────────────────────────────────────────────
+// Sale EXACTAMENTE la lista que se está viendo, con los filtros aplicados
+async function excelArt(){
+  const list = filtArts();
+  if(!list.length){ toast('No hay artículos para exportar','err'); return; }
+  if(!window.ExcelJS){
+    try{ await new Promise((res,rej)=>{ const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+      s.onload=res; s.onerror=()=>rej(new Error('No se pudo cargar ExcelJS')); document.head.appendChild(s); }); }
+    catch(e){ toast(e.message,'err'); return; }
+  }
+  const des=(k,c)=>{ const x=((typeof TABLAS!=='undefined'&&TABLAS[k])||[]).find(t=>t.CODIGO===c); return x?x.DETALLE:''; };
+  const wb=new ExcelJS.Workbook(); const ws=wb.addWorksheet('Artículos');
+  ws.columns=[{width:16},{width:40},{width:12},{width:20},{width:10},{width:10},{width:10},
+              {width:14},{width:11},{width:11},{width:11},{width:11}];
+  ws.addRow(['Listado de Artículos']).font={bold:true,size:13};
+  const fv=id=>{ const e=document.getElementById(id); return e&&e.value ? (e.selectedOptions?.[0]?.textContent||e.value) : ''; };
+  const filtros=[fv('af-marca'),fv('af-rubro'),fv('af-srub'),fv('af-grupo'),
+                 (typeof artSoloStock!=='undefined'&&artSoloStock)?'Con stock':'',
+                 (typeof artSoloFact!=='undefined'&&artSoloFact)?'Con stock p/facturar':'',
+                 (document.getElementById('art-q')?.value||'')].filter(Boolean);
+  ws.addRow([filtros.length?('Filtros: '+filtros.join(' · ')):'Sin filtros'+''])
+    .font={italic:true,color:{argb:'FF666666'}};
+  ws.addRow([`${list.length} artículo(s)`]).font={italic:true,color:{argb:'FF666666'}};
+  ws.addRow([]);
+  const hr=ws.addRow(['Código','Descripción','Marca','Rubro','Sub-rubro','Grupo','Moneda',
+                      'Precio','Stk Hatsu','Stk Tressa','Dep Hatsu','Dep Tressa']);
+  hr.eachCell(c=>{ c.font={bold:true}; c.border={bottom:{style:'thin'}}; });
+  list.forEach(a=>{
+    const r=ws.addRow([a.ART_COD||'', a.ART_DES||'', des('MARC',a.ART_MARCA)||a.ART_MARCA||'',
+      des('RUBR',a.ART_RUB)||a.ART_RUB||'', a.ART_SRUB||'', a.ART_GRUP||'', a.ART_MONEDA||'P',
+      Number(a.ART_PRE)||0, Number(a.ART_STK)||0, Number(a.ART_STKT)||0,
+      Number(a.ART_DEPH)||0, Number(a.ART_DEPT)||0]);
+    r.getCell(8).numFmt='#,##0.00';
+    [9,10,11,12].forEach(i=>{ r.getCell(i).numFmt='#,##0'; });
+  });
+  ws.views=[{state:'frozen', ySplit:5}];
+  ws.autoFilter={ from:{row:5,column:1}, to:{row:5,column:12} };
+  const buf=await wb.xlsx.writeBuffer();
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  a.download=`Articulos_${new Date().toISOString().substring(0,10)}.xlsx`;
+  a.click(); URL.revokeObjectURL(a.href);
+  toast(`${list.length} artículo(s) exportados`,'scs');
 }
 
 // ── Navegación por teclado ────────────────────────────────
