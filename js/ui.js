@@ -31,6 +31,60 @@ function toast(msg,type='scs'){
 // La versión vieja estaba acá y, al cargarse ui.js DESPUÉS de sgvprint.js,
 // la pisaba. No volver a definirla en este archivo.
 
+// ── CAMPOS FECHA: TIPEAR DE CORRIDO ────────────────────────────────
+// REGLA (Ricardo, Sep 2026): en TODOS los campos fecha se puede escribir la
+// fecha seguida, sin barras y con el año de 2 dígitos: 210926 → 21/09/2026.
+// También acepta 8 dígitos (21092026). El calendario sigue estando.
+//
+// El campo `type=date` nativo NO permite esto: pide el año de 4 dígitos y cada
+// segmento por separado. Por eso se capturan las teclas y se arma la fecha acá.
+// Vale para los campos que ya existen y para los que se creen después, porque
+// el enganche es a nivel documento.
+(function(){
+  const esFecha = el => el && el.tagName === 'INPUT' && el.type === 'date' && !el.disabled && !el.readOnly;
+
+  // Al hacer clic, el cursor va SIEMPRE al principio (si no, se empieza a
+  // escribir en el segmento donde se tocó y la fecha entra cambiada)
+  document.addEventListener('mousedown', e => {
+    const i = e.target;
+    if (esFecha(i) && document.activeElement !== i) { e.preventDefault(); i.focus(); i._fbuf = ''; }
+  }, true);
+  document.addEventListener('focusin', e => { if (esFecha(e.target)) e.target._fbuf = ''; });
+
+  document.addEventListener('keydown', e => {
+    const i = e.target;
+    if (!esFecha(i)) return;
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+    if (/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
+      i._fbuf = ((i._fbuf || '') + e.key).slice(0, 8);
+      const b = i._fbuf;
+      // Se arma al llegar a 6 (ddmmaa) o a 8 dígitos (ddmmaaaa)
+      if (b.length === 6 || b.length === 8) {
+        const d = b.slice(0, 2), m = b.slice(2, 4);
+        let a = b.slice(4);
+        if (a.length === 2) a = '20' + a;
+        const dd = +d, mm = +m;
+        if (dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12) {
+          i.value = `${a}-${m}-${d}`;
+          i.dispatchEvent(new Event('input',  { bubbles: true }));
+          i.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        i._fbuf = '';
+      }
+      return;
+    }
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      e.preventDefault();
+      i._fbuf = (i._fbuf || '').slice(0, -1);
+      if (!i._fbuf) { i.value = ''; i.dispatchEvent(new Event('change', { bubbles: true })); }
+      return;
+    }
+    if (e.key === 'Escape') i._fbuf = '';
+  }, true);
+})();
+
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape')document.querySelectorAll('.ov.open').forEach(o=>o.classList.remove('open'));
   if(e.key==='F2'){document.getElementById('page-art').classList.contains('active')?aAlta():cAlta();}
