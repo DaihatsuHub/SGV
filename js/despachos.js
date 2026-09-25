@@ -30,12 +30,19 @@ function filtDesps() {
   const qd  = (document.getElementById('desp-qdesp')?.value||'').trim().toLowerCase();
   const nro = document.getElementById('desp-nro')?.value||'';
   const srt = document.getElementById('desp-sort')?.value||'fec-desc';
+  const emp = (document.getElementById('desp-emp')?.value||'').toUpperCase();
+  const stk = document.getElementById('desp-stk')?.value||'';
 
   let list = DESPS.filter(d => {
     const mn = !nro || (d.dep_desp||'').trim() === nro;
     const ma = !qa || (d.dep_art||'').toLowerCase().includes(qa);
     const md = !qd || (d.dep_desp||'').toLowerCase().includes(qd);
-    return mn && ma && md;
+    // La EMPRESA está en la primera letra del número de despacho
+    const me = !emp || (d.dep_desp||'').trim().charAt(0).toUpperCase() === emp;
+    // Con stock = le queda disponible para facturar
+    const disp = Number(d.dep_stk)||0;
+    const ms = !stk || (stk==='S' ? disp > 0 : disp <= 0);
+    return mn && ma && md && me && ms;
   });
 
   const porArt  = (a,b) => (a.dep_art ||'').localeCompare(b.dep_art ||'') || (a.dep_desp||'').localeCompare(b.dep_desp||'');
