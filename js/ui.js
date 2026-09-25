@@ -131,6 +131,79 @@ document.addEventListener('keydown',e=>{
 });
 
 
+// ── AVISO GRANDE ───────────────────────────────────────────────────
+// Para lo que el usuario NO puede pasar por alto (registro tomado por otro,
+// validaciones que frenan una operación). El toast de abajo es chico y se va
+// solo; esto queda hasta que se cierra (Ricardo, Sep 2026).
+//   sgvAviso({titulo, texto, tipo:'err'|'adv'|'ok', accion:{texto, fn}})
+function sgvAviso(op){
+  const o = typeof op === 'string' ? { texto: op } : (op || {});
+  const col = o.tipo==='ok' ? '#1D9E75' : (o.tipo==='adv' ? '#EF9F27' : '#E24B4A');
+  const ico = o.tipo==='ok' ? '✓' : (o.tipo==='adv' ? '⚠' : '⛔');
+  const ov = document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;'
+    +'justify-content:center;z-index:10000;padding:20px';
+  ov.innerHTML=`<div style="background:var(--s1,#fff);border-radius:14px;max-width:520px;width:100%;
+      box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden">
+    <div style="background:${col};color:#fff;padding:14px 20px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:22px">${ico}</span>
+      <span style="font-size:17px;font-weight:600">${esc(o.titulo||'Atención')}</span>
+    </div>
+    <div style="padding:18px 20px;font-size:15px;line-height:1.6;color:var(--txt,#1b2a36);white-space:pre-wrap">${esc(o.texto||'')}</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;padding:0 20px 18px">
+      ${o.accion?`<button class="btn" id="sgvav-ac" style="padding:7px 16px;font-size:14px">${esc(o.accion.texto||'Aceptar')}</button>`:''}
+      <button class="btn pri" id="sgvav-ok" style="padding:7px 20px;font-size:14px">Entendido</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  const cerrar=()=>{ if(ov.parentNode) document.body.removeChild(ov); document.removeEventListener('keydown',esc2); };
+  const esc2=e=>{ if(e.key==='Escape'||e.key==='Enter') cerrar(); };
+  document.addEventListener('keydown',esc2);
+  ov.querySelector('#sgvav-ok').onclick=cerrar;
+  const ac=ov.querySelector('#sgvav-ac');
+  if(ac) ac.onclick=()=>{ cerrar(); try{ o.accion.fn(); }catch(e){ console.error(e); } };
+  setTimeout(()=>ov.querySelector('#sgvav-ok')?.focus(),30);
+  return cerrar;
+}
+
+// ── BLOQUEO DE EDICIÓN (maestros y tablas) ─────────────────────────
+// Una sola llamada al abrir Modificar: trae el registro FRESCO del server y lo
+// reserva. Si lo tiene otro usuario, avisa con cartel grande y no deja entrar.
+// Se libera al confirmar o cancelar — nunca por tiempo.
+const SGV_SID = (()=>{ try{ let s=sessionStorage.getItem('sgv_sid');
+  if(!s){ s=Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('sgv_sid',s); }
+  return s; }catch(_){ return Math.random().toString(36).slice(2); } })();
+
+async function sgvEditarAbrir(tabla, cod){
+  try{
+    const r = await apiPost('/editar/abrir', { tabla, cod, sid: SGV_SID });
+    if(r && r.ok) return r.registro;
+    if(r && r.bloqueado){
+      const desde = r.desde ? new Date(r.desde).toLocaleString('es-AR') : '';
+      const puedeForzar = (typeof USUARIO!=='undefined' && (USUARIO?.nivel||0) >= 90);
+      sgvAviso({ titulo:'Registro en uso',
+        texto:`${r.por} está modificando este registro${desde?' desde el '+desde:''}.\n\n`
+             +`Para evitar que se pisen los cambios, no se puede abrir hasta que termine.`,
+        tipo:'adv',
+        accion: puedeForzar ? { texto:'Desbloquear igual', fn: async ()=>{
+          const f = await apiPost('/editar/forzar', { tabla, cod });
+          if(f && f.ok) sgvAviso({ titulo:'Desbloqueado', texto:'Ya podés modificarlo.', tipo:'ok' });
+          else sgvAviso({ titulo:'No se pudo desbloquear', texto:(f&&f.error)||'Error', tipo:'err' });
+        } } : null });
+      return null;
+    }
+    sgvAviso({ titulo:'No se pudo abrir', texto:(r&&r.error)||'Error del servidor', tipo:'err' });
+    return null;
+  }catch(e){
+    sgvAviso({ titulo:'No se pudo abrir', texto:e.message||'Error de conexión', tipo:'err' });
+    return null;
+  }
+}
+function sgvEditarCerrar(tabla, cod){
+  if(!cod) return;
+  try{ apiPost('/editar/cerrar', { tabla, cod, sid: SGV_SID }); }catch(_){}
+}
+
 // ── DROPDOWN CLICK ─────────────────────────────────────────────────
 function toggleDD(menuId, btn) {
   const menu = document.getElementById(menuId);

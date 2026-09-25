@@ -247,15 +247,42 @@ function cAlta(){
   fillCliSelects();
   window._ce='A';
 }
-function cModif(){
+// Al modificar: el registro se pide AL SERVER (puede haberlo cambiado otro
+// usuario) y se RESERVA. Si lo tiene otro, cartel grande y no se abre.
+// Se libera al confirmar o al cancelar (Ricardo, Sep 2026).
+let _cliEditando = null;
+async function cModif(){
   if(cliSelIdx===null){toast('Seleccioná un cliente','err');return;}
+  const cod = CLIS[cliSelIdx].CLI_CODIGO;
+  const reg = await sgvEditarAbrir('clientes', cod);
+  if(!reg) return;
+
+  // Lo que trajo el server es lo real: se refresca también la grilla
+  const fresco = cliDesdeFila(reg);
+  CLIS[cliSelIdx] = fresco;
+  _cliEditando = cod;
+
   document.getElementById('cf-cod').disabled=true;
-  document.getElementById('cli-mtit').textContent='Modificar: '+CLIS[cliSelIdx].CLI_CODIGO;
+  document.getElementById('cli-mtit').textContent='Modificar: '+cod;
   setMtag('cli-mtag','MODIFICACIÓN','tag-m');
   document.getElementById('ov-cli').classList.add('open');
   fillCliSelects();
-  fillCliForm(CLIS[cliSelIdx]);
+  fillCliForm(fresco);
+  renderClis();
   window._ce='M';
+}
+
+// Fila de la base → objeto que usa la pantalla
+function cliDesdeFila(r){
+  const o={};
+  for(const k in r){ if(k.startsWith('cli_') && !k.startsWith('cli_edit')) o[k.toUpperCase()]=r[k]; }
+  return o;
+}
+
+// Cierra el editor liberando la reserva
+function cliCerrarEditor(){
+  if(_cliEditando){ sgvEditarCerrar('clientes', _cliEditando); _cliEditando=null; }
+  closeOv('ov-cli');
 }
 function cBaja(){
   if(cliSelIdx===null){toast('Seleccioná un cliente','err');return;}
@@ -339,7 +366,7 @@ function saveCli(){
     if(CLIS.find(c=>c.CLI_CODIGO===cod)){toast('Código ya existe','err');return;}
     CLIS.unshift(d);cliSelIdx=0;toast('Cliente dado de alta','scs');
   }else{CLIS[cliSelIdx]=d;toast('Cliente modificado','scs');}
-  sbSaveCli(d);closeOv('ov-cli');renderClis();
+  sbSaveCli(d);cliCerrarEditor();renderClis();
 }
 function printCli(){
   const list=filtClis();
