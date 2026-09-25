@@ -1686,6 +1686,13 @@
           <input class="finp" id="tlf-desc" maxlength="30" style="text-transform:uppercase"></div>
         <div class="fgrp"><label class="flbl2">Último Nro</label>
           <input class="finp" id="tlf-ult" type="number" step="1" value="0"></div>
+        <div class="fgrp" style="justify-content:flex-end">
+          <label class="flbl2" style="display:flex;align-items:center;gap:7px;cursor:pointer">
+            <input type="checkbox" id="tlf-cont" checked style="width:16px;height:16px;cursor:pointer">
+            Contable
+          </label>
+          <span style="font-size:11px;color:var(--t3)">Los recibos de este talonario cancelan comprobantes contables</span>
+        </div>
       </div>
     </div>
     <div class="mft">
@@ -1991,7 +1998,7 @@
   );
 </script>
 <script src="js/supabase.js"></script>
-<script src="js/ui.js?v=5"></script>
+<script src="js/ui.js?v=6"></script>
 <script src="js/columnas.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/articulos.js"></script>

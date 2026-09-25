@@ -51,7 +51,9 @@ function renderTalo() {
     return `<div class="tr-tab ${sel}" onclick="selTalo(${i})" ondblclick="taloModif()">
       <span class="col-cod">${esc(t.empresa||'')} / ${esc(t.tipo||'')}</span>
       <span class="col-des">${esc(t.descripcion||'')}</span>
-      <span class="col-sm">${esc(emp)}</span>
+      <span class="col-sm">${t.contable===false
+        ? '<span class="pill" style="background:rgba(0,0,0,.06);color:var(--t2)">No contable</span>'
+        : '<span class="pill ps">Contable</span>'}</span>
       <span class="col-num">${Number(t.ultimo_nro)||0}</span>
     </div>`;
   }).join('');
@@ -67,6 +69,7 @@ function taloAlta() {
   document.getElementById('tlf-emp').disabled  = false;
   document.getElementById('tlf-tipo').disabled = false;
   document.getElementById('talo-mtit').textContent = 'Nuevo Talonario';
+  const cbA=document.getElementById('tlf-cont'); if(cbA) cbA.checked=true;
   setMtag('talo-mtag','ALTA','tag-a');
   document.getElementById('ov-talo').classList.add('open');
   window._tle = 'A';
@@ -78,6 +81,7 @@ function taloModif() {
   document.getElementById('tlf-tipo').value = t.tipo;
   document.getElementById('tlf-desc').value = t.descripcion||'';
   document.getElementById('tlf-ult').value  = Number(t.ultimo_nro)||0;
+  const cbM=document.getElementById('tlf-cont'); if(cbM) cbM.checked = t.contable!==false;
   document.getElementById('tlf-emp').disabled  = true;   // clave: no se cambia
   document.getElementById('tlf-tipo').disabled = true;
   document.getElementById('talo-mtit').textContent = 'Modificar Talonario';
@@ -104,7 +108,9 @@ async function saveTalo() {
   const ult  = parseInt(document.getElementById('tlf-ult').value) || 0;
   if (!emp || !tipo) { toast('Empresa y tipo son obligatorios','err'); return; }
   if (window._tle==='A' && taloFind(emp,tipo)) { toast('Ya existe ese talonario','err'); return; }
-  const data = { empresa: emp, tipo, descripcion: desc||null, ultimo_nro: ult };
+  // CONTABLE: lo define el talonario, no la letra del tipo (Ricardo, Sep 2026)
+  const cont = !!document.getElementById('tlf-cont')?.checked;
+  const data = { empresa: emp, tipo, descripcion: desc||null, ultimo_nro: ult, contable: cont };
   try {
     const res = await apiPost('/talonarios/guardar', data);
     if (res && res.ok === false) { toast(res.error||'No se pudo guardar','err'); return; }
