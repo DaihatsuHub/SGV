@@ -1615,8 +1615,14 @@
         </div>
       </div>
 
-      <div id="rf-comp-titulo" style="font-size:12px;color:var(--t2);margin:4px 0 6px">Comprobantes deudores</div>
-      <div style="border:1px solid var(--b1);border-radius:8px;overflow:hidden">
+      <!-- QUÉ DEBE: mismo criterio de color que "Con qué paga" (azul = deuda,
+           verde = lo que entra, ámbar = lo que queda sin aplicar) -->
+      <div class="rf-debe">
+        <div class="rf-debe-tit">
+          <span id="rf-comp-titulo">🧾 Qué debe</span>
+          <span id="rf-debe-tot">$ 0,00</span>
+        </div>
+      <div style="border:1px solid var(--b1);border-radius:8px;overflow:hidden;background:var(--s1)">
         <div style="display:grid;grid-template-columns:92px 60px 92px 84px 70px 96px 92px 96px 92px;gap:6px;padding:6px 8px;background:var(--s2);font-size:11px;color:var(--t3)">
           <span>Comprobante</span><span>Fecha</span><span style="text-align:right">Saldo orig.</span><span style="text-align:right">Abona orig.</span><span style="text-align:right">Cotiz.</span><span style="text-align:right">Saldo</span><span style="text-align:right">Abona</span><span style="text-align:right;color:#c4b5fd">Saldo cont.</span><span style="text-align:right;color:#c4b5fd">Abona cont.</span>
         </div>
@@ -1624,6 +1630,7 @@
         <div style="display:grid;grid-template-columns:92px 60px 92px 84px 70px 96px 92px 96px 92px;gap:6px;padding:7px 8px;border-top:1px solid var(--b1);font-size:12px;font-family:var(--mono);font-weight:600">
           <span style="color:var(--t3)">Totales</span><span></span><span></span><span></span><span></span><span style="text-align:right" id="rf-tot-saldo">$ 0,00</span><span style="text-align:right;color:var(--acc)" id="rf-tot-abona">$ 0,00</span><span style="text-align:right;color:#c4b5fd" id="rf-tot-saldo-afip">$ 0,00</span><span style="text-align:right;color:#c4b5fd" id="rf-tot-abona-afip">$ 0,00</span>
         </div>
+      </div>
       </div>
 
       <!-- CON QUÉ PAGA: una sola fila con el total de cada instrumento.
@@ -1732,6 +1739,9 @@
 </div>
 
 <style>
+  .rf-debe{background:rgba(55,138,221,.09);border-radius:10px;padding:10px 12px;margin:6px 0 12px}
+  .rf-debe-tit{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#185FA5;margin-bottom:8px}
+  .rf-debe-tit span:last-child{font-family:var(--mono);font-size:15px;font-weight:600}
   .rf-paga{background:rgba(29,158,117,.10);border-radius:10px;padding:10px 12px;margin:14px 0 12px}
   .rf-paga-tit{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#0F6E56;margin-bottom:8px}
   .rf-paga-tit span:last-child{font-family:var(--mono);font-size:15px;font-weight:600}

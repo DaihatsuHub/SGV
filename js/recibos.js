@@ -776,6 +776,9 @@ function reciInstSync(){
   }
   const tot=document.getElementById('rf-paga-tot');
   if(tot) tot.textContent='$ '+reciFmt(reciTotInstrumentos());
+  // Total del bloque azul: lo que el cliente debe en los comprobantes listados
+  const deb=document.getElementById('rf-debe-tot');
+  if(deb) deb.textContent='$ '+reciFmt(_reciDeud.reduce((a,d)=>a+(Number(d.saldo)||0),0));
   if(_reciInstAbierto){
     const t=document.getElementById('inst-tot');
     if(t) t.textContent='$ '+reciFmt(RECI_INST[_reciInstAbierto].tot());
