@@ -146,6 +146,7 @@
         <button class="dd-item" id="ddi-dash" onclick="showSubPage('ven','dash')">📊 Dashboard</button>
         <button class="dd-item" id="ddi-rcc" onclick="showSubPage('ven','rcc')">📈 Resultado por Centro de Costos</button>
         <button class="dd-item" id="ddi-arm" onclick="showSubPage('ven','arm')">🧩 Armá tu informe</button>
+        <button class="dd-item" id="ddi-com" onclick="showSubPage('ven','com')">💰 Comisiones</button>
         <button class="dd-item" id="ddi-rank" onclick="showSubPage('ven','rank')">🏆 Ranking de Artículos</button>
         <button class="dd-item" id="ddi-subd" onclick="showSubPage('ven','subd')">📒 Subdiario de IVA</button>
         <button class="dd-item" id="ddi-saldo" onclick="showSubPage('ven','saldo')">📊 Saldos por Mes</button>
@@ -967,6 +968,33 @@
   </div>
   <div class="tbl-wrap">
     <div id="sd-body" class="tbl-body"><div class="empty" style="margin-top:40px">Elegí el período y tocá Consultar</div></div>
+  </div>
+</div>
+
+<div class="page" id="page-com">
+  <div class="toolbar">
+    <span style="font-weight:600;font-size:14px;color:var(--acc)">💰 Comisiones</span>
+    <label style="font-size:12px;color:var(--t2)">Desde</label>
+    <input type="date" class="finp" id="com-desde" style="width:140px">
+    <label style="font-size:12px;color:var(--t2)">Hasta</label>
+    <input type="date" class="finp" id="com-hasta" style="width:140px">
+    <select class="fsel" id="com-vend" style="width:240px" onchange="comPctSync()">
+      <option value="">Todos — liquidación del gerente</option>
+    </select>
+    <span id="com-pct-grp" style="display:flex;align-items:center;gap:5px">
+      <label style="font-size:12px;color:var(--t2)">%</label>
+      <input class="finp" id="com-pct" type="number" step="0.01" value="1" style="width:70px;text-align:right">
+    </span>
+    <button class="btn pri" onclick="comConsultar()">🔍 Liquidar</button>
+    <button class="btn" onclick="comVerDetalle()">📄 Resumen / Detalle</button>
+    <button class="btn" onclick="comPrint()">🖨 Imprimir</button>
+    <button class="btn" onclick="comExcel()">⬇ Excel</button>
+    <div class="spacer"></div>
+    <span style="font-size:11px;color:var(--t3)">Sobre lo cobrado · neto de IVA y percepciones · en pesos</span>
+  </div>
+  <div class="tbl-wrap">
+    <div id="com-head"></div>
+    <div id="com-body" class="tbl-body"></div>
   </div>
 </div>
 
@@ -2224,6 +2252,7 @@
 <script src="js/dashboard.js"></script>
 <script src="js/resultccos.js"></script>
 <script src="js/armador.js"></script>
+<script src="js/comisiones.js"></script>
 <script src="js/subdiario.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/vmes.js"></script>
