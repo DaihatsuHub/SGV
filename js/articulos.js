@@ -76,6 +76,10 @@ function artFillFiltros(){
 
 function renderArts(){
   artFillFiltros();
+  // Duplicar CREA un artículo: el botón sigue al permiso de ALTA. No se oculta
+  // solo porque su id no sigue el patrón btn-<modulo>-<accion> (Ricardo, Oct 2026).
+  const _bDup=document.getElementById('btn-art-dup');
+  if(_bDup) _bDup.style.display = (typeof puedeh!=='function' || puedeh('art','alta')) ? '' : 'none';
   if (typeof _artsLoaded !== 'undefined' && !_artsLoaded) { ensureArts().then(renderArts); return; }
   const list = filtArts();
   const body = document.getElementById('art-body');
