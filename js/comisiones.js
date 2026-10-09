@@ -55,7 +55,7 @@ async function comConsultar(){
 // La grilla: un renglón por cobro, con una COLUMNA POR CENTRO DE COSTOS, y
 // el VENDEDOR como subtítulo —igual que Saldos por Mes—. Cierra con el total
 // de cada centro y el total de comisión (Ricardo, Oct 2026).
-function _coGrid(nCC){ return `86px 130px repeat(${nCC},120px) 130px 62px 120px`; }
+function _coGrid(nCC){ return `86px 120px 120px 125px repeat(${nCC},120px) 62px 120px`; }
 
 function _coPintar(){
   const body=document.getElementById('com-body'), head=document.getElementById('com-head');
@@ -65,9 +65,10 @@ function _coPintar(){
 
   if(head){
     head.style.gridTemplateColumns=GRID;
-    head.innerHTML='<span>Fecha</span><span>Recibo</span>'
+    // Sólo se comisionan FACTURAS, así que la factura cobrada va a la vista
+    head.innerHTML='<span>Fecha</span><span>Recibo</span><span>Factura</span><span class="r">Cobrado</span>'
       + CC.map(c=>`<span class="r">${_coEsc(c)}</span>`).join('')
-      + '<span class="r">Cobrado</span><span class="r">%</span><span class="r">Comisión</span>';
+      + '<span class="r">%</span><span class="r">Comisión</span>';
   }
   if(!det.length){ body.innerHTML='<div class="empty" style="margin-top:30px">Sin cobranzas aplicadas en el período</div>'; return; }
 
@@ -82,8 +83,9 @@ function _coPintar(){
   const fila=(x,cls)=>`<div class="co-row${cls||''}" style="grid-template-columns:${GRID}">
       <span>${_coFecha(x.fecha)}</span>
       <span class="co-t" style="font-size:12px">${_coEsc(x.recibo)}</span>
-      ${CC.map(c=>`<span class="r">${x.cc&&x.cc[c]?_coFmt(x.cc[c]):''}</span>`).join('')}
+      <span class="co-t" style="font-size:12px;color:var(--acc)">${_coEsc(x.comprobante)}</span>
       <span class="r">${_coFmt(x.cobrado)}</span>
+      ${CC.map(c=>`<span class="r">${x.cc&&x.cc[c]?_coFmt(x.cc[c]):''}</span>`).join('')}
       <span class="r">${_coFmt(x.pct)}</span>
       <span class="r com">${_coFmt(x.comision)}</span>
     </div>`;
@@ -102,17 +104,19 @@ function _coPintar(){
       totGral.cobrado+=x.cobrado; totGral.comision+=x.comision;
     });
     html+=`<div class="co-row co-sub" style="grid-template-columns:${GRID}">
-      <span></span><span><b>Subtotal</b></span>
+      <span></span><span><b>Subtotal</b></span><span></span>
+      <span class="r">${_coFmt(sub.cobrado)}</span>
       ${CC.map(c=>`<span class="r">${sub.cc[c]?_coFmt(sub.cc[c]):''}</span>`).join('')}
-      <span class="r">${_coFmt(sub.cobrado)}</span><span></span>
+      <span></span>
       <span class="r com">${_coFmt(sub.comision)}</span>
     </div>`;
   }
 
   html+=`<div class="co-row co-tot" style="grid-template-columns:${GRID}">
-    <span><b>TOTAL</b></span><span></span>
+    <span><b>TOTAL</b></span><span></span><span></span>
+    <span class="r">${_coFmt(totGral.cobrado)}</span>
     ${CC.map(c=>`<span class="r">${totGral.cc[c]?_coFmt(totGral.cc[c]):''}</span>`).join('')}
-    <span class="r">${_coFmt(totGral.cobrado)}</span><span></span>
+    <span></span>
     <span class="r com">${_coFmt(totGral.comision)}</span>
   </div>`;
 
