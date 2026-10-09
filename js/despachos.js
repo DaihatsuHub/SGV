@@ -172,9 +172,17 @@ function despAlta() {
 }
 
 // ── Modificar ─────────────────────────────────────────────
-function despModif() {
+async function despModif() {
   if(despSelIdx===null){ toast('Seleccioná un despacho','err'); return; }
-  const d = filtDesps()[despSelIdx];
+  let d = filtDesps()[despSelIdx];
+  // REGLA: al modificar, el registro se pide AL SERVER. El stock lo cambian
+  // la facturación y los movimientos, así que lo que está en memoria puede
+  // estar viejo (Ricardo, Oct 2026).
+  const fresco = await sgvEditarAbrir('despachos', String(d.dep_id));
+  if(!fresco) return;
+  const i = DESPS.findIndex(x => String(x.dep_id) === String(d.dep_id));
+  if(i >= 0) DESPS[i] = fresco;
+  d = fresco;
   fillDespForm(d);
   document.getElementById('df-desp').disabled = true;
   document.getElementById('df-art').disabled  = true;

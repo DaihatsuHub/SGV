@@ -447,7 +447,7 @@
       <div class="frow">
         <div class="fgrp"><label class="flbl2">Fecha</label><input type="date" class="finp" id="msf-fecha"></div>
         <div class="fgrp"><label class="flbl2">Movimiento</label>
-          <select class="finp" id="msf-tipo">
+          <select class="finp" id="msf-tipo" onchange="mstkArtChange()">
             <option value="E">Egreso (baja)</option>
             <option value="I">Ingreso (alta)</option>
           </select>
@@ -470,10 +470,10 @@
         <label class="flbl2">Qué mueve</label>
         <div style="display:flex;gap:18px;align-items:center;padding-top:3px">
           <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px">
-            <input type="checkbox" id="msf-stk" checked style="width:16px;height:16px"> Stock
+            <input type="checkbox" id="msf-stk" checked onchange="mstkArtChange()" style="width:16px;height:16px"> Stock
           </label>
           <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px">
-            <input type="checkbox" id="msf-dep" style="width:16px;height:16px"> Depósito
+            <input type="checkbox" id="msf-dep" onchange="mstkArtChange()" style="width:16px;height:16px"> Depósito
           </label>
           <span style="font-size:11px;color:var(--t3)">La empresa la define el despacho</span>
         </div>

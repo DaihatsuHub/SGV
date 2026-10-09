@@ -7,7 +7,7 @@
    - El despacho define la empresa (Hatsu o Tressa) por su primera letra.
    =========================================================================== */
 
-let _mstkLista = [], _mstkSel = null, _mstkDesps = [];
+let _mstkLista = [], _mstkSel = null, _mstkDesps = [], _mstkUtiles = [];
 
 function _msEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function _msFmt(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
@@ -103,9 +103,26 @@ async function mstkArtChange(){
         texto:'Ese artículo no tiene ningún despacho cargado, así que no se le puede mover stock.', tipo:'adv' });
       return;
     }
-    sel.innerHTML=(_mstkDesps.length>1?'<option value="">— elegí el despacho —</option>':'')
-      + _mstkDesps.map(d=>`<option value="${d.dep_id}">${_msEsc(d.desp)} · ${d.empresa==='T'?'Tressa':'Hatsu'} · stock ${_msFmt0(d.stk)} · depósito ${_msFmt0(d.dep)}</option>`).join('');
-    if(_mstkDesps.length===1) sel.value=_mstkDesps[0].dep_id;
+    // En un EGRESO sólo se ofrecen los despachos que tienen de dónde sacar:
+    // si no, el server lo iba a rechazar igual (Ricardo, Oct 2026)
+    const esEgreso=_msVal('msf-tipo')==='E';
+    const mStk=!!document.getElementById('msf-stk')?.checked;
+    const mDep=!!document.getElementById('msf-dep')?.checked;
+    const utiles = esEgreso
+      ? _mstkDesps.filter(d => (!mStk || d.stk>0) && (!mDep || d.dep>0))
+      : _mstkDesps;
+
+    if(!utiles.length){
+      sel.innerHTML='<option value="">— ningún despacho con disponible —</option>';
+      sgvAviso({ titulo:'Sin disponible',
+        texto:`Ningún despacho de ${cod} tiene ${mStk&&mDep?'stock y depósito':(mDep?'depósito':'stock')} para sacar.`,
+        tipo:'adv' });
+      return;
+    }
+    sel.innerHTML=(utiles.length>1?'<option value="">— elegí el despacho —</option>':'')
+      + utiles.map(d=>`<option value="${d.dep_id}">${_msEsc(d.desp)} · ${d.empresa==='T'?'Tressa':'Hatsu'} · stock ${_msFmt0(d.stk)} · depósito ${_msFmt0(d.dep)}</option>`).join('');
+    if(utiles.length===1) sel.value=utiles[0].dep_id;
+    _mstkUtiles=utiles;
     mstkSugerirImporte();
   }catch(e){ sel.innerHTML='<option value="">⚠️ error al buscar</option>'; }
 }
@@ -126,7 +143,7 @@ async function mstkGuardar(){
   if(!cod){ toast('Elegí el artículo','err'); return; }
   if(!(can>0)){ toast('La cantidad tiene que ser mayor a cero','err'); return; }
   if(!mueveStk && !mueveDep){ toast('Elegí si mueve stock, depósito o los dos','err'); return; }
-  if(_mstkDesps.length>1 && !_msVal('msf-desp')){ toast('El artículo tiene varios despachos: elegí uno','err'); return; }
+  if(_mstkUtiles.length>1 && !_msVal('msf-desp')){ toast('El artículo tiene varios despachos: elegí uno','err'); return; }
 
   try{
     const r=await apiPost('/mstk/guardar',{
@@ -141,7 +158,7 @@ async function mstkGuardar(){
     }
     closeOv('ov-mstk');
     toast('Movimiento grabado','scs');
-    if(typeof reloadArts==='function') reloadArts();   // el stock cambió
+    mstkRefrescar();
     mstkConsultar();
   }catch(e){ sgvAviso({ titulo:'No se pudo grabar', texto:e.message, tipo:'err' }); }
 }
@@ -155,9 +172,18 @@ async function mstkAnular(){
     const r=await apiPost('/mstk/anular',{ id:m.id });
     if(!r || r.ok===false){ sgvAviso({ titulo:'No se pudo anular', texto:(r&&r.error)||'Error', tipo:'err' }); return; }
     toast('Movimiento anulado','scs');
-    if(typeof reloadArts==='function') reloadArts();
+    mstkRefrescar();
     mstkConsultar();
   }catch(e){ sgvAviso({ titulo:'No se pudo anular', texto:e.message, tipo:'err' }); }
+}
+
+// El movimiento cambió el stock: lo que está en memoria quedó viejo. Se
+// marcan artículos y despachos para que se vuelvan a traer del server
+// (Ricardo, Oct 2026: "tuve que salir y entrar para ver lo correcto").
+function mstkRefrescar(){
+  if(typeof reloadArts==='function') reloadArts();
+  window._despLoaded=false; window._despLoading=false;
+  if(typeof DESPS!=='undefined') DESPS=[];
 }
 
 function _msStyle(){
