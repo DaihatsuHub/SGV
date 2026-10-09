@@ -21,9 +21,27 @@ const CHEQ_ESTADOS = {
 
 const CART_SEL_W = '64px';   // ancho de la columna de selección
 
+// La cartera junta TODOS los cheques recibidos con los años, así que la
+// búsqueda se hace EN EL SERVER y acá sólo se dibuja. Se trae una página y,
+// aparte, los totales de todo lo que cumple el filtro (Ricardo, Oct 2026).
+let _cartTotales = null, _cartHayMas = false, _cartLimite = 1000;
+
 async function sbLoadCheques(){
-  try { CHEQUES = await sbGetAll('cheques','fecha'); CHEQUES.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')); }
-  catch(e){ console.error('sbLoadCheques:', e); CHEQUES=[]; }
+  try {
+    const qs=['limite='+_cartLimite];
+    if(typeof cheqFiltEstado!=='undefined' && cheqFiltEstado && cheqFiltEstado!=='todos') qs.push('estado='+encodeURIComponent(cheqFiltEstado));
+    const d=(document.getElementById('cart-desde')?.value||'').trim();
+    const h=(document.getElementById('cart-hasta')?.value||'').trim();
+    if(d) qs.push('desde='+d);
+    if(h) qs.push('hasta='+h);
+    const r = await apiGet('/cheques/buscar?'+qs.join('&'));
+    if(r && r.ok){
+      CHEQUES = r.cheques||[];
+      _cartTotales = r.totales||null;
+      _cartHayMas = !!r.hayMas;
+    } else { CHEQUES=[]; _cartTotales=null; _cartHayMas=false; }
+  }
+  catch(e){ console.error('sbLoadCheques:', e); CHEQUES=[]; _cartTotales=null; _cartHayMas=false; }
   // Asegurar recibos cargados para mostrar el talonario en la columna Recibo-Cheque
   if(typeof RECIS!=='undefined' && (!RECIS || !RECIS.length) && typeof sbLoadRecis==='function'){
     try{ await sbLoadRecis(); }catch(e){ console.error('sbLoadRecis desde cartera:', e); }
@@ -42,7 +60,11 @@ function cheqEstadoColor(e){
 }
 function cheqFisLabel(c){ return c.fisico ? 'Cheque' : 'ECheq'; }
 
-function cheqSetFiltEstado(e){ cheqFiltEstado=e; cheqSelIdx=null; renderCart(); }
+async function cheqSetFiltEstado(e){
+  cheqFiltEstado=e; cheqSelIdx=null;
+  await sbLoadCheques();      // el estado lo filtra el server
+  renderCart();
+}
 function cheqSetFiltFisico(f){ cheqFiltFisico=f; cheqSelIdx=null; renderCart(); }
 
 function getCheqRows(){
@@ -103,10 +125,14 @@ function renderCart(){
     const on=b.dataset.fis===cheqFiltFisico; b.style.background=on?'var(--acc)':''; b.style.color=on?'#fff':'';
   });
 
-  // totales del filtro actual
-  const tot=list.reduce((s,c)=>s+(c.importe||0),0);
+  // Totales: si el buscador del navegador no está filtrando, se muestran los
+  // del SERVER, que son de TODO lo que cumple el filtro y no sólo de la página
+  const buscando = !!(document.getElementById('cart-q')?.value||'').trim();
+  const usaServer = !buscando && _cartTotales;
+  const tot = usaServer ? _cartTotales.importe : list.reduce((s,c)=>s+(c.importe||0),0);
+  const cnt = usaServer ? _cartTotales.cantidad : list.length;
   const totEl=document.getElementById('cart-total'); if(totEl) totEl.textContent=reciFmt(tot);
-  const cntEl=document.getElementById('cart-count'); if(cntEl) cntEl.textContent=list.length;
+  const cntEl=document.getElementById('cart-count'); if(cntEl) cntEl.textContent=cnt;
 
   const cols=(typeof getActiveCols==='function')?getActiveCols('cart'):[];
   const gridTpl=cols.map(c=>c.width||'1fr').join(' ')+' '+CART_SEL_W;
@@ -119,7 +145,12 @@ function renderCart(){
   }
 
   if(!list.length){ body.innerHTML='<div class="empty">🔍 Sin cheques</div>'; cheqUpdateSel(); cheqInstallNav(); return; }
-  body.innerHTML=list.map((c,i)=>{
+  const aviso = _cartHayMas
+    ? `<div style="padding:10px;text-align:center;font-size:12px;color:var(--t2);background:var(--s2)">
+         Se muestran los primeros ${CHEQUES.length}. 
+         <button class="btn" style="padding:2px 10px;font-size:12px;margin-left:6px" onclick="cheqMas()">Traer más</button>
+       </div>` : '';
+  body.innerHTML=aviso+list.map((c,i)=>{
     const sel=cheqSelIdx===i?'sel':'';
     const cli=CLIS.find(k=>(k.CLI_CODIGO||'').trim()===(c.cliente||'').trim());
     const fec=c.fecha?_cartFecha(c.fecha):'—';
@@ -312,13 +343,20 @@ function cheqInstallNav(){
 }
 
 // ════════════════ Filtro por fechas ════════════════
-function cheqSetFiltDesde(v){ cheqFiltDesde=v||''; cheqSelIdx=null; renderCart(); }
-function cheqSetFiltHasta(v){ cheqFiltHasta=v||''; cheqSelIdx=null; renderCart(); }
-function cheqClearFechas(){
+// Las fechas también las resuelve el server
+async function cheqSetFiltDesde(v){ cheqFiltDesde=v||''; cheqSelIdx=null; await sbLoadCheques(); renderCart(); }
+async function cheqSetFiltHasta(v){ cheqFiltHasta=v||''; cheqSelIdx=null; await sbLoadCheques(); renderCart(); }
+async function cheqClearFechas(){
   cheqFiltDesde=''; cheqFiltHasta='';
   const d=document.getElementById('cart-desde'); if(d) d.value='';
   const h=document.getElementById('cart-hasta'); if(h) h.value='';
-  cheqSelIdx=null; renderCart();
+  cheqSelIdx=null; await sbLoadCheques(); renderCart();
+}
+
+// Trae más resultados cuando la lista quedó cortada
+async function cheqMas(){
+  _cartLimite += 1000;
+  await sbLoadCheques(); renderCart();
 }
 
 // ════════════════ Exportar / Imprimir ════════════════
