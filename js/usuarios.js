@@ -221,9 +221,10 @@ function renderUsua() {
   body.innerHTML = list.map((r,i) => {
     const sel = usuaSelIdx===i ? 'sel' : '';
     const nivelColor = parseInt(r.NIVEL)>80 ? 'ps' : 'po';
-    return `<div class="tr-tab ${sel}" style="display:grid;grid-template-columns:120px 1fr 80px;gap:8px;padding:11px 16px;font-size:14px;cursor:pointer;transition:background .1s" onclick="selUsua(${i})">
+    return `<div class="tr-tab ${sel}" style="display:grid;grid-template-columns:120px 1fr 90px 80px;gap:8px;padding:11px 16px;font-size:14px;cursor:pointer;transition:background .1s" onclick="selUsua(${i})">
       <span class="col-cod">${esc(r.CODIGO)}</span>
       <span style="color:var(--t2);font-size:13px">${'•'.repeat(Math.min(r.DETALLE.length,12))}</span>
+      <span style="text-align:center;font-size:12px;color:var(--t2)">${esc(r.GRUPO||r.grupo||'')}</span>
       <span style="text-align:center"><span class="pill ${nivelColor}">${r.NIVEL}</span></span>
     </div>`;
   }).join('');
@@ -231,7 +232,17 @@ function renderUsua() {
 
 function selUsua(i) { usuaSelIdx=i; renderUsua(); }
 
+// El combo de grupos sale de la tabla GRTR
+function usuaFillGrupos(sel){
+  const e=document.getElementById('uf-grupo'); if(!e) return;
+  e.innerHTML='<option value="">— Ve todo —</option>'
+    + (((typeof TABLAS!=='undefined' && TABLAS['GRTR'])||[])
+       .map(g=>`<option value="${esc(g.CODIGO)}"${g.CODIGO===sel?' selected':''}>${esc(g.CODIGO)} — ${esc(g.DETALLE)}</option>`).join(''));
+  if(sel) e.value=sel;
+}
+
 function usuaAlta() {
+  usuaFillGrupos('');
   document.getElementById('uf-cod').value='';
   document.getElementById('uf-pass').value='';
   document.getElementById('uf-pass').placeholder='';
@@ -251,6 +262,7 @@ function usuaModif() {
   document.getElementById('uf-pass').value='';                                   // vacío: la clave NO se toca salvo que escribas una nueva
   document.getElementById('uf-pass').placeholder='(dejar vacío para no cambiarla)';
   document.getElementById('uf-nivel').value=r.NIVEL;
+  usuaFillGrupos(r.GRUPO||r.grupo||'');
   document.getElementById('usua-mtit').textContent='Modificar: '+r.CODIGO;
   setMtag('usua-mtag','MODIFICACIÓN','tag-m');
   document.getElementById('ov-usua').classList.add('open');
@@ -278,21 +290,22 @@ async function saveUsua() {
   const cod   = document.getElementById('uf-cod').value.trim().toUpperCase();
   const pass  = document.getElementById('uf-pass').value.trim();
   const nivel = parseInt(document.getElementById('uf-nivel').value)||0;
+  const grupo = (document.getElementById('uf-grupo')?.value||'').trim();
   if (!cod) { toast('El usuario es obligatorio','err'); return; }
   if (window._ue==='A' && !pass) { toast('La contraseña es obligatoria','err'); return; }
   if (nivel<1||nivel>99) { toast('El nivel debe ser entre 1 y 99','err'); return; }
 
   try {
     if (window._ue==='A') {
-      const res = await apiPost('/usuarios/alta', { codigo:cod, password:pass, nivel });
+      const res = await apiPost('/usuarios/alta', { codigo:cod, password:pass, nivel, grupo });
       if (!TABLAS['USUA']) TABLAS['USUA']=[];
-      TABLAS['USUA'].push({ TABLA:'USUA', CODIGO:cod, DETALLE:'••••••', NIVEL:nivel, user_id:res.user_id, STRING1:'', STRING2:'', STRING3:'', FECHA1:'' });
+      TABLAS['USUA'].push({ TABLA:'USUA', CODIGO:cod, DETALLE:'••••••', NIVEL:nivel, GRUPO:grupo, user_id:res.user_id, STRING1:'', STRING2:'', STRING3:'', FECHA1:'' });
       toast('Usuario dado de alta','scs');
     } else {
       // pass vacío = NO se cambia la contraseña (solo el nivel)
-      await apiPost('/usuarios/modificar', { codigo:cod, password:pass, nivel });
+      await apiPost('/usuarios/modificar', { codigo:cod, password:pass, nivel, grupo });
       const idx = TABLAS['USUA'].findIndex(r=>r.CODIGO===cod);
-      if(idx>=0) { TABLAS['USUA'][idx].NIVEL=nivel; }
+      if(idx>=0) { TABLAS['USUA'][idx].NIVEL=nivel; TABLAS['USUA'][idx].GRUPO=grupo; TABLAS['USUA'][idx].grupo=grupo; }
       toast(pass ? 'Usuario y contraseña actualizados' : 'Usuario modificado','scs');
     }
     closeOv('ov-usua'); renderUsua();
