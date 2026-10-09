@@ -120,7 +120,14 @@ function updCliFilts(){
   const provs=[...new Set(CLIS.map(c=>c.CLI_PROVIN).filter(Boolean))].sort();
   const vends=[...new Set(CLIS.map(c=>c.CLI_VEND).filter(Boolean))].sort();
   pv.innerHTML='<option value="">Todas las provincias</option>'+provs.map(p=>`<option value="${p}"${p===curPv?' selected':''}>${PCIA[p]||p}</option>`).join('');
-  vd.innerHTML='<option value="">Todos los vendedores</option>'+vends.map(v=>`<option value="${v}"${v===curVd?' selected':''}>${v}</option>`).join('');
+  // Código Y descripción, como en los selectores del formulario: el código
+  // solo no dice nada (Ricardo, Oct 2026)
+  const _vendDet = cod => {
+    const t=((typeof TABLAS!=='undefined'&&TABLAS['VEND'])||[]).find(x=>x.CODIGO===cod);
+    return t ? (cod+' — '+t.DETALLE) : cod;
+  };
+  vd.innerHTML='<option value="">Todos los vendedores</option>'
+    +vends.map(v=>`<option value="${v}"${v===curVd?' selected':''}>${esc(_vendDet(v))}</option>`).join('');
 }
 
 function selCli(i){cliSelIdx=i;renderClis();}
