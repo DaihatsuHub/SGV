@@ -9,27 +9,6 @@ function saldoFmt(v) {
   return Math.round(v).toLocaleString('es-AR');
 }
 
-function saldoGetMeses(n) {
-  const meses = [];
-  const now = new Date();
-  for(let i=0; i<n; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
-    meses.push({
-      anio: d.getFullYear(),
-      mes:  d.getMonth()+1,
-      label: d.toLocaleString('es-AR',{month:'short'}).toUpperCase().substring(0,3)
-    });
-  }
-  return meses;
-}
-
-function saldoClasificar(facNro) {
-  const last = (facNro||'').trim().slice(-1).toUpperCase();
-  if(last==='R') return 'cheq';
-  if(last==='C') return 'nc';
-  return 'fac';
-}
-
 async function renderSaldos() {
   const body    = document.getElementById('saldo-body');
   const nMeses  = parseInt(document.getElementById('saldo-meses')?.value||3);
@@ -38,87 +17,20 @@ async function renderSaldos() {
   body.innerHTML = '<div class="empty" style="margin-top:40px">⏳ Cargando...</div>';
 
   try {
-    // Paginación automática — el server limita a 1000 por request
-    const baseRead = `/read/facturas?fac_saldo=gt.0&select=fac_nro,fac_fec,fac_cli,fac_saldo,fac_moneda,fac_vend`;
-    const facs = [];
-    let offset = 0;
-    while(true) {
-      body.innerHTML = `<div class="empty" style="margin-top:40px">⏳ Cargando... (${facs.length} registros)</div>`;
-      const res = await apiGet(`${baseRead}&limit=1000&offset=${offset}`);
-      const page = res.rows || [];
-      if(!page.length) break;
-      facs.push(...page);
-      if(page.length < 1000) break;
-      offset += 1000;
-    }
+    // El informe lo arma EL SERVER: antes el navegador se traía TODAS las
+    // facturas con saldo de a 1.000 por vuelta y las agrupaba acá
+    // (Ricardo, Oct 2026).
+    const r = await apiGet(`/informes/saldos?meses=${nMeses}${empFilt?'&emp='+empFilt:''}`);
+    if(!r.ok){ body.innerHTML='<div class="empty" style="margin-top:40px">⚠️ '+esc(r.error||'Error')+'</div>'; return; }
 
-    // Filtrar por empresa según primer carácter de fac_nro
-    const facsFilt = empFilt
-      ? facs.filter(f=>(f.fac_nro||'').trim().toUpperCase().charAt(0)===empFilt)
-      : facs;
-
-    if(!facsFilt.length) {
-      body.innerHTML = '<div class="empty" style="margin-top:40px">Sin facturas con saldo</div>';
-      return;
-    }
-
-    const meses   = saldoGetMeses(nMeses);
     const MONEDAS = TABLAS['MONE']||[];
     const monSign = cod => { const m=MONEDAS.find(x=>x.CODIGO===cod); return m?m.STRING1:cod; };
 
-    // Agrupar por cliente + moneda
-    const clientes = {};
-    facsFilt.forEach(f => {
-      const cod = (f.fac_cli||'').trim();
-      const mon = f.fac_moneda||'P';
-      const key = `${cod}|${mon}`;
-      if(!clientes[key]) {
-        const cli = (typeof CLIS!=='undefined') ? CLIS.find(c=>(c.CLI_CODIGO||'').trim()===cod) : null;
-        clientes[key] = {
-          cod, mon,
-          razon: cli?.CLI_RAZON||cod,
-          vend:  (cli?.CLI_VEND||f.fac_vend||'').trim(),
-          mes:   Array(nMeses).fill(0),
-          otros: 0,
-          total: 0,
-          cheq:  0
-        };
-      }
-      const fecDate = f.fac_fec ? new Date(f.fac_fec) : null;
-      const fecAnio = fecDate ? fecDate.getFullYear() : 0;
-      const fecMes  = fecDate ? fecDate.getMonth()+1  : 0;
-      const tipo    = saldoClasificar(f.fac_nro);
-      const saldo   = f.fac_saldo||0;
+    // Las etiquetas de los meses se arman acá, en castellano
+    const meses = (r.meses||[]).map(m=>({ ...m,
+      label: new Date(m.anio, m.mes-1, 1).toLocaleString('es-AR',{month:'short'}).toUpperCase().substring(0,3) }));
 
-      if(tipo==='cheq') {
-        clientes[key].cheq += saldo;
-        return;
-      }
-
-      const importe = tipo==='nc' ? -saldo : saldo;
-
-      let encontrado = false;
-      meses.forEach((m,i) => {
-        if(fecAnio===m.anio && fecMes===m.mes) {
-          clientes[key].mes[i] += importe;
-          clientes[key].total  += importe;
-          encontrado = true;
-        }
-      });
-      if(!encontrado) {
-        clientes[key].otros += importe;
-        clientes[key].total += importe;
-      }
-    });
-
-    // Ordenar por vendedor + razón social
-    const lista = Object.values(clientes)
-      .filter(r => r.total!==0 || r.cheq!==0 || r.otros!==0)
-      .sort((a,b) => {
-        const v = (a.vend||'').localeCompare(b.vend||'');
-        return v!==0 ? v : (a.razon||'').localeCompare(b.razon||'');
-      });
-
+    const lista = r.filas||[];
     if(!lista.length) {
       body.innerHTML = '<div class="empty" style="margin-top:40px">Sin saldos</div>';
       return;
