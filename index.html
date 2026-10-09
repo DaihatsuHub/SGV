@@ -169,6 +169,7 @@
       <div class="dd-menu" id="dd-util">
         <button class="dd-item" id="ddi-backup" onclick="utilRun(hacerBackup)">🗄️ Backup</button>
         <button class="dd-item" id="ddi-usua" onclick="showSubPage('util','usua')">🔑 Usuarios</button>
+        <button class="dd-item" id="ddi-grtr" onclick="showSubPage('util','grtr')">👥 Grupos de Trabajo</button>
         <button class="dd-item" id="btn-permisos" onclick="utilRun(openPermisos)">🛡️ Permisos</button>
       </div>
     </div>
@@ -381,6 +382,24 @@
   <div class="tbl-wrap">
     <div class="th-tab"><span>Código</span><span>Concepto</span><span></span><span></span></div>
     <div class="tbl-body" id="cgas-body"></div>
+  </div>
+</div>
+
+<div class="page" id="page-grtr">
+  <div class="toolbar">
+    <button class="btn pri" id="btn-grtr-alta" onclick="tabAlta('GRTR')">＋ Alta</button>
+    <button class="btn" id="btn-grtr-modif" onclick="tabModif('GRTR')">✏️ Modificar</button>
+    <button class="btn dng" id="btn-grtr-baja" onclick="tabBaja('GRTR')">✕ Baja</button>
+    <div class="spacer"></div>
+    <span style="font-size:11px;color:var(--t3);margin-right:8px">El grupo define QUÉ NO VE; el nivel, qué puede hacer</span>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="grtr-q" placeholder="Buscar..." oninput="renderTabGral('GRTR')">
+      <button class="srch-clr" onclick="clrSrch('grtr-q',function(){renderTabGral('GRTR')})" title="Limpiar">✕</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <div class="th-tab"><span>Código</span><span>Grupo de trabajo</span><span></span><span></span></div>
+    <div class="tbl-body" id="grtr-body"></div>
   </div>
 </div>
 
