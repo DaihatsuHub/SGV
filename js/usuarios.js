@@ -110,12 +110,33 @@ async function loginOk() {
   const btnPerm = document.getElementById('btn-permisos');
   if (btnPerm) btnPerm.style.display = usuarioActual.codigo === 'RGRDELTA' ? '' : 'none';
   if (typeof aplicarPermisos === 'function') aplicarPermisos();
+  await aplicarReglasMenu();   // el grupo de trabajo puede esconder pantallas
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-welcome')?.classList.add('active');
   renderUsua && renderUsua();
   showAppLoading(false);
   document.getElementById('app').style.display = 'block';
   inactStart();  // control de inactividad (auto-logout a los 60 min)
+}
+
+// ── QUÉ PANTALLAS NO VE ESTE USUARIO ──────────────────────
+// El NIVEL ya decidió a qué módulos entra. Además, su GRUPO DE TRABAJO puede
+// esconderle pantallas puntuales (Ricardo, Oct 2026). Si un menú entero queda
+// sin ítems visibles, se esconde también.
+async function aplicarReglasMenu(){
+  try{
+    const r = await apiGet('/mis-reglas');
+    if(!r || !r.ok) return;
+    window.MIS_REGLAS = r;
+    (r.menu||[]).forEach(id=>{
+      const b=document.getElementById('ddi-'+id);
+      if(b) b.style.display='none';
+    });
+    document.querySelectorAll('.dd-wrap').forEach(w=>{
+      const items=[...w.querySelectorAll('.dd-item')];
+      if(items.length && items.every(i=>i.style.display==='none')) w.style.display='none';
+    });
+  }catch(e){ console.warn('aplicarReglasMenu:', e); }
 }
 
 // Pantalla de carga entre login y app

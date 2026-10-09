@@ -47,7 +47,17 @@ const REGL_CAMPOS = {
   ]}
 };
 
-let _reglData = null, _reglGrupo = '', _reglTabla = 'articulos';
+let _reglData = null, _reglGrupo = '', _reglTabla = 'articulos', _reglSolapa = 'campos';
+
+// Los ítems del MENÚ se leen de la página: así no hay una lista que se
+// desactualice cada vez que agregamos una pantalla (Ricardo, Oct 2026).
+function reglItemsMenu(){
+  return [...document.querySelectorAll('.dd-item[id^="ddi-"]')].map(b=>({
+    id: b.id.replace('ddi-',''),
+    label: (b.textContent||'').trim(),
+    menu: (b.closest('.dd-wrap')?.querySelector('.dd-btn')?.textContent||'').trim()
+  }));
+}
 
 function _rgEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -86,6 +96,33 @@ function reglOnCambio(){
   _rgPintar();
 }
 
+function reglSolapa(cual){
+  _reglSolapa=cual;
+  document.querySelectorAll('.regl-tab').forEach(b=>b.classList.toggle('pri', b.dataset.s===cual));
+  // El selector de tabla sólo aplica a los campos
+  const ts=document.getElementById('regl-tabla');
+  if(ts) ts.style.display = cual==='campos' ? '' : 'none';
+  _rgPintar();
+}
+
+function _rgMenuOculto(id){
+  return (_reglData?.grupo||[]).some(r =>
+    r.grupo===_reglGrupo && (r.tipo||'')==='menu' && r.campo===id);
+}
+
+async function reglToggleMenu(id, ocultar){
+  if(!_reglGrupo){ toast('Elegí un grupo','err'); return; }
+  try{
+    const r=await apiPost('/reglas/guardar',{ grupo:_reglGrupo, tabla:'menu', tipo:'menu', campo:id, quitar:!ocultar });
+    if(!r || r.ok===false){ toast((r&&r.error)||'No se pudo guardar','err'); return; }
+    _reglData.grupo=(_reglData.grupo||[]).filter(x =>
+      !(x.grupo===_reglGrupo && (x.tipo||'')==='menu' && x.campo===id));
+    if(ocultar) _reglData.grupo.push({ grupo:_reglGrupo, tabla:'menu', tipo:'menu', campo:id });
+    _rgPintar();
+    toast(ocultar ? 'Pantalla oculta para el grupo' : 'Pantalla visible de nuevo','scs');
+  }catch(e){ toast('Error: '+e.message,'err'); }
+}
+
 function _rgOculto(campo){
   return (_reglData?.grupo||[]).some(r =>
     r.grupo===_reglGrupo && r.tabla===_reglTabla && (r.tipo||'campo')==='campo' && r.campo===campo);
@@ -97,6 +134,31 @@ function _rgPintar(){
     body.innerHTML='<div class="empty" style="margin-top:30px">Elegí un grupo para ver y cambiar sus reglas</div>';
     return;
   }
+  // ── Solapa PANTALLAS: a qué ítems del menú no entra ──
+  if(_reglSolapa==='menu'){
+    const items=reglItemsMenu();
+    const ocul=items.filter(i=>_rgMenuOculto(i.id)).length;
+    const porMenu={};
+    items.forEach(i=>{ (porMenu[i.menu||'—']||(porMenu[i.menu||'—']=[])).push(i); });
+    body.innerHTML=`
+      <div class="rg-cab">
+        Tildá las pantallas a las que el grupo <b>${_rgEsc(_reglGrupo)}</b> <b>NO</b> entra.
+        <span class="rg-cnt">${ocul} oculta(s)</span>
+      </div>`
+      + Object.entries(porMenu).map(([men,lista])=>`
+        <div class="rg-men">${_rgEsc(men)}</div>
+        ${lista.map(i=>{
+          const on=_rgMenuOculto(i.id);
+          return `<label class="rg-fila${on?' on':''}" style="grid-template-columns:28px 1fr 120px 90px">
+            <input type="checkbox" ${on?'checked':''} onchange="reglToggleMenu('${i.id}',this.checked)">
+            <span class="rg-lbl">${_rgEsc(i.label)}</span>
+            <span class="rg-col">${_rgEsc(i.id)}</span>
+            <span class="rg-est">${on?'No entra':'Entra'}</span>
+          </label>`;
+        }).join('')}`).join('');
+    return;
+  }
+
   const def=REGL_CAMPOS[_reglTabla];
   if(!def){ body.innerHTML='<div class="empty" style="margin-top:30px">Tabla sin campos configurables</div>'; return; }
 
@@ -146,6 +208,8 @@ function _rgStyle(){
     .rg-col{font-family:var(--mono);font-size:11px;color:var(--t3)}
     .rg-est{text-align:right;font-size:12px;color:var(--t2)}
     .rg-fila.on .rg-est{color:var(--red);font-weight:600}
+    .rg-men{margin:14px 14px 0;padding:6px 12px;font-size:11px;text-transform:uppercase;
+      letter-spacing:.5px;color:var(--t3);background:var(--s2);border-radius:6px}
   `;
   document.head.appendChild(st);
 }
