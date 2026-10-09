@@ -74,113 +74,34 @@ async function renderHistArt() {
   if(tit) tit.textContent = `📈 Historia — ${cod} ${artDes}`;
 
   try {
-    // ── Traer despachos del artículo ──
-    const desps = await sbGet('despachos', `dep_art=eq.${encodeURIComponent(cod)}&order=dep_fec.asc`);
-
-    // ── Traer items de facturas del artículo ──
-    const items = [];
-    let offset = 0;
-    while(true) {
-      const res = await apiGet(`/read/fac_items?ite_art=eq.${encodeURIComponent(cod)}&select=ite_nro,ite_art,ite_can,ite_uni,ite_imp,ite_desp&limit=1000&offset=${offset}`);
-      const pg = res.rows || [];
-      if(!pg.length) break;
-      items.push(...pg);
-      if(pg.length < 1000) break;
-      offset += 1000;
-    }
-    // Traer facturas correspondientes
-    const nros = [...new Set(items.map(i=>i.ite_nro).filter(Boolean))];
-    const facsMap = {};
-    if(nros.length) {
-      // En lotes de 50
-      for(let i=0; i<nros.length; i+=50) {
-        const lote = nros.slice(i,i+50).map(n=>`"${n}"`).join(',');
-        const rf = await apiGet(`/read/facturas?fac_nro=in.(${encodeURIComponent(lote)})&select=fac_nro,fac_fec,fac_cli,fac_moneda,fac_cotiz`);
-        const pf = rf.rows || [];
-        if(pf.length) pf.forEach(f=>facsMap[f.fac_nro]=f);
-      }
-    }
-
-    // ── Construir filas unificadas ──
-    const filas = [];
-
-    // Despachos
-    desps.forEach(d => {
-      const empDesp = (d.dep_desp||'').charAt(0).toUpperCase();
-      if(emp && empDesp !== emp) return;
-      filas.push({
-        fec:   d.dep_fec||'',
-        comp:  'Ingreso despacho',
-        det:   '',
-        desp:  (d.dep_desp||'') + (d.dep_sub?' '+d.dep_sub:''),
-        ing:   d.dep_ent||0,
-        egr:   0,
-        imp:   null,
-        tipo:  'desp'
-      });
-    });
-
-    // Ventas
-    items.forEach(it => {
-      const fac = facsMap[it.ite_nro];
-      if(!fac) return;
-      const empFac = (fac.fac_nro||'').charAt(0).toUpperCase();
-      if(emp && empFac !== emp) return;
-      const tipo = saldoClasificar ? saldoClasificar(fac.fac_nro) : ((fac.fac_nro||'').slice(-1).toUpperCase()==='C'?'nc':'fac');
-      const esNC = tipo === 'nc';
-      const cli = CLIS.find(c=>(c.CLI_CODIGO||'').trim()===(fac.fac_cli||'').trim());
-      filas.push({
-        fec:  fac.fac_fec||'',
-        comp: fac.fac_nro||'',
-        det:  cli?cli.CLI_RAZON:fac.fac_cli||'',
-        desp: it.ite_desp||'',
-        ing:  esNC ? (it.ite_can||0) : 0,
-        egr:  esNC ? 0 : (it.ite_can||0),
-        imp:  it.ite_uni||0,
-        // Moneda y cotización DEL COMPROBANTE: el precio está en esa moneda
-        mon:  _histSimb(fac.fac_moneda),
-        // En pesos la cotización es 1, y se MUESTRA: en Excel una celda vacía
-        // multiplica como 0, y la columna tiene que servir para calcular
-        cotiz:(!fac.fac_moneda || fac.fac_moneda==='P') ? 1 : (Number(fac.fac_cotiz)||1),
-        tipo: esNC ? 'nc' : 'fac'
-      });
-    });
-
-    // Ordenar por fecha
-    filas.sort((a,b) => (a.fec||'').localeCompare(b.fec||''));
-
-    if(!filas.length) {
-      body.innerHTML = '<div class="empty" style="margin-top:40px">Sin movimientos para este artículo</div>';
-      return;
-    }
-
-    // Calcular stock acumulado sobre TODO el histórico
-    let stk = 0;
-    filas.forEach(f => { stk += f.ing - f.egr; f.stk = stk; });
-
-    // PERÍODO: "Desde" en blanco = histórico completo; "Hasta" = hoy si está
-    // vacío. Si hay "Desde", lo anterior se resume en un renglón de SALDO
-    // ANTERIOR y el stock sigue corriendo desde ahí.
+    // El informe lo arma EL SERVER en una sola llamada: antes el navegador
+    // traía los renglones, después las facturas de a 50 y los clientes, y
+    // cruzaba todo acá (Ricardo, Oct 2026).
     const desde=(document.getElementById('histart-desde')?.value||'').trim();
     const hastaEl=document.getElementById('histart-hasta');
     if(hastaEl && !hastaEl.value) hastaEl.value=new Date().toISOString().substring(0,10);
     const hasta=(hastaEl?.value||'').trim();
-    const antes = desde ? filas.filter(f=>(f.fec||'').substring(0,10) < desde) : [];
-    let vis = filas.filter(f=>{
-      const d=(f.fec||'').substring(0,10);
-      return (!desde || d>=desde) && (!hasta || d<=hasta);
-    });
+
+    const qs=[`art=${encodeURIComponent(cod)}`];
+    if(emp)   qs.push('emp='+emp);
+    if(desde) qs.push('desde='+desde);
+    if(hasta) qs.push('hasta='+hasta);
+    const r = await apiGet('/informes/histart?'+qs.join('&'));
+    if(!r.ok){ body.innerHTML='<div class="empty" style="margin-top:40px">⚠️ '+esc(r.error||'Error')+'</div>'; return; }
+
+    // El símbolo de cada moneda sale de la tabla, acá
+    let vis=(r.filas||[]).map(f=>({ ...f, mon: f.mon ? _histSimb(f.mon) : '' }));
+
+    // Con "Desde" cargado, lo anterior se resume en un renglón
     if(desde){
-      const saldoAnt = antes.length ? antes[antes.length-1].stk : 0;
       vis = [{ fec:'', comp:'Saldo anterior', det:'al '+desde.split('-').reverse().join('/'), desp:'',
-               ing:0, egr:0, stk:saldoAnt, imp:null, mon:'', cotiz:null, tipo:'saldo' }, ...vis];
+               ing:0, egr:0, stk:r.saldoAnterior||0, imp:null, mon:'', cotiz:null, tipo:'saldo' }, ...vis];
     }
     if(!vis.length){
       body.innerHTML = '<div class="empty" style="margin-top:40px">Sin movimientos en el período</div>';
       _histFilas=[]; return;
     }
-    filas.length=0; filas.push(...vis);
-    _histFilas = filas; _histInfo = { cod, des: artDes, desde, hasta };
+    _histFilas = vis; _histInfo = { cod, des: artDes, desde, hasta };
 
     // Render tabla
     const fmtN2 = v => v===0||v===null||v===undefined?'':Number(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -215,7 +136,7 @@ async function renderHistArt() {
       </colgroup>
       <tbody>`;
 
-    filas.forEach((f,i) => {
+    _histFilas.forEach((f,i) => {
       const bg = f.tipo==='saldo' ? 'background:var(--s3);font-style:italic;font-weight:600'
                : (i%2===0?'':'background:rgba(255,255,255,0.03)');
       const stkColor = f.stk<=0?'color:var(--red)':'color:var(--grn)';
