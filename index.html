@@ -104,6 +104,7 @@
       <div class="dd-menu" id="dd-art">
         <button class="dd-item" id="ddi-art" onclick="showSubPage('art','art')">📋 Maestro de Artículos</button>
         <button class="dd-item" id="ddi-histart" onclick="showSubPage('art','histart')">📈 Historia por Artículo</button>
+        <button class="dd-item" id="ddi-mstk" onclick="showSubPage('art','mstk')">🔄 Movimientos de Stock</button>
         <button class="dd-item" id="ddi-marc" onclick="showSubPage('art','marc')">🏷️ Tabla de Marcas</button>
         <button class="dd-item" id="ddi-rubr" onclick="showSubPage('art','rubr')">📦 Tabla de Rubros</button>
         <button class="dd-item" id="ddi-estu" onclick="showSubPage('art','estu')">🎁 Estuches</button>
@@ -414,6 +415,76 @@
   <div class="tbl-wrap">
     <div class="th-tab"><span>Código</span><span>Grupo de trabajo</span><span></span><span></span></div>
     <div class="tbl-body" id="grtr-body"></div>
+  </div>
+</div>
+
+<div class="page" id="page-mstk">
+  <div class="toolbar">
+    <button class="btn pri" id="btn-mstk-alta" onclick="mstkNuevo()">＋ Nuevo movimiento</button>
+    <button class="btn dng" id="btn-mstk-baja" onclick="mstkAnular()">🚫 Anular</button>
+    <label style="font-size:12px;color:var(--t2);margin-left:6px">Desde</label>
+    <input type="date" class="finp" id="ms-desde" style="width:140px">
+    <label style="font-size:12px;color:var(--t2)">Hasta</label>
+    <input type="date" class="finp" id="ms-hasta" style="width:140px">
+    <input class="finp" id="ms-art" list="msf-art-list" placeholder="Artículo (opcional)" style="width:230px" autocomplete="off">
+    <button class="btn" onclick="mstkConsultar()">🔍 Consultar</button>
+    <div class="spacer"></div>
+    <span style="font-size:11px;color:var(--t3)">Mueve stock y depósito del artículo y del despacho</span>
+  </div>
+  <div class="tbl-wrap">
+    <div id="ms-head"></div>
+    <div id="ms-body" class="tbl-body"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-mstk">
+  <div class="modal" style="width:560px;max-width:95vw">
+    <div class="mhd">
+      <div class="mtit"><span>🔄 Movimiento de Stock</span></div>
+      <button class="mcls" onclick="closeOv('ov-mstk')">✕</button>
+    </div>
+    <div class="mbdy">
+      <div class="frow">
+        <div class="fgrp"><label class="flbl2">Fecha</label><input type="date" class="finp" id="msf-fecha"></div>
+        <div class="fgrp"><label class="flbl2">Movimiento</label>
+          <select class="finp" id="msf-tipo">
+            <option value="E">Egreso (baja)</option>
+            <option value="I">Ingreso (alta)</option>
+          </select>
+        </div>
+      </div>
+      <div class="fgrp"><label class="flbl2">Artículo</label>
+        <input class="finp" id="msf-art" list="msf-art-list" autocomplete="off" placeholder="Código o descripción…" onchange="mstkArtChange()">
+        <datalist id="msf-art-list"></datalist>
+      </div>
+      <div class="fgrp"><label class="flbl2">Despacho</label>
+        <select class="finp" id="msf-desp" onchange="mstkSugerirImporte()"><option value="">— elegí el artículo primero —</option></select>
+      </div>
+      <div class="frow">
+        <div class="fgrp"><label class="flbl2">Cantidad</label>
+          <input class="finp" id="msf-can" type="number" step="0.01" min="0" onfocus="this.select()" oninput="mstkSugerirImporte()"></div>
+        <div class="fgrp"><label class="flbl2">Importe</label>
+          <input class="finp" id="msf-imp" onfocus="this.select()" oninput="this.dataset.tocado='1'" placeholder="0,00"></div>
+      </div>
+      <div class="fgrp">
+        <label class="flbl2">Qué mueve</label>
+        <div style="display:flex;gap:18px;align-items:center;padding-top:3px">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="msf-stk" checked style="width:16px;height:16px"> Stock
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="msf-dep" style="width:16px;height:16px"> Depósito
+          </label>
+          <span style="font-size:11px;color:var(--t3)">La empresa la define el despacho</span>
+        </div>
+      </div>
+      <div class="fgrp"><label class="flbl2">Concepto</label>
+        <input class="finp" id="msf-con" placeholder="Rotura, ajuste de inventario, uso interno…"></div>
+    </div>
+    <div class="mft">
+      <button class="btn" onclick="closeOv('ov-mstk')">Cancelar</button>
+      <button class="btn pri" onclick="mstkGuardar()">Grabar</button>
+    </div>
   </div>
 </div>
 
@@ -2136,6 +2207,7 @@
 <script src="js/despachos.js"></script>
 <script src="js/saldos.js"></script>
 <script src="js/histart.js"></script>
+<script src="js/movstock.js"></script>
 <script src="js/talonarios.js"></script>
 <script src="js/retenciones.js"></script>
 <script src="js/recibos.js"></script>
