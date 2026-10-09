@@ -202,9 +202,9 @@
     <button class="btn" id="btn-art-modif" onclick="aModif()">✏️ Modificar</button>
     <button class="btn dng" id="btn-art-baja" onclick="aBaja()">✕ Baja</button>
     <button class="btn" id="btn-art-dup" onclick="aDuplicar()" title="Duplicar el artículo seleccionado">⧉ Duplicar</button>
-    <button class="btn scs" onclick="printArt()">🖨 Imprimir</button>
-    <button class="btn scs" onclick="excelArt()">⬇ Excel</button>
-    <button class="btn scs" onclick="abrirResumen()">📊 Resumen</button>
+    <button class="btn scs" data-regla="art-imprimir" onclick="printArt()">🖨 Imprimir</button>
+    <button class="btn scs" data-regla="art-excel" onclick="excelArt()">⬇ Excel</button>
+    <button class="btn scs" data-regla="art-resumen" onclick="abrirResumen()">📊 Resumen</button>
     <button class="btn" id="btn-cfg-art" style="display:none" onclick="openColCfg('art')" title="Configurar columnas">⚙️ Columnas</button>
     <select class="fsel" id="af-marca" style="width:135px;margin-left:4px" onchange="artOnFiltro()" title="Marca"><option value="">Todas las marcas</option></select>
     <select class="fsel" id="af-rubro" style="width:135px" onchange="artOnFiltro()" title="Rubro"><option value="">Todos los rubros</option></select>
@@ -243,7 +243,7 @@
     <button class="btn pri" id="btn-cli-alta" onclick="cAlta()">＋ Alta</button>
     <button class="btn" id="btn-cli-modif" onclick="cModif()">✏️ Modificar</button>
     <button class="btn dng" id="btn-cli-baja" onclick="cBaja()">✕ Baja</button>
-    <button class="btn scs" onclick="printCli()">🖨 Imprimir</button>
+    <button class="btn scs" data-regla="cli-imprimir" onclick="printCli()">🖨 Imprimir</button>
     <button class="btn" id="btn-cfg-cli" style="display:none" onclick="openColCfg('cli')" title="Configurar columnas">⚙️ Columnas</button>
     <div class="spacer"></div>
     <div class="srch-wrap">

@@ -303,6 +303,11 @@ function aBaja(){
   });
 }
 function aDuplicar(){
+  // Duplicar CREA un artículo: exige el mismo permiso que el alta
+  // (Ricardo, Oct 2026 — antes no lo miraba)
+  if(typeof puedeh==='function' && !puedeh('art','alta')){
+    toast('No tenés permiso para dar de alta artículos','err'); return;
+  }
   if(artSelIdx===null){ toast('Seleccioná un artículo a duplicar','err'); return; }
   const orig = ARTS[artSelIdx];
   fillArtForm(orig);                                   // trae TODOS los datos del artículo

@@ -52,11 +52,19 @@ let _reglData = null, _reglGrupo = '', _reglTabla = 'articulos', _reglSolapa = '
 // Los ítems del MENÚ se leen de la página: así no hay una lista que se
 // desactualice cada vez que agregamos una pantalla (Ricardo, Oct 2026).
 function reglItemsMenu(){
-  return [...document.querySelectorAll('.dd-item[id^="ddi-"]')].map(b=>({
+  const items = [...document.querySelectorAll('.dd-item[id^="ddi-"]')].map(b=>({
     id: b.id.replace('ddi-',''),
     label: (b.textContent||'').trim(),
     menu: (b.closest('.dd-wrap')?.querySelector('.dd-btn')?.textContent||'').trim()
   }));
+  // Además de las pantallas del menú, los BOTONES que abren otro informe
+  // dentro de un maestro (el Resumen de Artículos, por ejemplo). Se marcan en
+  // el HTML con data-regla (Ricardo, Oct 2026).
+  [...document.querySelectorAll('[data-regla]')].forEach(b=>{
+    items.push({ id:'btn:'+b.dataset.regla, label:(b.textContent||'').trim(),
+                 menu:'Botones dentro de las pantallas' });
+  });
+  return items;
 }
 
 function _rgEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }

@@ -129,6 +129,11 @@ async function aplicarReglasMenu(){
     if(!r || !r.ok) return;
     window.MIS_REGLAS = r;
     (r.menu||[]).forEach(id=>{
+      if(id.startsWith('btn:')){
+        // Botón dentro de una pantalla (Resumen, Excel, Imprimir…)
+        document.querySelectorAll(`[data-regla="${id.slice(4)}"]`).forEach(b=>b.style.display='none');
+        return;
+      }
       const b=document.getElementById('ddi-'+id);
       if(b) b.style.display='none';
     });
