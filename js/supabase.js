@@ -240,7 +240,8 @@ const TAB_MAP = {
   RUBR:'rubros', SRUB:'subrubros', MARC:'marcas', PROV:'proveedores',
   VEND:'vendedores', CPAG:'condpago', PCIA:'provincias',
   GRUP:'grupos', CATE:'categorias', EXPR:'expresos', MONE:'monedas',
-  CCOS:'centros_costos', PERC:'percepciones'
+  CCOS:'centros_costos', PERC:'percepciones',
+  BANC:'bancos', CGAS:'conceptos_gasto', ESTU:'estuches', GRTR:'grupos_trabajo'
 };
 
 async function saveTabRow(row) {
@@ -278,7 +279,8 @@ async function loadUsuarios() {
   try {
     const res = await apiGet('/usuarios');
     if (!TABLAS['USUA']) TABLAS['USUA'] = [];
-    TABLAS['USUA'] = res.usuarios.map(r => ({ TABLA:'USUA', CODIGO:r.codigo, DETALLE:'••••••', NIVEL:r.nivel||0, user_id:r.user_id, STRING1:'', STRING2:'', STRING3:'', FECHA1:'' }));
+    // GRUPO: define qué NO VE el usuario (el nivel sigue siendo qué puede hacer)
+    TABLAS['USUA'] = res.usuarios.map(r => ({ TABLA:'USUA', CODIGO:r.codigo, DETALLE:'••••••', NIVEL:r.nivel||0, GRUPO:r.grupo||'', user_id:r.user_id, STRING1:'', STRING2:'', STRING3:'', FECHA1:'' }));
   } catch(e) { console.warn('loadUsuarios:', e); }
 }
 
