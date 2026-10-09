@@ -170,6 +170,7 @@
         <button class="dd-item" id="ddi-backup" onclick="utilRun(hacerBackup)">🗄️ Backup</button>
         <button class="dd-item" id="ddi-usua" onclick="showSubPage('util','usua')">🔑 Usuarios</button>
         <button class="dd-item" id="ddi-grtr" onclick="showSubPage('util','grtr')">👥 Grupos de Trabajo</button>
+        <button class="dd-item" id="ddi-regl" onclick="showSubPage('util','regl')">🔒 Qué ve cada grupo</button>
         <button class="dd-item" id="btn-permisos" onclick="utilRun(openPermisos)">🛡️ Permisos</button>
       </div>
     </div>
@@ -383,6 +384,17 @@
     <div class="th-tab"><span>Código</span><span>Concepto</span><span></span><span></span></div>
     <div class="tbl-body" id="cgas-body"></div>
   </div>
+</div>
+
+<div class="page" id="page-regl">
+  <div class="toolbar">
+    <span style="font-weight:600;font-size:14px;color:var(--acc)">🔒 Qué ve cada grupo</span>
+    <select class="fsel" id="regl-grupo" style="width:220px" onchange="reglOnCambio()"><option value="">— Elegí un grupo —</option></select>
+    <select class="fsel" id="regl-tabla" style="width:170px" onchange="reglOnCambio()"></select>
+    <div class="spacer"></div>
+    <span style="font-size:11px;color:var(--t3)">El nivel decide qué puede hacer · el grupo, qué no ve</span>
+  </div>
+  <div class="tbl-wrap"><div id="regl-body" class="tbl-body"></div></div>
 </div>
 
 <div class="page" id="page-grtr">
@@ -2116,6 +2128,7 @@
 <script src="js/clientes.js"></script>
 <script src="js/tablas.js"></script>
 <script src="js/usuarios.js"></script>
+<script src="js/reglas.js"></script>
 <script src="js/permisos.js"></script>
 <script src="js/facturacion.js"></script>
 <script src="js/despachos.js"></script>
