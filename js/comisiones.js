@@ -124,18 +124,58 @@ function _coPintar(){
 }
 
 /* ─────────── Imprimir ─────────── */
+// Sale LO MISMO QUE SE VE: por vendedor, un renglón por cobro, una columna
+// por centro de costos, con subtotales y total (Ricardo, Oct 2026).
+function _coAgrupado(){
+  const det=(_comData?.detalle)||[], g={};
+  det.forEach(x=>{ (g[x.vend]||(g[x.vend]={det:x.vendDet||x.vend,filas:[]})).filas.push(x); });
+  return Object.keys(g).sort((a,b)=>g[a].det.localeCompare(g[b].det)).map(v=>({ vend:v, ...g[v] }));
+}
+function _coSuma(filas, CC){
+  const t={cc:{},cobrado:0,comision:0};
+  filas.forEach(x=>{
+    CC.forEach(c=>{ if(x.cc&&x.cc[c]) t.cc[c]=(t.cc[c]||0)+x.cc[c]; });
+    t.cobrado+=x.cobrado; t.comision+=x.comision;
+  });
+  return t;
+}
+
 function comPrint(){
   if(!_comData){ toast('Consultá primero','err'); return; }
-  const D=_comData, T=D.totales||{};
-  const CC=D.centros||[];
-  const tr=(f,b)=>`<tr${b?' class="fin"':''}><td>${b?'<b>TOTAL</b>':_coEsc(f.vend+' '+f.vendDet)}</td>
-    <td>${b?'':_coEsc(f.ccos||'')}</td><td class="r">${_coFmt(f.cobrado)}</td>
-    <td class="r">${_coFmt(f.base)}</td><td class="r">${_coFmt(f.comision)}</td></tr>`;
-  const sub=`Período ${_coFecha(D.desde)} a ${_coFecha(D.hasta)} · ${D.vend ? 'Vendedor '+_coEsc(D.vend) : 'Todos los vendedores al '+_coFmt(D.pctFijo)+'%'} · sobre lo cobrado, neto de IVA y percepciones`;
-  sgvPrint({ titulo:'Liquidación de Comisiones', subtitulo:sub,
-    cuerpo:`<table><thead><tr><th>Vendedor</th><th>Centro de costos</th><th class="r">Cobrado</th>
-      <th class="r">Base</th><th class="r">Comisión</th></tr></thead>
-      <tbody>${(D.filas||[]).map(f=>tr(f)).join('')}${tr(T,true)}</tbody></table>` });
+  const D=_comData, CC=D.centros||[], grupos=_coAgrupado();
+  if(!grupos.length){ toast('No hay nada para imprimir','err'); return; }
+
+  const th=`<tr><th>Fecha</th><th>Recibo</th><th>Factura</th><th class="r">Cobrado</th>`
+    + CC.map(c=>`<th class="r cc">${_coEsc(c)}</th>`).join('')
+    + `<th class="r">%</th><th class="r">Comisión</th></tr>`;
+
+  let cuerpo='', tot={cc:{},cobrado:0,comision:0};
+  for(const g of grupos){
+    cuerpo+=`<tr class="vend"><td colspan="${CC.length+6}">${_coEsc(g.vend)} — ${_coEsc(g.det)}</td></tr>`;
+    cuerpo+=g.filas.map(x=>`<tr><td>${_coFecha(x.fecha)}</td><td>${_coEsc(x.recibo)}</td>
+      <td>${_coEsc(x.comprobante)}</td><td class="r">${_coFmt(x.cobrado)}</td>
+      ${CC.map(c=>`<td class="r cc">${x.cc&&x.cc[c]?_coFmt(x.cc[c]):''}</td>`).join('')}
+      <td class="r">${_coFmt(x.pct)}</td><td class="r">${_coFmt(x.comision)}</td></tr>`).join('');
+    const sub=_coSuma(g.filas, CC);
+    cuerpo+=`<tr class="sub"><td colspan="3"><b>Subtotal</b></td><td class="r">${_coFmt(sub.cobrado)}</td>
+      ${CC.map(c=>`<td class="r cc">${sub.cc[c]?_coFmt(sub.cc[c]):''}</td>`).join('')}
+      <td></td><td class="r"><b>${_coFmt(sub.comision)}</b></td></tr>`;
+    CC.forEach(c=>{ if(sub.cc[c]) tot.cc[c]=(tot.cc[c]||0)+sub.cc[c]; });
+    tot.cobrado+=sub.cobrado; tot.comision+=sub.comision;
+  }
+  cuerpo+=`<tr class="fin"><td colspan="3"><b>TOTAL</b></td><td class="r">${_coFmt(tot.cobrado)}</td>
+    ${CC.map(c=>`<td class="r cc">${tot.cc[c]?_coFmt(tot.cc[c]):''}</td>`).join('')}
+    <td></td><td class="r"><b>${_coFmt(tot.comision)}</b></td></tr>`;
+
+  const sub=`Período ${_coFecha(D.desde)} a ${_coFecha(D.hasta)} · `
+    + (D.vend ? ('Vendedor '+_coEsc(D.vend)) : ('Todos los vendedores al '+_coFmt(D.pctFijo)+'%'))
+    + ' · sobre lo cobrado, neto de IVA y percepciones, en pesos';
+
+  sgvPrint({ titulo:'Liquidación de Comisiones', subtitulo:sub, apaisado:true,
+    estilos:`tr.vend td{background:#e8eef7;font-weight:bold;text-transform:uppercase;font-size:10px}
+             tr.sub td{background:#f4f6f9;font-weight:600}
+             td.cc,th.cc{color:#6A5BD0}`,
+    cuerpo:`<table><thead>${th}</thead><tbody>${cuerpo}</tbody></table>` });
 }
 
 /* ─────────── Excel ─────────── */
@@ -147,37 +187,43 @@ async function comExcel(){
       s.onload=res; s.onerror=()=>rej(new Error('No se pudo cargar ExcelJS')); document.head.appendChild(s); }); }
     catch(e){ toast(e.message,'err'); return; }
   }
-  const D=_comData, T=D.totales||{}, NUM='#,##0.00';
-  const wb=new ExcelJS.Workbook();
+  const D=_comData, CC=D.centros||[], grupos=_coAgrupado(), NUM='#,##0.00';
+  const wb=new ExcelJS.Workbook(); const ws=wb.addWorksheet('Comisiones');
+  ws.columns=[{width:12},{width:16},{width:16},{width:15},...CC.map(()=>({width:15})),{width:8},{width:15}];
 
-  const ws=wb.addWorksheet('Resumen');
-  ws.columns=[{width:12},{width:28},{width:20},{width:16},{width:16},{width:10},{width:14}];
   ws.addRow(['Liquidación de Comisiones']).font={bold:true,size:13};
   ws.addRow([`Período ${_coFecha(D.desde)} a ${_coFecha(D.hasta)} · `
     +(D.vend?('Vendedor '+D.vend):('Todos al '+_coFmt(D.pctFijo)+'%'))
-    +' · sobre lo cobrado, neto de IVA y percepciones']).font={italic:true,color:{argb:'FF666666'}};
+    +' · sobre lo cobrado, neto de IVA y percepciones, en pesos'])
+    .font={italic:true,color:{argb:'FF666666'}};
   ws.addRow([]);
-  const hr=ws.addRow(['Vendedor','Nombre','Centro de costos','Cobrado','Base comisión','Comp.','Comisión']);
+  const hr=ws.addRow(['Fecha','Recibo','Factura','Cobrado',...CC,'%','Comisión']);
   hr.eachCell(c=>{ c.font={bold:true}; c.border={bottom:{style:'thin'}}; });
-  (D.filas||[]).forEach(f=>{
-    const r=ws.addRow([f.vend,f.vendDet,f.ccos||'',f.cobrado,f.base,f.comprobantes,f.comision]);
-    [4,5,7].forEach(i=>{ r.getCell(i).numFmt=NUM; });
-  });
-  const fr=ws.addRow(['','','TOTAL',T.cobrado,T.base,null,T.comision]);
-  fr.font={bold:true}; [4,5,7].forEach(i=>{ fr.getCell(i).numFmt=NUM; });
+  const colCC = i => 5 + i;                     // primera columna de centro
+  const colPct = 5 + CC.length, colCom = 6 + CC.length;
+  const fmtFila = r => { r.getCell(4).numFmt=NUM; CC.forEach((_,i)=>{ r.getCell(colCC(i)).numFmt=NUM; });
+                         r.getCell(colPct).numFmt='#,##0.00'; r.getCell(colCom).numFmt=NUM; };
+
+  const tot={cc:{},cobrado:0,comision:0};
+  for(const g of grupos){
+    const rv=ws.addRow([`${g.vend} — ${g.det}`]);
+    rv.font={bold:true}; rv.getCell(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE8EEF7'}};
+    g.filas.forEach(x=>{
+      const r=ws.addRow([_coFecha(x.fecha), x.recibo, x.comprobante, x.cobrado,
+        ...CC.map(c=>(x.cc&&x.cc[c])?x.cc[c]:null), x.pct, x.comision]);
+      fmtFila(r);
+    });
+    const sub=_coSuma(g.filas, CC);
+    const rs=ws.addRow(['','','Subtotal', sub.cobrado, ...CC.map(c=>sub.cc[c]||null), null, sub.comision]);
+    rs.font={bold:true}; fmtFila(rs);
+    CC.forEach(c=>{ if(sub.cc[c]) tot.cc[c]=(tot.cc[c]||0)+sub.cc[c]; });
+    tot.cobrado+=sub.cobrado; tot.comision+=sub.comision;
+  }
+  const rt=ws.addRow(['','','TOTAL', tot.cobrado, ...CC.map(c=>tot.cc[c]||null), null, tot.comision]);
+  rt.font={bold:true}; fmtFila(rt);
+  rt.eachCell(c=>{ c.border={top:{style:'medium',color:{argb:'FF0A58CA'}}}; });
+
   ws.views=[{state:'frozen', ySplit:4}];
-
-  const wd=wb.addWorksheet('Detalle');
-  wd.columns=[{width:12},{width:16},{width:16},{width:30},{width:10},{width:15},{width:15},{width:8},{width:14}];
-  const hd=wd.addRow(['Fecha aplic.','Recibo','Comprobante','Cliente','Vend.','Cobrado','Base','%','Comisión']);
-  hd.eachCell(c=>{ c.font={bold:true}; c.border={bottom:{style:'thin'}}; });
-  (D.detalle||[]).forEach(x=>{
-    const r=wd.addRow([_coFecha(x.fecha),x.recibo,x.comprobante,x.cliente,x.vend,x.cobrado,x.base,x.pct,x.comision]);
-    [6,7,9].forEach(i=>{ r.getCell(i).numFmt=NUM; });
-  });
-  wd.views=[{state:'frozen', ySplit:1}];
-  wd.autoFilter={ from:{row:1,column:1}, to:{row:1,column:9} };
-
   const buf=await wb.xlsx.writeBuffer();
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
