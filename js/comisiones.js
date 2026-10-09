@@ -9,7 +9,7 @@
      Todos los vendedores → liquidación del gerente, con % fijo.
    =========================================================================== */
 
-let _comData = null, _comVerDet = false;
+let _comData = null;
 
 function _coEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function _coFmt(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
@@ -52,51 +52,68 @@ async function comConsultar(){
   }catch(e){ body.innerHTML='<div class="empty" style="margin-top:30px">⚠️ '+_coEsc(e.message||'Error')+'</div>'; }
 }
 
-function comVerDetalle(){ _comVerDet=!_comVerDet; _coPintar(); }
+// La grilla: un renglón por cobro, con una COLUMNA POR CENTRO DE COSTOS, y
+// el VENDEDOR como subtítulo —igual que Saldos por Mes—. Cierra con el total
+// de cada centro y el total de comisión (Ricardo, Oct 2026).
+function _coGrid(nCC){ return `86px 130px repeat(${nCC},120px) 130px 62px 120px`; }
 
 function _coPintar(){
   const body=document.getElementById('com-body'), head=document.getElementById('com-head');
   if(!body||!_comData) return;
-  const D=_comData, F=D.filas||[], T=D.totales||{};
+  const D=_comData, CC=D.centros||[], T=D.totales||{}, det=D.detalle||[];
+  const GRID=_coGrid(CC.length);
 
   if(head){
-    head.style.gridTemplateColumns=COM_GRID;
-    head.innerHTML= _comVerDet
-      ? '<span>Cliente</span><span>Comprobante</span><span class="r">Cobrado</span><span class="r">Base</span><span class="r">%</span><span class="r">Comisión</span>'
-      : '<span>Vendedor</span><span>Centro de costos</span><span class="r">Cobrado</span><span class="r">Base comisión</span><span class="r">Comp.</span><span class="r">Comisión</span>';
+    head.style.gridTemplateColumns=GRID;
+    head.innerHTML='<span>Fecha</span><span>Recibo</span>'
+      + CC.map(c=>`<span class="r">${_coEsc(c)}</span>`).join('')
+      + '<span class="r">Cobrado</span><span class="r">%</span><span class="r">Comisión</span>';
   }
-  if(!F.length){ body.innerHTML='<div class="empty" style="margin-top:30px">Sin cobranzas aplicadas en el período</div>'; return; }
+  if(!det.length){ body.innerHTML='<div class="empty" style="margin-top:30px">Sin cobranzas aplicadas en el período</div>'; return; }
 
-  const aviso = D.pctFijo!==null && D.pctFijo!==undefined
+  const aviso = (D.pctFijo!==null && D.pctFijo!==undefined)
     ? `<div class="co-nota">Liquidación del gerente: se aplica <b>${_coFmt(D.pctFijo)}%</b> sobre todo lo cobrado, sin mirar el porcentaje de cada vendedor.</div>`
     : '';
 
-  let html='';
-  if(_comVerDet){
-    html=(D.detalle||[]).map(x=>`<div class="co-row" style="grid-template-columns:${COM_GRID}">
-      <span class="co-t">${_coFecha(x.fecha)} · ${_coEsc(x.cliente)}</span>
-      <span class="co-t" style="font-family:var(--mono);font-size:11px">${_coEsc(x.comprobante)} · rec. ${_coEsc(x.recibo)}</span>
+  // Agrupado por vendedor
+  const porVend={};
+  det.forEach(x=>{ (porVend[x.vend]||(porVend[x.vend]={det:x.vendDet||x.vend,filas:[]})).filas.push(x); });
+
+  const fila=(x,cls)=>`<div class="co-row${cls||''}" style="grid-template-columns:${GRID}">
+      <span>${_coFecha(x.fecha)}</span>
+      <span class="co-t" style="font-size:12px">${_coEsc(x.recibo)}</span>
+      ${CC.map(c=>`<span class="r">${x.cc&&x.cc[c]?_coFmt(x.cc[c]):''}</span>`).join('')}
       <span class="r">${_coFmt(x.cobrado)}</span>
-      <span class="r">${_coFmt(x.base)}</span>
       <span class="r">${_coFmt(x.pct)}</span>
       <span class="r com">${_coFmt(x.comision)}</span>
-    </div>`).join('');
-  } else {
-    html=F.map(f=>`<div class="co-row" style="grid-template-columns:${COM_GRID}">
-      <span class="co-t"><b>${_coEsc(f.vend)}</b> ${_coEsc(f.vendDet)}</span>
-      <span class="co-t">${_coEsc(f.ccos||'—')}</span>
-      <span class="r">${_coFmt(f.cobrado)}</span>
-      <span class="r">${_coFmt(f.base)}</span>
-      <span class="r">${f.comprobantes}</span>
-      <span class="r com">${_coFmt(f.comision)}</span>
-    </div>`).join('');
+    </div>`;
+
+  let html='';
+  const totGral={cc:{},cobrado:0,comision:0};
+  for(const v of Object.keys(porVend).sort((a,b)=>porVend[a].det.localeCompare(porVend[b].det))){
+    const g=porVend[v];
+    html+=`<div class="co-vend" style="grid-column:1/-1">${_coEsc(v)} — ${_coEsc(g.det)}</div>`;
+    html+=g.filas.map(x=>fila(x)).join('');
+    // Subtotal del vendedor
+    const sub={cc:{},cobrado:0,comision:0};
+    g.filas.forEach(x=>{
+      CC.forEach(c=>{ if(x.cc&&x.cc[c]){ sub.cc[c]=(sub.cc[c]||0)+x.cc[c]; totGral.cc[c]=(totGral.cc[c]||0)+x.cc[c]; } });
+      sub.cobrado+=x.cobrado; sub.comision+=x.comision;
+      totGral.cobrado+=x.cobrado; totGral.comision+=x.comision;
+    });
+    html+=`<div class="co-row co-sub" style="grid-template-columns:${GRID}">
+      <span></span><span><b>Subtotal</b></span>
+      ${CC.map(c=>`<span class="r">${sub.cc[c]?_coFmt(sub.cc[c]):''}</span>`).join('')}
+      <span class="r">${_coFmt(sub.cobrado)}</span><span></span>
+      <span class="r com">${_coFmt(sub.comision)}</span>
+    </div>`;
   }
 
-  html+=`<div class="co-row co-tot" style="grid-template-columns:${COM_GRID}">
+  html+=`<div class="co-row co-tot" style="grid-template-columns:${GRID}">
     <span><b>TOTAL</b></span><span></span>
-    <span class="r">${_coFmt(T.cobrado)}</span>
-    <span class="r">${_coFmt(T.base)}</span><span></span>
-    <span class="r com">${_coFmt(T.comision)}</span>
+    ${CC.map(c=>`<span class="r">${totGral.cc[c]?_coFmt(totGral.cc[c]):''}</span>`).join('')}
+    <span class="r">${_coFmt(totGral.cobrado)}</span><span></span>
+    <span class="r com">${_coFmt(totGral.comision)}</span>
   </div>`;
 
   body.innerHTML=aviso+html;
@@ -106,6 +123,7 @@ function _coPintar(){
 function comPrint(){
   if(!_comData){ toast('Consultá primero','err'); return; }
   const D=_comData, T=D.totales||{};
+  const CC=D.centros||[];
   const tr=(f,b)=>`<tr${b?' class="fin"':''}><td>${b?'<b>TOTAL</b>':_coEsc(f.vend+' '+f.vendDet)}</td>
     <td>${b?'':_coEsc(f.ccos||'')}</td><td class="r">${_coFmt(f.cobrado)}</td>
     <td class="r">${_coFmt(f.base)}</td><td class="r">${_coFmt(f.comision)}</td></tr>`;
@@ -175,6 +193,9 @@ function _coStyle(){
     .co-row:hover{background:var(--s2)}
     .co-row .com{font-weight:600;color:var(--grn)}
     .co-tot{background:var(--s2);border-top:2px solid var(--acc);font-weight:700}
+    .co-sub{background:rgba(55,138,221,.06);font-weight:600;border-bottom:1px solid var(--b1)}
+    .co-vend{margin:12px 0 0;padding:7px 12px;background:var(--s3);font-size:12px;font-weight:700;
+      color:var(--acc);text-transform:uppercase;letter-spacing:.5px;border-top:1px solid var(--b1)}
     .co-nota{margin:10px 12px;padding:8px 12px;border-radius:6px;font-size:12px;line-height:1.5;
       background:rgba(55,138,221,.10);color:#185FA5}
   `;
