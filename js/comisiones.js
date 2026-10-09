@@ -67,7 +67,7 @@ function _coPintar(){
     head.style.gridTemplateColumns=GRID;
     // Sólo se comisionan FACTURAS, así que la factura cobrada va a la vista
     head.innerHTML='<span>Fecha</span><span>Recibo</span><span>Factura</span><span class="r">Cobrado</span>'
-      + CC.map(c=>`<span class="r">${_coEsc(c)}</span>`).join('')
+      + CC.map(c=>`<span class="r cc">${_coEsc(c)}</span>`).join('')
       + '<span class="r">%</span><span class="r">Comisión</span>';
   }
   if(!det.length){ body.innerHTML='<div class="empty" style="margin-top:30px">Sin cobranzas aplicadas en el período</div>'; return; }
@@ -85,7 +85,7 @@ function _coPintar(){
       <span class="co-t" style="font-size:12px">${_coEsc(x.recibo)}</span>
       <span class="co-t" style="font-size:12px;color:var(--acc)">${_coEsc(x.comprobante)}</span>
       <span class="r">${_coFmt(x.cobrado)}</span>
-      ${CC.map(c=>`<span class="r">${x.cc&&x.cc[c]?_coFmt(x.cc[c]):''}</span>`).join('')}
+      ${CC.map(c=>`<span class="r cc">${x.cc&&x.cc[c]?_coFmt(x.cc[c]):''}</span>`).join('')}
       <span class="r">${_coFmt(x.pct)}</span>
       <span class="r com">${_coFmt(x.comision)}</span>
     </div>`;
@@ -106,7 +106,7 @@ function _coPintar(){
     html+=`<div class="co-row co-sub" style="grid-template-columns:${GRID}">
       <span></span><span><b>Subtotal</b></span><span></span>
       <span class="r">${_coFmt(sub.cobrado)}</span>
-      ${CC.map(c=>`<span class="r">${sub.cc[c]?_coFmt(sub.cc[c]):''}</span>`).join('')}
+      ${CC.map(c=>`<span class="r cc">${sub.cc[c]?_coFmt(sub.cc[c]):''}</span>`).join('')}
       <span></span>
       <span class="r com">${_coFmt(sub.comision)}</span>
     </div>`;
@@ -115,7 +115,7 @@ function _coPintar(){
   html+=`<div class="co-row co-tot" style="grid-template-columns:${GRID}">
     <span><b>TOTAL</b></span><span></span><span></span>
     <span class="r">${_coFmt(totGral.cobrado)}</span>
-    ${CC.map(c=>`<span class="r">${totGral.cc[c]?_coFmt(totGral.cc[c]):''}</span>`).join('')}
+    ${CC.map(c=>`<span class="r cc">${totGral.cc[c]?_coFmt(totGral.cc[c]):''}</span>`).join('')}
     <span></span>
     <span class="r com">${_coFmt(totGral.comision)}</span>
   </div>`;
@@ -196,6 +196,10 @@ function _coStyle(){
     .co-row .co-t{font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .co-row:hover{background:var(--s2)}
     .co-row .com{font-weight:600;color:var(--grn)}
+    /* Los importes por CENTRO DE COSTOS, en violeta, para distinguirlos del
+       cobrado y de la comisión (Ricardo, Oct 2026) */
+    .co-row .cc,#com-head .cc{color:#6A5BD0}
+    .co-row .cc{background:rgba(127,119,221,.07)}
     .co-tot{background:var(--s2);border-top:2px solid var(--acc);font-weight:700}
     .co-sub{background:rgba(55,138,221,.06);font-weight:600;border-bottom:1px solid var(--b1)}
     .co-vend{margin:12px 0 0;padding:7px 12px;background:var(--s3);font-size:12px;font-weight:700;
