@@ -140,7 +140,10 @@ async function renderHistArt() {
       const bg = f.tipo==='saldo' ? 'background:var(--s3);font-style:italic;font-weight:600'
                : (i%2===0?'':'background:rgba(255,255,255,0.03)');
       const stkColor = f.stk<=0?'color:var(--red)':'color:var(--grn)';
-      const compColor = f.tipo==='desp'?'color:var(--acc)':f.tipo==='nc'?'color:var(--red)':'color:var(--txt)';
+      const compColor = f.tipo==='desp'?'color:var(--acc)'
+                     :f.tipo==='nc'?'color:var(--red)'
+                     :f.tipo==='mov'?'color:#854F0B'       // movimientos de stock
+                     :'color:var(--txt)';
       html += `<tr style="${bg}">
         <td style="padding:4px 10px;font-family:var(--mono);font-size:11px;color:var(--t2)">${fmtFec(f.fec)}</td>
         <td style="padding:4px 10px;font-family:var(--mono);font-size:11px;${compColor}">${esc(f.comp)}</td>
