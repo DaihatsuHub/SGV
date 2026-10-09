@@ -110,6 +110,7 @@ async function loginOk() {
   const btnPerm = document.getElementById('btn-permisos');
   if (btnPerm) btnPerm.style.display = usuarioActual.codigo === 'RGRDELTA' ? '' : 'none';
   if (typeof aplicarPermisos === 'function') aplicarPermisos();
+  if (typeof sgvPermisosVista === 'function') sgvPermisosVista();   // lo que no puede hacer, no se muestra
   await aplicarReglasMenu();   // el grupo de trabajo puede esconder pantallas
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-welcome')?.classList.add('active');

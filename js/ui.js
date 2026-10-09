@@ -166,6 +166,30 @@ function sgvAviso(op){
   return cerrar;
 }
 
+// ── LO QUE NO SE PUEDE HACER, NO SE MUESTRA ────────────────────────
+// REGLA (Ricardo, Oct 2026): si el usuario no tiene permiso para algo, la
+// opción NO SE LE MUESTRA. Nada de botones visibles que después avisan "no
+// tenés permiso".
+//
+// Los botones cuyo id sigue el patrón `btn-<modulo>-<accion>` ya los esconde
+// `aplicarPermisos()`. Para los que NO siguen ese patrón —Duplicar, Importar,
+// Anular, Aplicar NC— alcanza con marcarlos en el HTML:
+//     <button data-perm="art:alta" …>⧉ Duplicar</button>
+//     <button data-perm="fac:baja" …>🚫 Anular</button>
+// Acepta varios permisos separados por coma: basta con tener UNO.
+function sgvPermisosVista(raiz){
+  const r = raiz || document;
+  r.querySelectorAll('[data-perm]').forEach(el=>{
+    const pide = String(el.dataset.perm||'').split(',').map(x=>x.trim()).filter(Boolean);
+    if(!pide.length) return;
+    const puede = (typeof puedeh!=='function') || pide.some(p=>{
+      const [mod,acc] = p.split(':');
+      return mod && acc && puedeh(mod.trim(), acc.trim());
+    });
+    el.style.display = puede ? '' : 'none';
+  });
+}
+
 // ── BLOQUEO DE EDICIÓN (maestros y tablas) ─────────────────────────
 // Una sola llamada al abrir Modificar: trae el registro FRESCO del server y lo
 // reserva. Si lo tiene otro usuario, avisa con cartel grande y no deja entrar.
