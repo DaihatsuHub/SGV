@@ -1900,9 +1900,11 @@ async function nfCargarGrupo() {
   const despsPorArt={};
   try{
     const cods=arts.filter(a=>!FAC_ITEMS_NUEVA.find(it=>it.ite_art===a.ART_COD)).map(a=>a.ART_COD);
-    for(let i=0;i<cods.length;i+=40){
-      const lote=cods.slice(i,i+40);
-      aviso(`⏳ Despachos ${Math.min(i+40,cods.length)} de ${cods.length}…`);
+    // De a 200 artículos por consulta: con 2.000 artículos eran 50 viajes al
+    // server y pasan a ser 10 (Ricardo, Oct 2026)
+    for(let i=0;i<cods.length;i+=200){
+      const lote=cods.slice(i,i+200);
+      aviso(`⏳ Despachos ${Math.min(i+200,cods.length)} de ${cods.length}…`);
       // Entre comillas: los códigos traen guiones y barras
       const lista=lote.map(c=>'"'+String(c).replace(/"/g,'')+'"').join(',');
       const rows=await sbGet('despachos',`dep_art=in.(${encodeURIComponent(lista)})&order=dep_fec.desc`);
@@ -2280,10 +2282,17 @@ function nfItemChange(idx,campo,valor) {
   const cantAct=FAC_ITEMS_NUEVA[idx].ite_can||0;
   it.ite_imp=Math.round(neto*cantAct*100)/100;
   it.ite_iva_imp=esA?Math.round((it.ite_uni-neto)*cantAct*100)/100:0;
-  if(campo==='ite_can') {
-    // Solo actualizar el importe en el DOM sin re-renderizar (para no perder el foco)
-    const impEl=document.querySelector(`#nf-items-body [data-idx="${idx}"] .nf-imp`);
-    if(impEl) impEl.textContent=fmtN(it.ite_imp,2);
+  // Ni la CANTIDAD ni el PRECIO repintan la grilla entera: con 1.000 o 2.000
+  // renglones eso hacía que cada tecla tardara (Ricardo, Oct 2026). Se tocan
+  // sólo las celdas de ese renglón.
+  if(campo==='ite_can' || campo==='ite_uni') {
+    const fila=document.querySelector(`#nf-items-body [data-idx="${idx}"]`);
+    if(fila){
+      const impEl=fila.querySelector('.nf-imp');
+      if(impEl) impEl.textContent=fmtN(it.ite_imp,2);
+      const netoEl=fila.querySelector('.nf-neto');
+      if(netoEl) netoEl.textContent=fmtN(neto,2);
+    }
     nfCalcTotales();
   } else {
     nfRenderItems();
@@ -2355,7 +2364,9 @@ function nfRenderItems() {
   }
   const _monFac=document.getElementById('nf-moneda')?.value||'P';
   const _simb=nfMonSimbolo(_monFac);
-  body.innerHTML=FAC_ITEMS_NUEVA.map((it,i)=>{
+  // Con muchos renglones se dibuja POR TANDAS: la primera aparece enseguida y
+  // el resto se agrega de a poco, para que la pantalla no quede trabada.
+  const _filaHtml=(it,i)=>{
     const ivaPct=it.ite_iva_porc||21;
     const divIva=1+ivaPct/100;
     const precioConIva=it.ite_uni||0;
@@ -2403,12 +2414,31 @@ function nfRenderItems() {
           onchange="nfItemChange(${i},'ite_uni',nfParseNum(this.value))">
       </div>
       <span style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--t3)">${ivaPct}%</span>
-      <span style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--grn)">${fmtN(neto,2)}</span>
+      <span class="nf-neto" style="text-align:right;font-family:var(--mono);font-size:11px;color:var(--grn)">${fmtN(neto,2)}</span>
       <span class="nf-imp" style="text-align:right;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--txt)">${fmtN(imp,2)}</span>
       <button class="btn dng" onclick="nfEliminarItem(${i})" style="padding:2px 6px;font-size:11px">✕</button>
     </div>`;
-  }).join('');
+  };
+
+  // Primera tanda inmediata; el resto en bloques, sin trabar la pantalla
+  const TANDA = 150;
+  const lista = FAC_ITEMS_NUEVA;
+  body.innerHTML = lista.slice(0, TANDA).map(_filaHtml).join('');
+  if (lista.length > TANDA) {
+    const token = ++_nfRenderToken;          // si se repinta de nuevo, lo viejo se descarta
+    let i = TANDA;
+    const seguir = () => {
+      if (token !== _nfRenderToken) return;
+      const hasta = Math.min(i + 300, lista.length);
+      let html = '';
+      for (; i < hasta; i++) html += _filaHtml(lista[i], i);
+      body.insertAdjacentHTML('beforeend', html);
+      if (i < lista.length) requestAnimationFrame(seguir);
+    };
+    requestAnimationFrame(seguir);
+  }
 }
+let _nfRenderToken = 0;
 
 // ── Percepciones IIBB en facturación ──
 function nfPercDetalle(cod){
