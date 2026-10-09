@@ -267,14 +267,10 @@ async function deleteTabRow(tabla, codigo) {
   } catch(e) { console.error('deleteTabRow:', e); syncErr(); }
 }
 
-async function saveUsuario(cod, pass, nivel) {
-  try { await sbUpsert('usuarios', { codigo: cod, password: pass, nivel }); }
-  catch(e) { console.error('saveUsuario:', e); }
-}
-async function deleteUsuario(cod) {
-  try { await sbDelete('usuarios', { codigo: cod }); }
-  catch(e) { console.error('deleteUsuario:', e); }
-}
+// `saveUsuario` y `deleteUsuario` se quitaron: escribían la tabla de usuarios
+// por la vía genérica, con una columna `password` que ya no existe (la clave
+// la maneja Supabase Auth). Las altas y bajas van por /usuarios/alta y
+// /usuarios/baja, que validan permisos en el server.
 async function loadUsuarios() {
   try {
     const res = await apiGet('/usuarios');
