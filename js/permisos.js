@@ -140,50 +140,69 @@ function aplicarPermisos() {
 // ═══════════════════════════════════════════════════════════
 const MENU_DEF = [
   { grupo:'📦 Artículos', tnav:'tnav-art', items:[
-    { id:'ddi-art',  mod:'art',  label:'📋 Maestro de Artículos' },
-    { id:'ddi-marc', mod:'marc', label:'🏷️ Marcas',      tabla:true },
-    { id:'ddi-rubr', mod:'rubr', label:'📦 Rubros',      tabla:true },
-    { id:'ddi-ccos', mod:'ccos', label:'🏢 Centros de Costos', tabla:true },
-    { id:'ddi-prov', mod:'prov', label:'🏭 Proveedores', tabla:true },
-    { id:'ddi-mone', mod:'mone', label:'💱 Monedas',     tabla:true },
+    { id:'ddi-art',     mod:'art',     label:'📋 Maestro de Artículos' },
+    { id:'ddi-histart', mod:'histart', label:'📈 Historia por Artículo' },
+    { id:'ddi-mstk',    mod:'mstk',    label:'🔄 Movimientos de Stock' },
+    { id:'ddi-marc',    mod:'marc',    label:'🏷️ Marcas',             tabla:true },
+    { id:'ddi-rubr',    mod:'rubr',    label:'📦 Rubros',              tabla:true },
+    { id:'ddi-estu',    mod:'estu',    label:'🎁 Estuches',            tabla:true },
+    { id:'ddi-ccos',    mod:'ccos',    label:'🏢 Centros de Costos',   tabla:true },
+    { id:'ddi-prov',    mod:'prov',    label:'🏭 Proveedores',         tabla:true },
+    { id:'ddi-mone',    mod:'mone',    label:'💱 Monedas',             tabla:true },
   ]},
   { grupo:'👥 Clientes', tnav:'tnav-cli', items:[
-    { id:'ddi-cli',   mod:'cli',   label:'📋 Maestro de Clientes' },
-    { id:'ddi-ficha', mod:'ficha', label:'🪪 Ficha del Cliente' },
+    { id:'ddi-cli',    mod:'cli',    label:'📋 Maestro de Clientes' },
+    { id:'ddi-ficha',  mod:'ficha',  label:'🪪 Ficha del Cliente' },
     { id:'ddi-ctacte', mod:'ctacte', label:'📄 Cuenta Corriente' },
-    { id:'ddi-cpag',  mod:'cpag',  label:'💳 Condiciones de Pago', tabla:true },
-    { id:'ddi-vend',  mod:'vend',  label:'👤 Vendedores',          tabla:true },
-    { id:'ddi-cate',  mod:'cate',  label:'🏷️ Categorías',          tabla:true },
-    { id:'ddi-grup',  mod:'grup',  label:'📂 Grupos',              tabla:true },
-    { id:'ddi-perc',  mod:'perc',  label:'🧾 Tabla de Percepciones', tabla:true },
+    { id:'ddi-comp',   mod:'comp',   label:'🧾 Composición de Saldo' },
+    { id:'ddi-cpag',   mod:'cpag',   label:'💳 Condiciones de Pago', tabla:true },
+    { id:'ddi-vend',   mod:'vend',   label:'👤 Vendedores',          tabla:true },
+    { id:'ddi-cate',   mod:'cate',   label:'🏷️ Categorías',          tabla:true },
+    { id:'ddi-grup',   mod:'grup',   label:'📂 Grupos',              tabla:true },
+    { id:'ddi-perc',   mod:'perc',   label:'🧾 Percepciones',        tabla:true },
+    { id:'ddi-expr',   mod:'expr',   label:'🚚 Transportes',         tabla:true },
   ]},
   { grupo:'🛒 Compras', tnav:'tnav-cmp', items:[
     { id:'ddi-oc',   mod:'oc',   label:'📋 Ordenes de Compra' },
     { id:'ddi-desp', mod:'desp', label:'🚢 Despachos' },
+    { id:'ddi-gast', mod:'gast', label:'💸 Gastos Generales' },
+    { id:'ddi-cgas', mod:'cgas', label:'🏷 Conceptos de Gasto', tabla:true },
   ]},
   { grupo:'🧾 Ventas', tnav:'tnav-ven', items:[
-    { id:'ddi-fac',     mod:'fac',     label:'📄 Facturación' },
-    { id:'ddi-vmes',    mod:'vmes',    label:'📅 Ventas mensuales x Artículo' },
-    { id:'ddi-histart', mod:'histart', label:'📈 Historia por Artículo' },
-    { id:'ddi-saldo',   mod:'saldo',   label:'📊 Saldos por Mes' },
-    { id:'ddi-ctip',    mod:'ctip',    label:'📋 Tipos de Comprobantes' },
+    { id:'ddi-fac',  mod:'fac',  label:'📄 Facturación' },
+    { id:'ddi-vmes', mod:'vmes', label:'📅 Ventas mensuales x Artículo' },
+    { id:'ddi-dash', mod:'dash', label:'📊 Dashboard' },
+    { id:'ddi-rcc',  mod:'rcc',  label:'📈 Resultado por Centro de Costos' },
+    { id:'ddi-arm',  mod:'arm',  label:'🧩 Armá tu informe' },
+    { id:'ddi-com',  mod:'comi', label:'💰 Comisiones' },
+    { id:'ddi-rank', mod:'rank', label:'🏆 Ranking de Artículos' },
+    { id:'ddi-subd', mod:'subd', label:'📒 Subdiario de IVA' },
+    { id:'ddi-saldo',mod:'saldo',label:'📊 Saldos por Mes' },
+    { id:'ddi-ctip', mod:'ctip', label:'📋 Tipos de Comprobantes' },
   ]},
   { grupo:'💼 Cobranzas', tnav:'tnav-cob', items:[
-    { id:'ddi-reci', mod:'reci', label:'🧾 Recibos' },
-    { id:'ddi-talo', mod:'talo', label:'📓 Talonarios' },
-    { id:'ddi-rete', mod:'rete', label:'🧮 Tipo de Retenciones' },
-    { id:'ddi-cart', mod:'cart', label:'💼 Cartera de Valores' },
+    { id:'ddi-reci',    mod:'reci',    label:'🧾 Recibos' },
+    { id:'ddi-talo',    mod:'talo',    label:'📓 Talonarios' },
+    { id:'ddi-rete',    mod:'rete',    label:'🧮 Tipo de Retenciones' },
+    { id:'ddi-banc',    mod:'banc',    label:'🏦 Bancos', tabla:true },
+    { id:'ddi-cart',    mod:'cart',    label:'💼 Cartera de Valores' },
+    { id:'ddi-sdcob',   mod:'sdcob',   label:'📗 Subdiario de Cobranzas' },
     { id:'ddi-listcob', mod:'listcob', label:'📋 Listado de Cobranzas' },
+    { id:'ddi-antig',   mod:'antig',   label:'⏳ Antigüedad de Saldos' },
   ]},
   { grupo:'🔧 Utilidades', tnav:'tnav-util', items:[
-    { id:'ddi-backup',   mod:'backup',   label:'🗄️ Backup' },
-    { id:'ddi-usua',     mod:'usuarios', label:'🔑 Usuarios' },
-    { id:'btn-permisos', nivelMin:88,    label:'🛡️ Permisos' },
+    { id:'ddi-backup', mod:'backup',   label:'🗄️ Backup' },
+    { id:'ddi-usua',   mod:'usuarios', label:'🔑 Usuarios' },
+    { id:'ddi-grtr',   mod:'grtr',     label:'👥 Grupos de Trabajo', tabla:true },
+    { id:'ddi-regl',   mod:'regl',     label:'🔒 Qué ve cada grupo' },
+    { id:'btn-permisos', nivelMin:88,  label:'🛡️ Permisos' },
   ]},
 ];
 
+
 // Módulos del panel de permisos, DERIVADOS del menú (mismo orden). Solo ítems con módulo.
-const MODULOS_PERM = MENU_DEF.flatMap(g => g.items.filter(it => it.mod).map(it => ({ key:it.mod, label:it.label })));
+const MODULOS_PERM = MENU_DEF.flatMap(g =>
+  g.items.filter(it => it.mod).map((it, i) => ({ key:it.mod, label:it.label, grupo: i === 0 ? g.grupo : null })));
 
 // Mapa pantalla→módulo (derivado de MENU_DEF: id 'ddi-<sub>' → mod).
 const SUB_MODULO = {};
@@ -235,6 +254,9 @@ function renderPermisosPanel() {
       </thead>
       <tbody>
         ${MODULOS_PERM.map(m => `
+          ${m.grupo ? `<tr><td colspan="${ACCIONES_PERM.length+1}" style="padding:10px 12px 6px;font-size:11px;
+              text-transform:uppercase;letter-spacing:.5px;color:var(--acc);background:var(--s3);
+              font-weight:700">${m.grupo}</td></tr>` : ''}
           <tr style="border-bottom:1px solid var(--b1)">
             <td style="padding:10px 12px;font-weight:500;color:var(--txt)">${m.label}</td>
             ${ACCIONES_PERM.map(a => {
