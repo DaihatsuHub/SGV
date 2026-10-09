@@ -17,6 +17,11 @@
        tercio de la hoja. Ahora la tabla OCUPA TODO EL ANCHO de la hoja y la
        letra es de 11px. Si tiene muchas columnas y se pasa, sigue escalando
        como antes. (Probado por consola antes de pasarlo al archivo.)
+     · PRIORIDAD VERTICAL, PARA TODOS LOS LISTADOS: se arranca siempre en A4
+       vertical. Si la tabla no entra, se achica hasta un mínimo legible
+       (SGV_ESC_MIN, 80%). Si ni así entra, la hoja pasa a APAISADO y ahí se
+       achica sólo lo necesario. Lo decide sgvPrint, NO cada listado: el
+       parámetro `apaisado` que pasen las pantallas se ignora.
 
    CÓMO ENTRA TODO — y por qué así
      El ancho útil se mide DENTRO de la ventana de impresión, con una regla
@@ -48,6 +53,8 @@ const SGV_PAGE = {
 // demasiado apretadas.)
 const SGV_FILA   = 18;     // alto de renglón en px
 const SGV_FS     = 11;     // cuerpo de letra — NO cambia si cambia el renglón (era 9: muy chico)
+// Cuánto se puede achicar en VERTICAL antes de pasar a apaisado (11px → ~9px)
+const SGV_ESC_MIN = 0.8;
 
 // Corta textos largos (razón social: 30 caracteres).
 function sgvCorta(txt, n){
@@ -94,38 +101,46 @@ function sgvPrintEstilos(util){
   `;
 }
 
-// Corre DENTRO de la ventana: mide la hoja en mm y escala si hace falta.
-function sgvPrintScript(util){
+// Corre DENTRO de la ventana: mide la hoja en mm, decide vertical o apaisado
+// y escala si hace falta.
+function sgvPrintScript(){
+  const V = SGV_PAGE.vertical, A = SGV_PAGE.apaisado;
   return `
 (function(){
+  var MIN=${SGV_ESC_MIN};
+  // Ancho útil REAL de la hoja, medido en milímetros (única referencia
+  // confiable: los px no equivalen a mm al generar el PDF)
+  function medir(util){
+    var r=document.createElement('div');
+    r.style.cssText='position:absolute;visibility:hidden;width:'+util;
+    document.body.appendChild(r);
+    var w=r.getBoundingClientRect().width;
+    r.parentNode.removeChild(r);
+    return w;
+  }
+  function anchoTablas(cont){
+    var m=0, t=cont.querySelectorAll('table');
+    for(var i=0;i<t.length;i++){ var w=t[i].getBoundingClientRect().width; if(w>m) m=w; }
+    return m;
+  }
   function ajustar(){
-    // Ancho útil REAL de la hoja, medido en milímetros (única referencia
-    // confiable: los px no equivalen a mm al generar el PDF)
-    var regla=document.createElement('div');
-    regla.style.cssText='position:absolute;visibility:hidden;width:${util}';
-    document.body.appendChild(regla);
-    var hoja=regla.getBoundingClientRect().width;
-    regla.parentNode.removeChild(regla);
-
     var cont=document.getElementById('sgv-fit');
-    var ancho=0;
-    if(cont){
-      var tablas=cont.querySelectorAll('table');
-      for(var i=0;i<tablas.length;i++){
-        var w=tablas[i].getBoundingClientRect().width;
-        if(w>ancho) ancho=w;
-      }
-      if(hoja>0 && ancho>hoja+1){
-        var esc=hoja/ancho;
-        cont.style.transform='scale('+esc+')';
-        // Compensar el alto que se pierde al escalar, para no dejar hueco
-        cont.style.height=(cont.getBoundingClientRect().height*esc)+'px';
-      }
+    var hoja=medir('${V.util}'), ancho=cont?anchoTablas(cont):0, modo='vertical';
+
+    // Vertical primero; si achicando hasta MIN no entra, apaisado
+    if(cont && hoja>0 && ancho>hoja+1 && hoja/ancho<MIN){
+      document.getElementById('sgv-page').textContent='@page{size:${A.size};margin:10mm}';
+      document.body.style.width='${A.util}';
+      hoja=medir('${A.util}'); ancho=anchoTablas(cont); modo='apaisado';
+    }
+    if(cont && hoja>0 && ancho>hoja+1){
+      var esc=hoja/ancho;
+      cont.style.transform='scale('+esc+')';
+      // Compensar el alto que se pierde al escalar, para no dejar hueco
+      cont.style.height=(cont.getBoundingClientRect().height)+'px';
     }
     if(window.SGV_PRINT_DIAG){
-      console.log('sgvPrint · hoja', Math.round(hoja),
-                  '· tabla', Math.round(ancho),
-                  '· escala', (hoja>0&&ancho>hoja+1)?(hoja/ancho).toFixed(3):1);
+      console.log('sgvPrint ·', modo, '· hoja', Math.round(hoja), '· tabla', Math.round(ancho));
     }
     setTimeout(function(){ window.print(); }, 300);
   }
@@ -135,20 +150,22 @@ function sgvPrintScript(util){
 `;
 }
 
+// `opt.apaisado` se ignora a propósito: la orientación la decide sgvPrint
+// según entre o no la tabla (regla de Ricardo, Oct 2026).
 function sgvPrint(opt){
   const o = opt || {};
-  const pg = o.apaisado ? SGV_PAGE.apaisado : SGV_PAGE.vertical;
+  const pg = SGV_PAGE.vertical;
   const w = window.open('', '_blank');
   if(!w){ if(typeof toast==='function') toast('El navegador bloqueó la ventana de impresión','err'); return; }
 
   w.document.write(
     '<html><head><meta charset="utf-8"><title>' + (o.titulo || 'Listado') + '</title>' +
-    '<style>@page{size:' + pg.size + ';margin:10mm}</style>' +
+    '<style id="sgv-page">@page{size:' + pg.size + ';margin:10mm}</style>' +
     '<style>' + sgvPrintEstilos(pg.util) + (o.estilos || '') + '</style></head><body>' +
     (o.titulo ? '<h2>' + o.titulo + '</h2>' : '') +
     (o.subtitulo ? '<div class="sub">' + o.subtitulo + '</div>' : '') +
     '<div id="sgv-fit">' + (o.cuerpo || '') + '</div>' +
-    '<' + 'script>' + sgvPrintScript(pg.util) + '<' + '/script>' +
+    '<' + 'script>' + sgvPrintScript() + '<' + '/script>' +
     '</body></html>'
   );
   w.document.close();
