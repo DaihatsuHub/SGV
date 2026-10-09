@@ -12,6 +12,11 @@
        (letra y renglones en la misma proporción), nunca sólo la letra.
      · Se ve como planilla: cebra, encabezado gris, totales destacados,
        títulos de columna repetidos en cada hoja.
+   REGLA (Ricardo, Oct 2026):
+     · Los listados con pocas columnas salían chicos y angostos, ocupando un
+       tercio de la hoja. Ahora la tabla OCUPA TODO EL ANCHO de la hoja y la
+       letra es de 11px. Si tiene muchas columnas y se pasa, sigue escalando
+       como antes. (Probado por consola antes de pasarlo al archivo.)
 
    CÓMO ENTRA TODO — y por qué así
      El ancho útil se mide DENTRO de la ventana de impresión, con una regla
@@ -42,7 +47,7 @@ const SGV_PAGE = {
 // en una A4 vertical. (Las "72 líneas" venían de la matricial y quedaban
 // demasiado apretadas.)
 const SGV_FILA   = 18;     // alto de renglón en px
-const SGV_FS     = 9;      // cuerpo de letra — NO cambia si cambia el renglón
+const SGV_FS     = 11;     // cuerpo de letra — NO cambia si cambia el renglón (era 9: muy chico)
 
 // Corta textos largos (razón social: 30 caracteres).
 function sgvCorta(txt, n){
@@ -55,15 +60,16 @@ function sgvPrintEstilos(util){
   const h = SGV_FILA;
   return `
     *{box-sizing:border-box}
-    body{font-family:Arial,Helvetica,sans-serif;font-size:${SGV_FS}px;margin:0;color:#111;
+    body{font-family:Arial,Helvetica,sans-serif;font-size:12px;margin:0;color:#111;
          font-variant-numeric:tabular-nums;width:${util}}
 
-    h2{margin:0 0 2px;font-size:15px}
-    .sub{color:#555;font-size:10px;margin-bottom:6px}
-    h3{margin:8px 0 3px;color:#0a58ca;border-bottom:1px solid #ccc;font-size:12px}
+    h2{margin:0 0 2px;font-size:18px}
+    .sub{color:#555;font-size:11px;margin-bottom:6px}
+    h3{margin:8px 0 3px;color:#0a58ca;border-bottom:1px solid #ccc;font-size:13px}
 
-    /* La tabla toma su ancho natural; si se pasa, la escala el script */
-    table{width:max-content;border-collapse:collapse;margin-bottom:6px}
+    /* La tabla ocupa TODO el ancho de la hoja. Si con sus columnas se pasa
+       (nowrap), crece más allá y la escala el script. */
+    table{width:100%;border-collapse:collapse;margin-bottom:6px}
     /* El renglón mide ${h}px y la letra ${SGV_FS}px: agrandar el renglón NO
        agranda la letra, que es lo que dejaba el listado apretado. */
     th,td{padding:0 6px;border-bottom:1px solid #e5e5e5;text-align:left;
@@ -109,7 +115,7 @@ function sgvPrintScript(util){
         var w=tablas[i].getBoundingClientRect().width;
         if(w>ancho) ancho=w;
       }
-      if(hoja>0 && ancho>hoja){
+      if(hoja>0 && ancho>hoja+1){
         var esc=hoja/ancho;
         cont.style.transform='scale('+esc+')';
         // Compensar el alto que se pierde al escalar, para no dejar hueco
@@ -119,7 +125,7 @@ function sgvPrintScript(util){
     if(window.SGV_PRINT_DIAG){
       console.log('sgvPrint · hoja', Math.round(hoja),
                   '· tabla', Math.round(ancho),
-                  '· escala', (hoja>0&&ancho>hoja)?(hoja/ancho).toFixed(3):1);
+                  '· escala', (hoja>0&&ancho>hoja+1)?(hoja/ancho).toFixed(3):1);
     }
     setTimeout(function(){ window.print(); }, 300);
   }
