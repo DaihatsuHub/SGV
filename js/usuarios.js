@@ -129,6 +129,12 @@ async function aplicarReglasMenu(){
     const r = await apiGet('/mis-reglas');
     if(!r || !r.ok) return;
     window.MIS_REGLAS = r;
+    // Si sólo puede ver ciertos vendedores, se recorta la tabla VEND: con eso
+    // TODOS los selectores de vendedor de TODOS los informes dejan de ofrecer
+    // los que no corresponden, sin tocarlos uno por uno (Ricardo, Oct 2026).
+    if(Array.isArray(r.vendedores) && typeof TABLAS!=='undefined' && TABLAS['VEND']){
+      TABLAS['VEND'] = TABLAS['VEND'].filter(v => r.vendedores.includes((v.CODIGO||'').trim()));
+    }
     (r.menu||[]).forEach(id=>{
       if(id.startsWith('btn:')){
         // Botón dentro de una pantalla (Resumen, Excel, Imprimir…)
