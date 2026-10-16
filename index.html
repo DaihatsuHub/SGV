@@ -1337,38 +1337,38 @@
 <div class="page" id="page-comcli">
   <div class="toolbar" style="flex-wrap:wrap;row-gap:8px">
     <div class="srch-wrap" style="min-width:340px"><span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" onclick="this.select()" id="cc-cli" list="cc-cli-list" placeholder="Razón social o código del cliente...">
-      <datalist id="cc-cli-list"></datalist>
-      <button class="srch-clr" onclick="document.getElementById('cc-cli').value='';_ccData=null;ccRender();" title="Limpiar">✕</button>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="cxc-cli" list="cxc-cli-list" placeholder="Razón social o código del cliente...">
+      <datalist id="cxc-cli-list"></datalist>
+      <button class="srch-clr" onclick="document.getElementById('cxc-cli').value='';_cxcData=null;cxcRender();" title="Limpiar">✕</button>
     </div>
     <label style="font-size:12px;color:var(--t2);margin-left:8px">Desde</label>
-    <input type="date" class="finp" id="cc-desde">
+    <input type="date" class="finp" id="cxc-desde">
     <label style="font-size:12px;color:var(--t2)">Hasta</label>
-    <input type="date" class="finp" id="cc-hasta">
-    <button class="btn pri" onclick="ccConsultar()">🔍 Consultar</button>
+    <input type="date" class="finp" id="cxc-hasta">
+    <button class="btn pri" onclick="cxcConsultar()">🔍 Consultar</button>
     <div class="spacer"></div>
-    <button class="btn scs" data-regla="comcli-imprimir" onclick="ccImprimir()">🖨 Imprimir</button>
-    <button class="btn scs" data-regla="comcli-excel" onclick="ccExcel()">⬇ Excel</button>
+    <button class="btn scs" data-regla="comcli-imprimir" onclick="cxcImprimir()">🖨 Imprimir</button>
+    <button class="btn scs" data-regla="comcli-excel" onclick="cxcExcel()">⬇ Excel</button>
   </div>
-  <div id="cc-body" style="overflow:auto;height:calc(100vh - 170px);margin:10px 14px;background:var(--s1);border:1px solid var(--b1);border-radius:6px"></div>
+  <div id="cxc-body" style="overflow:auto;height:calc(100vh - 170px);margin:10px 14px;background:var(--s1);border:1px solid var(--b1);border-radius:6px"></div>
 </div>
 
 <div class="page" id="page-salcont">
   <div class="toolbar" style="flex-wrap:wrap;row-gap:8px">
     <label style="font-size:12px;color:var(--t2)">Empresa</label>
-    <select class="finp" id="sc-empresa" style="width:170px">
+    <select class="finp" id="sct-empresa" style="width:170px">
       <option value="">— Elegir —</option>
       <option value="H">Hatsu Electronics</option>
       <option value="T">Tressa Argentina</option>
     </select>
     <label style="font-size:12px;color:var(--t2);margin-left:8px">Hasta</label>
-    <input type="date" class="finp" id="sc-hasta">
-    <button class="btn pri" onclick="scConsultar()">🔍 Consultar</button>
+    <input type="date" class="finp" id="sct-hasta">
+    <button class="btn pri" onclick="sctConsultar()">🔍 Consultar</button>
     <div class="spacer"></div>
-    <button class="btn scs" data-regla="salcont-imprimir" onclick="scImprimir()">🖨 Imprimir</button>
-    <button class="btn scs" data-regla="salcont-excel" onclick="scExcel()">⬇ Excel</button>
+    <button class="btn scs" data-regla="salcont-imprimir" onclick="sctImprimir()">🖨 Imprimir</button>
+    <button class="btn scs" data-regla="salcont-excel" onclick="sctExcel()">⬇ Excel</button>
   </div>
-  <div id="sc-body" style="overflow:auto;height:calc(100vh - 170px);margin:10px 14px;background:var(--s1);border:1px solid var(--b1);border-radius:6px"></div>
+  <div id="sct-body" style="overflow:auto;height:calc(100vh - 170px);margin:10px 14px;background:var(--s1);border:1px solid var(--b1);border-radius:6px"></div>
 </div>
 
 <div class="page" id="page-vmes">
