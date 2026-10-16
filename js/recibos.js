@@ -673,8 +673,9 @@ function reciAddACuenta(){
 // ── CARGA RÁPIDA DE INSTRUMENTOS (Ricardo, Oct 2026) ─────────────────
 // Vale igual para CHEQUES, TRANSFERENCIAS y RETENCIONES:
 //   · ENTER = TAB en todos los campos (fecha, número, importe, Fís., Prop.,
-//     código). En el último campo del último renglón, da de alta uno nuevo.
-//   · "+" o el botón Alta: renglón nuevo con el cursor en su primer campo.
+//     código). En el último campo del último renglón NO da de alta: se queda.
+//   · El alta es SÓLO con "+" o el botón Alta: renglón nuevo con el cursor en
+//     su primer campo (Ricardo, Oct 2026).
 //   · El campo donde se está cargando se ve resaltado (amarillo + borde azul).
 //   · El primer renglón arranca con la fecha de HOY; del segundo en adelante
 //     se copia el anterior (cheque: fecha, importe, Fís., Prop.;
@@ -715,7 +716,7 @@ function reciInstEnter(e,el){
   if(el.type!=='checkbox'&&el.tagName!=='SELECT') el.dispatchEvent(new Event('change',{bubbles:true}));
   const k=reciInstVisible(); if(!k) return;
   const l=reciInstCampos(k), sig=l[l.indexOf(el)+1];
-  if(sig){ sig.focus(); reciInstSel(sig); } else reciInstAlta(k);
+  if(sig){ sig.focus(); reciInstSel(sig); }     // en el último se queda: el alta es con "+" o Alta
 }
 // "+" = Alta en la ventana de instrumento que esté abierta; y el resaltado del foco
 (function(){
