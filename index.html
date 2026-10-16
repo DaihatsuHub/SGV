@@ -148,6 +148,7 @@
         <button class="dd-item" id="ddi-dash" onclick="showSubPage('ven','dash')">📊 Dashboard</button>
         <button class="dd-item" id="ddi-rcc" onclick="showSubPage('ven','rcc')">📈 Resultado por Centro de Costos</button>
         <button class="dd-item" id="ddi-arm" onclick="showSubPage('ven','arm')">🧩 Armá tu informe</button>
+        <button class="dd-item" id="ddi-psgv" style="display:none" onclick="showSubPage('ven','psgv')">✨ Preguntale a SGV</button>
         <button class="dd-item" id="ddi-com" onclick="showSubPage('ven','com')">💰 Comisiones</button>
         <button class="dd-item" id="ddi-rank" onclick="showSubPage('ven','rank')">🏆 Ranking de Artículos</button>
         <button class="dd-item" id="ddi-subd" onclick="showSubPage('ven','subd')">📒 Subdiario de IVA</button>
@@ -1371,6 +1372,22 @@
   <div id="sct-body" style="overflow:auto;height:calc(100vh - 170px);margin:10px 14px;background:var(--s1);border:1px solid var(--b1);border-radius:6px"></div>
 </div>
 
+<div class="page" id="page-psgv">
+  <div class="toolbar">
+    <span style="font-weight:600;font-size:14px;color:var(--acc)">✨ Preguntale a SGV</span>
+    <div class="spacer"></div>
+    <button class="btn scs" data-regla="psgv-imprimir" onclick="psgvImprimir()">🖨 Imprimir</button>
+    <button class="btn scs" data-regla="psgv-excel" onclick="psgvExcel()">⬇ Excel</button>
+  </div>
+  <div class="psgv-caja">
+    <input id="psgv-frase" type="text" autocomplete="off" maxlength="600"
+      placeholder="Preguntá en castellano: los 10 clientes que más compraron este año en Tressa…"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();psgvPreguntar()}">
+    <button class="btn pri" id="psgv-btn" onclick="psgvPreguntar()">✨ Preguntar</button>
+  </div>
+  <div id="psgv-res"></div>
+</div>
+
 <div class="page" id="page-vmes">
   <div class="toolbar" style="flex-wrap:wrap;row-gap:8px;align-items:flex-start">
     <div style="display:flex;align-items:center;gap:6px">
@@ -2292,6 +2309,7 @@
 <script src="js/dashboard.js"></script>
 <script src="js/resultccos.js"></script>
 <script src="js/armador.js"></script>
+<script src="js/preguntasgv.js"></script>
 <script src="js/comisiones.js"></script>
 <script src="js/subdiario.js"></script>
 <script src="js/calc.js"></script>
