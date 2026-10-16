@@ -485,7 +485,17 @@ function reciLoadDeudores(){
   }
   renderReciDeud(); reciReconcile();
 }
+// Columnas de la grilla de comprobantes deudores: se reparten TODO el ancho y
+// los importes no se cortan en dos renglones (Ricardo, Oct 2026). Los títulos
+// y los totales están en index.html con el ancho fijo viejo: se les aplica el
+// mismo molde acá, así quedan siempre alineados.
+const RECI_DEUD_TPL='minmax(110px,1fr) 72px minmax(120px,1.3fr) minmax(100px,1fr) 56px minmax(120px,1.3fr) minmax(110px,1.1fr) minmax(120px,1.3fr) minmax(110px,1.1fr)';
+function reciDeudMolde(){
+  document.querySelectorAll('[style*="92px 60px 92px 84px 70px 96px 92px 96px 92px"]')
+    .forEach(e=>{ e.style.gridTemplateColumns=RECI_DEUD_TPL; e.style.whiteSpace='nowrap'; });
+}
 function renderReciDeud(){
+  reciDeudMolde();
   const body=document.getElementById('rf-deud-body'); if(!body) return;
   if(!_reciDeud.length){
     body.innerHTML = _reciTipoNoCorresponde
@@ -514,7 +524,7 @@ function renderReciDeud(){
     const cellAfip = sAfip > 0
       ? `<input type="text" value="${reciFmt(aAfip)}" onclick="event.stopPropagation()" onchange="reciAbonaAfipInput(${i},this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px;background:#3b2a5c;color:#e9d5ff;border-color:#6d28d9">`
       : `<span style="text-align:right;color:var(--t3)">—</span>`;
-    return `<div onclick="reciAplicarFila(${i})" title="Clic para aplicar: ofrece el saldo del comprobante o lo que falta del saldo a aplicar" style="display:grid;grid-template-columns:92px 60px 92px 84px 70px 96px 92px 96px 92px;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--b1);font-size:12px;font-family:var(--mono);cursor:pointer">
+    return `<div onclick="reciAplicarFila(${i})" title="Clic para aplicar: ofrece el saldo del comprobante o lo que falta del saldo a aplicar" style="display:grid;grid-template-columns:${RECI_DEUD_TPL};white-space:nowrap;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--b1);font-size:12px;font-family:var(--mono);cursor:pointer">
       <span style="color:var(--acc)">${esc(d.fac_nro)}</span>
       <span style="color:var(--t2)">${fec}</span>
       <span style="text-align:right">${esc(d.simbolo)} ${reciFmt(d.saldo_orig)}</span>
