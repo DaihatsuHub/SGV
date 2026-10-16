@@ -118,6 +118,7 @@
       <div class="dd-menu" id="dd-cli">
         <button class="dd-item" id="ddi-cli" onclick="showSubPage('cli','cli')">📋 Maestro de Clientes</button>
         <button class="dd-item" id="ddi-ficha" onclick="showSubPage('cli','ficha')">🪪 Ficha del Cliente</button>
+        <button class="dd-item" id="ddi-comcli" onclick="showSubPage('cli','comcli')">🛒 Compras por Cliente</button>
         <button class="dd-item" id="ddi-ctacte" onclick="showSubPage('cli','ctacte')">📄 Cuenta Corriente</button>
         <button class="dd-item" id="ddi-comp" onclick="showSubPage('cli','comp')">🧾 Composición de Saldo</button>
         <div style="height:1px;background:rgba(255,255,255,0.15);margin:6px 12px"></div>
@@ -1332,6 +1333,25 @@
   </div>
 </div>
 
+<div class="page" id="page-comcli">
+  <div class="toolbar" style="flex-wrap:wrap;row-gap:8px">
+    <div class="srch-wrap" style="min-width:340px"><span class="srch-ico">⌕</span>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="cc-cli" list="cc-cli-list" placeholder="Razón social o código del cliente...">
+      <datalist id="cc-cli-list"></datalist>
+      <button class="srch-clr" onclick="document.getElementById('cc-cli').value='';_ccData=null;ccRender();" title="Limpiar">✕</button>
+    </div>
+    <label style="font-size:12px;color:var(--t2);margin-left:8px">Desde</label>
+    <input type="date" class="finp" id="cc-desde">
+    <label style="font-size:12px;color:var(--t2)">Hasta</label>
+    <input type="date" class="finp" id="cc-hasta">
+    <button class="btn pri" onclick="ccConsultar()">🔍 Consultar</button>
+    <div class="spacer"></div>
+    <button class="btn scs" data-regla="comcli-imprimir" onclick="ccImprimir()">🖨 Imprimir</button>
+    <button class="btn scs" data-regla="comcli-excel" onclick="ccExcel()">⬇ Excel</button>
+  </div>
+  <div id="cc-body" style="overflow:auto;height:calc(100vh - 170px);margin:10px 14px;background:var(--s1);border:1px solid var(--b1);border-radius:6px"></div>
+</div>
+
 <div class="page" id="page-vmes">
   <div class="toolbar" style="flex-wrap:wrap;row-gap:8px;align-items:flex-start">
     <div style="display:flex;align-items:center;gap:6px">
@@ -2241,6 +2261,7 @@
 <script src="js/cartera.js"></script>
 <script src="js/oc.js"></script>
 <script src="js/fichacli.js"></script>
+<script src="js/comprascli.js"></script>
 <script src="js/listcob.js"></script>
 <script src="js/subdiariocob.js"></script>
 <script src="js/ctacte.js"></script>
