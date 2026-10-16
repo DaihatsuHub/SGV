@@ -119,6 +119,7 @@
         <button class="dd-item" id="ddi-cli" onclick="showSubPage('cli','cli')">📋 Maestro de Clientes</button>
         <button class="dd-item" id="ddi-ficha" onclick="showSubPage('cli','ficha')">🪪 Ficha del Cliente</button>
         <button class="dd-item" id="ddi-comcli" onclick="showSubPage('cli','comcli')">🛒 Compras por Cliente</button>
+        <button class="dd-item" id="ddi-salcont" onclick="showSubPage('cli','salcont')">📒 Saldos Contables</button>
         <button class="dd-item" id="ddi-ctacte" onclick="showSubPage('cli','ctacte')">📄 Cuenta Corriente</button>
         <button class="dd-item" id="ddi-comp" onclick="showSubPage('cli','comp')">🧾 Composición de Saldo</button>
         <div style="height:1px;background:rgba(255,255,255,0.15);margin:6px 12px"></div>
@@ -1352,6 +1353,24 @@
   <div id="cc-body" style="overflow:auto;height:calc(100vh - 170px);margin:10px 14px;background:var(--s1);border:1px solid var(--b1);border-radius:6px"></div>
 </div>
 
+<div class="page" id="page-salcont">
+  <div class="toolbar" style="flex-wrap:wrap;row-gap:8px">
+    <label style="font-size:12px;color:var(--t2)">Empresa</label>
+    <select class="finp" id="sc-empresa" style="width:170px">
+      <option value="">— Elegir —</option>
+      <option value="H">Hatsu Electronics</option>
+      <option value="T">Tressa Argentina</option>
+    </select>
+    <label style="font-size:12px;color:var(--t2);margin-left:8px">Hasta</label>
+    <input type="date" class="finp" id="sc-hasta">
+    <button class="btn pri" onclick="scConsultar()">🔍 Consultar</button>
+    <div class="spacer"></div>
+    <button class="btn scs" data-regla="salcont-imprimir" onclick="scImprimir()">🖨 Imprimir</button>
+    <button class="btn scs" data-regla="salcont-excel" onclick="scExcel()">⬇ Excel</button>
+  </div>
+  <div id="sc-body" style="overflow:auto;height:calc(100vh - 170px);margin:10px 14px;background:var(--s1);border:1px solid var(--b1);border-radius:6px"></div>
+</div>
+
 <div class="page" id="page-vmes">
   <div class="toolbar" style="flex-wrap:wrap;row-gap:8px;align-items:flex-start">
     <div style="display:flex;align-items:center;gap:6px">
@@ -2262,6 +2281,7 @@
 <script src="js/oc.js"></script>
 <script src="js/fichacli.js"></script>
 <script src="js/comprascli.js"></script>
+<script src="js/saldoscont.js"></script>
 <script src="js/listcob.js"></script>
 <script src="js/subdiariocob.js"></script>
 <script src="js/ctacte.js"></script>
