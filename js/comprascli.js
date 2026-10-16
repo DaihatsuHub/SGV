@@ -114,13 +114,47 @@ function ccImprimir(){
       <tr class="fin"><td></td><td>${F.length} artículos</td><td class="r">${ccCant(tot)}</td><td></td><td></td></tr></table>` });
 }
 
-function ccExcel(){
+// Excel CON FORMATO (como Comisiones): título, cliente y período, encabezado
+// en negrita, números como números, columnas a medida, títulos fijos y total.
+async function ccExcel(){
   if(!_ccData || !(_ccData.filas||[]).length){ toast('Consultá primero','err'); return; }
-  const D=_ccData;
-  exportToXls(`Compras_${D.cli}_${(D.desde||'').replace(/-/g,'')}_${(D.hasta||'').replace(/-/g,'')}`,
-    ['Código','Descripción','Cantidad','Moneda','Precio unit. c/IVA','Última compra'],
-    D.filas.map(x=>[x.art, x.descripcion, String(x.cantidad).replace('.',','), ccSimbolo(x.moneda),
-      x.unitario!=null ? String(x.unitario).replace('.',',') : '', ccFecha(x.ultFec)]));
+  if(!window.ExcelJS){
+    try{ await new Promise((res,rej)=>{ const sc=document.createElement('script');
+      sc.src='https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+      sc.onload=res; sc.onerror=()=>rej(new Error('No se pudo cargar ExcelJS')); document.head.appendChild(sc); }); }
+    catch(e){ toast(e.message,'err'); return; }
+  }
+  const D=_ccData, F=D.filas, NUM='#,##0.00';
+  const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('Compras');
+  ws.columns=[{width:16},{width:44},{width:12},{width:9},{width:18},{width:14}];
+
+  ws.addRow(['Compras por Cliente']).font={bold:true,size:13};
+  ws.addRow([`${D.cli} — ${D.razon} · Período ${ccFecha(D.desde)} a ${ccFecha(D.hasta)}`])
+    .font={italic:true,color:{argb:'FF666666'}};
+  ws.addRow([]);
+  const hr=ws.addRow(['Código','Descripción','Cantidad','Moneda','Precio unit. c/IVA','Últ. compra']);
+  hr.eachCell(c=>{ c.font={bold:true}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE8EAED'}};
+                   c.border={bottom:{style:'thin'}}; });
+  [3,5,6].forEach(n=>hr.getCell(n).alignment={horizontal:'right'});
+
+  F.forEach(x=>{
+    const r=ws.addRow([x.art, x.descripcion, Number(x.cantidad)||0, ccSimbolo(x.moneda),
+      x.unitario!=null ? Number(x.unitario) : null, ccFecha(x.ultFec)]);
+    r.getCell(3).numFmt='#,##0.##'; r.getCell(5).numFmt=NUM;
+    r.getCell(6).alignment={horizontal:'right'};
+    if((Number(x.cantidad)||0)<0) r.font={color:{argb:'FFC00000'}};
+  });
+  const tot=F.reduce((s,x)=>s+(Number(x.cantidad)||0),0);
+  const rt=ws.addRow(['', `${F.length} artículos`, tot]);
+  rt.font={bold:true}; rt.getCell(3).numFmt='#,##0.##';
+  rt.eachCell(c=>{ c.border={top:{style:'medium',color:{argb:'FF0A58CA'}}}; });
+
+  ws.views=[{state:'frozen', ySplit:4}];
+  const buf=await wb.xlsx.writeBuffer();
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  a.download=`Compras_${D.cli}_${(D.desde||'').replace(/-/g,'')}_${(D.hasta||'').replace(/-/g,'')}.xlsx`;
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 
 // Se inicializa sola cada vez que la pantalla pasa a estar visible
