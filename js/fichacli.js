@@ -84,7 +84,10 @@ async function renderFicha(){
     </div>`;
 
   // ── IZQUIERDA: comprobantes con saldo + A/Cuenta, encolumnado por moneda ──
-  const LGRID='80px 1fr 95px 95px 95px';
+  // Comprobante con el ancho justo; los importes se reparten el resto y no se
+  // cortan nunca (Ricardo, Oct 2026: antes sobraba lugar entre Comprobante y
+  // Pesos y el negativo grande desbordaba la columna).
+  const LGRID='86px 120px minmax(115px,1fr) minmax(115px,1fr) minmax(115px,1fr)';
   // En la vista contable todo va en pesos: se avisa arriba del bloque
   const _tit=document.getElementById('ficha-izq-tit');
   if(_tit) _tit.textContent=_fichaContables
@@ -101,7 +104,7 @@ async function renderFicha(){
     const fec=(f.fec||'').split('-').reverse().join('/');
     const cell = esNC ? '- '+reciFmt(v0) : reciFmt(v0);
     const est = esNC ? 'color:var(--red);font-weight:700' : '';
-    lrows+=`<div style="display:grid;grid-template-columns:${LGRID};gap:6px;font-size:12px;font-family:var(--mono);padding:2px 0;${est}">
+    lrows+=`<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:12px;font-family:var(--mono);padding:2px 0;${est}">
       <span style="${esNC?'':'color:var(--t3)'}">${fec}</span><span style="${esNC?'':'color:var(--acc)'}">${esc(f.nro||'')}</span>
       <span style="text-align:right">${key==='pesos'?cell:''}</span>
       <span style="text-align:right">${key==='tressa'?cell:''}</span>
@@ -111,7 +114,7 @@ async function renderFicha(){
     const key=reciMonKey(a.moneda), v=a.importe||0;
     if(key==='pesos') totP-=v; else if(key==='tressa') totT-=v; else totC-=v;
     const fec=(a.fec||'').split('-').reverse().join('/'), cell='- '+reciFmt(v);
-    lrows+=`<div style="display:grid;grid-template-columns:${LGRID};gap:6px;font-size:12px;font-family:var(--mono);padding:2px 0;color:var(--grn)">
+    lrows+=`<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:12px;font-family:var(--mono);padding:2px 0;color:var(--grn)">
       <span>${fec}</span><span>${esc(a.desc||'A/Cuenta')}</span>
       <span style="text-align:right">${key==='pesos'?cell:''}</span>
       <span style="text-align:right">${key==='tressa'?cell:''}</span>
@@ -119,10 +122,10 @@ async function renderFicha(){
   });
   if(!lrows){ izq.innerHTML='<div style="color:var(--t3);padding:12px">Sin comprobantes con saldo ni A/Cuenta.</div>'; }
   else izq.innerHTML=
-    `<div style="display:grid;grid-template-columns:${LGRID};gap:6px;font-size:11px;color:var(--t2);font-weight:600;border-bottom:1px solid var(--b1);padding-bottom:4px;margin-bottom:4px">
+    `<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:11px;color:var(--t2);font-weight:600;border-bottom:1px solid var(--b1);padding-bottom:4px;margin-bottom:4px">
       <span>Fecha</span><span>Comprobante</span><span style="text-align:right">Pesos</span><span style="text-align:right">Tressa</span><span style="text-align:right">Casio</span></div>`
     + lrows
-    + `<div style="display:grid;grid-template-columns:${LGRID};gap:6px;font-size:12px;font-weight:700;font-family:var(--mono);border-top:1px solid var(--b1);padding-top:4px;margin-top:4px">
+    + `<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:12px;font-weight:700;font-family:var(--mono);border-top:1px solid var(--b1);padding-top:4px;margin-top:4px">
       <span></span><span>Saldo</span><span style="text-align:right">${reciFmt(totP)}</span><span style="text-align:right">${reciFmt(totT)}</span><span style="text-align:right">${reciFmt(totC)}</span></div>`;
 
   // ── DERECHA: cheques encolumnado Físico / ECheq ──
