@@ -31,7 +31,11 @@ let _psgvData = null;
     .psgv-tabla tr:nth-child(even) td{background:var(--s2)}
     .psgv-tabla .n{text-align:right;font-family:var(--mono)}
     .psgv-vacio{color:var(--t3);padding:24px;text-align:center}
-    .psgv-nota{margin:6px 14px 0;font-size:12px;color:#854F0B}`;
+    .psgv-nota{margin:6px 14px 0;font-size:12px;color:#854F0B}
+    .tnav.tnav-ia{background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;font-weight:700;
+      border-radius:999px;padding:4px 14px;margin-left:6px;letter-spacing:.5px;
+      box-shadow:0 0 0 1px rgba(255,255,255,.25),0 2px 8px rgba(124,58,237,.45)}
+    .tnav.tnav-ia:hover{filter:brightness(1.15)}`;
   document.head.appendChild(st);
 })();
 
@@ -149,10 +153,13 @@ async function psgvExcel(){
   else arrancar();
 })();
 
-// La opción del menú sólo la ve el nivel alto (lo que no se puede usar, no se muestra)
-document.addEventListener('click', ()=>{
-  const b=document.getElementById('ddi-psgv'); if(!b) return;
-  // El usuario logueado está en `usuarioActual` (no existe `USUARIO`)
+// Botón "✨ IA" en la barra principal: sólo lo ve el nivel alto
+// (lo que no se puede usar, no se muestra). El usuario logueado está en
+// `usuarioActual`; se revisa cada 2 s porque el login llega después de cargar.
+function _psgvBoton(){
+  const b=document.getElementById('tnav-ia'); if(!b) return;
   const nivel=(typeof usuarioActual!=='undefined' && usuarioActual) ? (Number(usuarioActual.nivel)||0) : 0;
   b.style.display = nivel>=90 ? '' : 'none';
-}, true);
+}
+setInterval(_psgvBoton, 2000);
+document.addEventListener('click', _psgvBoton, true);
