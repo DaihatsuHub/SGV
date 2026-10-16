@@ -32,96 +32,124 @@ function toast(msg,type='scs'){
 // la pisaba. No volver a definirla en este archivo.
 
 // ── CAMPOS FECHA CON MÁSCARA ───────────────────────────────────────
-// REGLA (Ricardo, Sep 2026): la fecha se escribe SEGUIDA, sin barras y con el
-// año de 2 dígitos: 210926 → 21/09/2026.
+// REGLA (Ricardo, Oct 2026): la fecha se ve y se escribe dd/mm/aa, COMO EN DOS.
+//   · 161026 → 16/10/26 (las barras las pone el formato).
+//   · Lo que se escribe PISA desde el día y lo que no se escribe QUEDA:
+//     parado en 16/10/26, "14" + Enter → 14/10/26; "1411" + Enter → 14/11/26.
+//   · Campo vacío: lo que no se escribe sale de HOY.
+//   · ENTER acepta y pasa al campo siguiente, igual que TAB.
+//   · Retroceso borra lo último tipeado; Supr deja la fecha vacía; Esc
+//     descarta lo tipeado. Fecha inexistente (31/02) se rechaza y vuelve.
+//   · Años 70-99 → 19xx; el resto → 20xx.
+//   · El 📅 va ADENTRO del recuadro, a la derecha, y el campo es angosto
+//     (del ancho de dd/mm/aa): así no corre las grillas ni desalinea títulos.
+//   · TODO campo type=date se convierte SOLO, incluidos los que se arman al
+//     abrir una ventana (cheques, filtros, modales): no hace falta llamarlo.
 //
 // POR QUÉ NO SE USA `type=date`: se intentó capturarle las teclas y NO
-// funcionó (el campo nativo maneja sus segmentos por su cuenta y no siempre
-// entrega el teclado). La solución definitiva es un campo de TEXTO con máscara
-// más un botón de calendario al lado.
+// funcionó (el campo nativo maneja sus segmentos por su cuenta). La solución
+// es un campo de TEXTO con máscara más el calendario.
 //
 // CÓMO NO ROMPE LO QUE YA ESTÁ: al campo convertido se le redefine `value`,
 // así que todo el código que hace `el.value` sigue recibiendo y aceptando
 // 'AAAA-MM-DD' como antes. Lo único que cambia es lo que se ve.
 //
-// SE APLICA MÓDULO POR MÓDULO, a medida que se toca cada programa:
-//     sgvFechas('#page-reci');     // una pantalla entera
-//     sgvFecha(document.getElementById('rf-fecha'));   // un campo puntual
+// El teclado se escucha en CAPTURA para correr ANTES que los onkeydown de
+// cada pantalla (Enter = consultar): así la fecha ya está aceptada.
 function sgvFecha(el){
-  if(!el || el._mask) return el;
-  const iso2vis = v => { const p=String(v||'').split('-'); return p.length===3 ? `${p[2]}/${p[1]}/${p[0]}` : ''; };
+  if(!el || el._mask || el.dataset.sgvCal) return el;
+  const P=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
+  const ver=t=>P.set.call(el,t), leer=()=>P.get.call(el);
+  const iso2d=v=>{const p=String(v||'').split('-');return p.length===3?p[2]+p[1]+p[0].slice(2):'';};
+  const vis=d=>d.replace(/^(\d{2})(\d{2})(\d{2})$/,'$1/$2/$3');
+  const hoy=()=>{const h=new Date();return String(h.getDate()).padStart(2,'0')+String(h.getMonth()+1).padStart(2,'0')+String(h.getFullYear()).slice(2);};
+  const aa4=a=>(+a>=70?'19':'20')+a;
+  const ok=d=>{const dd=+d.slice(0,2),mm=+d.slice(2,4),aa=+aa4(d.slice(4,6)),f=new Date(aa,mm-1,dd);
+    return f.getFullYear()===aa&&f.getMonth()===mm-1&&f.getDate()===dd;};
+  const base=()=>iso2d(el._iso)||hoy();
+  // Muestra lo tipeado encima de la fecha que había, con el cursor detrás
+  const pintar=()=>{const n=el._buf.length;ver(vis(el._buf+base().slice(n)));
+    const p=n+(n>=2)+(n>=4);el.setSelectionRange(p,p);};
+  const confirmar=()=>{
+    if(!el._buf) return true;
+    const d=el._buf+base().slice(el._buf.length); el._buf='';
+    if(!ok(d)){ ver(vis(iso2d(el._iso))); if(typeof toast==='function') toast('Fecha inválida','err'); return false; }
+    const iso=aa4(d.slice(4,6))+'-'+d.slice(2,4)+'-'+d.slice(0,2), cambio=iso!==el._iso;
+    el.value=iso; if(cambio) el.dispatchEvent(new Event('change',{bubbles:true}));
+    return true;
+  };
+  // Enter = Tab: pasa al siguiente campo de la misma ventana o pantalla
+  const siguiente=()=>{
+    const raiz=el.closest('.ov.open')||el.closest('[id^=page-]')||document;
+    const l=[...raiz.querySelectorAll('input,select,textarea,button,[tabindex]')]
+      .filter(x=>!x.disabled&&x.tabIndex>=0&&x.offsetParent!==null&&x.getBoundingClientRect().width>0);
+    const s=l[l.indexOf(el)+1]; s?s.focus():el.blur();
+  };
 
-  el._mask = true;
-  el._iso  = el.value || '';
-  el.type = 'text';
-  el.placeholder = el.placeholder || 'dd/mm/aaaa';
-  el.autocomplete = 'off';
-  el.value = iso2vis(el._iso);
-
+  el._mask=true; el._iso=el.value||''; el._buf='';
+  el.type='text'; el.placeholder='dd/mm/aa'; el.autocomplete='off';
   // `value` sigue hablando en AAAA-MM-DD hacia afuera
-  Object.defineProperty(el, 'value', {
-    configurable: true,
-    get(){ return el._iso; },
-    set(v){ el._iso = v || ''; el.setAttribute('value', el._iso); el.defaultValue = el._iso;
-            Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el, iso2vis(el._iso)); }
-  });
-  const verTexto = t => Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el, t);
-  const leerTexto = () => Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').get.call(el);
+  Object.defineProperty(el,'value',{configurable:true,get(){return el._iso;},
+    set(v){el._iso=v||'';el.setAttribute('value',el._iso);ver(vis(iso2d(el._iso)));}});
+  ver(vis(iso2d(el._iso)));
 
-  el.addEventListener('input', () => {
-    // Sólo dígitos; se arma dd/mm/aaaa a medida que se escribe
-    const d = leerTexto().replace(/\D/g,'').slice(0,8);
-    let t = d;
-    if(d.length > 4) t = d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4);
-    else if(d.length > 2) t = d.slice(0,2)+'/'+d.slice(2);
-    verTexto(t);
-    if(d.length === 6 || d.length === 8){
-      const dd=d.slice(0,2), mm=d.slice(2,4);
-      let aa=d.slice(4); if(aa.length===2) aa='20'+aa;
-      if(+dd>=1 && +dd<=31 && +mm>=1 && +mm<=12){
-        el._iso = `${aa}-${mm}-${dd}`;
-        el.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    } else if(!d.length){
-      el._iso = '';
-      el.dispatchEvent(new Event('change', { bubbles: true }));
+  el.addEventListener('keydown',e=>{
+    if(/^\d$/.test(e.key)&&!e.ctrlKey&&!e.altKey){
+      e.preventDefault(); if(el._buf.length>=6) el._buf='';
+      el._buf+=e.key; pintar(); if(el._buf.length===6) confirmar(); return;
     }
-  });
+    if(e.key==='Backspace'){ e.preventDefault(); el._buf=el._buf.slice(0,-1);
+      el._buf?pintar():ver(vis(iso2d(el._iso))); return; }
+    if(e.key==='Delete'){ e.preventDefault(); el._buf=''; el.value='';
+      el.dispatchEvent(new Event('change',{bubbles:true})); return; }
+    if(e.key==='Enter'){ e.preventDefault(); e.stopPropagation(); if(confirmar()) siguiente(); return; }
+    if(e.key==='Tab'){ confirmar(); return; }
+    if(e.key==='Escape'&&el._buf){ el._buf=''; ver(vis(iso2d(el._iso))); e.stopPropagation(); return; }
+    if(e.key.length===1&&!e.ctrlKey&&!e.metaKey) e.preventDefault();   // sólo dígitos
+  },true);
+  // Pegar: acepta 161026 o 16/10/2026
+  el.addEventListener('input',()=>{ let d=leer().replace(/\D/g,''); if(d.length===8) d=d.slice(0,4)+d.slice(6);
+    el._buf=d.slice(0,6); el._buf.length===6?confirmar():pintar(); });
+  el.addEventListener('focus',()=>{ el._buf=''; setTimeout(()=>el.setSelectionRange(0,0),0); });
+  el.addEventListener('blur',()=>confirmar());
 
-  // Al salir, se normaliza lo que quedó a medias
-  el.addEventListener('blur', () => {
-    const d = leerTexto().replace(/\D/g,'');
-    if(d.length===6 || d.length===8){ verTexto(iso2vis(el._iso)); }
-    else if(!d.length){ el._iso=''; verTexto(''); }
-    else { verTexto(iso2vis(el._iso)); }   // incompleto: vuelve a lo último válido
-  });
-  el.addEventListener('focus', () => el.select());
-
-  // Botón de calendario, para el que lo prefiera
-  const btn = document.createElement('button');
-  btn.type = 'button'; btn.textContent = '📅'; btn.tabIndex = -1; btn.title = 'Elegir del calendario';
-  btn.style.cssText = 'border:none;background:none;cursor:pointer;font-size:14px;padding:0 4px;line-height:1';
-  const oculto = document.createElement('input');
-  oculto.type = 'date';
-  oculto.style.cssText = 'position:absolute;opacity:0;width:0;height:0;pointer-events:none';
-  oculto.addEventListener('change', () => {
-    if(!oculto.value) return;
-    el.value = oculto.value;                       // pasa por el setter
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  btn.onclick = () => { oculto.value = el._iso || ''; if(oculto.showPicker) oculto.showPicker(); else oculto.click(); };
-  if(el.parentNode){ el.parentNode.insertBefore(oculto, el.nextSibling); el.parentNode.insertBefore(btn, oculto); }
+  // Fecha angosta con el calendario ADENTRO del recuadro
+  const caja=document.createElement('span');
+  caja.style.cssText='position:relative;display:inline-flex;align-items:center;justify-self:start;align-self:center;flex:none;max-width:100%';
+  if(el.parentNode){ el.parentNode.insertBefore(caja,el); caja.appendChild(el); }
+  el.style.boxSizing='border-box'; el.style.width='calc(8ch + 34px)'; el.style.paddingRight='24px';
+  const btn=document.createElement('button'); btn.type='button'; btn.textContent='📅'; btn.tabIndex=-1;
+  btn.title='Elegir del calendario';
+  btn.style.cssText='position:absolute;right:3px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;font-size:13px;padding:0;line-height:1';
+  // El calendario oculto se marca para que NO se convierta él también
+  const oc=document.createElement('input'); oc.type='date'; oc.dataset.sgvCal='1'; oc.tabIndex=-1;
+  oc.style.cssText='position:absolute;left:0;bottom:0;opacity:0;width:0;height:0;pointer-events:none';
+  oc.addEventListener('change',()=>{ if(!oc.value) return; el.value=oc.value; el.dispatchEvent(new Event('change',{bubbles:true})); });
+  btn.onclick=()=>{ oc.value=el._iso||''; oc.showPicker?oc.showPicker():oc.click(); };
+  caja.appendChild(btn); caja.appendChild(oc);
   return el;
 }
 
-// Convierte todos los campos fecha de una pantalla (o de todo el documento)
+// Convierte los campos fecha de una pantalla (o de todo el documento).
+// Ya no hace falta llamarlo: se queda por compatibilidad.
 function sgvFechas(sel){
   const raiz = sel ? document.querySelector(sel) : document;
   if(!raiz) return 0;
-  const l = raiz.querySelectorAll('input[type=date]');
+  const l = raiz.querySelectorAll('input[type=date]:not([data-sgv-cal])');
   l.forEach(sgvFecha);
   return l.length;
 }
+
+// Conversión AUTOMÁTICA de todo campo fecha, también los que se crean después
+(function(){
+  const arrancar=()=>{
+    sgvFechas();
+    if('MutationObserver' in window)
+      new MutationObserver(()=>sgvFechas()).observe(document.body,{childList:true,subtree:true});
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', arrancar);
+  else arrancar();
+})();
 
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape')document.querySelectorAll('.ov.open').forEach(o=>o.classList.remove('open'));
