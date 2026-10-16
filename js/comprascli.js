@@ -96,8 +96,8 @@ function ccRender(){
 
 function ccSubtitulo(){
   const D=_ccData;
-  return `${esc(D.cli)} — ${esc(D.razon)} · Período ${ccFecha(D.desde)} a ${ccFecha(D.hasta)}`
-       + ' · Sólo comprobantes que bajan stock; las NC restan · Precio final con IVA de la última factura';
+  // Sólo cliente y período: NADA de textos explicativos en los listados (Ricardo, Oct 2026)
+  return `${esc(D.cli)} — ${esc(D.razon)} · Período ${ccFecha(D.desde)} a ${ccFecha(D.hasta)}`;
 }
 
 function ccImprimir(){
