@@ -670,31 +670,102 @@ function reciAddACuenta(){
 }
 
 // ════════════════ EDITOR — instrumentos ════════════════
-function reciAddTransf(){ _reciTransf.push({fecha:_reciHdr.fecha,importe:0}); renderReciTransf(); reciReconcile(); }
+// ── CARGA RÁPIDA DE INSTRUMENTOS (Ricardo, Oct 2026) ─────────────────
+// Vale igual para CHEQUES, TRANSFERENCIAS y RETENCIONES:
+//   · ENTER = TAB en todos los campos (fecha, número, importe, Fís., Prop.,
+//     código). En el último campo del último renglón, da de alta uno nuevo.
+//   · "+" o el botón Alta: renglón nuevo con el cursor en su primer campo.
+//   · El campo donde se está cargando se ve resaltado (amarillo + borde azul).
+//   · El primer renglón arranca con la fecha de HOY; del segundo en adelante
+//     se copia el anterior (cheque: fecha, importe, Fís., Prop.;
+//     transferencia: fecha e importe; retención: código e importe).
+//   · Ningún importe puede ser 0 ni negativo.
+//   · 🗑 borra el renglón.
+//   · Cambiar un dato NO redibuja la lista: así no se pierde el cursor.
+const RECI_IBODY={cheq:'rf-cheq-body',transf:'rf-transf-body',reten:'rf-reten-body'};
+const RECI_IENTER=' onkeydown="reciInstEnter(event,this)"';
+function reciHoyIso(){ const h=new Date(); return h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0'); }
+function reciInstVisible(){ for(const k in RECI_IBODY){ const b=document.getElementById(RECI_IBODY[k]); if(b&&b.offsetParent!==null) return k; } return null; }
+function reciInstCampos(k){ return [...document.querySelectorAll('#'+RECI_IBODY[k]+' [data-nav]')].filter(x=>!x.disabled); }
+function reciInstSel(e){ setTimeout(()=>{ if(typeof e.select==='function') e.select(); },40); }
+function reciInstFoco(k,i){ setTimeout(()=>{ const e=document.querySelector(`#${RECI_IBODY[k]} [data-nav="${i}-0"]`); if(e){ e.focus(); reciInstSel(e); } },0); }
+function reciInstSubs(){
+  [['rf-cheq-sub',_reciCheques],['rf-transf-sub',_reciTransf],['rf-reten-sub',_reciRetenc]].forEach(([id,a])=>{
+    const s=document.getElementById(id); if(s) s.textContent='$ '+reciFmt(a.reduce((x,y)=>x+(y.importe||0),0)); });
+}
+function reciInstDel(fn,i){ return `<button type="button" class="inst-del" tabindex="-1" onclick="${fn}(${i})" title="Borrar este renglón">🗑</button>`; }
+// Importe: mayor a cero o no se acepta (vuelve al anterior y queda en el campo)
+function reciInstImp(o,k,i,val){
+  const e=document.querySelector(`#${RECI_IBODY[k]} [data-imp="${i}"]`), v=reciParseNum(val);
+  if(!(v>0)){ toast('El importe tiene que ser mayor a cero','err');
+    if(e){ e.value=reciFmt(o.importe); setTimeout(()=>{ e.focus(); e.select(); },0); } return false; }
+  o.importe=v; if(e) e.value=reciFmt(v); return true;
+}
+// Lo que se estaba escribiendo se graba antes de un alta
+function reciInstCommit(){
+  const a=document.activeElement;
+  if(a&&a.dataset&&a.dataset.nav&&!a._mask&&a.type!=='checkbox') a.dispatchEvent(new Event('change',{bubbles:true}));
+}
+function reciInstAlta(k){ if(k==='cheq') reciAddCheque(); else if(k==='transf') reciAddTransf(); else reciAddRetenc(); }
+// ENTER = TAB. La fecha la maneja sgvFecha (ui.js), que ya pasa al siguiente.
+function reciInstEnter(e,el){
+  if(e.key!=='Enter') return;
+  e.preventDefault(); e.stopPropagation();
+  if(el.dataset.imp && !(reciParseNum(el.value)>0)){ el.dispatchEvent(new Event('change',{bubbles:true})); return; }
+  if(el.type!=='checkbox'&&el.tagName!=='SELECT') el.dispatchEvent(new Event('change',{bubbles:true}));
+  const k=reciInstVisible(); if(!k) return;
+  const l=reciInstCampos(k), sig=l[l.indexOf(el)+1];
+  if(sig){ sig.focus(); reciInstSel(sig); } else reciInstAlta(k);
+}
+// "+" = Alta en la ventana de instrumento que esté abierta; y el resaltado del foco
+(function(){
+  document.addEventListener('keydown',e=>{
+    if(e.key!=='+') return; const k=reciInstVisible(); if(!k) return;
+    e.preventDefault(); e.stopPropagation(); reciInstAlta(k);
+  },true);
+  const st=document.createElement('style');
+  st.textContent='#inst-body input:focus,#inst-body select:focus{background:#fff6cc !important;outline:2px solid #0a58ca;outline-offset:0}'
+    +'#inst-body input[type=checkbox]:focus{outline:2px solid #0a58ca;outline-offset:2px}'
+    +'.inst-del{border:none;background:none;cursor:pointer;font-size:15px;padding:0;opacity:.75}.inst-del:hover{opacity:1}';
+  document.head.appendChild(st);
+})();
+
+// ── TRANSFERENCIAS ──
+function reciAddTransf(){ reciInstCommit(); const u=_reciTransf[_reciTransf.length-1];
+  _reciTransf.push(u?{fecha:u.fecha,importe:u.importe||0}:{fecha:reciHoyIso(),importe:0});
+  renderReciTransf(); reciReconcile(); reciInstFoco('transf',_reciTransf.length-1); }
 function reciDelTransf(i){ _reciTransf.splice(i,1); renderReciTransf(); reciReconcile(); }
-function reciTransfInput(i,campo,val){ const t=_reciTransf[i]; if(!t) return; if(campo==='importe') t.importe=reciParseNum(val); else t.fecha=val; renderReciTransf(); reciReconcile(); }
+function reciTransfInput(i,campo,val){ const t=_reciTransf[i]; if(!t) return;
+  if(campo==='importe'){ if(!reciInstImp(t,'transf',i,val)) return; } else t.fecha=val;
+  reciInstSubs(); reciReconcile(); }
 function renderReciTransf(){
   const b=document.getElementById('rf-transf-body'); if(!b) return;
   b.innerHTML=_reciTransf.map((t,i)=>`<div style="display:grid;grid-template-columns:1fr 1fr 22px;gap:6px;align-items:center;padding:3px 0">
-    <input type="date" value="${t.fecha||''}" onchange="reciTransfInput(${i},'fecha',this.value)" style="height:24px;font-size:12px">
-    <input type="text" value="${reciFmt(t.importe)}" onchange="reciTransfInput(${i},'importe',this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="height:24px;text-align:right;font-family:var(--mono);font-size:12px">
-    <button class="mcls" onclick="reciDelTransf(${i})" title="Quitar">✕</button>
+    <input type="date" data-nav="${i}-0" value="${t.fecha||''}" onchange="reciTransfInput(${i},'fecha',this.value)" style="height:24px;font-size:12px">
+    <input type="text" data-nav="${i}-1" data-imp="${i}" value="${reciFmt(t.importe)}" onchange="reciTransfInput(${i},'importe',this.value)" onfocus="this.select()"${RECI_IENTER} style="height:24px;text-align:right;font-family:var(--mono);font-size:12px">
+    ${reciInstDel('reciDelTransf',i)}
   </div>`).join('');
-  const s=document.getElementById('rf-transf-sub'); if(s) s.textContent='$ '+reciFmt(_reciTransf.reduce((a,x)=>a+(x.importe||0),0));
+  reciInstSubs();
 }
-function reciAddCheque(){ _reciCheques.push({fecha:_reciHdr.fecha,numero:'',importe:0,fisico:true,propio:false}); renderReciCheques(); reciReconcile(); }
+
+// ── CHEQUES ──
+function reciAddCheque(){ reciInstCommit(); const u=_reciCheques[_reciCheques.length-1];
+  _reciCheques.push(u?{fecha:u.fecha,numero:'',importe:u.importe||0,fisico:!!u.fisico,propio:!!u.propio}
+                     :{fecha:reciHoyIso(),numero:'',importe:0,fisico:true,propio:false});
+  renderReciCheques(); reciReconcile(); reciInstFoco('cheq',_reciCheques.length-1); }
 function reciDelCheque(i){
   if(_reciCheques[i]?.bloqueado){ toast('El cheque ya salió de cartera: no se puede quitar','err'); return; }
   _reciCheques.splice(i,1); renderReciCheques(); reciReconcile(); }
 function reciChequeInput(i,campo,val,checked){
-  if(_reciCheques[i]?.bloqueado){ toast('El cheque ya salió de cartera: no se puede modificar','err'); renderReciCheques(); return; }
   const c=_reciCheques[i]; if(!c) return;
-  if(campo==='importe') c.importe=reciParseNum(val);
+  if(c.bloqueado){ toast('El cheque ya salió de cartera: no se puede modificar','err'); renderReciCheques(); return; }
+  if(campo==='importe'){ if(!reciInstImp(c,'cheq',i,val)) return; }
   else if(campo==='fisico') c.fisico=checked;
   else if(campo==='propio') c.propio=checked;
-  else if(campo==='numero') c.numero=(val||'').replace(/\D/g,'').slice(0,4);
+  else if(campo==='numero'){ c.numero=(val||'').replace(/\D/g,'').slice(0,4);
+    const e=document.querySelector(`#rf-cheq-body [data-nav="${i}-1"]`); if(e) e.value=c.numero; }
   else c.fecha=val;
-  renderReciCheques(); reciReconcile();
+  reciInstSubs(); reciReconcile();
 }
 function renderReciCheques(){
   const b=document.getElementById('rf-cheq-body'); if(!b) return;
@@ -703,30 +774,35 @@ function renderReciCheques(){
     const bl=!!c.bloqueado, dis=bl?' disabled':'';
     const tit=bl?` title="El cheque está ${esc(c.estado)}: no se modifica desde el recibo"`:'';
     return `<div style="display:grid;grid-template-columns:1.1fr 0.7fr 1fr 40px 40px 22px;gap:6px;align-items:center;padding:3px 0${bl?';opacity:.65':''}"${tit}>
-    <input type="date" value="${c.fecha||''}" onchange="reciChequeInput(${i},'fecha',this.value)" style="height:24px;font-size:12px"${dis}>
-    <input type="text" maxlength="4" value="${esc(c.numero||'')}" placeholder="0000" onchange="reciChequeInput(${i},'numero',this.value)" style="height:24px;font-size:12px;font-family:var(--mono)"${dis}>
-    <input type="text" value="${reciFmt(c.importe)}" onchange="reciChequeInput(${i},'importe',this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="height:24px;text-align:right;font-family:var(--mono);font-size:12px"${dis}>
-    <input type="checkbox" ${c.fisico?'checked':''} onchange="reciChequeInput(${i},'fisico',null,this.checked)" title="Físico"${dis}>
-    <input type="checkbox" ${c.propio?'checked':''} onchange="reciChequeInput(${i},'propio',null,this.checked)" title="Propio"${dis}>
-    ${bl ? '<span title="Fuera de cartera" style="text-align:center;color:var(--t3)">🔒</span>'
-         : `<button class="mcls" onclick="reciDelCheque(${i})" title="Quitar">✕</button>`}
+    <input type="date" data-nav="${i}-0" value="${c.fecha||''}" onchange="reciChequeInput(${i},'fecha',this.value)" style="height:24px;font-size:12px"${dis}>
+    <input type="text" data-nav="${i}-1" maxlength="4" value="${esc(c.numero||'')}" placeholder="0000" onchange="reciChequeInput(${i},'numero',this.value)" onfocus="this.select()"${RECI_IENTER} style="height:24px;font-size:12px;font-family:var(--mono)"${dis}>
+    <input type="text" data-nav="${i}-2" data-imp="${i}" value="${reciFmt(c.importe)}" onchange="reciChequeInput(${i},'importe',this.value)" onfocus="this.select()"${RECI_IENTER} style="height:24px;text-align:right;font-family:var(--mono);font-size:12px"${dis}>
+    <input type="checkbox" data-nav="${i}-3" ${c.fisico?'checked':''} onchange="reciChequeInput(${i},'fisico',null,this.checked)"${RECI_IENTER} title="Físico"${dis}>
+    <input type="checkbox" data-nav="${i}-4" ${c.propio?'checked':''} onchange="reciChequeInput(${i},'propio',null,this.checked)"${RECI_IENTER} title="Propio"${dis}>
+    ${bl ? '<span title="Fuera de cartera" style="text-align:center;color:var(--t3)">🔒</span>' : reciInstDel('reciDelCheque',i)}
   </div>`;}).join('');
-  const s=document.getElementById('rf-cheq-sub'); if(s) s.textContent='$ '+reciFmt(_reciCheques.reduce((a,x)=>a+(x.importe||0),0));
+  reciInstSubs();
 }
-function reciAddRetenc(){ _reciRetenc.push({codigo:(RETES[0]?.codigo||''),importe:0}); renderReciRetenc(); reciReconcile(); }
+
+// ── RETENCIONES ──
+function reciAddRetenc(){ reciInstCommit(); const u=_reciRetenc[_reciRetenc.length-1];
+  _reciRetenc.push(u?{codigo:u.codigo,importe:u.importe||0}:{codigo:(RETES[0]?.codigo||''),importe:0});
+  renderReciRetenc(); reciReconcile(); reciInstFoco('reten',_reciRetenc.length-1); }
 function reciDelRetenc(i){ _reciRetenc.splice(i,1); renderReciRetenc(); reciReconcile(); }
-function reciRetencInput(i,campo,val){ const r=_reciRetenc[i]; if(!r) return; if(campo==='importe') r.importe=reciParseNum(val); else r.codigo=val; renderReciRetenc(); reciReconcile(); }
+function reciRetencInput(i,campo,val){ const r=_reciRetenc[i]; if(!r) return;
+  if(campo==='importe'){ if(!reciInstImp(r,'reten',i,val)) return; } else r.codigo=val;
+  reciInstSubs(); reciReconcile(); }
 function renderReciRetenc(){
   const b=document.getElementById('rf-reten-body'); if(!b) return;
   b.innerHTML=_reciRetenc.map((r,i)=>{
     const opts=(RETES||[]).map(x=>`<option value="${esc(x.codigo)}" ${x.codigo===r.codigo?'selected':''}>${esc(x.codigo)} — ${esc(x.descripcion||'')}</option>`).join('');
     return `<div style="display:grid;grid-template-columns:1.6fr 1fr 22px;gap:6px;align-items:center;padding:3px 0">
-      <select onchange="reciRetencInput(${i},'codigo',this.value)" style="height:24px;font-size:12px">${opts}</select>
-      <input type="text" value="${reciFmt(r.importe)}" onchange="reciRetencInput(${i},'importe',this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="height:24px;text-align:right;font-family:var(--mono);font-size:12px">
-      <button class="mcls" onclick="reciDelRetenc(${i})" title="Quitar">✕</button>
+      <select data-nav="${i}-0" onchange="reciRetencInput(${i},'codigo',this.value)"${RECI_IENTER} style="height:24px;font-size:12px">${opts}</select>
+      <input type="text" data-nav="${i}-1" data-imp="${i}" value="${reciFmt(r.importe)}" onchange="reciRetencInput(${i},'importe',this.value)" onfocus="this.select()"${RECI_IENTER} style="height:24px;text-align:right;font-family:var(--mono);font-size:12px">
+      ${reciInstDel('reciDelRetenc',i)}
     </div>`;
   }).join('');
-  const s=document.getElementById('rf-reten-sub'); if(s) s.textContent='$ '+reciFmt(_reciRetenc.reduce((a,x)=>a+(x.importe||0),0));
+  reciInstSubs();
 }
 
 // ════════════════ Reconciliación ════════════════
