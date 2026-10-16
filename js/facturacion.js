@@ -1997,7 +1997,40 @@ function nfOnEmpresaChange() {
 let _nfCtipBloqueadoId = null;
 const _sessionId = 'S' + Math.random().toString(36).slice(2) + Date.now().toString(36);
 
+// ── AVISO ANTES DE QUE VENZA EL NUMERADOR (Ricardo, Oct 2026) ──────────
+// El server suelta el numerador a los 60 min (una PC apagada o sin conexión
+// no puede avisar). A los 55 min se avisa con cartel grande y se ofrece
+// "Sigo trabajando", que lo renueva por otra hora (mismo sid = renovar).
+const NF_AVISO_MS = 55 * 60 * 1000;
+let _nfAvisoT = null;
+function nfAvisoProgramar(){
+  clearTimeout(_nfAvisoT);
+  _nfAvisoT = setTimeout(()=>{
+    if(!_nfCtipBloqueadoId) return;
+    sgvAviso({ titulo:'Factura abierta hace casi una hora', tipo:'adv',
+      texto:'Tenés tomado el numerador hace casi una hora.\n\nSi no grabás ni lo renovás, en 5 minutos queda libre y otro usuario puede usarlo.',
+      accion:{ texto:'Sigo trabajando', fn: async()=>{
+        const res=await apiPost('/comp_tipos/bloquear',{ id:_nfCtipBloqueadoId, por:usuarioActual?.codigo||'?', sid:_sessionId });
+        if(res&&res.locked){ toast('Numerador renovado por otra hora'); nfAvisoProgramar(); }
+        else sgvAviso({ titulo:'No se pudo renovar', tipo:'err',
+          texto:(res&&res.bloqueado_por)? res.bloqueado_por+' ya tomó el numerador.' : 'Error del servidor' });
+      }}});
+  }, NF_AVISO_MS);
+}
+
+// ── AL CERRAR O RECARGAR LA PESTAÑA: soltar lo tomado (Ricardo, Oct 2026) ──
+// sendBeacon llega aunque la pestaña se esté cerrando. No puede llevar la
+// sesión del usuario: el server suelta sólo lo que tenga tomado ESTE sid
+// (el numerador de facturación y el registro de maestro que se editaba).
+window.addEventListener('pagehide', ()=>{
+  const b=[typeof API_URL!=='undefined'&&API_URL, typeof API_BASE!=='undefined'&&API_BASE,
+    typeof SERVER_URL!=='undefined'&&SERVER_URL].find(Boolean)||'https://sgv-server.onrender.com';
+  const sids=[typeof _sessionId!=='undefined'&&_sessionId, typeof SGV_SID!=='undefined'&&SGV_SID].filter(Boolean);
+  try{ navigator.sendBeacon(b+'/soltar-beacon', new Blob([JSON.stringify({sids})],{type:'text/plain'})); }catch(_){}
+});
+
 async function nfDesbloquearCtip() {
+  clearTimeout(_nfAvisoT); _nfAvisoT=null;
   if(_nfCtipBloqueadoId) {
     try {
       await apiPost('/comp_tipos/desbloquear', { id: _nfCtipBloqueadoId, sid: _sessionId });
@@ -2035,6 +2068,7 @@ async function nfOnCtipChange() {
     ct.bloqueado=true; ct.bloqueado_por=miUsuario;
     if(res.ultimo_nro!==undefined) ct.ultimo_nro=res.ultimo_nro;
     _nfCtipBloqueadoId=ct.id;
+    nfAvisoProgramar();
   } catch(e){
     console.error('nfOnCtipChange lock:',e);
     toast('No se pudo reservar la numeración','err');
