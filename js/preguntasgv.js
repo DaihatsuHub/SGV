@@ -152,6 +152,7 @@ async function psgvExcel(){
 // La opción del menú sólo la ve el nivel alto (lo que no se puede usar, no se muestra)
 document.addEventListener('click', ()=>{
   const b=document.getElementById('ddi-psgv'); if(!b) return;
-  const nivel=(typeof USUARIO!=='undefined' && USUARIO) ? (USUARIO.nivel||0) : 0;
+  // El usuario logueado está en `usuarioActual` (no existe `USUARIO`)
+  const nivel=(typeof usuarioActual!=='undefined' && usuarioActual) ? (Number(usuarioActual.nivel)||0) : 0;
   b.style.display = nivel>=90 ? '' : 'none';
 }, true);
