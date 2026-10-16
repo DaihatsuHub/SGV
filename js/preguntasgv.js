@@ -17,6 +17,11 @@ let _psgvData = null;
     .psgv-caja input{flex:1;min-width:0;height:36px;font-size:14px;padding:0 12px;border-radius:8px;
       border:1px solid var(--b1);background:var(--s1);color:var(--txt)}
     .psgv-caja input:focus{outline:2px solid #0a58ca;outline-offset:0}
+    .psgv-campo{position:relative;flex:1;min-width:0;display:flex}
+    .psgv-campo input{padding-right:34px}
+    .psgv-x{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:none;
+      cursor:pointer;font-size:15px;color:var(--t3);padding:2px 4px;line-height:1}
+    .psgv-x:hover{color:var(--red)}
     .psgv-expl{margin:10px 14px 0;padding:9px 12px;border-radius:8px;font-size:13px;line-height:1.5;
       background:rgba(55,138,221,.10);color:#185FA5}
     .psgv-sql{margin:6px 14px 0;font-size:12px}
@@ -136,13 +141,33 @@ async function psgvExcel(){
   a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 
+// "✕" para borrar la pregunta y el resultado
+function psgvLimpiar(){
+  const inp=document.getElementById('psgv-frase');
+  if(inp){ inp.value=''; inp.focus(); }
+  _psgvData=null; psgvRender();
+}
+// Al entrar al campo se selecciona todo: se escribe encima la pregunta nueva.
+// La "✕" va DENTRO del campo. Se arma desde acá para no tocar el index.html.
+function _psgvCampo(){
+  const inp=document.getElementById('psgv-frase');
+  if(!inp || inp.dataset.listo) return;
+  inp.dataset.listo='1';
+  const w=document.createElement('span'); w.className='psgv-campo';
+  inp.parentNode.insertBefore(w, inp); w.appendChild(inp);
+  const x=document.createElement('button'); x.type='button'; x.className='psgv-x';
+  x.textContent='✕'; x.title='Borrar la consulta'; x.tabIndex=-1; x.onclick=psgvLimpiar;
+  w.appendChild(x);
+  inp.addEventListener('focus', ()=>setTimeout(()=>inp.select(),0));
+}
+
 // Al mostrarse la pantalla: mensaje inicial y foco en la pregunta
 (function(){
   const arrancar=()=>{
     const pg=document.getElementById('page-psgv');
     if(!pg || !('MutationObserver' in window)) return;
     let visible=pg.offsetParent!==null;
-    const alMostrar=()=>{ if(!_psgvData) psgvRender(); setTimeout(()=>document.getElementById('psgv-frase')?.focus(),50); };
+    const alMostrar=()=>{ _psgvCampo(); if(!_psgvData) psgvRender(); setTimeout(()=>document.getElementById('psgv-frase')?.focus(),50); };
     const chequear=()=>{ const ahora=pg.offsetParent!==null; if(ahora && !visible) alMostrar(); visible=ahora; };
     const obs=new MutationObserver(chequear);
     obs.observe(pg,{attributes:true,attributeFilter:['class','style']});
