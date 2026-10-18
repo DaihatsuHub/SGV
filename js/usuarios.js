@@ -177,18 +177,17 @@ function showAppLoadingError(msg) {
   el.style.display = 'flex';
 }
 
+// Al SALIR se recarga la página entera (Ricardo, Oct 2026): los datos que
+// cargó el usuario anterior (facturas, artículos, reglas de su grupo, tablas
+// recortadas) quedaban en memoria y el que entraba después veía lo del otro.
+// Recargando, el próximo usuario arranca limpio. Al recargar también se
+// sueltan los bloqueos que tuviera tomados (beacon de facturacion.js).
 async function cerrarSistema() {
   inactStop();  // frenar el control de inactividad
-  await sbClient.auth.signOut();
+  try { await sbClient.auth.signOut(); } catch(e) { console.warn('signOut:', e); }
   usuarioActual = null;
   document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  const _lu=document.getElementById('l-user'); if(_lu){ _lu.value=''; _lu.readOnly=false; _lu.style.opacity=''; _lu.style.cursor=''; }
-  document.getElementById('l-pass').value = '';
-  document.getElementById('l-err').textContent = '';
-  const _lf=document.getElementById('l-fija'); if(_lf) _lf.style.display='none';
-  document.querySelectorAll('.dd-menu').forEach(m=>m.classList.remove('open'));
-  document.querySelectorAll('.dd-arrow').forEach(a=>a.classList.remove('open'));
+  location.reload();
 }
 
 // ─────────────────────────────────────────────────────────
