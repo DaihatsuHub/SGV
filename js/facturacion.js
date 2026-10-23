@@ -609,7 +609,21 @@ async function selFac(i) {
   if(f) await renderFacDetalle(f);
 }
 
+// REGLA (Ricardo, Oct 2026): la GRILLA puede salir de memoria, pero el DETALLE
+// de un comprobante se pide SIEMPRE al server: otro usuario pudo haberlo cambiado.
+let _facDetSeq = 0;
+async function facRefrescar(f){
+  try{
+    const r = await sbGet('facturas', 'fac_nro=eq.' + encodeURIComponent(f.fac_nro));
+    if(r && r[0]) Object.assign(f, r[0]);     // actualiza también la fila de la grilla
+  }catch(e){ console.error('facRefrescar:', e); }   // sin conexión: queda lo de memoria
+  return f;
+}
+
 async function renderFacDetalle(f, vista) {
+  const _seq = ++_facDetSeq;
+  await facRefrescar(f);
+  if(_seq !== _facDetSeq) return;     // ya se eligió otro comprobante (flechas rápidas)
   vista = (vista==='afip')?'afip':'real';
   const _fac = vista==='afip' ? (1-(Number(f.fac_monpor)||0)/100) : 1;
   const det=document.getElementById('fac-detalle');
@@ -690,6 +704,7 @@ async function renderFacDetalle(f, vista) {
           <div style="font-size:11px;color:var(--t3);margin-top:2px">I.V.A Responsable Inscripto</div>
           <div style="display:flex;flex-wrap:nowrap;gap:6px;margin-top:8px">
           ${tipoChar==='C'?`<button onclick="ncAbrirAplicar('${f.fac_nro}')" class="btn pri" style="padding:5px 12px;font-size:12px;white-space:nowrap">📌 ${(f.fac_saldo||0)>0?'Aplicar saldo de NC':'Ver / cancelar aplicaciones'}</button>`:''}
+          <button onclick="facComentario('${f.fac_nro}')" class="btn" style="padding:5px 12px;font-size:12px;white-space:nowrap;${f.fac_coment?'background:#facc15;color:#1a1a1a;font-weight:600':''}" title="${f.fac_coment?esc(f.fac_coment):'Sin comentario'}">💬 Comentario</button>
           ${(tieneDto||!esContable)?`<button onclick="facImprimirBorrador()" class="btn" style="padding:5px 12px;font-size:12px;background:var(--acc);color:#fff;white-space:nowrap">🖨 Imprimir Borrador</button>`:''}
           ${_puedeAnular?`<button onclick="facAnular('${f.fac_nro}')" class="btn" style="padding:5px 12px;font-size:12px;background:var(--red);color:#fff;white-space:nowrap">🚫 Anular</button>`:''}
           ${_puedeElim?`<button onclick="facEliminar('${f.fac_nro}')" class="btn" style="padding:5px 12px;font-size:12px;background:#7f1d1d;color:#fff;white-space:nowrap" title="Borra el comprobante y libera el número. Sólo dentro del mes.">🗑 Eliminar</button>`:''}
@@ -913,6 +928,43 @@ function _ccLocProv(cli){
 }
 
 // Guardar la fecha de entrega del comprobante
+// ── Comentario interno del comprobante (fac_coment) ──────────
+// Nota interna: NO se imprime. Viene de FACTREF.DBF del DOS.
+// Editable con permiso de modificar comprobantes; después, por grupo (Ricardo, Oct 2026).
+async function facComentario(facNro){
+  const f=FACS.find(x=>x.fac_nro===facNro); if(!f) return;
+  await facRefrescar(f);        // siempre el dato del server
+  const puede=(typeof puedeh==='function') && puedeh('fac','modif');
+  document.getElementById('fac-coment-modal')?.remove();
+  const m=document.createElement('div');
+  m.id='fac-coment-modal';
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center';
+  m.innerHTML=`<div style="background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:16px;width:min(480px,92vw)">
+      <div style="font-weight:700;margin-bottom:8px">💬 Comentario · ${esc(facNro)}</div>
+      <textarea id="fac-coment-txt" maxlength="2000" ${puede?'':'readonly'}
+        style="width:100%;box-sizing:border-box;height:140px;resize:vertical;background:var(--s3);border:1px solid var(--b1);border-radius:6px;color:var(--txt);padding:8px;font-size:13px">${esc(f.fac_coment||'')}</textarea>
+      <div style="font-size:11px;color:var(--t3);margin-top:4px">Nota interna: no sale impresa.</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+        <button class="btn" onclick="document.getElementById('fac-coment-modal').remove()">${puede?'Cancelar':'Cerrar'}</button>
+        ${puede?`<button class="btn pri" onclick="facComentarioGuardar('${facNro}')">Guardar</button>`:''}
+      </div></div>`;
+  m.addEventListener('mousedown',e=>{ if(e.target===m) m.remove(); });
+  m.addEventListener('keydown',e=>{ if(e.key==='Escape') m.remove(); });
+  document.body.appendChild(m);
+  const t=document.getElementById('fac-coment-txt'); t.focus(); t.setSelectionRange(t.value.length,t.value.length);
+}
+async function facComentarioGuardar(facNro){
+  const txt=(document.getElementById('fac-coment-txt')?.value||'').trim();
+  try{
+    const res=await apiPost('/facturas/comentario',{ fac_nro:facNro, comentario:txt });
+    if(!res.ok){ toast(res.error||'No se pudo guardar el comentario','err'); return; }
+    const f=FACS.find(x=>x.fac_nro===facNro); if(f) f.fac_coment=res.comentario;
+    document.getElementById('fac-coment-modal')?.remove();
+    renderFac();
+    toast(txt?'Comentario guardado':'Comentario borrado','scs');
+  }catch(e){ console.error('facComentarioGuardar:',e); toast('Error: '+e.message,'err'); }
+}
+
 async function facGuardarSalida(facNro, val){
   try{
     const res=await apiPost('/facturas/salida',{ fac_nro:facNro, salida: val||null });
