@@ -40,7 +40,20 @@ let _psgvData = null;
     .tnav.tnav-ia{background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;font-weight:700;
       border-radius:999px;padding:4px 14px;margin-left:6px;letter-spacing:.5px;
       box-shadow:0 0 0 1px rgba(255,255,255,.25),0 2px 8px rgba(124,58,237,.45)}
-    .tnav.tnav-ia:hover{filter:brightness(1.15)}`;
+    .tnav.tnav-ia:hover{filter:brightness(1.15)}
+    .psgv-charla{margin:10px 14px;padding:12px 14px;border-radius:10px;background:var(--s1);border:1px solid var(--b1)}
+    .psgv-ia{font-size:13px;line-height:1.5;color:var(--txt)}
+    .psgv-duda{margin-top:6px;padding:8px 12px;border-left:3px solid #7c3aed;background:rgba(124,58,237,.08);font-size:13px;line-height:1.5}
+    .psgv-charla textarea,.psgv-chk textarea,.psgv-chk input{width:100%;box-sizing:border-box;margin-top:8px;padding:8px;
+      border:1px solid var(--b1);border-radius:6px;background:var(--s2);color:var(--txt);font:inherit;font-size:13px}
+    .psgv-chk{margin-top:8px;padding:8px 10px;border:1px solid var(--b1);border-radius:6px;background:var(--s2);font-size:12px;line-height:1.5}
+    .psgv-chk-q{font-weight:600;color:var(--t2);margin-bottom:2px}
+    .psgv-ok{margin:8px 14px 0;font-size:12px;color:var(--t2);display:flex;gap:8px;align-items:center}
+    .psgv-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px}
+    .psgv-modal{background:var(--s1,#fff);border-radius:12px;width:min(760px,100%);max-height:85vh;display:flex;flex-direction:column;
+      box-shadow:0 12px 40px rgba(0,0,0,.35)}
+    .psgv-mtit{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--b1);font-weight:700}
+    .psgv-mbody{overflow:auto;padding:4px 16px 16px}`;
   document.head.appendChild(st);
 })();
 
@@ -61,10 +74,13 @@ function _psgvCols(F){ return F.length ? Object.keys(F[0]) : []; }
 function _psgvColNum(F,c){ const v=F.map(r=>r[c]).filter(x=>x!==null&&x!==undefined&&x!==''); return v.length>0 && v.every(_psgvEsNum); }
 function _psgvTitulo(c){ const t=String(c).replace(/_/g,' '); return t.charAt(0).toUpperCase()+t.slice(1); }
 
-async function psgvPreguntar(){
+function _psgvNivel(){ return (typeof usuarioActual!=='undefined' && usuarioActual) ? (Number(usuarioActual.nivel)||0) : 0; }
+
+async function psgvPreguntar(fraseForzada){
   const inp=document.getElementById('psgv-frase');
-  const frase=(inp?.value||'').trim();
+  const frase=(typeof fraseForzada==='string' ? fraseForzada : (inp?.value||'')).trim();
   if(!frase){ inp?.focus(); return; }
+  if(inp && inp.value.trim()!==frase) inp.value=frase;
   const btn=document.getElementById('psgv-btn'), res=document.getElementById('psgv-res');
   if(btn){ btn.disabled=true; btn.textContent='⏳ Pensando…'; }
   res.innerHTML='<div class="psgv-vacio">⏳ Armando la consulta…</div>';
@@ -82,21 +98,157 @@ async function psgvPreguntar(){
     res.innerHTML=`<div class="psgv-vacio" style="color:var(--red)">Error: ${esc(e.message||'')}</div>`;
   }finally{
     if(btn){ btn.disabled=false; btn.textContent='✨ Preguntar'; }
+    _psgvContarPendientes();
   }
+}
+
+// La IA no supo qué significa algo: pregunta en vez de adivinar
+function _psgvHtmlPregunta(D){
+  const P=D.pregunta||{};
+  let h=`<div class="psgv-charla"><div class="psgv-ia">🤔 Antes de responder necesito saber algo${P.termino?` sobre <b>"${esc(P.termino)}"</b>`:''}:</div>
+    <div class="psgv-duda">${esc(P.duda||'')}</div>`;
+  if(D.puedeResponder && P.id){
+    h+=`<textarea id="psgv-resp" rows="3" placeholder="Explicale qué significa en SGV (de qué tabla o campo sale el dato)…"></textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
+        <button class="btn" onclick="psgvDescartar(${P.id})">Descartar</button>
+        <button class="btn pri" onclick="psgvResponder(${P.id})">✅ Enseñarle y volver a preguntar</button>
+      </div>`;
+  } else {
+    h+=`<div class="psgv-ia" style="margin-top:8px">Le pasé la duda a Ricardo. Cuando me la aclare, volvé a preguntarme y ya voy a saber.</div>`;
+  }
+  return h+'</div>';
+}
+
+// No hubo resultados: la IA explica por qué y muestra lo que revisó
+function _psgvHtmlDiagnostico(D){
+  const G=D.diagnostico;
+  if(!G) return '<div class="psgv-vacio">La consulta no devolvió resultados.</div>';
+  let h=`<div class="psgv-charla"><div class="psgv-ia">🔎 ${esc(G.mensaje||'No encontré resultados.')}</div>`;
+  (G.chequeos||[]).forEach(c=>{
+    let r;
+    if(c.error) r='<i>no se pudo verificar</i>';
+    else if(!c.filas.length) r='<b>no encontré nada</b>';
+    else r=c.filas.map(f=>esc(Object.values(f).map(_psgvVer).join(' · '))).join('<br>');
+    h+=`<div class="psgv-chk"><div class="psgv-chk-q">${esc(c.que)}</div><div>${r}</div></div>`;
+  });
+  return h+'</div>';
 }
 
 function psgvRender(){
   const res=document.getElementById('psgv-res'); if(!res) return;
   if(!_psgvData){ res.innerHTML='<div class="psgv-vacio">Escribí tu pregunta y apretá Enter.<br>Por ejemplo: <i>los 10 clientes que más compraron este año en Tressa</i></div>'; return; }
-  const D=_psgvData, F=D.filas||[], C=_psgvCols(F);
+  const D=_psgvData;
+  if(D.pregunta){ res.innerHTML=_psgvHtmlPregunta(D); setTimeout(()=>document.getElementById('psgv-resp')?.focus(),50); return; }
+  const F=D.filas||[], C=_psgvCols(F);
   const num=Object.fromEntries(C.map(c=>[c,_psgvColNum(F,c)]));
   let html=`<div class="psgv-expl">${esc(D.explicacion||'')}</div>
     <details class="psgv-sql"><summary>Ver la consulta</summary><pre>${esc(D.sql||'')}</pre></details>`;
   if(D.truncado) html+='<div class="psgv-nota">Se muestran las primeras 2000 filas.</div>';
-  if(!F.length) html+='<div class="psgv-vacio">La consulta no devolvió resultados.</div>';
-  else html+=`<div class="psgv-tabla"><table><thead><tr>${C.map(c=>`<th class="${num[c]?'n':''}">${esc(_psgvTitulo(c))}</th>`).join('')}</tr></thead>
+  if(!F.length) html+=_psgvHtmlDiagnostico(D);
+  else{
+    html+=`<div class="psgv-ok" id="psgv-ok">¿Es lo que buscabas?
+        <button class="btn" onclick="psgvBien()">👍 Sí, aprendelo</button>
+        <span style="color:var(--t3)">· si no, reformulá la pregunta</span></div>`;
+    html+=`<div class="psgv-tabla"><table><thead><tr>${C.map(c=>`<th class="${num[c]?'n':''}">${esc(_psgvTitulo(c))}</th>`).join('')}</tr></thead>
     <tbody>${F.map(r=>`<tr>${C.map(c=>`<td class="${num[c]?'n':''}">${esc(_psgvVer(r[c]))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  }
   res.innerHTML=html;
+}
+
+async function psgvResponder(id){
+  const t=(document.getElementById('psgv-resp')?.value||'').trim();
+  if(!t){ document.getElementById('psgv-resp')?.focus(); return; }
+  try{
+    const r=await apiPost('/ia/responder',{ id, respuesta:t });
+    if(!r||!r.ok){ sgvAviso({titulo:'No se pudo guardar', texto:(r&&r.error)||'Error', tipo:'err'}); return; }
+    toast('Aprendido: "'+(r.termino||'')+'"');
+    psgvPreguntar(r.frase || _psgvData?.frase);
+  }catch(e){ sgvAviso({titulo:'No se pudo guardar', texto:e.message||'Error', tipo:'err'}); }
+}
+async function psgvDescartar(id){
+  try{ await apiPost('/ia/pendientes/descartar',{ id }); }catch(_){}
+  _psgvData=null; psgvRender(); _psgvContarPendientes();
+}
+async function psgvBien(){
+  if(!_psgvData?.sql) return;
+  try{
+    const r=await apiPost('/ia/ejemplo',{ frase:_psgvData.frase, sql:_psgvData.sql });
+    const b=document.getElementById('psgv-ok');
+    if(r&&r.ok&&b) b.innerHTML='✅ Gracias, lo aprendí: las preguntas parecidas van a salir mejor.';
+  }catch(e){ toast('No se pudo guardar','err'); }
+}
+
+// ── Lo que sabe la IA: dudas pendientes y diccionario (sólo Ricardo) ──
+async function _psgvContarPendientes(){
+  const b=document.getElementById('psgv-btn-pend'); if(!b) return;
+  if(_psgvNivel()<99){ b.style.display='none'; document.getElementById('psgv-btn-dic')&&(document.getElementById('psgv-btn-dic').style.display='none'); return; }
+  try{ const r=await apiGet('/ia/pendientes'); const n=(r&&r.pendientes||[]).length;
+       b.textContent=n?`❓ Dudas (${n})`:'❓ Dudas'; b.classList.toggle('pri', n>0); }catch(_){}
+}
+function _psgvModal(titulo, cuerpo){
+  let ov=document.getElementById('psgv-ov');
+  if(!ov){ ov=document.createElement('div'); ov.id='psgv-ov'; ov.className='psgv-ov'; document.body.appendChild(ov);
+           ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); }); }
+  ov.innerHTML=`<div class="psgv-modal"><div class="psgv-mtit"><span>${titulo}</span>
+      <button class="psgv-x" style="position:static;transform:none" onclick="document.getElementById('psgv-ov').remove()">✕</button></div>
+    <div class="psgv-mbody">${cuerpo}</div></div>`;
+}
+async function psgvVerPendientes(){
+  const r=await apiGet('/ia/pendientes');
+  const L=(r&&r.pendientes)||[];
+  _psgvModal('❓ Dudas de la IA para Ricardo', !L.length ? '<div class="psgv-vacio">No hay dudas pendientes.</div>' :
+    L.map(p=>`<div class="psgv-chk"><div class="psgv-chk-q">${esc(p.usuario||'')} preguntó: "${esc(p.frase)}"</div>
+      <div style="margin:4px 0">${esc(p.duda)}</div>
+      <textarea id="psgv-pr-${p.id}" rows="2" placeholder="Tu respuesta…"></textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+        <button class="btn" onclick="psgvPendDescartar(${p.id})">Descartar</button>
+        <button class="btn pri" onclick="psgvPendResponder(${p.id})">✅ Responder</button></div></div>`).join(''));
+}
+async function psgvPendResponder(id){
+  const t=(document.getElementById('psgv-pr-'+id)?.value||'').trim(); if(!t) return;
+  const r=await apiPost('/ia/responder',{ id, respuesta:t });
+  if(r&&r.ok){ toast('Aprendido: "'+(r.termino||'')+'"'); psgvVerPendientes(); _psgvContarPendientes(); }
+  else sgvAviso({titulo:'No se pudo guardar', texto:(r&&r.error)||'Error', tipo:'err'});
+}
+async function psgvPendDescartar(id){ await apiPost('/ia/pendientes/descartar',{ id }); psgvVerPendientes(); _psgvContarPendientes(); }
+
+async function psgvVerDiccionario(){
+  const r=await apiGet('/ia/diccionario');
+  const L=(r&&r.diccionario)||[];
+  _psgvModal(`📚 Lo que sabe la IA <span style="font-weight:400;font-size:12px;color:var(--t2)">· ${L.length} términos · ${r&&r.ejemplos||0} ejemplos aprendidos</span>`,
+    `<div class="psgv-chk"><div class="psgv-chk-q">Enseñarle algo nuevo</div>
+       <input id="psgv-dn-t" placeholder="Término (como lo dicen los usuarios)">
+       <textarea id="psgv-dn-s" rows="2" placeholder="Qué significa en SGV (tabla, campo, regla)…"></textarea>
+       <div style="text-align:right;margin-top:4px"><button class="btn pri" onclick="psgvDicGuardar(0)">➕ Agregar</button></div></div>`
+    + L.map(d=>`<div class="psgv-chk">
+        <input id="psgv-d-t-${d.id}" value="${esc(d.termino)}">
+        <textarea id="psgv-d-s-${d.id}" rows="2">${esc(d.significado)}</textarea>
+        <div style="display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:4px">
+          <span style="font-size:11px;color:var(--t3)">${d.origen==='ricardo'?'✍️ Ricardo':'⚙️ del sistema'}${/A CONFIRMAR/i.test(d.significado)?' · <b style="color:#b45309">a confirmar</b>':''}</span>
+          <span><button class="btn" onclick="psgvDicBorrar(${d.id})">🗑</button>
+                <button class="btn pri" onclick="psgvDicGuardar(${d.id})">💾 Guardar</button></span></div></div>`).join(''));
+}
+async function psgvDicGuardar(id){
+  const t=(document.getElementById(id?`psgv-d-t-${id}`:'psgv-dn-t')?.value||'').trim();
+  const s=(document.getElementById(id?`psgv-d-s-${id}`:'psgv-dn-s')?.value||'').trim();
+  const r=await apiPost('/ia/diccionario/guardar',{ id, termino:t, significado:s });
+  if(r&&r.ok){ toast('Guardado'); psgvVerDiccionario(); } else sgvAviso({titulo:'No se pudo guardar', texto:(r&&r.error)||'Error', tipo:'err'});
+}
+async function psgvDicBorrar(id){
+  confirm2('¿Borrar este término?','La IA deja de saberlo.', async ()=>{
+    const r=await apiPost('/ia/diccionario/borrar',{ id });
+    if(r&&r.ok) psgvVerDiccionario();
+  });
+}
+// Botones "Dudas" y "Diccionario" en la barra de la pantalla (sólo Ricardo)
+function _psgvBotonesMaestro(){
+  const bar=document.querySelector('#page-psgv .toolbar');
+  if(!bar || document.getElementById('psgv-btn-pend')) return;
+  const sp=bar.querySelector('.spacer');
+  const b1=document.createElement('button'); b1.className='btn'; b1.id='psgv-btn-pend'; b1.textContent='❓ Dudas'; b1.onclick=psgvVerPendientes;
+  const b2=document.createElement('button'); b2.className='btn'; b2.id='psgv-btn-dic'; b2.textContent='📚 Diccionario'; b2.onclick=psgvVerDiccionario;
+  bar.insertBefore(b2, sp ? sp.nextSibling : null); bar.insertBefore(b1, b2);
+  _psgvContarPendientes();
 }
 
 function psgvImprimir(){
@@ -167,7 +319,7 @@ function _psgvCampo(){
     const pg=document.getElementById('page-psgv');
     if(!pg || !('MutationObserver' in window)) return;
     let visible=pg.offsetParent!==null;
-    const alMostrar=()=>{ _psgvCampo(); if(!_psgvData) psgvRender(); setTimeout(()=>document.getElementById('psgv-frase')?.focus(),50); };
+    const alMostrar=()=>{ _psgvCampo(); _psgvBotonesMaestro(); if(!_psgvData) psgvRender(); setTimeout(()=>document.getElementById('psgv-frase')?.focus(),50); };
     const chequear=()=>{ const ahora=pg.offsetParent!==null; if(ahora && !visible) alMostrar(); visible=ahora; };
     const obs=new MutationObserver(chequear);
     obs.observe(pg,{attributes:true,attributeFilter:['class','style']});
