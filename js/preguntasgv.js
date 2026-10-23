@@ -48,6 +48,10 @@ let _psgvData = null;
       border:1px solid var(--b1);border-radius:6px;background:var(--s2);color:var(--txt);font:inherit;font-size:13px}
     .psgv-chk{margin-top:8px;padding:8px 10px;border:1px solid var(--b1);border-radius:6px;background:var(--s2);font-size:12px;line-height:1.5}
     .psgv-chk-q{font-weight:600;color:var(--t2);margin-bottom:2px}
+    .psgv-ops{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .psgv-op{border-radius:999px;padding:6px 14px}
+    .psgv-op:hover{border-color:#7c3aed;color:#7c3aed}
+    #psgv-otra{padding:7px 10px;border:1px solid var(--b1);border-radius:6px;background:var(--s2);color:var(--txt);font:inherit;font-size:13px}
     .psgv-ok{margin:8px 14px 0;font-size:12px;color:var(--t2);display:flex;gap:8px;align-items:center}
     .psgv-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px}
     .psgv-modal{background:var(--s1,#fff);border-radius:12px;width:min(760px,100%);max-height:85vh;display:flex;flex-direction:column;
@@ -119,6 +123,24 @@ function _psgvHtmlPregunta(D){
   return h+'</div>';
 }
 
+// Pregunta ambigua: el usuario elige qué quiso decir y se vuelve a preguntar
+function _psgvHtmlAclarar(D){
+  const A=D.aclarar||{};
+  const ops=(A.opciones||[]).map((o,i)=>`<button class="btn psgv-op" onclick="psgvElegir(${i})">${esc(o)}</button>`).join('');
+  return `<div class="psgv-charla"><div class="psgv-ia">🤔 ${esc(A.duda||'¿Qué quisiste decir?')}</div>
+    <div class="psgv-ops">${ops}</div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input id="psgv-otra" placeholder="Otra cosa… (escribilo y Enter)" style="flex:1"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();psgvElegir(-1)}">
+    </div></div>`;
+}
+function psgvElegir(i){
+  const D=_psgvData; if(!D) return;
+  const t = i>=0 ? (D.aclarar?.opciones||[])[i] : (document.getElementById('psgv-otra')?.value||'').trim();
+  if(!t) return;
+  psgvPreguntar(`${D.frase} [Aclaración del usuario: ${t}]`);
+}
+
 // No hubo resultados: la IA explica por qué y muestra lo que revisó
 function _psgvHtmlDiagnostico(D){
   const G=D.diagnostico;
@@ -138,6 +160,7 @@ function psgvRender(){
   const res=document.getElementById('psgv-res'); if(!res) return;
   if(!_psgvData){ res.innerHTML='<div class="psgv-vacio">Escribí tu pregunta y apretá Enter.<br>Por ejemplo: <i>los 10 clientes que más compraron este año en Tressa</i></div>'; return; }
   const D=_psgvData;
+  if(D.aclarar){ res.innerHTML=_psgvHtmlAclarar(D); return; }
   if(D.pregunta){ res.innerHTML=_psgvHtmlPregunta(D); setTimeout(()=>document.getElementById('psgv-resp')?.focus(),50); return; }
   const F=D.filas||[], C=_psgvCols(F);
   const num=Object.fromEntries(C.map(c=>[c,_psgvColNum(F,c)]));
