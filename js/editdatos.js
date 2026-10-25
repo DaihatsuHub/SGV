@@ -52,7 +52,7 @@ function renderEdd(){
       <span style="font-weight:600;font-size:14px;color:var(--acc)">🧮 Editor de datos</span>
       <div class="spacer"></div>
       <button class="btn" onclick="eddCopiar()" title="Copia la grilla para pegarla en Excel">📋 Copiar grilla</button>
-      <button class="btn pri" id="edd-guardar" onclick="eddGuardar()">💾 Grabar cambios</button>
+      <button class="btn pri" id="edd-guardar" onclick="eddGuardar()" disabled>💾 Grabar cambios</button>
     </div>
     <div class="edd-aviso">⚠️ Sin controles de SGV: lo que se graba acá va directo a la base. Cada cambio queda registrado.
       Para pegar desde Excel, hacé clic en la celda donde empieza y Ctrl+V.</div>
@@ -97,6 +97,13 @@ const _eddFiltros = () => [1,2].map(n=>({
 })).filter(f=>f.campo);
 
 function _eddPendientes(){ return Object.keys(_edd.cambios).length; }
+// Grabar sólo se activa si hay cambios sin grabar
+function eddBoton(){
+  const b=document.getElementById('edd-guardar'); if(!b) return;
+  const n=_eddPendientes();
+  b.disabled=!n;
+  b.textContent='💾 Grabar cambios'+(n?' ('+n+')':'');
+}
 
 async function eddCambiarTabla(){
   if(_eddPendientes() && !confirm('Hay cambios sin grabar. ¿Descartarlos?')){
@@ -105,6 +112,7 @@ async function eddCambiarTabla(){
   ['edd-f1v','edd-f2v','edd-gv'].forEach(id=>document.getElementById(id).value='');
   _edd={ tabla:document.getElementById('edd-tabla').value, pk:'', cols:[], filas:[], total:0, cambios:{} };
   document.getElementById('edd-wrap').innerHTML='';
+  eddBoton();
   if(_edd.tabla) await eddLeer(true);
 }
 
@@ -147,7 +155,7 @@ function eddPintar(){
         ${ro[c]?'':'contenteditable="plaintext-only"'} title="${esc(v)}">${esc(v)}</td>`;
     }).join('')}</tr>`).join('')}</tbody></table>`;
   const t=document.getElementById('edd-grid');
-  eddAjustarAlto();
+  eddAjustarAlto(); eddBoton();
   t.addEventListener('input', eddInput);
   t.addEventListener('paste', eddPegar);
   t.addEventListener('keydown', eddTecla);
@@ -158,7 +166,7 @@ function _eddMarcar(td, valor){
   if(valor===_eddTxt(_edd.filas[i][c])){ delete _edd.cambios[k]; td.classList.remove('edd-mod'); }
   else { _edd.cambios[k]=valor; td.classList.add('edd-mod'); }
   td.title=valor;
-  document.getElementById('edd-guardar').textContent=`💾 Grabar cambios${_eddPendientes()?' ('+_eddPendientes()+')':''}`;
+  eddBoton();
 }
 function eddInput(e){ const td=e.target.closest('td[contenteditable]'); if(td) _eddMarcar(td, td.textContent); }
 
@@ -206,7 +214,7 @@ async function eddGuardar(){
     _edd.cambios={};
     await eddLeer(true);
   }catch(e){ sgvAviso({ titulo:'No se pudo grabar', texto:e.message, tipo:'err' }); }
-  finally{ btn.disabled=false; btn.textContent='💾 Grabar cambios'; }
+  finally{ eddBoton(); }
 }
 
 async function eddGlobal(){
