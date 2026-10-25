@@ -113,7 +113,7 @@ const COL_DEFS = {
   ]
 };
 
-const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true}, desp:{col:null,asc:true}, reci:{col:null,asc:true}, cart:{col:null,asc:true}, oc:{col:null,asc:true}, ctip:{col:null,asc:true} };
+const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true}, desp:{col:null,asc:true}, reci:{col:null,asc:true}, cart:{col:'CHQ_FEC',asc:true}, oc:{col:null,asc:true}, ctip:{col:null,asc:true} };
 
 // Ancho de referencia por carácter (px). Se usa para convertir 'chars' → px FIJO,
 // así una columna mide igual en el encabezado y en las filas aunque usen fuentes

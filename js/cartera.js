@@ -28,7 +28,8 @@ let _cartTotales = null, _cartHayMas = false, _cartLimite = 1000;
 
 async function sbLoadCheques(){
   try {
-    const qs=['limite='+_cartLimite];
+    // Orden original: fecha del cheque ascendente (Ricardo, Oct 2026)
+    const qs=['limite='+_cartLimite,'orden=fecha+'];
     if(typeof cheqFiltEstado!=='undefined' && cheqFiltEstado && cheqFiltEstado!=='todos') qs.push('estado='+encodeURIComponent(cheqFiltEstado));
     // En "Todos" no se suman cantidad ni importe: sería el histórico completo
     else qs.push('sinTotales=1');
