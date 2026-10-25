@@ -62,9 +62,13 @@ async function gastConsultar(){
 }
 
 // Opciones de un select de tabla, con el valor elegido marcado
+// Si el código no existe en la tabla (p. ej. vino del DOS) igual se muestra,
+// en rojo y marcado, para poder verlo y corregirlo (Ricardo, Oct 2026)
 function _gOpts(k,val){
-  return '<option value=""></option>'+_gTabla(k).map(x=>
-    `<option value="${_gEsc(x.CODIGO)}"${x.CODIGO===val?' selected':''}>${_gEsc(x.CODIGO)} — ${_gEsc(x.DETALLE)}</option>`).join('');
+  const L=_gTabla(k), existe=!val || L.some(x=>x.CODIGO===val);
+  return '<option value=""></option>'
+    + (existe ? '' : `<option value="${_gEsc(val)}" selected style="color:#c00">${_gEsc(val)} — ⚠ no existe</option>`)
+    + L.map(x=>`<option value="${_gEsc(x.CODIGO)}"${x.CODIGO===val?' selected':''}>${_gEsc(x.CODIGO)} — ${_gEsc(x.DETALLE)}</option>`).join('');
 }
 
 function _gFila(g,i){
