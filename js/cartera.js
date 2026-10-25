@@ -4,7 +4,7 @@
 
 let CHEQUES = [];
 let cheqSelIdx = null;
-let cheqFiltEstado = 'todos';
+let cheqFiltEstado = 'cartera';  // arranca en "En cartera" (Ricardo, Oct 2026)
 let cheqFiltFisico = 'todos';     // todos | fisico | echeq
 let cheqFiltDesde = '';           // filtro rango de fechas (fecha del cheque)
 let cheqFiltHasta = '';
@@ -30,6 +30,8 @@ async function sbLoadCheques(){
   try {
     const qs=['limite='+_cartLimite];
     if(typeof cheqFiltEstado!=='undefined' && cheqFiltEstado && cheqFiltEstado!=='todos') qs.push('estado='+encodeURIComponent(cheqFiltEstado));
+    // En "Todos" no se suman cantidad ni importe: sería el histórico completo
+    else qs.push('sinTotales=1');
     const d=(document.getElementById('cart-desde')?.value||'').trim();
     const h=(document.getElementById('cart-hasta')?.value||'').trim();
     if(d) qs.push('desde='+d);
@@ -42,11 +44,11 @@ async function sbLoadCheques(){
     } else { CHEQUES=[]; _cartTotales=null; _cartHayMas=false; }
   }
   catch(e){ console.error('sbLoadCheques:', e); CHEQUES=[]; _cartTotales=null; _cartHayMas=false; }
-  // Asegurar recibos cargados para mostrar el talonario en la columna Recibo-Cheque
-  if(typeof RECIS!=='undefined' && (!RECIS || !RECIS.length) && typeof sbLoadRecis==='function'){
-    try{ await sbLoadRecis(); }catch(e){ console.error('sbLoadRecis desde cartera:', e); }
-  }
+  // El talonario del recibo viene con cada cheque desde el server: ya no hace
+  // falta bajar todos los recibos (era lo que demoraba la entrada, Oct 2026)
+  _cartCargada = true;
 }
+let _cartCargada = false;
 
 function cheqEstadoLabel(e){ return CHEQ_ESTADOS[e] || e || 'En cartera'; }
 function cheqEstadoColor(e){
@@ -110,9 +112,11 @@ function getCheqRows(){
 
 function renderCart(){
   const body=document.getElementById('cart-body'); if(!body) return;
-  if (typeof _recisLoaded !== 'undefined' && !_recisLoaded) {
+  // Sólo se traen los cheques del filtro (no todos los recibos con sus renglones)
+  if (!_cartCargada) {
     body.innerHTML='<div class="empty">⏳ Cargando cartera…</div>';
-    if (typeof ensureRecibos==='function') ensureRecibos().then(renderCart);
+    _cartCargada = true;
+    sbLoadCheques().then(renderCart);
     return;
   }
   const list=getCheqRows();
@@ -131,8 +135,9 @@ function renderCart(){
   const usaServer = !buscando && _cartTotales;
   const tot = usaServer ? _cartTotales.importe : list.reduce((s,c)=>s+(c.importe||0),0);
   const cnt = usaServer ? _cartTotales.cantidad : list.length;
-  const totEl=document.getElementById('cart-total'); if(totEl) totEl.textContent=reciFmt(tot);
-  const cntEl=document.getElementById('cart-count'); if(cntEl) cntEl.textContent=cnt;
+  const sinTot = cheqFiltEstado==='todos' && !buscando;   // "Todos": no se suma el histórico
+  const totEl=document.getElementById('cart-total'); if(totEl) totEl.textContent=sinTot?'—':reciFmt(tot);
+  const cntEl=document.getElementById('cart-count'); if(cntEl) cntEl.textContent=sinTot?'—':cnt;
 
   const cols=(typeof getActiveCols==='function')?getActiveCols('cart'):[];
   const gridTpl=cols.map(c=>c.width||'1fr').join(' ')+' '+CART_SEL_W;
@@ -369,8 +374,8 @@ function _cartFecha(f){
 // Recibo: empresa+talonario+numero(6 díg). Talonario del recibo real (coincide con el recibo).
 function _cartRecibo(c){
   if(!c||!c.recibo_numero) return '';
-  let emp=c.empresa||'', talo='';
-  if(typeof RECIS!=='undefined' && Array.isArray(RECIS)){
+  let emp=c.recibo_empresa||c.empresa||'', talo=c.recibo_talonario||'';
+  if(!talo && typeof RECIS!=='undefined' && Array.isArray(RECIS)){
     const r=RECIS.find(x=>x.id===c.recibo_id);
     if(r){ emp=r.empresa||emp; talo=r.talonario||''; }
   }
