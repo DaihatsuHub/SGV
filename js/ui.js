@@ -232,7 +232,7 @@ async function sgvEditarAbrir(tabla, cod){
     if(r && r.ok) return r.registro;
     if(r && r.bloqueado){
       const desde = r.desde ? new Date(r.desde).toLocaleString('es-AR') : '';
-      const puedeForzar = (typeof USUARIO!=='undefined' && (USUARIO?.nivel||0) >= 90);
+      const puedeForzar = (typeof usuarioActual!=='undefined' && (usuarioActual?.nivel||0) >= 90);
       sgvAviso({ titulo:'Registro en uso',
         texto:`${r.por} está modificando este registro${desde?' desde el '+desde:''}.\n\n`
              +`Para evitar que se pisen los cambios, no se puede abrir hasta que termine.`,

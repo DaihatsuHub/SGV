@@ -271,16 +271,17 @@ function aAlta(){
   document.getElementById('ov-art').classList.add('open');
   window._ae = 'A';
 }
+// Al modificar: el artículo se pide AL SERVER (otro usuario pudo cambiarlo) y se
+// RESERVA. Si lo tiene otro, cartel grande y no se abre. Se libera al grabar o
+// al cancelar. Mismo bloqueo general que Clientes (Ricardo, Oct 2026).
 async function aModif(){
   if(artSelIdx===null){ toast('Seleccioná un artículo','err'); return; }
-  const a = ARTS[artSelIdx];
-  // Aviso INFORMATIVO (no bloquea): ¿otra sesión lo abrió hace poco?
-  try {
-    const sid = (typeof _sessionId!=='undefined')?_sessionId:'?';
-    const por = (typeof usuarioActual!=='undefined' && usuarioActual?.codigo) ? usuarioActual.codigo : '?';
-    const r = await apiPost('/articulos/editando', { cod:a.ART_COD, por, sid });
-    if(r && r.otro) toast('⚠️ '+r.otro+' podría estar editando este artículo ahora','err');
-  } catch(e){ /* si falla el aviso, abrimos igual */ }
+  const cod = ARTS[artSelIdx].ART_COD;
+  const reg = await sgvEditarAbrir('articulos', cod);
+  if(!reg) return;
+  // Lo que trajo el server es lo real: se refresca también la grilla
+  const a = artDesdeFila(reg);
+  ARTS[artSelIdx] = a;
   fillArtForm(a);
   document.getElementById('af-cod').disabled = true;
   document.getElementById('art-mtit').textContent = 'Modificar: ' + a.ART_COD;
@@ -288,13 +289,20 @@ async function aModif(){
   document.getElementById('ov-art').classList.add('open');
   window._ae = 'M';
   window._artVerEdit = a.ART_UPDATED || null;   // versión que estoy editando
-  window._artEditCod = a.ART_COD;               // para liberar la presencia al cerrar
+  window._artEditCod = a.ART_COD;               // para liberar la reserva al cerrar
+  renderArts();
 }
-// Libera mi presencia informativa (al guardar o cancelar)
+// Fila de la base → objeto que usa la pantalla (art_xxx → ART_XXX)
+function artDesdeFila(r){
+  const o={};
+  for(const k in r){ if(k.startsWith('art_') && !k.startsWith('art_edit')) o[k.toUpperCase()]=r[k]; }
+  o.CODCASIO = r.codcasio || null;
+  return o;
+}
+// Libera la reserva (al grabar o cancelar)
 function aSalirEdicion(){
   if(window._artEditCod){
-    const sid = (typeof _sessionId!=='undefined')?_sessionId:'?';
-    apiPost('/articulos/editando/salir', { cod:window._artEditCod, sid }).catch(()=>{});
+    sgvEditarCerrar('articulos', window._artEditCod);
     window._artEditCod=null;
   }
 }
