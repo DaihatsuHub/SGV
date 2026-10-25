@@ -198,6 +198,7 @@ const MENU_DEF = [
     { id:'ddi-grtr',   mod:'grtr',     label:'👥 Grupos de Trabajo', tabla:true },
     { id:'ddi-regl',   mod:'regl',     label:'🔒 Qué ve cada grupo' },
     { id:'btn-permisos', nivelMin:88,  label:'🛡️ Permisos' },
+    { id:'ddi-edd',      nivelMin:99,  label:'🧮 Editor de datos' },
   ]},
 ];
 

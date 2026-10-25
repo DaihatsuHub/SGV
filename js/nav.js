@@ -78,6 +78,7 @@ function showSubPage(menu, sub) {
   else if (sub==='histart') { if(typeof ensureArts==='function') ensureArts(); /* se renderiza al consultar */ }
   else if (sub==='vmes') { if(typeof vmesRenderMarcas==='function') vmesRenderMarcas();
                            if(typeof vmesFillFiltros==='function') vmesFillFiltros(); }
+  else if (sub==='edd')  { if(typeof renderEdd==='function') renderEdd(); }
   else if (sub==='dash') { if(typeof renderDashboard==='function') renderDashboard(); }
   else if (sub==='rcc') { if(typeof renderResultadoCcos==='function') renderResultadoCcos(); }
   else if (sub==='arm') { if(typeof renderArmador==='function') renderArmador(); }

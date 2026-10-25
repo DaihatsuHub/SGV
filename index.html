@@ -177,6 +177,7 @@
         <button class="dd-item" id="ddi-grtr" onclick="showSubPage('util','grtr')">👥 Grupos de Trabajo</button>
         <button class="dd-item" id="ddi-regl" onclick="showSubPage('util','regl')">🔒 Qué ve cada grupo</button>
         <button class="dd-item" id="btn-permisos" onclick="utilRun(openPermisos)">🛡️ Permisos</button>
+        <button class="dd-item" id="ddi-edd" onclick="showSubPage('util','edd')">🧮 Editor de datos</button>
       </div>
     </div>
     <button class="tnav tnav-ia" id="tnav-ia" style="display:none" onclick="showSubPage('ven','psgv')" title="Preguntale a SGV en castellano">✨ IA</button>
@@ -1373,6 +1374,9 @@
   <div id="sct-body" style="overflow:auto;height:calc(100vh - 170px);margin:10px 14px;background:var(--s1);border:1px solid var(--b1);border-radius:6px"></div>
 </div>
 
+<!-- Editor de datos (Utilidades, nivel 99): lo arma js/editdatos.js -->
+<div class="page" id="page-edd"></div>
+
 <div class="page" id="page-psgv">
   <div class="toolbar">
     <span style="font-weight:600;font-size:14px;color:var(--acc)">✨ Preguntale a SGV</span>
@@ -2308,6 +2312,7 @@
 <script src="js/antiguedad.js"></script>
 <script src="js/ranking.js"></script>
 <script src="js/dashboard.js"></script>
+<script src="js/editdatos.js"></script>
 <script src="js/resultccos.js"></script>
 <script src="js/armador.js"></script>
 <script src="js/preguntasgv.js"></script>
