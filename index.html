@@ -145,7 +145,6 @@
       <div class="dd-menu" id="dd-ven">
         <button class="dd-item" id="ddi-fac" onclick="showSubPage('ven','fac')">📄 Facturación</button>
         <button class="dd-item" id="ddi-vmes" onclick="showSubPage('ven','vmes')">📅 Ventas mensuales x Artículos</button>
-        <button class="dd-item" id="ddi-dash" onclick="showSubPage('ven','dash')">📊 Dashboard</button>
         <button class="dd-item" id="ddi-rcc" onclick="showSubPage('ven','rcc')">📈 Resultado por Centro de Costos</button>
         <button class="dd-item" id="ddi-arm" onclick="showSubPage('ven','arm')">🧩 Armá tu informe</button>
         <button class="dd-item" id="ddi-com" onclick="showSubPage('ven','com')">💰 Comisiones</button>
@@ -168,6 +167,8 @@
         <button class="dd-item" id="ddi-antig" onclick="showSubPage('cob','antig')">⏳ Antigüedad de Saldos</button>
       </div>
     </div>
+    <!-- Dashboard: opción propia en la barra, después de Cobranzas. Cada clic lo vuelve a calcular (Ricardo, Oct 2026) -->
+    <button class="tnav" id="ddi-dash" onclick="_dashData=null;showSubPage('dash','dash')">📊 Dashboard</button>
     <div class="dd-wrap">
       <button class="tnav" id="tnav-util" onclick="toggleDD('dd-util',this)">🔧 Utilidades <span class="dd-arrow" id="arr-util">▼</span></button>
       <div class="dd-menu" id="dd-util">

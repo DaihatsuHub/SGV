@@ -171,7 +171,6 @@ const MENU_DEF = [
   { grupo:'🧾 Ventas', tnav:'tnav-ven', items:[
     { id:'ddi-fac',  mod:'fac',  label:'📄 Facturación' },
     { id:'ddi-vmes', mod:'vmes', label:'📅 Ventas mensuales x Artículo' },
-    { id:'ddi-dash', mod:'dash', label:'📊 Dashboard' },
     { id:'ddi-rcc',  mod:'rcc',  label:'📈 Resultado por Centro de Costos' },
     { id:'ddi-arm',  mod:'arm',  label:'🧩 Armá tu informe' },
     { id:'ddi-com',  mod:'comi', label:'💰 Comisiones' },
@@ -189,6 +188,9 @@ const MENU_DEF = [
     { id:'ddi-sdcob',   mod:'sdcob',   label:'📗 Subdiario de Cobranzas' },
     { id:'ddi-listcob', mod:'listcob', label:'📋 Listado de Cobranzas' },
     { id:'ddi-antig',   mod:'antig',   label:'⏳ Antigüedad de Saldos' },
+  ]},
+  { grupo:'📊 Dashboard', items:[      // botón propio en la barra (no es un desplegable)
+    { id:'ddi-dash', mod:'dash', label:'📊 Dashboard' },
   ]},
   { grupo:'🔧 Utilidades', tnav:'tnav-util', items:[
     { id:'ddi-backup', mod:'backup',   label:'🗄️ Backup' },
