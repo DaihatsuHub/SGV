@@ -34,6 +34,9 @@ let _edd = { tabla:'', pk:'', cols:[], filas:[], total:0, cambios:{} };   // cam
       text-overflow:ellipsis;color:var(--txt);background:var(--s1)}
     #edd-grid td[contenteditable]:focus{outline:2px solid #0a58ca;outline-offset:-2px;background:var(--s3);max-width:none}
     #edd-grid td.edd-pk,#edd-grid td.edd-ro{color:var(--t3);background:var(--s2)}
+    /* El código (🔑) queda siempre visible al desplazarse a la derecha */
+    #edd-grid td.edd-pk{position:sticky;left:0;z-index:1;color:var(--txt);font-weight:600;box-shadow:2px 0 0 var(--b1)}
+    #edd-grid th.edd-pkh{position:sticky;left:0;z-index:3;box-shadow:2px 0 0 var(--b1)}
     #edd-grid td.edd-mod{background:#fff3b0;color:#1a1a1a}
     .edd-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--b1)}
     .edd-bar .finp,.edd-bar .fsel{height:30px}
@@ -113,7 +116,8 @@ async function eddLeer(primera){
     const r=await apiPost('/datos/leer',{ tabla:_edd.tabla, filtros:_eddFiltros(),
       limite:document.getElementById('edd-lim').value });
     if(!r.ok){ info.textContent=''; sgvAviso({ titulo:'No se pudo leer', texto:r.error||'Error', tipo:'err' }); return; }
-    _edd.pk=r.pk; _edd.cols=r.columnas; _edd.filas=r.filas; _edd.total=r.total; _edd.cambios={};
+    // El código va primero (y queda fijo a la izquierda)
+    _edd.pk=r.pk; _edd.cols=[r.pk].concat(r.columnas.filter(c=>c!==r.pk)); _edd.filas=r.filas; _edd.total=r.total; _edd.cambios={};
     // Los combos de campos se arman con las columnas de la tabla
     const opts=_edd.cols.map(c=>`<option value="${c}">${c}</option>`).join('');
     ['edd-f1c','edd-f2c'].forEach(id=>{ const e=document.getElementById(id), v=e.value;
@@ -136,13 +140,14 @@ function eddPintar(){
   if(!_edd.cols.length){ w.innerHTML='<div class="empty">Sin registros</div>'; return; }
   const esObj=c=>_edd.filas.some(f=>f[c]!==null && typeof f[c]==='object');
   const ro=Object.fromEntries(_edd.cols.map(c=>[c, c===_edd.pk || esObj(c)]));
-  w.innerHTML=`<table id="edd-grid"><thead><tr>${_edd.cols.map(c=>`<th>${esc(c)}${c===_edd.pk?' 🔑':''}</th>`).join('')}</tr></thead>
+  w.innerHTML=`<table id="edd-grid"><thead><tr>${_edd.cols.map(c=>`<th${c===_edd.pk?' class="edd-pkh"':''}>${esc(c)}${c===_edd.pk?' 🔑':''}</th>`).join('')}</tr></thead>
     <tbody>${_edd.filas.map((f,i)=>`<tr>${_edd.cols.map((c,j)=>{
       const k=i+'|'+c, mod=k in _edd.cambios, v=mod?_edd.cambios[k]:_eddTxt(f[c]);
       return `<td data-i="${i}" data-j="${j}" class="${c===_edd.pk?'edd-pk':(ro[c]?'edd-ro':'')}${mod?' edd-mod':''}"
         ${ro[c]?'':'contenteditable="plaintext-only"'} title="${esc(v)}">${esc(v)}</td>`;
     }).join('')}</tr>`).join('')}</tbody></table>`;
   const t=document.getElementById('edd-grid');
+  eddAjustarAlto();
   t.addEventListener('input', eddInput);
   t.addEventListener('paste', eddPegar);
   t.addEventListener('keydown', eddTecla);
@@ -232,3 +237,10 @@ async function eddCopiar(){
   try{ await navigator.clipboard.writeText(lineas.join('\n')); toast(`${_edd.filas.length} filas copiadas: pegalas en Excel`,'scs'); }
   catch(e){ toast('No se pudo copiar: '+e.message,'err'); }
 }
+
+// La grilla termina donde termina la ventana: así se ve la barra de desplazamiento de abajo
+function eddAjustarAlto(){
+  const w=document.getElementById('edd-wrap'); if(!w || !w.offsetParent) return;
+  w.style.height=Math.max(200, window.innerHeight - w.getBoundingClientRect().top - 12)+'px';
+}
+window.addEventListener('resize', eddAjustarAlto);
