@@ -74,7 +74,8 @@ function eddDesc(c){
   }
   return '';
 }
-const _eddOpt = c => { const d=eddDesc(c); return `<option value="${c}">${esc(d ? d+' — '+c : c)}</option>`; };
+// En un combo no se puede poner negrita: el campo va en MAYÚSCULAS para que resalte
+const _eddOpt = c => { const d=eddDesc(c); return `<option value="${c}">${esc(c.toUpperCase()+(d ? ' — '+d : ''))}</option>`; };
 
 let _edd = { tabla:'', pk:'', cols:[], filas:[], total:0, cambios:{} };   // cambios: 'fila|col' → valor
 
@@ -203,7 +204,7 @@ function eddPintar(){
   if(!_edd.cols.length){ w.innerHTML='<div class="empty">Sin registros</div>'; return; }
   const esObj=c=>_edd.filas.some(f=>f[c]!==null && typeof f[c]==='object');
   const ro=Object.fromEntries(_edd.cols.map(c=>[c, c===_edd.pk || esObj(c)]));
-  w.innerHTML=`<table id="edd-grid"><thead><tr>${_edd.cols.map(c=>`<th${c===_edd.pk?' class="edd-pkh"':''} title="${esc(c)}">${esc(eddDesc(c)||c)}${c===_edd.pk?' 🔑':''}<div style="font-weight:400;font-size:10px;color:var(--t3)">${esc(c)}</div></th>`).join('')}</tr></thead>
+  w.innerHTML=`<table id="edd-grid"><thead><tr>${_edd.cols.map(c=>`<th${c===_edd.pk?' class="edd-pkh"':''} title="${esc(eddDesc(c)||c)}"><b>${esc(c.toUpperCase())}</b>${c===_edd.pk?' 🔑':''}<div style="font-weight:400;font-size:10px;color:var(--t3)">${esc(eddDesc(c))}</div></th>`).join('')}</tr></thead>
     <tbody>${_edd.filas.map((f,i)=>`<tr>${_edd.cols.map((c,j)=>{
       const k=i+'|'+c, mod=k in _edd.cambios, v=mod?_edd.cambios[k]:_eddTxt(f[c]);
       return `<td data-i="${i}" data-j="${j}" class="${c===_edd.pk?'edd-pk':(ro[c]?'edd-ro':'')}${mod?' edd-mod':''}"
