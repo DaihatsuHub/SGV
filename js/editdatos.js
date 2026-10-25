@@ -21,6 +21,61 @@ const EDD_TABLAS_UI = [
   ['ordenes_compra','Órdenes de compra'], ['oc_items','Órdenes de compra (renglones)'], ['gastos','Gastos']
 ];
 
+// Descripción de cada campo (se muestra al lado del nombre). Lo que no está acá
+// se toma de las columnas configurables de cada pantalla (COL_DEFS).
+const EDD_DESC = {
+  art_cod:'Código', art_des:'Descripción', art_rub:'Rubro', art_srub:'Subrubro', art_marca:'Marca',
+  art_pre:'Precio de lista', art_stk:'Stock Hatsu', art_stkt:'Stock Tressa', art_deph:'Depósito Hatsu',
+  art_dept:'Depósito Tressa', art_act:'Activo (S/N)', art_estu:'Estuche', art_grup:'Grupo', art_sex:'Sexo',
+  art_prov:'Proveedor', art_moneda:'Moneda', codcasio:'Código Casio', art_ccos:'Centro de costos',
+  art_iva:'% IVA', art_updated:'Última modificación',
+  cli_codigo:'Código', cli_razon:'Razón social', cli_domic:'Domicilio', cli_local:'Localidad',
+  cli_codpos:'Código postal', cli_provin:'Provincia', cli_telef:'Teléfono', cli_vend:'Vendedor',
+  cli_expre:'Transporte', cli_cuit:'CUIT', cli_iva:'Condición de IVA', cli_nroib:'N° Ingresos Brutos',
+  cli_tipoib:'Tipo IIBB', cli_percib:'Percibe IIBB (S/N)', cli_conpag:'Condición de pago', cli_dto:'% Descuento',
+  cli_obs:'Observaciones', cli_ufec:'Última compra', cli_incob:'Incobrable', cli_nodar:'No darle mercadería',
+  cli_preinc:'Pre-incobrable', cli_abc:'Clasificación ABC', cli_icred:'Límite de crédito', cli_fcred:'Fecha del crédito',
+  cli_estado:'Estado', cli_email:'Email', cli_cate:'Categoría', cli_percep:'Percepciones',
+  dep_id:'Id', dep_desp:'Despacho', dep_sub:'Sub-despacho', dep_fec:'Fecha', dep_art:'Artículo',
+  dep_proc:'Procedencia', dep_adua:'Aduana', dep_ent:'Entradas', dep_sal:'Salidas', dep_stk:'Stock',
+  dep_fob:'FOB unitario', dep_gas:'Gastos 1', dep_gas2:'% Gasto', dep_moneda:'Moneda', dep_costo:'Costo (FOB + gasto)',
+  dep_cotiz:'Cotización', dep_coent:'Entradas contables', dep_cosal:'Salidas contables', dep_costk:'Stock contable',
+  fac_nro:'N° comprobante', fac_fec:'Fecha', fac_cli:'Cliente', fac_vend:'Vendedor', fac_tiva:'Condición IVA',
+  fac_sub:'Subtotal', fac_iva:'IVA', fac_percib:'Percepciones', fac_total:'Total', fac_saldo:'Saldo',
+  fac_salida:'Fecha de entrega', fac_transp:'Transporte', fac_remito:'Remito', fac_vcomi:'% Comisión',
+  fac_moneda:'Moneda', fac_cotiz:'Cotización', fac_monpor:'% Descuento', fac_empresa:'Empresa (H/T)',
+  fac_ctip:'Tipo de comprobante (id)', fac_usuario:'Usuario', fac_tab_stk:'Baja stock', fac_tab_fact:'Fiscal / depósito',
+  fac_anul:'Anulado', fac_neto_afip:'Neto contable', fac_iva_afip:'IVA contable', fac_percep_afip:'Percepciones contables',
+  fac_total_afip:'Total contable', fac_saldo_afip:'Saldo contable', fac_coment:'Comentario interno',
+  fac_leyenda:'Leyenda', fac_ley_neto:'Leyenda: neto', fac_ley_exento:'Leyenda: exento', fac_ley_alic:'Leyenda: % IVA',
+  fac_cae:'CAE', fac_cae_vto:'Vencimiento CAE', fac_afip_st:'Estado AFIP',
+  ite_nro:'N° comprobante', ite_art:'Artículo', ite_can:'Cantidad', ite_uni:'Precio unitario', ite_imp:'Importe',
+  ite_iva_imp:'IVA', ite_desp:'Despacho', ite_dep_id:'Despacho (id)', ite_costo:'Precio de lista',
+  ite_preori:'Precio original', ite_moneda:'Moneda', ite_cotiz:'Cotización',
+  empresa:'Empresa (H/T)', talonario:'Talonario', numero:'Número', fecha:'Fecha', cliente:'Cliente',
+  importe:'Importe', moneda:'Moneda', cotizacion:'Cotización', usuario:'Usuario', estado:'Estado',
+  observaciones:'Observaciones / destino', fecha_salida:'Fecha de salida', fisico:'Físico (no e-cheq)',
+  propio:'Propio', recibo_id:'Recibo (id)', recibo_numero:'N° recibo', fecha_recibo:'Fecha del recibo',
+  imputa_afip:'Imputado a contable', comprobante:'Comprobante', abona:'Abona (pesos)', abona_orig:'Abona (moneda orig.)',
+  abona_afip:'Abona contable', saldo:'Saldo', saldo_orig:'Saldo (moneda orig.)', a_cuenta:'A cuenta',
+  tipo:'Tipo', ret_codigo:'Código de retención', total_abonado:'Total abonado', anulado:'Anulado',
+  cot_casio:'Cotización Casio', cot_tressa:'Cotización Tressa', usuario_alta:'Usuario alta',
+  nc_nro:'N° NC', comp_nro:'Comprobante aplicado', importe_afip:'Importe contable',
+  codigo:'Código', detalle:'Descripción', descripcion:'Descripción', signo:'Signo', contable:'Contable',
+  prefijo:'Prefijo', ultimo_nro:'Último número', tab_stk:'Baja stock', tab_fact:'Fiscal / depósito',
+  articulo:'Artículo', despacho:'Despacho', cantidad:'Cantidad', concepto:'Concepto',
+  mueve_stk:'Mueve stock', mueve_dep:'Mueve depósito', banco:'Banco', librador:'Librador',
+  cuenta:'Cuenta', localidad:'Localidad', gasto:'Gasto', fecha_pago:'Fecha de pago', fac_nro_r:'Comprobante'
+};
+function eddDesc(c){
+  if(EDD_DESC[c]) return EDD_DESC[c];
+  if(typeof COL_DEFS!=='undefined'){
+    for(const k in COL_DEFS){ const d=(COL_DEFS[k]||[]).find(x=>(x.field||'').toLowerCase()===c); if(d && d.label) return d.label; }
+  }
+  return '';
+}
+const _eddOpt = c => { const d=eddDesc(c); return `<option value="${c}">${esc(d ? d+' — '+c : c)}</option>`; };
+
 let _edd = { tabla:'', pk:'', cols:[], filas:[], total:0, cambios:{} };   // cambios: 'fila|col' → valor
 
 (function(){
@@ -127,11 +182,11 @@ async function eddLeer(primera){
     // El código va primero (y queda fijo a la izquierda)
     _edd.pk=r.pk; _edd.cols=[r.pk].concat(r.columnas.filter(c=>c!==r.pk)); _edd.filas=r.filas; _edd.total=r.total; _edd.cambios={};
     // Los combos de campos se arman con las columnas de la tabla
-    const opts=_edd.cols.map(c=>`<option value="${c}">${c}</option>`).join('');
+    const opts=_edd.cols.map(_eddOpt).join('');
     ['edd-f1c','edd-f2c'].forEach(id=>{ const e=document.getElementById(id), v=e.value;
       e.innerHTML='<option value="">Filtro…</option>'+opts; e.value=_edd.cols.includes(v)?v:''; });
     const g=document.getElementById('edd-gc'), gv=g.value;
-    g.innerHTML='<option value="">campo…</option>'+_edd.cols.filter(c=>c!==_edd.pk).map(c=>`<option value="${c}">${c}</option>`).join('');
+    g.innerHTML='<option value="">campo…</option>'+_edd.cols.filter(c=>c!==_edd.pk).map(_eddOpt).join('');
     g.value=_edd.cols.includes(gv)?gv:'';
     info.textContent=`${_edd.filas.length} de ${_edd.total} registros`+(_edd.filas.length<_edd.total?' (afiná el filtro o subí el límite)':'');
     eddPintar();
@@ -148,7 +203,7 @@ function eddPintar(){
   if(!_edd.cols.length){ w.innerHTML='<div class="empty">Sin registros</div>'; return; }
   const esObj=c=>_edd.filas.some(f=>f[c]!==null && typeof f[c]==='object');
   const ro=Object.fromEntries(_edd.cols.map(c=>[c, c===_edd.pk || esObj(c)]));
-  w.innerHTML=`<table id="edd-grid"><thead><tr>${_edd.cols.map(c=>`<th${c===_edd.pk?' class="edd-pkh"':''}>${esc(c)}${c===_edd.pk?' 🔑':''}</th>`).join('')}</tr></thead>
+  w.innerHTML=`<table id="edd-grid"><thead><tr>${_edd.cols.map(c=>`<th${c===_edd.pk?' class="edd-pkh"':''} title="${esc(c)}">${esc(eddDesc(c)||c)}${c===_edd.pk?' 🔑':''}<div style="font-weight:400;font-size:10px;color:var(--t3)">${esc(c)}</div></th>`).join('')}</tr></thead>
     <tbody>${_edd.filas.map((f,i)=>`<tr>${_edd.cols.map((c,j)=>{
       const k=i+'|'+c, mod=k in _edd.cambios, v=mod?_edd.cambios[k]:_eddTxt(f[c]);
       return `<td data-i="${i}" data-j="${j}" class="${c===_edd.pk?'edd-pk':(ro[c]?'edd-ro':'')}${mod?' edd-mod':''}"
