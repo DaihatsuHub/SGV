@@ -131,8 +131,9 @@ async function renderFicha(){
   // ── DERECHA: cheques encolumnado Físico / ECheq ──
   const hoy=new Date().toISOString().substring(0,10);
   const chs=D.cheques||[];
-  const enCart=chs.filter(ch=>(ch.estado||'cartera')==='cartera');
-  const otros =chs.filter(ch=>(ch.estado||'cartera')!=='cartera' && (ch.fec||'')>=hoy);
+  // El server ya manda sólo los que corresponden (desde una semana antes, y los
+  // en cartera de hasta 30 días), ordenados por fecha: los que no están en cartera van en gris
+
   const RGRID='68px minmax(56px,auto) repeat(2,minmax(0,1fr)) minmax(70px,auto)';
   let totFis=0, totEch=0, rrows='';
   const chRow=(ch,gris)=>{
@@ -147,8 +148,7 @@ async function renderFicha(){
       <span style="text-align:right">${!ch.fisico?reciFmt(imp):''}</span>
       <span style="color:${estCol}">${esc(est)}</span></div>`;
   };
-  enCart.forEach(ch=>rrows+=chRow(ch,false));
-  otros.forEach(ch=>rrows+=chRow(ch,true));
+  chs.forEach(ch=>rrows+=chRow(ch,(ch.estado||'cartera')!=='cartera'));
   if(!rrows){ der.innerHTML='<div style="color:var(--t3);padding:12px">Sin cheques.</div>'; }
   else der.innerHTML=
     `<div style="display:grid;grid-template-columns:${RGRID};gap:6px;font-size:calc(var(--ffs,12px) - 1px);color:var(--t2);font-weight:600;border-bottom:1px solid var(--b1);padding:4px 0;margin-bottom:4px;position:sticky;top:-8px;background:var(--s2);z-index:1">
