@@ -31,9 +31,20 @@ function nfiAbrir(){
   if (!ct) { toast('Elegí primero la empresa y el tipo de comprobante','err'); return; }
   if (nfEsNC()) { toast('La importación es para facturas, no para notas de crédito','err'); return; }
   const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = '.xlsx';
+  inp.type = 'file'; inp.accept = '.xlsx,.xls,.csv';
   inp.onchange = () => { if (inp.files[0]) nfiLeer(inp.files[0]); };
   inp.click();
+}
+
+// SheetJS: sólo para leer .xls / .csv (ExcelJS lee únicamente .xlsx)
+function _nfiCargarSheetJS(){
+  if (typeof XLSX !== 'undefined') return Promise.resolve();
+  return new Promise((ok, mal) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    sc.onload = () => ok(); sc.onerror = () => mal(new Error('No se pudo cargar el lector de .xls'));
+    document.head.appendChild(sc);
+  });
 }
 
 // Cartel "Procesando…" mientras se lee el Excel y se arma el control
@@ -51,7 +62,14 @@ async function nfiLeer(file){
   try {
     await vmesLoadExcelJS();
     const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(await file.arrayBuffer());
+    let buf = await file.arrayBuffer();
+    // .xls (formato viejo de Excel) o .csv: se convierten a .xlsx con SheetJS
+    if (!/\.xlsx$/i.test(file.name)) {
+      await _nfiCargarSheetJS();
+      const x = XLSX.read(buf, { type:'array', cellDates:true });
+      buf = XLSX.write(x, { bookType:'xlsx', type:'array' });
+    }
+    await wb.xlsx.load(buf);
     const ws = wb.worksheets[0];
     if (!ws) { document.getElementById('nfi-modal')?.remove(); toast('El Excel no tiene hojas','err'); return; }
     // Fila de títulos: la primera (de las 10 primeras) que tenga AL MENOS UNO de
@@ -69,7 +87,7 @@ async function nfiLeer(file){
       if (c.sku || c.can || c.pre) { hdrRow = r; cols = c; break; }
     }
     // Los precios del Excel están en la MONEDA DE LA FACTURA (pesos, U$T, U$C…)
-    _nfi = { wb, ws, nombre:file.name.replace(/\.xlsx$/i,''), cols, hdrRow, emp:document.getElementById('nf-empresa')?.value||'H',
+    _nfi = { wb, ws, nombre:file.name.replace(/\.(xlsx|xls|csv)$/i,''), cols, hdrRow, emp:document.getElementById('nf-empresa')?.value||'H',
              mon:document.getElementById('nf-moneda')?.value||'P' };
     if (!cols.sku || !cols.can || !cols.pre) nfiElegirColumnas();
     else nfiArmar();
