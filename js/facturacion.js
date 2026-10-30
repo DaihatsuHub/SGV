@@ -12,11 +12,32 @@ let FAC_ITEMS_NUEVA = [];
 let NF_PERCEP = [];   // [{cod, detalle, pct, importe}] percepciones IIBB de la factura actual
 let FAC_MODO = null;
 
+// Carga de la grilla: las páginas de 1.000 se piden DE A 4 A LA VEZ en vez de
+// una detrás de otra (con 12.000 comprobantes eran 13 viajes seguidos, Oct 2026)
 async function sbLoadFacs() {
   try {
-    FACS = await sbGetAll('facturas', 'fac_fec');
+    const todas = [];
+    for (let base = 0; ; base += 4) {
+      const lote = await Promise.all([0,1,2,3].map(k =>
+        sbGet('facturas', `order=fac_fec.asc&limit=1000&offset=${(base+k)*1000}`)));
+      lote.forEach(r => todas.push(...(r||[])));
+      if (lote.some(r => !r || r.length < 1000)) break;
+    }
+    FACS = todas;
     FACS.sort((a,b) => (b.fac_fec||'').localeCompare(a.fac_fec||''));
   } catch(e) { console.error('sbLoadFacs:', e); }
+}
+
+// Después de grabar, anular o eliminar se trae SÓLO ese comprobante del server
+// (antes se volvían a bajar todos). Si ya no existe, se saca de la grilla.
+async function facRefrescarNro(facNro){
+  try{
+    const r = await sbGet('facturas', 'fac_nro=eq.' + encodeURIComponent(facNro));
+    const i = FACS.findIndex(x => x.fac_nro === facNro);
+    if (r && r[0]) { if (i >= 0) FACS[i] = r[0]; else FACS.unshift(r[0]); }
+    else if (i >= 0) FACS.splice(i, 1);
+    FACS.sort((a,b) => (b.fac_fec||'').localeCompare(a.fac_fec||''));
+  }catch(e){ console.error('facRefrescarNro:', e); await sbLoadFacs(); }
 }
 
 // Carga facturas bajo demanda (idempotente). La usan el módulo Facturas,
@@ -904,7 +925,7 @@ async function facEliminar(facNro){
   try{
     const res=await apiPost('/facturas/eliminar',{fac_nro:facNro});
     if(!res.ok){ toast(res.error||'No se pudo eliminar','err'); return; }
-    await sbLoadFacs();
+    await facRefrescarNro(facNro);
     if(typeof reloadArts==='function'){ try{ await reloadArts(); }catch(_){} }
     facSelIdx=null;
     renderFac();
@@ -929,7 +950,7 @@ async function facAnular(facNro) {
       } else toast(res.error||'No se pudo anular','err');
       return;
     }
-    await sbLoadFacs();
+    await facRefrescarNro(facNro);
     if(typeof reloadArts==='function'){ try{ await reloadArts(); }catch(_){} }
     renderFac();
     const idx=filtFacs().findIndex(x=>x.fac_nro===facNro);
@@ -3236,7 +3257,7 @@ async function nfGuardar() {
     const facNro=res.facNro;
     ct.ultimo_nro=res.nuevoUltimo; ct.bloqueado=false; ct.bloqueado_por=null;
     _nfCtipBloqueadoId=null;
-    await sbLoadFacs();
+    await facRefrescarNro(facNro);
     FAC_MODO=null; FAC_ITEMS_NUEVA=[];
     // Cerrar modal y volver a la grilla
     const ovNf=document.getElementById('ov-nf');
