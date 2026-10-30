@@ -155,6 +155,7 @@ const MENU_DEF = [
     { id:'ddi-ficha',  mod:'ficha',  label:'🪪 Ficha del Cliente' },
     { id:'ddi-ctacte', mod:'ctacte', label:'📄 Cuenta Corriente' },
     { id:'ddi-comp',   mod:'comp',   label:'🧾 Composición de Saldo' },
+    { id:'ddi-pib',    mod:'pib',    label:'🧾 Percepciones de IIBB' },
     { id:'ddi-cpag',   mod:'cpag',   label:'💳 Condiciones de Pago', tabla:true },
     { id:'ddi-vend',   mod:'vend',   label:'👤 Vendedores',          tabla:true },
     { id:'ddi-cate',   mod:'cate',   label:'🏷️ Categorías',          tabla:true },

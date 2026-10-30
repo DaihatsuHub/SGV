@@ -122,6 +122,7 @@
         <button class="dd-item" id="ddi-salcont" onclick="showSubPage('cli','salcont')">📒 Saldos Contables</button>
         <button class="dd-item" id="ddi-ctacte" onclick="showSubPage('cli','ctacte')">📄 Cuenta Corriente</button>
         <button class="dd-item" id="ddi-comp" onclick="showSubPage('cli','comp')">🧾 Composición de Saldo</button>
+        <button class="dd-item" id="ddi-pib" onclick="showSubPage('cli','pib')">🧾 Percepciones de IIBB</button>
         <div style="height:1px;background:rgba(255,255,255,0.15);margin:6px 12px"></div>
         <button class="dd-item" id="ddi-cpag" onclick="showSubPage('cli','cpag')">💳 Tabla Condiciones de Pago</button>
         <button class="dd-item" id="ddi-vend" onclick="showSubPage('cli','vend')">👤 Tabla de Vendedores</button>
@@ -1380,6 +1381,9 @@
   <div id="sct-body" style="overflow:auto;height:calc(100vh - 170px);margin:10px 14px;background:var(--s1);border:1px solid var(--b1);border-radius:6px"></div>
 </div>
 
+<!-- Percepciones de IIBB desde el padrón (Clientes): lo arma js/percibb.js -->
+<div class="page" id="page-pib"></div>
+
 <!-- Editor de datos (Utilidades, nivel 99): lo arma js/editdatos.js -->
 <div class="page" id="page-edd"></div>
 
@@ -2327,6 +2331,7 @@
 <script src="js/ranking.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/editdatos.js"></script>
+<script src="js/percibb.js"></script>
 <script src="js/resultccos.js"></script>
 <script src="js/armador.js"></script>
 <script src="js/preguntasgv.js"></script>
