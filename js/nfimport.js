@@ -30,7 +30,6 @@ function nfiAbrir(){
   const ct = nfCtipActual();
   if (!ct) { toast('Elegí primero la empresa y el tipo de comprobante','err'); return; }
   if (nfEsNC()) { toast('La importación es para facturas, no para notas de crédito','err'); return; }
-  if ((document.getElementById('nf-moneda')?.value||'P') !== 'P') { toast('El Excel trae precios en pesos: la factura tiene que ser en pesos','err'); return; }
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = '.xlsx';
   inp.onchange = () => { if (inp.files[0]) nfiLeer(inp.files[0]); };
@@ -57,7 +56,9 @@ async function nfiLeer(file){
       });
       if (c.sku) { hdrRow = r; cols = c; break; }
     }
-    _nfi = { wb, ws, nombre:file.name.replace(/\.xlsx$/i,''), cols, hdrRow, emp:document.getElementById('nf-empresa')?.value||'H' };
+    // Los precios del Excel están en la MONEDA DE LA FACTURA (pesos, U$T, U$C…)
+    _nfi = { wb, ws, nombre:file.name.replace(/\.xlsx$/i,''), cols, hdrRow, emp:document.getElementById('nf-empresa')?.value||'H',
+             mon:document.getElementById('nf-moneda')?.value||'P' };
     if (!cols.sku || !cols.can || !cols.pre) nfiElegirColumnas();
     else nfiArmar();
   } catch (e) { console.error('nfiLeer:', e); sgvAviso({ titulo:'No se pudo leer el Excel', texto:e.message, tipo:'err' }); }
@@ -135,6 +136,8 @@ function nfiArmar(){
   Object.keys(porArt).forEach(k => {
     const a = _nfiArt(k), tot = porArt[k];
     if (!a) destino[k] = { col:'E', motivo:'No existe en el maestro' };
+    // Factura en otra moneda: sólo artículos de esa misma moneda (igual que por grupo)
+    else if (_nfi.mon !== 'P' && (a.ART_MONEDA||'P') !== _nfi.mon) destino[k] = { col:'E', motivo:`El artículo es en ${a.ART_MONEDA||'P'}, la factura en ${_nfi.mon}` };
     else if (cargados.has(k)) destino[k] = { col:'E', motivo:'Ya está cargado en la factura' };
     else if (_nfiDispArt(a, emp, ct) >= tot) destino[k] = { col:emp };
     else if (_nfiDispArt(a, otra, ct) >= tot) destino[k] = { col:otra, motivo:`No alcanza el stock de ${emp==='T'?'Tressa':'Hatsu'}` };
@@ -164,7 +167,7 @@ function nfiMostrar(){
   m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center';
   m.innerHTML = `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:14px;width:min(920px,96vw);max-height:90vh;display:flex;flex-direction:column">
     <div style="font-weight:700;margin-bottom:4px">📥 Importar · ${esc(_nfi.nombre)} · facturando <span style="color:var(--acc)">${emp==='T'?'TRESSA':'HATSU'}</span></div>
-    <div style="font-size:12px;color:var(--t2);margin-bottom:8px">Se factura sólo la columna ${emp==='T'?'TRESSA':'HATSU'}.${_nfi.yaFact?` ${_nfi.yaFact} fila(s) ya facturadas se descartaron.`:''}</div>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:8px">Precios en ${esc((TABLAS['MONE']||[]).find(m=>m.CODIGO===_nfi.mon)?.STRING1||_nfi.mon)}. Se factura sólo la columna ${emp==='T'?'TRESSA':'HATSU'}.${_nfi.yaFact?` ${_nfi.yaFact} fila(s) ya facturadas se descartaron.`:''}</div>
     <div style="display:grid;grid-template-columns:${grid};gap:6px;padding:5px 8px;background:var(--s2);font-size:11px;font-weight:600;color:var(--t2)">
       <span>Código</span><span>Descripción</span><span style="text-align:right">Precio</span>
       <span style="text-align:right">Hatsu</span><span style="text-align:right">Tressa</span><span style="text-align:right;color:var(--red)">Error</span></div>
@@ -215,7 +218,7 @@ async function nfiConfirmar(){
       const dStk = d ? ((d.dep_stk!=null) ? d.dep_stk : ((d.dep_ent||0)-(d.dep_sal||0))) : null;
       return { ite_art:(a.ART_COD||'').trim(), ite_desp_art:a.ART_DES||'',
         ite_desp_nro: d ? d.dep_desp + (d.dep_sub||'') : '', ite_desp_fec: d ? (d.dep_fec||'') : '', ite_can:can,
-        ite_uni:x.pre, ite_preori:x.pre, ite_moneda:'P', ite_cotiz:1, ite_iva_porc:iva,
+        ite_uni:x.pre, ite_preori:x.pre, ite_moneda:_nfi.mon, ite_cotiz:1, ite_iva_porc:iva,
         ite_imp:Math.round(neto*can*100)/100, ite_iva_imp: esA ? Math.round((x.pre-neto)*can*100)/100 : 0,
         _artReal: emp==='T' ? (a.ART_STKT||0) : (a.ART_STK||0), _artPfac: emp==='T' ? (a.ART_DEPT||0) : (a.ART_DEPH||0),
         _depStk:dStk, _depCostk: d ? ((d.dep_costk!=null) ? d.dep_costk : dStk) : null,
