@@ -446,10 +446,13 @@ async function saveCtip() {
 
 function filtFacs() {
   const emp=document.getElementById('fac-empresa')?.value||'';
+  // "Pendientes de Entrega": sólo facturas no anuladas sin fecha de entrega
+  const soloPend=!!document.getElementById('fac-pend')?.checked;
   let list=FACS.filter(f=>{
     const me=!emp||(f.fac_nro||'').startsWith(emp);
     const mf=!facFechaBusq||(f.fac_fec||'').includes(facFechaBusq);
-    return me&&mf;
+    const mp=!soloPend||((f.fac_nro||'').trim().slice(-1).toUpperCase()==='F' && !f.fac_anul && !f.fac_salida);
+    return me&&mf&&mp;
   });
   // `_razon` no es una columna: se resuelve contra el maestro de clientes.
   // Al ordenar por razón social, dentro de cada cliente van de la MÁS RECIENTE
@@ -568,9 +571,7 @@ function renderFac() {
       ?`<span style="font-size:10px;background:#3a1a1a;color:#f87171;padding:1px 5px;border-radius:3px;margin-left:3px">ANULADA</span>`
       :f.fac_cae
       ?`<span style="font-size:10px;background:#1a3a1a;color:#4ade80;padding:1px 5px;border-radius:3px;margin-left:3px">CAE</span>`
-      :esBorrador
-        ?`<span style="font-size:10px;background:#2a2a1a;color:#facc15;padding:1px 5px;border-radius:3px;margin-left:3px">BORR</span>`
-        :'';
+      :'';   // (sin etiqueta BORR en la grilla: Ricardo, Oct 2026)
     const _anulSty=f.fac_anul?'text-decoration:line-through;opacity:0.55':'';
     // Subfacturada: se distingue en la grilla con fondo violeta suave y una
     // etiqueta con el % declarado, para no confundirla con una factura al 100%.
@@ -598,10 +599,9 @@ function renderFac() {
     const nomCorto = nomCli.length>20 ? nomCli.substring(0,20).trim()+'…' : nomCli;
     // Grilla de columnas FIJAS (antes era flex y el nombre arrancaba en una
     // posición distinta en cada fila, según el largo del número y la etiqueta).
-    return `<div class="tr-fac ${sel}" data-idx="${i}" onclick="selFac(${i})" style="${_dtoSty}${_anulSty};display:grid;grid-template-columns:78px 122px 46px 1fr 22px;gap:8px;align-items:center;overflow:hidden">
+    return `<div class="tr-fac ${sel}" data-idx="${i}" onclick="selFac(${i})" style="${_dtoSty}${_anulSty};display:grid;grid-template-columns:78px 122px 1fr 22px;gap:8px;align-items:center;overflow:hidden">
       <span style="font-size:12px;color:var(--t2);white-space:nowrap">${fec}</span>
       <span class="col-cod" style="font-family:var(--mono);color:${_dtoCol};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(f.fac_nro||'')}${badge}</span>
-      <span style="white-space:nowrap">${_dtoTag}</span>
       <span title="${esc(nomCli)}" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">${esc(nomCorto)}</span>
       <span style="text-align:right;font-size:13px;font-family:var(--mono);white-space:nowrap">${marcas}</span>
     </div>`;
@@ -748,6 +748,7 @@ async function renderFacDetalle(f, vista) {
           <button onclick="facComentario('${f.fac_nro}')" class="btn" style="padding:5px 12px;font-size:12px;white-space:nowrap;${f.fac_coment?'background:#facc15;color:#1a1a1a;font-weight:600':''}" title="${f.fac_coment?esc(f.fac_coment):'Sin comentario'}">💬 Comentario</button>
           ${(tieneDto||!esContable)?`<button onclick="facImprimirBorrador()" class="btn" style="padding:5px 12px;font-size:12px;background:var(--acc);color:#fff;white-space:nowrap">🖨 Imprimir Borrador</button>`:''}
           ${_puedeAnular?`<button onclick="facAnular('${f.fac_nro}')" class="btn" style="padding:5px 12px;font-size:12px;background:var(--red);color:#fff;white-space:nowrap">🚫 Anular</button>`:''}
+          ${esFactura?`<button onclick="facFirmar('${f.fac_nro}')" class="btn" style="padding:5px 12px;font-size:12px;white-space:nowrap;${(f.fac_preparo&&f.fac_controlo)?'background:#166534;color:#fff':''}" title="Preparó: ${esc(f.fac_preparo||'—')} · Controló: ${esc(f.fac_controlo||'—')}">✍ Firmar</button>`:''}
           ${_puedeElim?`<button onclick="facEliminar('${f.fac_nro}')" class="btn" style="padding:5px 12px;font-size:12px;background:#7f1d1d;color:#fff;white-space:nowrap" title="Borra el comprobante y libera el número. Sólo dentro del mes.">🗑 Eliminar</button>`:''}
           </div>
         </div>
@@ -1005,6 +1006,42 @@ async function facComentarioGuardar(facNro){
     renderFac();
     toast(txt?'Comentario guardado':'Comentario borrado','scs');
   }catch(e){ console.error('facComentarioGuardar:',e); toast('Error: '+e.message,'err'); }
+}
+
+// ── FIRMAR: Preparó / Controló (sólo facturas; edita quien puede modificar) ──
+async function facFirmar(facNro){
+  const f=FACS.find(x=>x.fac_nro===facNro); if(!f) return;
+  await facRefrescar(f);                    // siempre el dato del server
+  const puede=(typeof puedeh==='function') && puedeh('fac','modif') && !f.fac_anul;
+  document.getElementById('fac-firma-modal')?.remove();
+  const m=document.createElement('div');
+  m.id='fac-firma-modal';
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center';
+  const inp=(id,v)=>`<input id="${id}" class="finp" value="${esc(v||'')}" maxlength="40" ${puede?'':'readonly'} style="width:100%;box-sizing:border-box;text-transform:uppercase">`;
+  m.innerHTML=`<div style="background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:16px;width:min(380px,92vw)">
+      <div style="font-weight:700;margin-bottom:12px">✍ Firmar · ${esc(facNro)}</div>
+      <label style="font-size:12px;color:var(--t2)">Preparó</label>${inp('fac-firma-prep',f.fac_preparo)}
+      <div style="height:8px"></div>
+      <label style="font-size:12px;color:var(--t2)">Controló</label>${inp('fac-firma-ctrl',f.fac_controlo)}
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button class="btn" onclick="document.getElementById('fac-firma-modal').remove()">${puede?'Cancelar':'Cerrar'}</button>
+        ${puede?`<button class="btn pri" onclick="facFirmarGuardar('${facNro}')">Guardar</button>`:''}
+      </div></div>`;
+  m.addEventListener('mousedown',e=>{ if(e.target===m) m.remove(); });
+  m.addEventListener('keydown',e=>{ if(e.key==='Escape') m.remove(); if(e.key==='Enter' && puede) facFirmarGuardar(facNro); });
+  document.body.appendChild(m);
+  document.getElementById('fac-firma-prep')?.focus();
+}
+async function facFirmarGuardar(facNro){
+  const preparo=document.getElementById('fac-firma-prep')?.value||'', controlo=document.getElementById('fac-firma-ctrl')?.value||'';
+  try{
+    const res=await apiPost('/facturas/campo',{ fac_nro:facNro, campo:'firmas', valor:{ preparo, controlo } });
+    if(!res.ok){ toast(res.error||'No se pudo guardar','err'); return; }
+    const f=FACS.find(x=>x.fac_nro===facNro); if(f){ f.fac_preparo=res.fac_preparo; f.fac_controlo=res.fac_controlo; }
+    document.getElementById('fac-firma-modal')?.remove();
+    toast('Firmas guardadas','scs');
+    renderFac();
+  }catch(e){ console.error('facFirmarGuardar:',e); toast('Error: '+e.message,'err'); }
 }
 
 // Transporte / Esperar Pago (permiso de modificar comprobantes)
