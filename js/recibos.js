@@ -282,7 +282,7 @@ async function _reciOpenEditor(){
   document.getElementById('rf-cot-tressa').value=reciFmt(_reciHdr.cotTressa);
   reciFillClienteList();
   const cli=CLIS.find(c=>(c.CLI_CODIGO||'').trim()===(rc.cliente||'').trim());
-  document.getElementById('rf-cli').value=cli?cli.CLI_RAZON:rc.cliente; document.getElementById('rf-cli').disabled=true;
+  document.getElementById('rf-cli').value=cli?`${(cli.CLI_RAZON||'').trim()} — ${(cli.CLI_CODIGO||'').trim()}`:rc.cliente; document.getElementById('rf-cli').disabled=true;
   if(cli){
     document.getElementById('rf-domic').textContent=cli.CLI_DOMIC||'—';
     document.getElementById('rf-local').textContent=cli.CLI_LOCAL||'—';
@@ -406,7 +406,9 @@ function reciHdrCotizChange(){
 }
 function reciFillClienteList(){
   const dl=document.getElementById('rf-cli-list'); if(!dl) return;
-  dl.innerHTML=(CLIS||[]).map(c=>`<option value="${esc(c.CLI_RAZON||'')}">`).join('');
+  // "Razón social — código": el navegador filtra por lo que se escriba, así se
+  // puede buscar por cualquiera de los dos (Ricardo, Oct 2026)
+  dl.innerHTML=(CLIS||[]).map(c=>`<option value="${esc((c.CLI_RAZON||'').trim())} — ${esc((c.CLI_CODIGO||'').trim())}">`).join('');
 }
 function rfCliClear(){
   const el=document.getElementById('rf-cli'); if(!el || el.disabled) return;
@@ -415,7 +417,11 @@ function rfCliClear(){
 }
 async function reciClienteChange(){
   const val=(document.getElementById('rf-cli').value||'').trim().toLowerCase();
-  const c=(CLIS||[]).find(x=>(x.CLI_RAZON||'').trim().toLowerCase()===val);
+  // Acepta "Razón — código", sólo el código o sólo la razón social
+  const cod=(val.split('—').pop()||'').trim();
+  const c=(CLIS||[]).find(x=>(x.CLI_CODIGO||'').trim().toLowerCase()===cod)
+       || (CLIS||[]).find(x=>(x.CLI_CODIGO||'').trim().toLowerCase()===val)
+       || (CLIS||[]).find(x=>(x.CLI_RAZON||'').trim().toLowerCase()===val);
   if(!c){ _reciHdr.cliente='';
     ['rf-domic','rf-local','rf-provin','rf-vend'].forEach(id=>{const el=document.getElementById(id); if(el) el.textContent='—';});
     _reciDeud=[]; renderReciDeud(); reciReconcile(); return;
@@ -482,6 +488,8 @@ function reciLoadDeudores(){
           && ['F','D','R'].includes(tipo) && (f.fac_saldo||0)>0
           && (_reciEsX() ? !!f.fac_tab_fact : !f.fac_tab_fact);
     });
+    // De la más vieja a la más nueva (Ricardo, Oct 2026)
+    _reciDeud.sort((a,b)=>String(a.fac_fec||'').localeCompare(String(b.fac_fec||'')) || String(a.fac_nro||'').localeCompare(String(b.fac_nro||'')));
   }
   renderReciDeud(); reciReconcile();
 }
