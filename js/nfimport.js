@@ -36,13 +36,24 @@ function nfiAbrir(){
   inp.click();
 }
 
+// Cartel "Procesando…" mientras se lee el Excel y se arma el control
+function nfiProcesando(txt){
+  document.getElementById('nfi-modal')?.remove();
+  const m=document.createElement('div'); m.id='nfi-modal';
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center';
+  m.innerHTML=`<div style="background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:22px 28px;font-size:15px;font-weight:600;color:var(--txt)">⏳ ${esc(txt||'Procesando el Excel…')}</div>`;
+  document.body.appendChild(m);
+}
+
 async function nfiLeer(file){
+  nfiProcesando('Procesando el Excel…');
+  await new Promise(r=>setTimeout(r,30));    // que se pinte el cartel antes de leer
   try {
     await vmesLoadExcelJS();
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(await file.arrayBuffer());
     const ws = wb.worksheets[0];
-    if (!ws) { toast('El Excel no tiene hojas','err'); return; }
+    if (!ws) { document.getElementById('nfi-modal')?.remove(); toast('El Excel no tiene hojas','err'); return; }
     // Fila de títulos: la primera (de las 10 primeras) que tenga "SKU"
     let hdrRow = 0, cols = {};
     for (let r = 1; r <= Math.min(10, ws.rowCount); r++) {
@@ -61,7 +72,7 @@ async function nfiLeer(file){
              mon:document.getElementById('nf-moneda')?.value||'P' };
     if (!cols.sku || !cols.can || !cols.pre) nfiElegirColumnas();
     else nfiArmar();
-  } catch (e) { console.error('nfiLeer:', e); sgvAviso({ titulo:'No se pudo leer el Excel', texto:e.message, tipo:'err' }); }
+  } catch (e) { document.getElementById('nfi-modal')?.remove(); console.error('nfiLeer:', e); sgvAviso({ titulo:'No se pudo leer el Excel', texto:e.message, tipo:'err' }); }
 }
 
 // Sin títulos (o incompletos): se adivina el SKU por los códigos que existen en
