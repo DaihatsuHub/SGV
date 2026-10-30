@@ -54,18 +54,19 @@ async function nfiLeer(file){
     await wb.xlsx.load(await file.arrayBuffer());
     const ws = wb.worksheets[0];
     if (!ws) { document.getElementById('nfi-modal')?.remove(); toast('El Excel no tiene hojas','err'); return; }
-    // Fila de títulos: la primera (de las 10 primeras) que tenga "SKU"
+    // Fila de títulos: la primera (de las 10 primeras) que tenga AL MENOS UNO de
+    // los títulos conocidos. Lo que se reconozca se usa; lo que falte se pide.
     let hdrRow = 0, cols = {};
     for (let r = 1; r <= Math.min(10, ws.rowCount); r++) {
       const c = {};
       ws.getRow(r).eachCell({ includeEmpty:false }, (cell, n) => {
-        const t = _nfiNorm(_nfiVal(cell));
-        if (t === 'SKU') c.sku = n;
-        else if (/^(CANT|CANTIDAD|UNIDADES|CANT\.)$/.test(t)) c.can = n;
-        else if (/^(PRECIO|UNITARIO|P\.? ?UNIT)/.test(t)) c.pre = c.pre || n;   // PRECIO o UNITARIO
+        const t = _nfiNorm(_nfiVal(cell)).replace(/[.:$]/g,'').trim();
+        if (/^(SKU|COD|CODIGO|CODIGO SGV|ARTICULO)$/.test(t)) c.sku = c.sku || n;
+        else if (/^(CANT|CANTIDAD|UNIDADES|UNID|UDS)$/.test(t)) c.can = c.can || n;
+        else if (/^(PRECIO|UNITARIO|P ?UNIT|PRECIO UNITARIO)/.test(t)) c.pre = c.pre || n;
         else if (t === 'FACTURA') c.fac = n;
       });
-      if (c.sku) { hdrRow = r; cols = c; break; }
+      if (c.sku || c.can || c.pre) { hdrRow = r; cols = c; break; }
     }
     // Los precios del Excel están en la MONEDA DE LA FACTURA (pesos, U$T, U$C…)
     _nfi = { wb, ws, nombre:file.name.replace(/\.xlsx$/i,''), cols, hdrRow, emp:document.getElementById('nf-empresa')?.value||'H',
