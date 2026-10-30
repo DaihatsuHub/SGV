@@ -2097,8 +2097,10 @@ async function nfCargarGrupo() {
       const desps=despsPorArt[a.ART_COD]||[];
       const despsFilt=desps.filter(d=>nfDispDesp(d)>0);
       despsArr=despsFilt;
-      if(despsFilt.length===1){
-        const d=despsFilt[0];
+      // Se ofrece el despacho MÁS ANTIGUO con stock (vienen ordenados del más
+      // nuevo al más viejo) — Ricardo, Oct 2026
+      if(despsFilt.length){
+        const d=despsFilt[despsFilt.length-1];
         despNro=d.dep_desp+(d.dep_sub||'');
         despFec=d.dep_fec||'';
         depStk=(d.dep_stk!=null)?d.dep_stk:((d.dep_ent||0)-(d.dep_sal||0));
@@ -2385,8 +2387,9 @@ async function nfItemArtChange(idx,cod) {
     const desps=await sbGet('despachos',`dep_art=eq.${encodeURIComponent(codUp)}&order=dep_fec.desc`);
     const despsFilt=esNC?desps:desps.filter(d=>nfDispDesp(d)>0);
     FAC_ITEMS_NUEVA[idx]._desps=despsFilt;
-    if(despsFilt.length===1){
-      const d=despsFilt[0];
+    // Se ofrece el despacho MÁS ANTIGUO (vienen del más nuevo al más viejo)
+    if(despsFilt.length){
+      const d=despsFilt[despsFilt.length-1];
       FAC_ITEMS_NUEVA[idx].ite_desp_nro=d.dep_desp+(d.dep_sub||'');
       FAC_ITEMS_NUEVA[idx].ite_desp_fec=d.dep_fec||'';
       const dStk=(d.dep_stk!=null)?d.dep_stk:((d.dep_ent||0)-(d.dep_sal||0));
