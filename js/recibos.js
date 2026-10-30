@@ -435,6 +435,13 @@ async function reciClienteChange(){
   reciLoadDeudores();
 }
 
+// ¿El tipo del comprobante es CONTABLE? (prefijo = 3 primeros caracteres + tipo = última letra)
+function _reciTipoContable(nro){
+  const n=String(nro||'').trim().toUpperCase();
+  const ct=(typeof CTIPS!=='undefined'?CTIPS:[]).find(c=>(c.prefijo||'').toUpperCase()===n.substring(0,3) && (c.tipo||'').toUpperCase()===n.slice(-1));
+  return ct ? !!ct.contable : true;
+}
+
 // ════════════════ EDITOR — grilla de deudores ════════════════
 function reciLoadDeudores(){
   const cod=_reciHdr.cliente, emp=_reciHdr.empresa; _reciDeud=[];
@@ -475,7 +482,8 @@ function reciLoadDeudores(){
           // Saldo CONTABLE: sólo existe si el comprobante BAJA DEPÓSITO.
           // Si no baja depo no es fiscal, así que no tiene parte contable y no
           // se muestra ni se calcula lo abonado contable.
-          saldo_afip: f.fac_tab_fact ? round2(f.fac_saldo_afip||0) : 0,
+          // …y sólo si el TIPO es CONTABLE (Tipos de Comprobantes) — Ricardo, Oct 2026
+          saldo_afip: (f.fac_tab_fact && _reciTipoContable(f.fac_nro)) ? round2(f.fac_saldo_afip||0) : 0,
           abona_afip:0 });
       }
     });
