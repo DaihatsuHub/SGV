@@ -1521,7 +1521,7 @@ function facNavegar(fn) {
 }
 
 function facAlta() {
-  FAC_ITEMS_NUEVA=[]; NF_PERCEP=[];
+  FAC_ITEMS_NUEVA=[]; NF_PERCEP=[]; if(typeof nfiReset==='function') nfiReset();
   FAC_MODO='A';
   renderFacModal(new Date().toISOString().substring(0,10),'H','');
 }
@@ -1535,7 +1535,7 @@ function facBaja() {
 }
 function facCancelar() {
   nfDesbloquearCtip();
-  FAC_MODO=null; FAC_ITEMS_NUEVA=[];
+  FAC_MODO=null; FAC_ITEMS_NUEVA=[]; if(typeof nfiReset==='function') nfiReset();
   const ov=document.getElementById('ov-nf');
   if(ov) ov.classList.remove('open');
   const f=filtFacs()[facSelIdx];
@@ -1676,6 +1676,7 @@ function renderFacModal(fecha, empresa, cliCod) {
             <button class="btn" style="padding:2px 7px;font-size:11px" onclick="nfBuscarItemLimpiar()" title="Limpiar">✕</button>
           </span>
           <button id="nf-btn-grupo" class="btn" onclick="nfAbrirCargaGrupo()" style="padding:3px 10px;font-size:11px">📦 Grupo</button>
+          <button id="nf-btn-importar" class="btn" onclick="nfiAbrir()" title="Importar artículos desde un Excel (ej. ventas de Mercado Libre)" style="padding:3px 10px;font-size:11px">📥 Importar</button>
           <button id="nf-btn-resumir" class="btn" onclick="nfResumirItems()" style="padding:3px 10px;font-size:11px;color:var(--t2)">✂ Resumir</button>
           <button id="nf-btn-dtos" class="btn" onclick="nfDtosTodos()" title="Aplicar descuentos a todos los ítems cargados" style="padding:3px 10px;font-size:11px">% Dto</button>
           <button id="nf-btn-agregar" class="btn pri" onclick="nfAbrirBusqArt()" style="padding:3px 10px;font-size:11px">＋ Agregar</button>
@@ -3299,6 +3300,8 @@ async function nfGuardar() {
       }
     }
     const facNro=res.facNro;
+    // Si los renglones vinieron de un Excel: se baja la copia con la columna FACTURA
+    if(typeof nfiTrasGrabar==='function') nfiTrasGrabar(facNro);
     ct.ultimo_nro=res.nuevoUltimo; ct.bloqueado=false; ct.bloqueado_por=null;
     _nfCtipBloqueadoId=null;
     await facRefrescarNro(facNro);
