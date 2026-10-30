@@ -169,8 +169,9 @@ function nfiArmar(){
 function nfiMostrar(){
   const emp = _nfi.emp, G = _nfi.grupos;
   const fmt = v => (Number(v)||0).toLocaleString('es-AR', { minimumFractionDigits:2, maximumFractionDigits:2 });
-  const tot = { H:0, T:0, E:0, imp:0, uni:0 };
-  G.forEach(x => { tot[x.col] += x.can; tot.uni += x.can; if (x.col === emp) tot.imp += x.can * x.pre; });
+  // impTot = CANT × PRECIO de TODO lo leído (también lo que da error), para cotejar con el Excel
+  const tot = { H:0, T:0, E:0, imp:0, impTot:0, uni:0 };
+  G.forEach(x => { tot[x.col] += x.can; tot.uni += x.can; tot.impTot += x.can * x.pre; if (x.col === emp) tot.imp += x.can * x.pre; });
   const grid = '120px minmax(0,1fr) 100px 70px 70px 70px';
   const celda = (x, c) => x.col === c ? `<b>${x.can}</b>` : '';
   document.getElementById('nfi-modal')?.remove();
@@ -191,7 +192,7 @@ function nfiMostrar(){
         <span style="text-align:right;font-family:var(--mono)">${celda(x,'T')}</span>
         <span style="text-align:right;font-family:var(--mono);color:var(--red)">${celda(x,'E')}</span></div>`).join('')}</div>
     <div style="display:grid;grid-template-columns:${grid};gap:6px;padding:6px 8px;border-top:2px solid var(--b1);font-size:12px;font-weight:700">
-      <span>Totales</span><span>${tot.uni} unidades · a facturar $ ${fmt(tot.imp)}</span><span></span>
+      <span>Totales</span><span>${tot.uni} unidades · total del Excel ${fmt(tot.impTot)} · a facturar ${fmt(tot.imp)}</span><span></span>
       <span style="text-align:right">${tot.H}</span><span style="text-align:right">${tot.T}</span><span style="text-align:right;color:var(--red)">${tot.E}</span></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;align-items:center">
       ${tot.E?`<span style="font-size:12px;color:var(--red);margin-right:auto">Hay ${tot.E} unidad(es) con error: corregí el Excel o el stock y volvé a importar.</span>`:''}
