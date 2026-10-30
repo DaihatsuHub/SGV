@@ -51,7 +51,7 @@ async function nfiLeer(file){
         const t = _nfiNorm(_nfiVal(cell));
         if (t === 'SKU') c.sku = n;
         else if (/^(CANT|CANTIDAD|UNIDADES|CANT\.)$/.test(t)) c.can = n;
-        else if (/^PRECIO/.test(t)) c.pre = c.pre || n;
+        else if (/^(PRECIO|UNITARIO|P\.? ?UNIT)/.test(t)) c.pre = c.pre || n;   // PRECIO o UNITARIO
         else if (t === 'FACTURA') c.fac = n;
       });
       if (c.sku) { hdrRow = r; cols = c; break; }
@@ -87,7 +87,7 @@ function nfiElegirColumnas(){
   m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center';
   m.innerHTML = `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:16px;width:min(520px,94vw)">
     <div style="font-weight:700;margin-bottom:6px">📥 ¿Qué columna es cada dato?</div>
-    <div style="font-size:12px;color:var(--t2);margin-bottom:12px">No encontré los títulos SKU, CANT y PRECIO. Elegí las columnas (al lado van los primeros valores).</div>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:12px">No encontré los títulos SKU, CANT y PRECIO (o UNITARIO). Elegí las columnas (al lado van los primeros valores).</div>
     ${[['nfi-c-sku','SKU (código de SGV)',c.sku],['nfi-c-can','Cantidad',c.can],['nfi-c-pre','Precio final',c.pre]].map(([id,l,v])=>
       `<label style="font-size:12px;color:var(--t2)">${l}</label><select id="${id}" class="finp" style="width:100%;margin-bottom:8px">${opts(v)}</select>`).join('')}
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
