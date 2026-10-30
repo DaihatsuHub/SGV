@@ -433,6 +433,21 @@ async function reciClienteChange(){
   document.getElementById('rf-vend').textContent=reciVendDesc(c.CLI_VEND)||(c.CLI_VEND||'—');
   await ensureFacturas();   // facturas cargadas antes de buscar los deudores
   reciLoadDeudores();
+  // Recibo con talonario CONTABLE: el cliente tiene que deber algo contable,
+  // si no, no se puede seguir (Ricardo, Oct 2026)
+  if(_reciMode==='A'){
+    const t=(talosDeEmpresa(_reciHdr.empresa)||[]).find(x=>x.tipo===_reciHdr.talonario);
+    const contable = t ? t.contable!==false : !_reciEsX();
+    if(contable && !_reciDeud.some(d=>(Number(d.saldo_afip)||0)>0.005)){
+      sgvAviso({ titulo:'El cliente no tiene saldo contable deudor', tipo:'adv',
+        texto:`${(c.CLI_RAZON||'').trim()} no tiene comprobantes con saldo contable.\n\nCon un talonario contable el recibo tiene que cancelar saldo contable: elegí un talonario X u otro cliente.` });
+      const el=document.getElementById('rf-cli'); if(el){ el.value=''; }
+      _reciHdr.cliente='';
+      ['rf-domic','rf-local','rf-provin','rf-vend'].forEach(id=>{const e=document.getElementById(id); if(e) e.textContent='—';});
+      _reciDeud=[]; renderReciDeud(); reciReconcile();
+      el?.focus();
+    }
+  }
 }
 
 // ¿El tipo del comprobante es CONTABLE? (prefijo = 3 primeros caracteres + tipo = última letra)

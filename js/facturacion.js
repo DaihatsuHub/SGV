@@ -2288,13 +2288,17 @@ function nfSelCliSug(cod) {
 // Búsqueda por razón social con datalist nativo (igual que recibos/ficha)
 function nfFillCliList(){
   const dl=document.getElementById('nf-cli-list'); if(!dl || dl.dataset.filled) return;
-  dl.innerHTML=(CLIS||[]).map(c=>`<option value="${esc(c.CLI_RAZON||'')}">`).join('');
+  // REGLA (Ricardo, Oct 2026): en todo SGV el cliente se busca por código y/o razón social
+  dl.innerHTML=(CLIS||[]).map(c=>`<option value="${esc((c.CLI_RAZON||'').trim())} — ${esc((c.CLI_CODIGO||'').trim())}">`).join('');
   dl.dataset.filled='1';
 }
 function nfOnCliBusqPick(){
   const val=(document.getElementById('nf-cli-busq')?.value||'').trim().toLowerCase();
   if(!val) return;
-  const c=(CLIS||[]).find(x=>(x.CLI_RAZON||'').trim().toLowerCase()===val);
+  const cod=(val.split('—').pop()||'').trim();
+  const c=(CLIS||[]).find(x=>(x.CLI_CODIGO||'').trim().toLowerCase()===cod)
+       || (CLIS||[]).find(x=>(x.CLI_CODIGO||'').trim().toLowerCase()===val)
+       || (CLIS||[]).find(x=>(x.CLI_RAZON||'').trim().toLowerCase()===val);
   if(c) nfSetCliente(c);
 }
 function nfSetCliente(cli) {
