@@ -572,7 +572,7 @@ function renderFac() {
     const marcas=
       `<span title="${_pend?'Pendiente de entrega':''}" style="color:var(--wrn,#f59e0b);font-weight:700">${_pend?'P':''}</span>`+
       // Con "Esperar Pago" el $ titila: no entregar sin autorización (Ricardo, Oct 2026)
-      `<span title="${_debe?(f.fac_esperar_pago?'ESPERAR PAGO — no entregar sin autorización':'Con saldo pendiente'):''}" class="${_debe&&f.fac_esperar_pago?'fac-espera':''}" style="color:var(--red);font-weight:700">${_debe?'$':''}</span>`;
+      `<span title="${_debe?(f.fac_esperar_pago?'ESPERAR PAGO — no entregar sin autorización':'Con saldo pendiente'):''}" class="${_debe&&f.fac_esperar_pago&&(f.fac_nro||'').trim().slice(-1)==='F'?'fac-espera':''}" style="color:var(--red);font-weight:700">${_debe?'$':''}</span>`;
     // La razón social se corta a 20 caracteres: la grilla nunca se estira
     const nomCorto = nomCli.length>20 ? nomCli.substring(0,20).trim()+'…' : nomCli;
     // Grilla de columnas FIJAS (antes era flex y el nombre arrancaba en una
@@ -655,9 +655,9 @@ async function renderFacDetalle(f, vista) {
   // "ESPERAR PAGO" (Ricardo, Oct 2026): marca manual para que no se entregue el
   // pedido sin autorización. Con saldo 0 no se muestra (queda apagado).
   const _conSaldo = Math.abs(Number(f.fac_saldo)||0) > 0.005;
-  const _espera = !!f.fac_esperar_pago && _conSaldo;
+  const _espera = esFactura && !!f.fac_esperar_pago && _conSaldo;   // sólo FACTURAS
   const _dsel = _puedeModifFac && !f.fac_anul;
-  const espEdit = _conSaldo
+  const espEdit = (esFactura && _conSaldo)
     ? `<label style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;${_dsel?'cursor:pointer':''}">
          <input type="checkbox" ${_espera?'checked':''} ${_dsel?'':'disabled'} onchange="facGuardarCampo('${f.fac_nro}','esperar_pago',this.checked)" style="accent-color:var(--red)">
          <span style="font-weight:600;color:${_espera?'var(--red)':'var(--t2)'}">Esperar Pago</span></label>`
