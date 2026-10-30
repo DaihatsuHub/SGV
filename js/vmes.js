@@ -47,6 +47,11 @@ function vmesFillFiltros(){
       (TABLAS['VEND']||[]).map(v=>`<option value="${esc(v.CODIGO)}">${esc(v.CODIGO)} — ${esc(v.DETALLE)}</option>`).join('');
   }
   if(sv) sv.disabled=false;
+  [['vmes-rubro','RUBR','Todos los rubros'],['vmes-srub','SRUB','Todos los subrubros']].forEach(([id,k,t])=>{
+    const e=document.getElementById(id);
+    if(e && e.options.length<=1) e.innerHTML=`<option value="">${t}</option>`+
+      (TABLAS[k]||[]).map(x=>`<option value="${esc(x.CODIGO)}">${esc(x.CODIGO)} — ${esc(x.DETALLE)}</option>`).join('');
+  });
 
   // Cliente y vendedor son EXCLUYENTES: un cliente pertenece a un vendedor,
   // combinarlos no aporta nada. Se ATENÚA el otro, no se deshabilita:
@@ -109,6 +114,9 @@ async function vmesGenerar(){
     const qs=['meses='+n, 'marcas='+encodeURIComponent(marcas.join(','))];
     if(cli)  qs.push('cli='+encodeURIComponent(cli));
     if(vend) qs.push('vend='+encodeURIComponent(vend));
+    const rub=(document.getElementById('vmes-rubro')?.value||'').trim(), srub=(document.getElementById('vmes-srub')?.value||'').trim();
+    if(rub)  qs.push('rubro='+encodeURIComponent(rub));
+    if(srub) qs.push('srub='+encodeURIComponent(srub));
     const r=await apiGet('/informes/vmes?'+qs.join('&'));
     if(!r.ok){ toast(r.error||'Error al generar','err'); if(status) status.textContent=''; return; }
 
@@ -135,15 +143,15 @@ function vmesRender(rows, months){
   // no son de ese cliente y mostrarlos confunde. Queda "qué le vendí, mes a mes".
   const filt=_vmesFiltrado;
   const grid = filt
-    ? `120px 46px 100px ${months.map(()=>'58px').join(' ')} 72px 100px`
-    : `120px 46px 100px ${months.map(()=>'58px').join(' ')} 72px 92px 64px 100px 78px 70px 92px`;
+    ? `120px 100px ${months.map(()=>'58px').join(' ')} 72px 100px`
+    : `120px 100px ${months.map(()=>'58px').join(' ')} 72px 64px 92px 64px 100px 78px 70px 92px`;
   head.style.gridTemplateColumns=grid;
   head.innerHTML=
-    `<span>Código</span><span>PR</span><span>Marca</span>`
+    `<span>Código</span><span>Marca</span>`
     + months.map(m=>`<span style="text-align:right">${m.label}</span>`).join('')
     + (filt
         ? `<span style="text-align:right">Total</span><span style="text-align:right">Precio</span>`
-        : `<span style="text-align:right">Stock</span><span>DFec</span><span style="text-align:right">DIng</span><span style="text-align:right">Precio</span><span style="text-align:right">FOB</span><span style="text-align:right">Gasto2</span><span style="text-align:right">Costo2</span>`);
+        : `<span style="text-align:right">Stock</span><span style="text-align:right;background:#000;color:#fff;font-weight:700;padding:0 4px;border-radius:2px">REPO</span><span>DFec</span><span style="text-align:right">DIng</span><span style="text-align:right">Precio</span><span style="text-align:right">FOB</span><span style="text-align:right">Gasto2</span><span style="text-align:right">Costo2</span>`);
   if(!rows.length){ body.innerHTML='<div class="empty">Sin resultados — probá otras marcas, otro cliente o más meses.</div>'; return; }
   const numF=v=>(v||0).toLocaleString('es-AR');
   const fdate=d=>{ if(!d) return ''; const p=d.substring(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0].slice(-2)}`:''; };
@@ -151,13 +159,13 @@ function vmesRender(rows, months){
     const tot=r.mes.reduce((s,q)=>s+q,0);
     return `<div class="tr-art" style="grid-template-columns:${grid}">
       <span class="col-cod" style="color:var(--acc)">${esc(r.cod)}</span>
-      <span class="col-sm">${esc(r.pr)}</span>
       <span class="col-sm" style="font-family:var(--mono)">${esc(r.marca)}</span>
       ${r.mes.map(q=>`<span style="text-align:right;font-family:var(--mono)">${q?numF(q):''}</span>`).join('')}
       ${filt
         ? `<span style="text-align:right;font-family:var(--mono);font-weight:600;color:var(--grn)">${numF(tot)}</span>
            <span style="text-align:right;font-family:var(--mono)">${reciFmt(r.precio)}</span>`
         : `<span style="text-align:right;font-family:var(--mono);${r.stock>0?'color:var(--grn);font-weight:600':''}">${numF(r.stock)}</span>
+           <span style="text-align:right;font-family:var(--mono);font-weight:700">${r.repo?numF(r.repo):''}</span>
            <span class="col-sm">${fdate(r.dfec)}</span>
            <span style="text-align:right;font-family:var(--mono)">${r.ding?numF(r.ding):''}</span>
            <span style="text-align:right;font-family:var(--mono)">${reciFmt(r.precio)}</span>
@@ -213,18 +221,22 @@ async function vmesExportar(){
   // columnas: ... Stock | [COLUMNA NEGRA ~1cm] | DFec ...
   const filt=_vmesFiltrado;
   const headers = filt
-    ? ['Marca','Código','PR', ...months.map(m=>m.label), 'Total','', 'Precio']
-    : ['Marca','Código','PR', ...months.map(m=>m.label), 'Stock','', 'DFec','DIng','Precio','FOB','Gasto2','Costo2'];
+    ? ['Marca','Código', ...months.map(m=>m.label), 'Total','', 'Precio']
+    : ['Marca','Código', ...months.map(m=>m.label), 'Stock','REPO','', 'DFec','DIng','Precio','FOB','Gasto2','Costo2'];
   const widths = filt
-    ? [10,16,6, ...months.map(()=>8), 10, 1, 12]
-    : [10,16,6, ...months.map(()=>8), 9, 1, 10,9,12,10,9,11];
+    ? [10,16, ...months.map(()=>8), 10, 1, 12]
+    : [10,16, ...months.map(()=>8), 9, 9, 1, 10,9,12,10,9,11];
 
   const wb=new ExcelJS.Workbook();
   const ws=wb.addWorksheet('Ventas mensuales');
   ws.columns=widths.map(w=>({width:w}));
 
   // posiciones (1-based)
-  const cM0=4, cMn=3+nM, cStock=4+nM, cBlack=5+nM, cDFec=6+nM, cDIng=7+nM, cPrecio=8+nM, cFob=9+nM, cGas=10+nM, cCosto=11+nM;
+  // Sin PR; REPO va después de Stock (sólo sin filtro)
+  const cM0=3, cMn=2+nM, cStock=3+nM;
+  const cRepo = filt ? null : 4+nM;
+  const off = filt ? 0 : 1;
+  const cBlack=4+nM+off, cDFec=5+nM+off, cDIng=6+nM+off, cPrecio=7+nM+off, cFob=8+nM+off, cGas=9+nM+off, cCosto=10+nM+off;
   const totalCols=headers.length;
 
   // títulos: negrita + centrados + fondo naranja (col negra va negra)
@@ -232,7 +244,8 @@ async function vmesExportar(){
   hr.eachCell({includeEmpty:true},(cell,col)=>{
     cell.font={bold:true};
     cell.alignment={horizontal:'center',vertical:'middle'};
-    cell.fill = (col===cBlack)?blackFill:orangeFill;
+    cell.fill = (col===cBlack||col===cRepo)?blackFill:orangeFill;
+    if(col===cRepo) cell.font={bold:true,color:{argb:'FFFFFFFF'}};
     cell.border=allB;
   });
 
@@ -246,14 +259,15 @@ async function vmesExportar(){
     prevMarca=r.marca;
 
     const vals = filt
-      ? [ r.marca, r.cod, r.pr, ...r.mes.map(q=>q||null),
+      ? [ r.marca, r.cod, ...r.mes.map(q=>q||null),
           r.mes.reduce((s,q)=>s+q,0)||0, '', r.precio||0 ]
-      : [ r.marca, r.cod, r.pr, ...r.mes.map(q=>q||null),
-          r.stock||0, '', fdate(r.dfec), r.ding||null,
+      : [ r.marca, r.cod, ...r.mes.map(q=>q||null),
+          r.stock||0, r.repo||null, '', fdate(r.dfec), r.ding||null,
           r.precio||0, r.fob||0, r.gas2||0, r.costo||0 ];
     const row=ws.addRow(vals);
     for(let i=cM0;i<=cMn;i++){ row.getCell(i).numFmt='#,##0'; row.getCell(i).alignment={horizontal:'right'}; }
     row.getCell(cStock).numFmt='#,##0'; row.getCell(cStock).alignment={horizontal:'right'};
+    if(cRepo){ row.getCell(cRepo).numFmt='#,##0'; row.getCell(cRepo).alignment={horizontal:'right'}; row.getCell(cRepo).font={bold:true}; }
     if(filt){
       row.getCell(cDFec).numFmt='#,##0.00'; row.getCell(cDFec).alignment={horizontal:'right'};
     } else {
