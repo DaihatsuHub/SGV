@@ -84,9 +84,14 @@ async function nfiLeer(file){
         const t = _nfiNorm(_nfiVal(cell)).replace(/[.:$]/g,'').trim();
         if (/^(SKU|COD|CODIGO|CODIGO SGV|ARTICULO)$/.test(t)) c.sku = c.sku || n;
         else if (/^(CANT|CANTIDAD|UNIDADES|UNID|UDS)$/.test(t)) c.can = c.can || n;
-        else if (/^(PRECIO|UNITARIO|P ?UNIT|PRECIO UNITARIO)/.test(t)) c.pre = c.pre || n;
+        // Precio: UNITARIO manda sobre cualquier otra columna "PRECIO…" (que puede
+        // ser el total o el de lista) — Ricardo, Oct 2026
+        else if (/^(UNITARIO|P ?UNIT|PRECIO UNIT)/.test(t)) c.pre = n;
+        else if (/^PRECIO/.test(t)) c.preAlt = c.preAlt || n;
         else if (t === 'FACTURA') c.fac = n;
       });
+      if (!c.pre && c.preAlt) c.pre = c.preAlt;
+      delete c.preAlt;
       if (c.sku || c.can || c.pre) { hdrRow = r; cols = c; break; }
     }
     // Los precios del Excel están en la MONEDA DE LA FACTURA (pesos, U$T, U$C…)
