@@ -325,7 +325,8 @@ async function saveOC(){
         pedido:ped, codprov:it.codprov||null, subcod:null,
         // Si existe en el maestro va como código; si no, como leyenda
         codint: ocArt(it.codint) ? (ocArt(it.codint).ART_COD||'').trim() : null,
-        leyenda: (!ocArt(it.codint) && (it.codint||'').trim()) ? it.codint.trim() : null,
+        // (sólo se manda si hay leyenda: así funciona aunque la columna todavía no exista)
+        ...((!ocArt(it.codint) && (it.codint||'').trim()) ? { leyenda: it.codint.trim() } : {}),
         envio:hdr.envio, am:hdr.am,
         cantped:Math.round(Number(it.cantped)||0), cantent:Math.round(Number(it.cantent)||0), cantpl:null,
         costo:Number(it.costo)||0, total:(Number(it.cantped)||0)*(Number(it.costo)||0)
