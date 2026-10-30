@@ -650,6 +650,27 @@ async function renderFacDetalle(f, vista) {
 
   // Transporte, fecha de entrega y comisión son solo de FACTURAS
   const esFactura = tipoChar==='F';
+
+  // "ESPERAR PAGO" (Ricardo, Oct 2026): marca manual para que no se entregue el
+  // pedido sin autorización. Con saldo 0 no se muestra (queda apagado).
+  const _conSaldo = Math.abs(Number(f.fac_saldo)||0) > 0.005;
+  const _espera = !!f.fac_esperar_pago && _conSaldo;
+  const _dsel = _puedeModifFac && !f.fac_anul;
+  const espEdit = _conSaldo
+    ? `<label style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;${_dsel?'cursor:pointer':''}">
+         <input type="checkbox" ${_espera?'checked':''} ${_dsel?'':'disabled'} onchange="facGuardarCampo('${f.fac_nro}','esperar_pago',this.checked)" style="accent-color:var(--red)">
+         <span style="font-weight:600;color:${_espera?'var(--red)':'var(--t2)'}">Esperar Pago</span></label>`
+    : '';
+  const comentTxt = f.fac_coment ? String(f.fac_coment).replace(/\n/g,' · ') : '';
+  const comentRow = `<span style="display:flex;gap:10px;align-items:center;min-width:0">
+      <span onclick="facComentario('${f.fac_nro}')" title="${esc(f.fac_coment||'Sin comentario')}" style="cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;${comentTxt?'':'color:var(--t3)'}">${comentTxt?esc(comentTxt):(_dsel?'✏ agregar…':'—')}</span>
+      ${espEdit}</span>`;
+  const transpEdit = _dsel
+    ? `<select style="max-width:100%;background:var(--s3);border:1px solid var(--b1);border-radius:4px;color:var(--txt);padding:1px 4px;font-size:12px" onchange="facGuardarCampo('${f.fac_nro}','transp',this.value)">
+         <option value="">—</option>${(TABLAS['EXPR']||[]).map(e=>`<option value="${esc(e.CODIGO)}"${e.CODIGO===(f.fac_transp||'').trim()?' selected':''}>${esc(e.CODIGO)} — ${esc(e.DETALLE)}</option>`).join('')}
+         ${f.fac_transp && !(TABLAS['EXPR']||[]).some(e=>e.CODIGO===(f.fac_transp||'').trim())?`<option value="${esc(f.fac_transp)}" selected>${esc(f.fac_transp)} — ⚠ no existe</option>`:''}
+       </select>`
+    : esc(facTranspDesc(f.fac_transp||''));
   // Fila del encabezado: etiqueta a ancho fijo + valor que se corta si no entra
   const _fila = (lbl, val, plano) => `<div style="display:flex;gap:6px;align-items:center;min-width:0">`+
     `<span style="color:var(--t3);width:78px;flex-shrink:0">${lbl}:</span>`+
@@ -658,7 +679,7 @@ async function renderFacDetalle(f, vista) {
 
   // Fecha de entrega (fac_salida): editable si tiene permiso modificar en facturas
   const _salVal = (f.fac_salida||'').substring(0,10);
-  const salEdit = _puedeModifFac
+  const salEdit = (_puedeModifFac && !(f.fac_esperar_pago && Math.abs(Number(f.fac_saldo)||0)>0.005))
     ? `<input type="date" value="${_salVal}" style="background:var(--s3);border:1px solid var(--b1);border-radius:4px;color:var(--txt);padding:1px 6px;font-family:var(--mono);font-size:12px" onchange="facGuardarSalida('${f.fac_nro}',this.value)">`
     : (_salVal ? _salVal.split('-').reverse().join('/') : '<span style="color:var(--wrn,#f59e0b)">pendiente</span>');
 
@@ -717,7 +738,7 @@ async function renderFacDetalle(f, vista) {
           ${f.fac_usuario?`<div style="font-size:11px;color:var(--t3)">Emitió: ${esc(f.fac_usuario)}</div>`:''}
         </div>
       </div>
-      ${anulInfo}${caeInfo}
+      ${anulInfo}${_espera?`<div style="background:#3a1a1a;border-radius:6px;padding:8px 12px;font-size:13px;color:#f87171;margin-bottom:8px;font-weight:700">⛔ ESPERAR PAGO — no entregar sin autorización</div>`:''}${caeInfo}
       <div style="background:var(--s2);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px">
         <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 20px">
           <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
@@ -725,9 +746,10 @@ async function renderFacDetalle(f, vista) {
             ${_fila('Dirección', esc(cli?.CLI_DOMIC||'—'))}
             ${_fila('Ciudad', esc(_ccLocProv(cli)))}
             ${_fila('Cond.Pago', esc(facConpagDesc(cli?.CLI_CONPAG||f.fac_conpag||'')))}
+            ${_fila('Comentarios', comentRow, true)}
           </div>
           <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
-            ${esFactura?_fila('Transporte', esc(facTranspDesc(f.fac_transp||''))):''}
+            ${esFactura?_fila('Transporte', transpEdit, true):''}
             ${esFactura?_fila('Fe.Entrega', salEdit, true):''}
             ${_fila('Vendedor', esc(facVendDesc(f.fac_vend||'')))}
             ${esFactura?_fila('Comisión', comEdit, true):''}
@@ -963,6 +985,20 @@ async function facComentarioGuardar(facNro){
     renderFac();
     toast(txt?'Comentario guardado':'Comentario borrado','scs');
   }catch(e){ console.error('facComentarioGuardar:',e); toast('Error: '+e.message,'err'); }
+}
+
+// Transporte / Esperar Pago (permiso de modificar comprobantes)
+async function facGuardarCampo(facNro, campo, valor){
+  try{
+    const res=await apiPost('/facturas/campo',{ fac_nro:facNro, campo, valor });
+    if(!res.ok){ toast(res.error||'No se pudo guardar','err'); }
+    else {
+      const f=FACS.find(x=>x.fac_nro===facNro);
+      if(f){ if('fac_transp' in res) f.fac_transp=res.fac_transp; if('fac_esperar_pago' in res) f.fac_esperar_pago=res.fac_esperar_pago; }
+      toast(campo==='transp'?'Transporte guardado':(res.fac_esperar_pago?'Marcado: Esperar Pago':'Esperar Pago desmarcado'),'scs');
+    }
+  }catch(e){ console.error('facGuardarCampo:',e); toast('Error: '+e.message,'err'); }
+  renderFac();
 }
 
 async function facGuardarSalida(facNro, val){
