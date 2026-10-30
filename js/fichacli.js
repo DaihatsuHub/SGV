@@ -87,7 +87,7 @@ async function renderFicha(){
   // Comprobante con el ancho justo; los importes se reparten el resto y no se
   // cortan nunca (Ricardo, Oct 2026: antes sobraba lugar entre Comprobante y
   // Pesos y el negativo grande desbordaba la columna).
-  const LGRID='86px 120px minmax(115px,1fr) minmax(115px,1fr) minmax(115px,1fr)';
+  const LGRID='68px minmax(84px,auto) repeat(3,minmax(0,1fr))';
   // En la vista contable todo va en pesos: se avisa arriba del bloque
   const _tit=document.getElementById('ficha-izq-tit');
   if(_tit) _tit.textContent=_fichaContables
@@ -104,7 +104,7 @@ async function renderFicha(){
     const fec=(f.fec||'').split('-').reverse().join('/');
     const cell = esNC ? '- '+reciFmt(v0) : reciFmt(v0);
     const est = esNC ? 'color:var(--red);font-weight:700' : '';
-    lrows+=`<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:12px;font-family:var(--mono);padding:2px 0;${est}">
+    lrows+=`<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:var(--ffs,12px);font-family:var(--mono);padding:2px 0;${est}">
       <span style="${esNC?'':'color:var(--t3)'}">${fec}</span><span style="${esNC?'':'color:var(--acc)'}">${esc(f.nro||'')}</span>
       <span style="text-align:right">${key==='pesos'?cell:''}</span>
       <span style="text-align:right">${key==='tressa'?cell:''}</span>
@@ -114,7 +114,7 @@ async function renderFicha(){
     const key=reciMonKey(a.moneda), v=a.importe||0;
     if(key==='pesos') totP-=v; else if(key==='tressa') totT-=v; else totC-=v;
     const fec=(a.fec||'').split('-').reverse().join('/'), cell='- '+reciFmt(v);
-    lrows+=`<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:12px;font-family:var(--mono);padding:2px 0;color:var(--grn)">
+    lrows+=`<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:var(--ffs,12px);font-family:var(--mono);padding:2px 0;color:var(--grn)">
       <span>${fec}</span><span>${esc(a.desc||'A/Cuenta')}</span>
       <span style="text-align:right">${key==='pesos'?cell:''}</span>
       <span style="text-align:right">${key==='tressa'?cell:''}</span>
@@ -122,10 +122,10 @@ async function renderFicha(){
   });
   if(!lrows){ izq.innerHTML='<div style="color:var(--t3);padding:12px">Sin comprobantes con saldo ni A/Cuenta.</div>'; }
   else izq.innerHTML=
-    `<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:11px;color:var(--t2);font-weight:600;border-bottom:1px solid var(--b1);padding-bottom:4px;margin-bottom:4px">
+    `<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:calc(var(--ffs,12px) - 1px);color:var(--t2);font-weight:600;border-bottom:1px solid var(--b1);padding:4px 0;margin-bottom:4px;position:sticky;top:-8px;background:var(--s2);z-index:1">
       <span>Fecha</span><span>Comprobante</span><span style="text-align:right">Pesos</span><span style="text-align:right">Tressa</span><span style="text-align:right">Casio</span></div>`
     + lrows
-    + `<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:12px;font-weight:700;font-family:var(--mono);border-top:1px solid var(--b1);padding-top:4px;margin-top:4px">
+    + `<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:var(--ffs,12px);font-weight:700;font-family:var(--mono);border-top:1px solid var(--b1);padding:4px 0;margin-top:4px;position:sticky;bottom:-8px;background:var(--s2);z-index:1">
       <span></span><span>Saldo</span><span style="text-align:right">${reciFmt(totP)}</span><span style="text-align:right">${reciFmt(totT)}</span><span style="text-align:right">${reciFmt(totC)}</span></div>`;
 
   // ── DERECHA: cheques encolumnado Físico / ECheq ──
@@ -133,7 +133,7 @@ async function renderFicha(){
   const chs=D.cheques||[];
   const enCart=chs.filter(ch=>(ch.estado||'cartera')==='cartera');
   const otros =chs.filter(ch=>(ch.estado||'cartera')!=='cartera' && (ch.fec||'')>=hoy);
-  const RGRID='80px 80px 95px 95px 1fr';
+  const RGRID='68px minmax(56px,auto) repeat(2,minmax(0,1fr)) minmax(70px,auto)';
   let totFis=0, totEch=0, rrows='';
   const chRow=(ch,gris)=>{
     const fec=(ch.fec||'').split('-').reverse().join('/');
@@ -141,7 +141,7 @@ async function renderFicha(){
     const imp=ch.importe||0;
     if(ch.fisico) totFis+=imp; else totEch+=imp;
     const estCol=gris?'var(--t3)':((typeof cheqEstadoColor==='function')?cheqEstadoColor(ch.estado):'var(--txt)');
-    return `<div style="display:grid;grid-template-columns:${RGRID};gap:6px;font-size:12px;font-family:var(--mono);padding:2px 0;${gris?'color:var(--t3)':''}">
+    return `<div style="display:grid;grid-template-columns:${RGRID};gap:6px;font-size:var(--ffs,12px);font-family:var(--mono);padding:2px 0;${gris?'color:var(--t3)':''}">
       <span style="color:var(--t3)">${fec}</span><span>${esc(ch.numero||'')}</span>
       <span style="text-align:right">${ch.fisico?reciFmt(imp):''}</span>
       <span style="text-align:right">${!ch.fisico?reciFmt(imp):''}</span>
@@ -151,11 +151,13 @@ async function renderFicha(){
   otros.forEach(ch=>rrows+=chRow(ch,true));
   if(!rrows){ der.innerHTML='<div style="color:var(--t3);padding:12px">Sin cheques.</div>'; }
   else der.innerHTML=
-    `<div style="display:grid;grid-template-columns:${RGRID};gap:6px;font-size:11px;color:var(--t2);font-weight:600;border-bottom:1px solid var(--b1);padding-bottom:4px;margin-bottom:4px">
+    `<div style="display:grid;grid-template-columns:${RGRID};gap:6px;font-size:calc(var(--ffs,12px) - 1px);color:var(--t2);font-weight:600;border-bottom:1px solid var(--b1);padding:4px 0;margin-bottom:4px;position:sticky;top:-8px;background:var(--s2);z-index:1">
       <span>Fecha</span><span>Número</span><span style="text-align:right">Físico</span><span style="text-align:right">ECheq</span><span>Estado</span></div>`
     + rrows
-    + `<div style="display:grid;grid-template-columns:${RGRID};gap:6px;font-size:12px;font-weight:700;font-family:var(--mono);border-top:1px solid var(--b1);padding-top:4px;margin-top:4px">
+    + `<div style="display:grid;grid-template-columns:${RGRID};gap:6px;font-size:var(--ffs,12px);font-weight:700;font-family:var(--mono);border-top:1px solid var(--b1);padding:4px 0;margin-top:4px;position:sticky;bottom:-8px;background:var(--s2);z-index:1">
       <span></span><span>Total</span><span style="text-align:right">${reciFmt(totFis)}</span><span style="text-align:right">${reciFmt(totEch)}</span><span></span></div>`;
+
+  fichaAjustarLetra(izq); fichaAjustarLetra(der);
 
   // ── Crédito otorgado + vencimiento (debajo del recuadro de cheques) ──
   const _cred = document.getElementById('ficha-cred');
@@ -195,3 +197,15 @@ async function renderFicha(){
     if(pg.parentElement) obs.observe(pg.parentElement,{attributes:true,attributeFilter:['class','style']});
   }
 })();
+
+// Sin scroll horizontal: si los importes no entran, se achica la letra de a medio
+// punto (hasta 9px). Encabezado y totales quedan fijos arriba y abajo (Oct 2026).
+function fichaAjustarLetra(el){
+  if(!el) return;
+  el.style.overflowX='hidden';
+  let fs=12;
+  el.style.setProperty('--ffs', fs+'px');
+  const desborda=()=>[...el.children].some(r=>r.scrollWidth>r.clientWidth+1);
+  while(fs>9 && desborda()){ fs-=0.5; el.style.setProperty('--ffs', fs+'px'); }
+}
+window.addEventListener('resize', ()=>{ fichaAjustarLetra(document.getElementById('ficha-izq')); fichaAjustarLetra(document.getElementById('ficha-der')); });
