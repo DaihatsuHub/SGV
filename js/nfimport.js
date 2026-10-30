@@ -185,7 +185,7 @@ function nfiMostrar(){
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;align-items:center">
       ${tot.E?`<span style="font-size:12px;color:var(--red);margin-right:auto">Hay ${tot.E} unidad(es) con error: corregí el Excel o el stock y volvé a importar.</span>`:''}
       <button class="btn" onclick="nfiReset()">Cancelar</button>
-      <button class="btn pri" onclick="nfiConfirmar()" ${tot.E || !tot[emp] ? 'disabled' : ''}>✔ Confirmar</button></div></div>`;
+      ${tot.E || !tot[emp] ? '' : '<button class="btn pri" onclick="nfiConfirmar()">✔ Confirmar</button>'}</div></div>`;   // con errores no se muestra
   document.body.appendChild(m);
 }
 
