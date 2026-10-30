@@ -662,12 +662,8 @@ async function renderFacDetalle(f, vista) {
          <input type="checkbox" ${_espera?'checked':''} ${_dsel?'':'disabled'} onchange="facGuardarCampo('${f.fac_nro}','esperar_pago',this.checked)" style="accent-color:var(--red)">
          <span style="font-weight:600;color:${_espera?'var(--red)':'var(--t2)'}">Esperar Pago</span></label>`
     : '';
-  const comentTxt = f.fac_coment ? String(f.fac_coment).replace(/\n/g,' · ') : '';
-  const comentRow = `<span style="display:flex;gap:10px;align-items:center;min-width:0">
-      <span onclick="facComentario('${f.fac_nro}')" title="${esc(f.fac_coment||'Sin comentario')}" style="cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;${comentTxt?'':'color:var(--t3)'}">${comentTxt?esc(comentTxt):(_dsel?'✏ agregar…':'—')}</span>
-      ${espEdit}</span>`;
   const transpEdit = _dsel
-    ? `<select style="max-width:100%;background:var(--s3);border:1px solid var(--b1);border-radius:4px;color:var(--txt);padding:1px 4px;font-size:12px" onchange="facGuardarCampo('${f.fac_nro}','transp',this.value)">
+    ? `<select style="flex:1;width:100%;min-width:0;max-width:100%;box-sizing:border-box;background:var(--s3);border:1px solid var(--b1);border-radius:4px;color:var(--txt);padding:1px 4px;font-size:12px" onchange="facGuardarCampo('${f.fac_nro}','transp',this.value)">
          <option value="">—</option>${(TABLAS['EXPR']||[]).map(e=>`<option value="${esc(e.CODIGO)}"${e.CODIGO===(f.fac_transp||'').trim()?' selected':''}>${esc(e.CODIGO)} — ${esc(e.DETALLE)}</option>`).join('')}
          ${f.fac_transp && !(TABLAS['EXPR']||[]).some(e=>e.CODIGO===(f.fac_transp||'').trim())?`<option value="${esc(f.fac_transp)}" selected>${esc(f.fac_transp)} — ⚠ no existe</option>`:''}
        </select>`
@@ -747,7 +743,7 @@ async function renderFacDetalle(f, vista) {
             ${_fila('Dirección', esc(cli?.CLI_DOMIC||'—'))}
             ${_fila('Ciudad', esc(_ccLocProv(cli)))}
             ${_fila('Cond.Pago', esc(facConpagDesc(cli?.CLI_CONPAG||f.fac_conpag||'')))}
-            ${_fila('Comentarios', comentRow, true)}
+            ${espEdit?_fila('', espEdit, true):''}
           </div>
           <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
             ${esFactura?_fila('Transporte', transpEdit, true):''}
