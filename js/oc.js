@@ -47,6 +47,17 @@ function ocPagosDe(pedido){ return (OCPAGOS||[]).filter(p=>Number(p.pedido)===Nu
 function ocItemsDe(pedido){ return (OCITEMS||[]).filter(it=>Number(it.pedido)===Number(pedido)); }
 function ocTotalItems(pedido){ return ocItemsDe(pedido).reduce((s,it)=>s+(Number(it.total)||0),0); }
 function ocProxNumero(){ const m=(OCS||[]).reduce((x,o)=>Math.max(x,Number(o.pedido)||0),0); return m+1; }
+// Cruce del código interno con el maestro de artículos (Ricardo, Oct 2026).
+// Si el usuario no sabe el código puede escribir una LEYENDA en su lugar: se
+// guarda aparte (oc_items.leyenda) y se muestra marcada.
+function ocArt(cod){ const c=String(cod||'').trim().toUpperCase(); return c ? (ARTS||[]).find(a=>(a.ART_COD||'').trim().toUpperCase()===c) : null; }
+function ocItemDesc(it){
+  const a=ocArt(it.codint);
+  if(a) return `<span class="mono" style="color:var(--txt)">${esc((a.ART_COD||'').trim())}</span> <span style="color:var(--t2)">${esc(a.ART_DES||'')}</span>`;
+  const ley=(it.leyenda||it.codint||'').trim();
+  return ley ? `<span style="color:#b45309;font-style:italic" title="No es un artículo del maestro: leyenda">✎ ${esc(ley)}</span>` : '';
+}
+
 function ocFillArtList(){
   const dl=document.getElementById('oce-art-list'); if(!dl || dl.childElementCount) return;
   dl.innerHTML=(ARTS||[]).map(a=>`<option value="${esc((a.ART_COD||'').trim())}">${esc((a.ART_DES||'').trim())}</option>`).join('');
@@ -172,7 +183,7 @@ function renderOCDetail(o){
       const ped=Number(it.cantped)||0, ent=Number(it.cantent)||0, sld=ped-ent;
       return `<div class="oc-itrow">`
         + `<span class="mono">${esc(it.codprov||'')}</span>`
-        + `<span class="mono" style="color:var(--txt)">${esc(it.codint||'')}</span>`
+        + `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">${ocItemDesc(it)}</span>`
         + `<span style="text-align:right">${ocInt(ped)}</span>`
         + `<span style="text-align:right;color:${sld>0?'var(--txt)':'var(--t3)'}">${ocInt(sld)}</span>`
         + `<span style="text-align:right" class="mono">${ocFmt3(it.costo)}</span>`
@@ -208,7 +219,7 @@ function ocModif(){
   if(ocSelIdx===null){ toast('Seleccioná una orden','err'); return; }
   const o=getOCRows()[ocSelIdx]; if(!o){ toast('Seleccioná una orden','err'); return; }
   _ocEditNum=Number(o.pedido);
-  _ocEditItems=ocItemsDe(o.pedido).map(it=>({ codint:it.codint||'', codprov:it.codprov||'', cantped:Number(it.cantped)||0, cantent:Number(it.cantent)||0, costo:Number(it.costo)||0 }));
+  _ocEditItems=ocItemsDe(o.pedido).map(it=>({ codint:it.codint||it.leyenda||'', codprov:it.codprov||'', cantped:Number(it.cantped)||0, cantent:Number(it.cantent)||0, costo:Number(it.costo)||0 }));
   _ocFill(o);
   document.getElementById('oce-mtit').textContent=`Modificar OC · Pedido ${o.pedido}`;
   document.getElementById('oce-mtag').textContent='MODIF';
@@ -241,7 +252,8 @@ function ocEditRenderItems(){
     <div class="oce-itrow">
       <span style="position:relative;display:block">
         <input class="finp" list="oce-art-list" value="${esc(it.codint||'')}" onchange="ocEditItChg(${i},'codint',this.value)" onfocus="this.select()" onclick="this.select()" placeholder="cód. interno" style="width:100%;padding-right:22px">
-        <button type="button" tabindex="-1" onclick="ocEditClearCod(${i})" title="Limpiar" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:13px;line-height:1;padding:0">✕</button>
+        <button type="button" tabindex="-1" onclick="ocEditClearCod(${i})" title="Limpiar" style="position:absolute;right:4px;top:11px;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:13px;line-height:1;padding:0">✕</button>
+        <span class="oce-desc" style="display:block;font-size:10px;line-height:1.3;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ocEditDescTxt(it.codint)}</span>
       </span>
       <input class="finp" value="${esc(it.codprov||'')}" onchange="ocEditItChg(${i},'codprov',this.value)" onfocus="this.select()" onclick="this.select()" placeholder="cód. prov.">
       <input class="finp" type="text" inputmode="numeric" value="${it.cantped||0}" oninput="ocEditItChg(${i},'cantped',this.value)" onfocus="this.select()" onclick="this.select()" style="text-align:right">
@@ -251,10 +263,22 @@ function ocEditRenderItems(){
       <button class="btn dng" style="padding:2px 7px" onclick="ocEditDelItem(${i})" title="Quitar">✕</button>
     </div>`).join('') || '<div class="empty" style="padding:10px">Sin items — agregá con “＋ Item”.</div>';
 }
+// Debajo del código: la descripción del artículo, o el aviso de que queda como leyenda
+function ocEditDescTxt(cod){
+  const v=String(cod||'').trim(); if(!v) return '';
+  const a=ocArt(v);
+  return a ? `<span style="color:var(--t2)">${esc(a.ART_DES||'')}</span>`
+           : `<span style="color:#b45309">✎ No es un artículo: queda como leyenda</span>`;
+}
 function ocEditItChg(i,campo,val){
   if(!_ocEditItems[i]) return;
   _ocEditItems[i][campo] = (campo==='codint'||campo==='codprov') ? val : (ocNum(val)||0);
   const r=document.querySelectorAll('#oce-items .oce-itrow')[i];
+  if(campo==='codint' && r){
+    const a=ocArt(val);
+    if(a){ _ocEditItems[i].codint=(a.ART_COD||'').trim(); const inp=r.querySelector('input[list="oce-art-list"]'); if(inp) inp.value=_ocEditItems[i].codint; }
+    const d=r.querySelector('.oce-desc'); if(d) d.innerHTML=ocEditDescTxt(val);
+  }
   if(r){ const sub=r.querySelector('.oce-sub'); if(sub){ const it=_ocEditItems[i]; sub.textContent=ocFmt3((Number(it.cantped)||0)*(Number(it.costo)||0)); } }
   ocEditCalc();
 }
@@ -298,7 +322,10 @@ async function saveOC(){
     for(const it of _ocEditItems){
       if(!(it.codint||'').trim() && !(Number(it.cantped))) continue;
       items.push({
-        pedido:ped, codprov:it.codprov||null, subcod:null, codint:it.codint||null,
+        pedido:ped, codprov:it.codprov||null, subcod:null,
+        // Si existe en el maestro va como código; si no, como leyenda
+        codint: ocArt(it.codint) ? (ocArt(it.codint).ART_COD||'').trim() : null,
+        leyenda: (!ocArt(it.codint) && (it.codint||'').trim()) ? it.codint.trim() : null,
         envio:hdr.envio, am:hdr.am,
         cantped:Math.round(Number(it.cantped)||0), cantent:Math.round(Number(it.cantent)||0), cantpl:null,
         costo:Number(it.costo)||0, total:(Number(it.cantped)||0)*(Number(it.costo)||0)
