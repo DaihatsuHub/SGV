@@ -308,9 +308,8 @@ function renderCtip() {
         }
         if(col.field==='tipo')       return `<span class="col-sm">${esc(TIPO_LABEL[c.tipo]||c.tipo)}</span>`;
         // Descripción propia del tipo (Ricardo, Oct 2026); si no tiene, la empresa
-        if(col.field==='desc')       return c.descripcion
-          ? `<span style="font-size:12px;color:var(--txt)">${esc(c.descripcion)}</span>`
-          : `<span style="color:var(--t3);font-size:12px">${c.empresa==='H'?'Hatsu Electronics SA':'Tressa Argentina SA'}</span>`;
+        // Descripción = para qué se usa el tipo (la empresa ya está en su columna)
+        if(col.field==='desc')       return `<span style="font-size:12px;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.descripcion||'')}</span>`;
         if(col.field==='ultimo_nro') return `<span style="text-align:right;font-family:var(--mono)">${c.ultimo_nro||0}</span>`;
         if(col.field==='contable')   return pill(c.contable);
         if(col.field==='tab_stk')    return pill(c.tab_stk);
