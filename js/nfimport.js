@@ -31,7 +31,7 @@ function nfiAbrir(){
   if (!ct) { toast('Elegí primero la empresa y el tipo de comprobante','err'); return; }
   if (nfEsNC()) { toast('La importación es para facturas, no para notas de crédito','err'); return; }
   const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = '.xlsx,.xls,.csv';
+  inp.type = 'file'; inp.accept = '.xlsx,.xls,.ods,.csv';
   inp.onchange = () => { if (inp.files[0]) nfiLeer(inp.files[0]); };
   inp.click();
 }
@@ -63,7 +63,7 @@ async function nfiLeer(file){
     await vmesLoadExcelJS();
     const wb = new ExcelJS.Workbook();
     let buf = await file.arrayBuffer();
-    // .xls (formato viejo de Excel) o .csv: se convierten a .xlsx con SheetJS
+    // .xls (Excel viejo), .ods (OpenOffice/LibreOffice) o .csv: se convierten a .xlsx con SheetJS
     if (!/\.xlsx$/i.test(file.name)) {
       await _nfiCargarSheetJS();
       const x = XLSX.read(buf, { type:'array', cellDates:true });
@@ -87,7 +87,7 @@ async function nfiLeer(file){
       if (c.sku || c.can || c.pre) { hdrRow = r; cols = c; break; }
     }
     // Los precios del Excel están en la MONEDA DE LA FACTURA (pesos, U$T, U$C…)
-    _nfi = { wb, ws, nombre:file.name.replace(/\.(xlsx|xls|csv)$/i,''), cols, hdrRow, emp:document.getElementById('nf-empresa')?.value||'H',
+    _nfi = { wb, ws, nombre:file.name.replace(/\.(xlsx|xls|ods|csv)$/i,''), cols, hdrRow, emp:document.getElementById('nf-empresa')?.value||'H',
              mon:document.getElementById('nf-moneda')?.value||'P' };
     if (!cols.sku || !cols.can || !cols.pre) nfiElegirColumnas();
     else nfiArmar();
