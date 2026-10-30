@@ -87,7 +87,7 @@ async function renderFicha(){
   // Comprobante con el ancho justo; los importes se reparten el resto y no se
   // cortan nunca (Ricardo, Oct 2026: antes sobraba lugar entre Comprobante y
   // Pesos y el negativo grande desbordaba la columna).
-  const LGRID='68px minmax(84px,auto) repeat(3,minmax(0,1fr))';
+  const LGRID='68px 92px repeat(3,minmax(0,1fr))';
   // En la vista contable todo va en pesos: se avisa arriba del bloque
   const _tit=document.getElementById('ficha-izq-tit');
   if(_tit) _tit.textContent=_fichaContables
@@ -105,7 +105,7 @@ async function renderFicha(){
     const cell = esNC ? '- '+reciFmt(v0) : reciFmt(v0);
     const est = esNC ? 'color:var(--red);font-weight:700' : '';
     lrows+=`<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:var(--ffs,12px);font-family:var(--mono);padding:2px 0;${est}">
-      <span style="${esNC?'':'color:var(--t3)'}">${fec}</span><span style="${esNC?'':'color:var(--acc)'}">${esc(f.nro||'')}</span>
+      <span style="${esNC?'':'color:var(--t3)'}">${fec}</span><span style="${esNC?'':'color:var(--acc)'};overflow:hidden;text-overflow:ellipsis">${esc(f.nro||'')}</span>
       <span style="text-align:right">${key==='pesos'?cell:''}</span>
       <span style="text-align:right">${key==='tressa'?cell:''}</span>
       <span style="text-align:right">${key==='casio'?cell:''}</span></div>`;
@@ -115,7 +115,7 @@ async function renderFicha(){
     if(key==='pesos') totP-=v; else if(key==='tressa') totT-=v; else totC-=v;
     const fec=(a.fec||'').split('-').reverse().join('/'), cell='- '+reciFmt(v);
     lrows+=`<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:var(--ffs,12px);font-family:var(--mono);padding:2px 0;color:var(--grn)">
-      <span>${fec}</span><span>${esc(a.desc||'A/Cuenta')}</span>
+      <span>${fec}</span><span style="overflow:hidden;text-overflow:ellipsis">${esc(a.desc||'A/Cuenta')}</span>
       <span style="text-align:right">${key==='pesos'?cell:''}</span>
       <span style="text-align:right">${key==='tressa'?cell:''}</span>
       <span style="text-align:right">${key==='casio'?cell:''}</span></div>`;
@@ -134,7 +134,7 @@ async function renderFicha(){
   // El server ya manda sólo los que corresponden (desde una semana antes, y los
   // en cartera de hasta 30 días), ordenados por fecha: los que no están en cartera van en gris
 
-  const RGRID='68px minmax(56px,auto) repeat(2,minmax(0,1fr)) minmax(70px,auto)';
+  const RGRID='68px 64px repeat(2,minmax(0,1fr)) 96px';
   let totFis=0, totEch=0, rrows='';
   const chRow=(ch,gris)=>{
     const fec=(ch.fec||'').split('-').reverse().join('/');
@@ -143,10 +143,10 @@ async function renderFicha(){
     if(ch.fisico) totFis+=imp; else totEch+=imp;
     const estCol=gris?'var(--t3)':((typeof cheqEstadoColor==='function')?cheqEstadoColor(ch.estado):'var(--txt)');
     return `<div style="display:grid;grid-template-columns:${RGRID};gap:6px;font-size:var(--ffs,12px);font-family:var(--mono);padding:2px 0;${gris?'color:var(--t3)':''}">
-      <span style="color:var(--t3)">${fec}</span><span>${esc(ch.numero||'')}</span>
+      <span style="color:var(--t3)">${fec}</span><span style="overflow:hidden;text-overflow:ellipsis">${esc(ch.numero||'')}</span>
       <span style="text-align:right">${ch.fisico?reciFmt(imp):''}</span>
       <span style="text-align:right">${!ch.fisico?reciFmt(imp):''}</span>
-      <span style="color:${estCol}">${esc(est)}</span></div>`;
+      <span style="color:${estCol};overflow:hidden;text-overflow:ellipsis" title="${esc(est)}">${esc(est)}</span></div>`;
   };
   chs.forEach(ch=>rrows+=chRow(ch,(ch.estado||'cartera')!=='cartera'));
   if(!rrows){ der.innerHTML='<div style="color:var(--t3);padding:12px">Sin cheques.</div>'; }
