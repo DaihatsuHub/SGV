@@ -463,11 +463,14 @@ function reciLoadDeudores(){
   if(cod){
     // ¿El cliente tiene alguna deudora CONTABLE que además baja stock? Si la
     // hay, el talonario fiscal también puede asentar las no contables.
+    // CONTABLE lo decide TIPOS DE COMPROBANTES (marca Contable), no "baja depósito":
+    // hay tipos que bajan depósito y no son contables (Ricardo, Oct 2026)
+    const esCont = f => !!f.fac_tab_fact && _reciTipoContable(f.fac_nro);
     const hayContableConStock = !_reciEsX() && (FACS||[]).some(f=>{
       const t=(f.fac_nro||'').trim().slice(-1);
       const mE=(f.fac_empresa? f.fac_empresa===emp : (f.fac_nro||'').startsWith(emp));
       return (f.fac_cli||'').trim()===cod.trim() && mE && ['F','D','R'].includes(t)
-          && (f.fac_saldo||0)>0 && !!f.fac_tab_fact && !!f.fac_tab_stk;
+          && (f.fac_saldo||0)>0 && esCont(f) && !!f.fac_tab_stk;
     });
     (FACS||[]).forEach(f=>{
       const tipo=(f.fac_nro||'').trim().slice(-1);
@@ -484,9 +487,9 @@ function reciLoadDeudores(){
       // recibo impreso, que sólo muestra la parte contable.
       const esChqRech = tipo==='R';
       const okTipo = _reciEsX()
-        ? !f.fac_tab_fact
-        : (!!f.fac_tab_fact
-           || (hayContableConStock && !!f.fac_tab_stk && !f.fac_tab_fact)
+        ? !esCont(f)
+        : (esCont(f)
+           || (hayContableConStock && !!f.fac_tab_stk && !esCont(f))
            || (hayContableConStock && esChqRech));
       if((f.fac_cli||'').trim()===cod.trim() && mismaEmp && esDeudor && okTipo && (f.fac_saldo||0)>0){
         const info=reciMonInfo(f.fac_moneda,_reciHdr);
@@ -509,7 +512,7 @@ function reciLoadDeudores(){
       const mismaEmp=(f.fac_empresa? f.fac_empresa===emp : (f.fac_nro||'').startsWith(emp));
       return (f.fac_cli||'').trim()===cod.trim() && mismaEmp
           && ['F','D','R'].includes(tipo) && (f.fac_saldo||0)>0
-          && (_reciEsX() ? !!f.fac_tab_fact : !f.fac_tab_fact);
+          && (_reciEsX() ? esCont(f) : !esCont(f));
     });
     // De la más vieja a la más nueva (Ricardo, Oct 2026)
     _reciDeud.sort((a,b)=>String(a.fac_fec||'').localeCompare(String(b.fac_fec||'')) || String(a.fac_nro||'').localeCompare(String(b.fac_nro||'')));

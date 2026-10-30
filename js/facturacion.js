@@ -812,7 +812,7 @@ async function renderFacDetalle(f, vista) {
             <span style="text-align:right;font-family:var(--mono)">${it.ite_can||0}</span>
             <span style="text-align:right;font-family:var(--mono)">${mon}${fmt((it.ite_uni||0)*_fac)}</span>
             <span style="text-align:right;font-family:var(--mono);color:var(--grn)">${mon}${fmt((it.ite_imp||0)*_fac)}</span>
-            <span style="text-align:right;font-family:var(--mono);font-size:11px">${(()=>{const o=Number(it.ite_preori)||0,u=Number(it.ite_uni)||0; if(o>0&&u<o){const d=Math.round((1-u/o)*100); if(d>=1) return `<span style="color:var(--wrn,#f59e0b)" title="Original: ${mon}${fmt(o)}">-${d}%</span>`;} return '<span style="color:var(--t3)">—</span>';})()}</span>
+            <span style="text-align:right;font-family:var(--mono);font-size:11px">${(()=>{const o=Number(it.ite_preori)||0,u=Number(it.ite_uni)||0; if(o>0&&u<o){const d=Math.round((1-u/o)*100); if(d>=1) return `<span style="background:#b45309;color:#fff;font-weight:700;padding:1px 6px;border-radius:4px" title="Original: ${mon}${fmt(o)}">-${d}%</span>`;} return '<span style="color:var(--t3)">—</span>';})()}</span>
           </div>`;
         }).join(''):'<div style="padding:12px;text-align:center;color:var(--t3);font-size:12px">Sin ítems</div>'}
         </div>
