@@ -448,11 +448,15 @@ function filtFacs() {
   const emp=document.getElementById('fac-empresa')?.value||'';
   // "Pendientes de Entrega": sólo facturas no anuladas sin fecha de entrega
   const soloPend=!!document.getElementById('fac-pend')?.checked;
+  const soloEsp=!!document.getElementById('fac-espera')?.checked;
   let list=FACS.filter(f=>{
     const me=!emp||(f.fac_nro||'').startsWith(emp);
     const mf=!facFechaBusq||(f.fac_fec||'').includes(facFechaBusq);
     const mp=!soloPend||((f.fac_nro||'').trim().slice(-1).toUpperCase()==='F' && !f.fac_anul && !f.fac_salida);
-    return me&&mf&&mp;
+    // "Esperando Pagos": sólo facturas con Esperar Pago activo (y saldo)
+    const mx=!soloEsp||((f.fac_nro||'').trim().slice(-1).toUpperCase()==='F' && !f.fac_anul && !!f.fac_esperar_pago
+                         && Math.abs(Number(f.fac_saldo)||0)>0.005);
+    return me&&mf&&mp&&mx;
   });
   // `_razon` no es una columna: se resuelve contra el maestro de clientes.
   // Al ordenar por razón social, dentro de cada cliente van de la MÁS RECIENTE

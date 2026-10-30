@@ -685,8 +685,12 @@
       <option value="H">Hatsu Electronics</option>
       <option value="T">Tressa Argentina</option>
     </select>
-    <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--t2);cursor:pointer;white-space:nowrap" title="Sólo facturas sin fecha de entrega">
-      <input type="checkbox" id="fac-pend" onchange="facSelIdx=null;renderFac()" style="accent-color:var(--acc)"> Pendientes de Entrega</label>
+    <div style="display:flex;flex-direction:column;gap:1px">
+      <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--t2);cursor:pointer;white-space:nowrap" title="Sólo facturas sin fecha de entrega">
+        <input type="checkbox" id="fac-pend" onchange="facSelIdx=null;renderFac()" style="accent-color:var(--acc)"> Pendientes de Entrega</label>
+      <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--t2);cursor:pointer;white-space:nowrap" title="Sólo facturas con Esperar Pago activo">
+        <input type="checkbox" id="fac-espera" onchange="facSelIdx=null;renderFac()" style="accent-color:var(--red)"> Esperando Pagos</label>
+    </div>
     <input type="date" class="fsel" id="fac-fecha" onchange="setFacFecha(this.value)" title="Filtrar por fecha" style="cursor:pointer">
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
