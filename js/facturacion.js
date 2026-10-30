@@ -307,7 +307,10 @@ function renderCtip() {
           return `<span class="col-cod">${esc(c.prefijo)}${cand}</span>`;
         }
         if(col.field==='tipo')       return `<span class="col-sm">${esc(TIPO_LABEL[c.tipo]||c.tipo)}</span>`;
-        if(col.field==='desc')       return `<span style="color:var(--t2);font-size:12px">${c.empresa==='H'?'Hatsu Electronics SA':'Tressa Argentina SA'}</span>`;
+        // Descripción propia del tipo (Ricardo, Oct 2026); si no tiene, la empresa
+        if(col.field==='desc')       return c.descripcion
+          ? `<span style="font-size:12px;color:var(--txt)">${esc(c.descripcion)}</span>`
+          : `<span style="color:var(--t3);font-size:12px">${c.empresa==='H'?'Hatsu Electronics SA':'Tressa Argentina SA'}</span>`;
         if(col.field==='ultimo_nro') return `<span style="text-align:right;font-family:var(--mono)">${c.ultimo_nro||0}</span>`;
         if(col.field==='contable')   return pill(c.contable);
         if(col.field==='tab_stk')    return pill(c.tab_stk);
@@ -384,6 +387,7 @@ function ctipAlta() {
   document.getElementById('ctip-prefijo').value='';
   document.getElementById('ctip-tipo').value='F';
   document.getElementById('ctip-ultimo').value=0;
+  document.getElementById('ctip-desc').value='';
   setTog('ctip-tog-cont','ctip-contable',true);
   setTog('ctip-tog-stk','ctip-stk',false);
   setTog('ctip-tog-fact','ctip-fact',false);
@@ -400,6 +404,7 @@ function ctipModif() {
   document.getElementById('ctip-prefijo').value=c.prefijo;
   document.getElementById('ctip-tipo').value=c.tipo;
   document.getElementById('ctip-ultimo').value=c.ultimo_nro||0;
+  document.getElementById('ctip-desc').value=c.descripcion||'';
   setTog('ctip-tog-cont','ctip-contable',!!c.contable);
   setTog('ctip-tog-stk','ctip-stk',!!c.tab_stk);
   setTog('ctip-tog-fact','ctip-fact',!!c.tab_fact);
@@ -436,7 +441,8 @@ async function saveCtip() {
   const id = window._ctipe==='A' ? null : (filtCtip()[ctipSelIdx]?.id);
   syncSaving();
   try {
-    const res=await apiPost('/comp_tipos/guardar',{ id, empresa, prefijo, tipo, ultimo_nro:ultimo, contable, tab_stk:tabStk, tab_fact:tabFact, tab_percib:tabPercib });
+    const res=await apiPost('/comp_tipos/guardar',{ id, empresa, prefijo, tipo, ultimo_nro:ultimo, contable, tab_stk:tabStk, tab_fact:tabFact, tab_percib:tabPercib,
+      descripcion:(document.getElementById('ctip-desc')?.value||'').trim() });
     if(!res.ok){ syncErr(); toast(res.error||'No se pudo guardar','err'); return; }
     await sbLoadCtips(); closeOv('ov-ctip'); ctipSelIdx=null; renderCtip();
     syncOk();
@@ -1550,7 +1556,7 @@ function facCancelar() {
 function renderFacModal(fecha, empresa, cliCod) {
   const monesOpts=(TABLAS['MONE']||[]).map(m=>`<option value="${m.CODIGO}">${m.STRING1} ${m.DETALLE}</option>`).join('')||'<option value="P">$ Pesos</option>';
   const ctipOpts=CTIPS.filter(c=>c.empresa===empresa&&['F','C','D','R'].includes(c.tipo))
-    .map(c=>`<option value="${c.prefijo}|${c.tipo}">${c.prefijo} — ${TIPO_LABEL[c.tipo]||c.tipo}</option>`).join('');
+    .map(c=>`<option value="${c.prefijo}|${c.tipo}">${c.prefijo} — ${TIPO_LABEL[c.tipo]||c.tipo}${c.descripcion?' · '+esc(c.descripcion):''}</option>`).join('');
   const cpagOpts='<option value="">— Sin especificar —</option>'+(TABLAS['CPAG']||[]).map(c=>`<option value="${c.CODIGO}">${c.CODIGO} — ${c.DETALLE}</option>`).join('');
   const exprOpts='<option value="">— Sin especificar —</option>'+(TABLAS['EXPR']||[]).map(e=>`<option value="${e.CODIGO}">${e.CODIGO} — ${e.DETALLE}</option>`).join('');
   const vendOpts='<option value="">— Sin especificar —</option>'+(TABLAS['VEND']||[]).map(v=>`<option value="${v.CODIGO}">${v.CODIGO} — ${v.DETALLE}</option>`).join('');
@@ -1588,6 +1594,7 @@ function renderFacModal(fecha, empresa, cliCod) {
                 <option value="">— Seleccionar —</option>
                 ${ctipOpts}
               </select>
+              <div id="nf-ctip-desc" style="font-size:11px;color:var(--acc);margin-top:2px;min-height:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
             </div>
             <div>
               <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:2px">Número</label>
@@ -2142,7 +2149,7 @@ function nfOnEmpresaChange() {
   if(!sel) return;
   const lista=CTIPS.filter(c=>c.empresa===emp&&['F','C','D','R'].includes(c.tipo));
   sel.innerHTML='<option value="">— Seleccionar —</option>'+
-    lista.map(c=>`<option value="${c.prefijo}|${c.tipo}">${c.prefijo} — ${TIPO_LABEL[c.tipo]||c.tipo}</option>`).join('');
+    lista.map(c=>`<option value="${c.prefijo}|${c.tipo}">${c.prefijo} — ${TIPO_LABEL[c.tipo]||c.tipo}${c.descripcion?' · '+esc(c.descripcion):''}</option>`).join('');
   nfOnCtipChange();
   nfRenderItems();
 }
@@ -2194,6 +2201,8 @@ async function nfDesbloquearCtip() {
 }
 
 async function nfOnCtipChange() {
+  // Descripción del tipo elegido, debajo del combo (Ricardo, Oct 2026)
+  { const d=document.getElementById('nf-ctip-desc'), ct=nfCtipActual(); if(d){ d.textContent=ct?.descripcion||''; d.title=ct?.descripcion||''; } }
   const val=document.getElementById('nf-ctip')?.value||'';
   const el=document.getElementById('nf-num');
   // Desbloquear el anterior si había uno
