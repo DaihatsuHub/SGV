@@ -64,7 +64,10 @@ async function nfiLeer(file){
     const wb = new ExcelJS.Workbook();
     let buf = await file.arrayBuffer();
     // .xls (Excel viejo), .ods (OpenOffice/LibreOffice) o .csv: se convierten a .xlsx con SheetJS
-    if (!/\.xlsx$/i.test(file.name)) {
+    // Se decide por el CONTENIDO, no por la extensión: un .xlsx de verdad es un zip
+    // (empieza con "PK"); hay planillas que dicen .xls/.xlsx y son otra cosa
+    const _b = new Uint8Array(buf, 0, 2);
+    if (!(_b[0] === 0x50 && _b[1] === 0x4B)) {
       await _nfiCargarSheetJS();
       const x = XLSX.read(buf, { type:'array', cellDates:true });
       buf = XLSX.write(x, { bookType:'xlsx', type:'array' });
