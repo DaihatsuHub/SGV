@@ -655,9 +655,11 @@ async function renderFacDetalle(f, vista) {
   // "ESPERAR PAGO" (Ricardo, Oct 2026): marca manual para que no se entregue el
   // pedido sin autorización. Con saldo 0 no se muestra (queda apagado).
   const _conSaldo = Math.abs(Number(f.fac_saldo)||0) > 0.005;
-  const _espera = esFactura && !!f.fac_esperar_pago && _conSaldo;   // sólo FACTURAS
+  // Consumidor Final: venta prepaga, no lleva "Esperar Pago" (Ricardo, Oct 2026)
+  const _esCF = String(f.fac_tiva||'').trim().toUpperCase()==='C';
+  const _espera = esFactura && !_esCF && !!f.fac_esperar_pago && _conSaldo;   // sólo FACTURAS
   const _dsel = _puedeModifFac && !f.fac_anul;
-  const espEdit = (esFactura && _conSaldo)
+  const espEdit = (esFactura && !_esCF && _conSaldo)
     ? `<label style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;${_dsel?'cursor:pointer':''}">
          <input type="checkbox" ${_espera?'checked':''} ${_dsel?'':'disabled'} onchange="facGuardarCampo('${f.fac_nro}','esperar_pago',this.checked)" style="accent-color:var(--red)">
          <span style="font-weight:600;color:${_espera?'var(--red)':'var(--t2)'}">Esperar Pago</span></label>`
