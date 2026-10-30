@@ -227,7 +227,8 @@ function nfiMostrar(){
 async function nfiConfirmar(){
   const emp = _nfi.emp, G = _nfi.grupos.filter(x => x.col === emp);
   if (!G.length) return;
-  const btn = document.querySelector('#nfi-modal .btn.pri'); if (btn) { btn.disabled = true; btn.textContent = '⏳ Buscando despachos…'; }
+  const btn = null;
+  nfiProcesando('Procesando…');               // cartel mientras busca despachos y arma los renglones
   const ct = nfCtipActual(), ms = !!ct.tab_stk, pf = !!ct.tab_fact;
   const dispDesp = d => { const s = (d.dep_stk!=null) ? d.dep_stk : ((d.dep_ent||0)-(d.dep_sal||0)); const c = (d.dep_costk!=null) ? d.dep_costk : s;
     return ms && pf ? Math.min(s, c) : (pf ? c : s); };
@@ -239,7 +240,7 @@ async function nfiConfirmar(){
       const rows = await sbGet('despachos', `dep_art=in.(${encodeURIComponent(lista)})&order=dep_fec.asc`);
       (rows||[]).forEach(d => (desps[_nfiNorm(d.dep_art)] = desps[_nfiNorm(d.dep_art)] || []).push({ ...d, _libre: dispDesp(d) }));
     }
-  } catch (e) { if (btn) { btn.disabled = false; btn.textContent = '✔ Confirmar'; } sgvAviso({ titulo:'No se pudieron traer los despachos', texto:e.message, tipo:'err' }); return; }
+  } catch (e) { nfiMostrar(); sgvAviso({ titulo:'No se pudieron traer los despachos', texto:e.message, tipo:'err' }); return; }
 
   const esA = nfEsFacturaA(), nuevos = [], faltan = [];
   for (const x of G) {
@@ -268,7 +269,7 @@ async function nfiConfirmar(){
     if (resta > 0) faltan.push(`${x.cod}: faltan ${resta} en los despachos`);
   }
   if (faltan.length) {
-    if (btn) { btn.disabled = false; btn.textContent = '✔ Confirmar'; }
+    nfiMostrar();
     sgvAviso({ titulo:'Los despachos no alcanzan', texto:'El stock del artículo alcanza pero el de sus despachos no:\n\n' + faltan.join('\n'), tipo:'err' });
     return;
   }
