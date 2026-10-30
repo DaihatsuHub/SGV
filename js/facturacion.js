@@ -571,7 +571,8 @@ function renderFac() {
     const _debe=!f.fac_anul && Math.abs(Number(f.fac_saldo)||0)>0.005;
     const marcas=
       `<span title="${_pend?'Pendiente de entrega':''}" style="color:var(--wrn,#f59e0b);font-weight:700">${_pend?'P':''}</span>`+
-      `<span title="${_debe?'Con saldo pendiente':''}" style="color:var(--red);font-weight:700">${_debe?'$':''}</span>`;
+      // Con "Esperar Pago" el $ titila: no entregar sin autorización (Ricardo, Oct 2026)
+      `<span title="${_debe?(f.fac_esperar_pago?'ESPERAR PAGO — no entregar sin autorización':'Con saldo pendiente'):''}" class="${_debe&&f.fac_esperar_pago?'fac-espera':''}" style="color:var(--red);font-weight:700">${_debe?'$':''}</span>`;
     // La razón social se corta a 20 caracteres: la grilla nunca se estira
     const nomCorto = nomCli.length>20 ? nomCli.substring(0,20).trim()+'…' : nomCli;
     // Grilla de columnas FIJAS (antes era flex y el nombre arrancaba en una
@@ -3540,3 +3541,11 @@ function ncImpInput(i, saldoAfip){
   ncRecalcTotales();
 }
 
+
+// "$" que titila en la grilla cuando la factura está en "Esperar Pago"
+(function(){
+  if(document.getElementById('fac-espera-css')) return;
+  const st=document.createElement('style'); st.id='fac-espera-css';
+  st.textContent='@keyframes facEspera{0%,49%{opacity:1}50%,100%{opacity:0}} .fac-espera{animation:facEspera 1s step-end infinite}';
+  document.head.appendChild(st);
+})();
