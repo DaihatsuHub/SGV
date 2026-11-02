@@ -106,11 +106,13 @@ function nfLetraComp(){
 }
 
 // Qué letras admite cada condición de IVA del cliente:
-//   I (Resp. Inscripto)                          -> A y X
-//   M (Monotributista), C (Cons.Final),
-//   E (Exento), N (No Responsable)               -> B y X
+//   I (Resp. Inscripto), M (Monotributista)      -> A y X   (monotributista = A desde la
+//                                                   Ley 27.618 / RG 5003, con leyenda)
+//   C (Cons.Final), E (Exento), N (No Responsable) -> B y X
 // La X no chequea condición de IVA, así que sirve para todos.
-const NF_LETRAS_POR_IVA = { I:['A','X'], M:['B','X'], C:['B','X'], E:['B','X'], N:['B','X'] };
+const NF_LETRAS_POR_IVA = { I:['A','X'], M:['A','X'], C:['B','X'], E:['B','X'], N:['B','X'] };
+// Leyenda obligatoria en los comprobantes A a monotributistas
+const NF_LEY_MONOTRIBUTO = 'El crédito fiscal discriminado en el presente comprobante, sólo podrá ser computado a efectos del Régimen de Sostenimiento e Inclusión Fiscal para Pequeños Contribuyentes de la Ley Nº 27.618';
 
 // '' si la combinación tipo de comprobante <-> cliente es válida; el motivo si no.
 function nfLetraIncompatible(){
@@ -1365,6 +1367,8 @@ async function facImprimir(modo) {
       <div class="tot-row"><span class="tot-lbl">TOTAL</span><span class="tot-val">${_monImp} ${fmt(_vTotal)}</span></div>
     </div>
   </div>
+  ${(_esAfip && String(tiva).trim().toUpperCase()==='M' && (prefijo.charAt(1)||'').toUpperCase()==='A')
+    ? `<div style="margin-top:3mm;font-size:9px;font-style:italic;border:1px solid #999;padding:1.5mm 2mm">${NF_LEY_MONOTRIBUTO}</div>` : ''}
   ${f.fac_cae?`
   <div class="cae-box">
     <div class="cae-datos">
