@@ -826,12 +826,18 @@ async function renderFacDetalle(f, vista) {
           <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Subtotal neto</span><span>${mon} ${fmt(((f.fac_sub||0)-(f.fac_iva||0))*_fac)}</span></div>
           <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>IVA 21%</span><span>${mon} ${fmt((f.fac_iva||0)*_fac)}</span></div>`:'')}
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Subtotal</span><span>${mon} ${fmt((f.fac_sub||0)*_fac)}</span></div>
-        ${(Array.isArray(f.fac_percep_det)&&f.fac_percep_det.length)
+        ${(tieneDto && vista!=='afip') ? '' : (Array.isArray(f.fac_percep_det)&&f.fac_percep_det.length)
           ? f.fac_percep_det.map(p=>{ const _c=Number(f.fac_cotiz)||1, _d=1-(Number(f.fac_monpor)||0)/100;
               const v=(Number(p.importe)||0)/_c/(vista==='afip'?1:(_d||1));   // guardado en pesos declarados
               return `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>${esc(p.detalle||'Percepción')} (${fmt(p.pct)}%)</span><span>${mon} ${fmt(v)}</span></div>`; }).join('')
           : ((f.fac_percib||0)>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Percepción IIBB</span><span>${mon} ${fmt((f.fac_percib||0)*_fac)}</span></div>`:'')}
         <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--txt);padding:8px 0 3px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL</span><span>${mon} ${fmt((f.fac_total||0)*_fac)}</span></div>
+        ${(tieneDto && vista!=='afip' && facPercepFact(f).L.length) ? (()=>{ const P=facPercepFact(f);
+          return `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--b1);font-size:12px">
+            <div style="color:var(--t3);font-size:11px;margin-bottom:2px">Percepciones facturadas</div>
+            ${P.L.map(p=>`<div style="display:flex;justify-content:space-between;color:var(--t2);padding:2px 0"><span>${esc(p.detalle||'Percepción')} (${fmt(p.pct)}%)</span><span>$ ${fmt(p.importe)}</span></div>`).join('')}
+            ${P.L.length>1?`<div style="display:flex;justify-content:space-between;font-weight:700;padding:2px 0;border-top:1px solid var(--b1)"><span>Total percepciones</span><span>$ ${fmt(P.tot)}</span></div>`:''}
+          </div>`; })() : ''}
         ${tieneDto?`<div style="display:flex;gap:6px;margin-top:6px">
           <button onclick="renderFacDetalle(FACS.find(x=>x.fac_nro==='${f.fac_nro}'),'real')" class="btn ${vista==='real'?'pri':''}" style="flex:1;padding:5px;font-size:11px">Ver Borrador</button>
           <button onclick="renderFacDetalle(FACS.find(x=>x.fac_nro==='${f.fac_nro}'),'afip')" class="btn ${vista==='afip'?'pri':''}" style="flex:1;padding:5px;font-size:11px">Ver Factura</button>
@@ -1053,6 +1059,14 @@ async function facFirmarGuardar(facNro){
     toast('Firmas guardadas','scs');
     renderFac();
   }catch(e){ console.error('facFirmarGuardar:',e); toast('Error: '+e.message,'err'); }
+}
+
+// Factura CON DESCUENTO (subfacturada): en el borrador las percepciones no van
+// antes del TOTAL real (no lo integran: son de lo facturado). Se detallan DESPUÉS
+// del total, en pesos, y si hay más de una se totalizan (Ricardo, Nov 2026).
+function facPercepFact(f){
+  const L=(Array.isArray(f.fac_percep_det)?f.fac_percep_det:[]).filter(p=>(Number(p.importe)||0)>0);
+  return { L, tot:Math.round(L.reduce((a,p)=>a+(Number(p.importe)||0),0)*100)/100 };
 }
 
 // Transporte / Esperar Pago (permiso de modificar comprobantes)
@@ -1442,7 +1456,8 @@ async function facImprimirBorrador() {
       <td class="r">${mon} ${fmtN(imp,2)}</td>
     </tr>`;
   }).join('');
-  const percepFilas = (esPesos && Array.isArray(f.fac_percep_det) && f.fac_percep_det.length)
+  const _subf = (Number(f.fac_monpor)||0)!==0;
+  const percepFilas = (!_subf && esPesos && Array.isArray(f.fac_percep_det) && f.fac_percep_det.length)
     ? f.fac_percep_det.map(p=>`<tr class="tt"><td class="tl">${esc(p.detalle||'Perc. IIBB')} (${fmtN(p.pct,2)}%)</td><td class="tr">${mon} ${fmtN(p.importe,2)}</td></tr>`).join('')
     : '';
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(f.fac_nro)}</title>
@@ -1509,6 +1524,10 @@ async function facImprimirBorrador() {
       ${percepFilas}
       <tr class="sep"><td colspan="2"></td></tr>
       <tr class="total"><td class="tl">TOTAL</td><td class="tr">${mon} ${fmtN(f.fac_total||0,2)}</td></tr>
+      ${(_subf && facPercepFact(f).L.length) ? (()=>{ const P=facPercepFact(f);
+        return `<tr class="sep"><td colspan="2"></td></tr><tr><td colspan="2" class="tl" style="font-size:11px;color:#555;padding-top:3mm">Percepciones facturadas</td></tr>`
+          + P.L.map(p=>`<tr class="tt"><td class="tl">${esc(p.detalle||'Perc. IIBB')} (${fmtN(p.pct,2)}%)</td><td class="tr">$ ${fmtN(p.importe,2)}</td></tr>`).join('')
+          + (P.L.length>1?`<tr class="tt"><td class="tl"><b>Total percepciones</b></td><td class="tr"><b>$ ${fmtN(P.tot,2)}</b></td></tr>`:''); })() : ''}
     </table>
   </div>
 </body></html>`;
