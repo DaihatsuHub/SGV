@@ -25,6 +25,7 @@ function renderComisiones(){
   const v=document.getElementById('com-vend');
   if(v && v.options.length<=1){
     v.innerHTML='<option value="">Todos — liquidación del gerente</option>'
+      + '<option value="*GER">👥 Vendedores de Gerencia — uno por uno</option>'
       + (((typeof TABLAS!=='undefined'&&TABLAS['VEND'])||[])
          .map(x=>`<option value="${_coEsc(x.CODIGO)}">${_coEsc(x.CODIGO)} — ${_coEsc(x.DETALLE)}</option>`).join(''));
   }
@@ -74,7 +75,7 @@ function _coPintar(){
 
   const aviso = (D.pctFijo!==null && D.pctFijo!==undefined)
     ? `<div class="co-nota">Liquidación del gerente: se aplica <b>${_coFmt(D.pctFijo)}%</b> sobre todo lo cobrado, sin mirar el porcentaje de cada vendedor.</div>`
-    : '';
+    : (D.grupal ? `<div class="co-nota">Vendedores de Gerencia: cada vendedor con <b>su</b> porcentaje (el de la factura o el de su ficha). Al imprimir, cada liquidación sale aparte, con una línea para cortar.</div>` : '');
 
   // Agrupado por vendedor
   const porVend={};
@@ -142,6 +143,7 @@ function _coSuma(filas, CC){
 
 function comPrint(){
   if(!_comData){ toast('Consultá primero','err'); return; }
+  if(_comData.grupal) return _coPrintGrupal();
   const D=_comData, CC=D.centros||[], grupos=_coAgrupado();
   if(!grupos.length){ toast('No hay nada para imprimir','err'); return; }
 
@@ -178,6 +180,43 @@ function comPrint(){
     cuerpo:`<table><thead>${th}</thead><tbody>${cuerpo}</tbody></table>` });
 }
 
+/* GRUPAL "Vendedores de Gerencia" (Ricardo, Nov 2026): cada vendedor es una
+   liquidación COMPLETA (título, período, encabezado, renglones y subtotal).
+   Entre una y otra quedan unos renglones y una LÍNEA GRUESA para cortar el
+   papel. Si la liquidación de uno no entra en lo que queda de la hoja, salta
+   a la siguiente (break-inside:avoid); si ocupa más de una hoja, se corta
+   normal (el navegador ignora el avoid cuando no entra en ninguna hoja). */
+function _coPrintGrupal(){
+  const D=_comData, CC=D.centros||[], grupos=_coAgrupado();
+  if(!grupos.length){ toast('No hay nada para imprimir','err'); return; }
+  const per=`Período ${_coFecha(D.desde)} a ${_coFecha(D.hasta)} · sobre lo cobrado, neto de IVA y percepciones, en pesos`;
+  const th=`<tr><th>Fecha</th><th>Recibo</th><th>Factura</th><th class="r">Cobrado</th>`
+    + CC.map(c=>`<th class="r cc">${_coEsc(c)}</th>`).join('')
+    + `<th class="r">%</th><th class="r">Comisión</th></tr>`;
+  const bloques=grupos.map(g=>{
+    const sub=_coSuma(g.filas, CC);
+    const filas=g.filas.map(x=>`<tr><td>${_coFecha(x.fecha)}</td><td>${_coEsc(x.recibo)}</td>
+      <td>${_coEsc(x.comprobante)}</td><td class="r">${_coFmt(x.cobrado)}</td>
+      ${CC.map(c=>`<td class="r cc">${x.cc&&x.cc[c]?_coFmt(x.cc[c]):''}</td>`).join('')}
+      <td class="r">${_coFmt(x.pct)}</td><td class="r">${_coFmt(x.comision)}</td></tr>`).join('');
+    return `<div class="blq">
+      <div class="bt">Liquidación de Comisiones — ${_coEsc(g.vend)} · ${_coEsc(g.det)}</div>
+      <div class="sub">${per}</div>
+      <table><thead>${th}</thead><tbody>${filas}
+        <tr class="fin"><td colspan="3"><b>TOTAL ${_coEsc(g.det)}</b></td><td class="r">${_coFmt(sub.cobrado)}</td>
+        ${CC.map(c=>`<td class="r cc">${sub.cc[c]?_coFmt(sub.cc[c]):''}</td>`).join('')}
+        <td></td><td class="r"><b>${_coFmt(sub.comision)}</b></td></tr>
+      </tbody></table>
+    </div><div class="corte"></div>`;
+  }).join('');
+  sgvPrint({ titulo:'', subtitulo:'',
+    estilos:`.blq{break-inside:avoid;page-break-inside:avoid;padding-top:4px}
+             .bt{font-size:15px;font-weight:bold;margin:0 0 2px}
+             .corte{border-top:3px solid #000;margin:22px 0 18px}
+             td.cc,th.cc{color:#6A5BD0}`,
+    cuerpo:bloques });
+}
+
 /* ─────────── Excel ─────────── */
 async function comExcel(){
   if(!_comData){ toast('Consultá primero','err'); return; }
@@ -189,6 +228,7 @@ async function comExcel(){
   }
   const D=_comData, CC=D.centros||[], grupos=_coAgrupado(), NUM='#,##0.00';
   const wb=new ExcelJS.Workbook(); const ws=wb.addWorksheet('Comisiones');
+  if(D.grupal) return _coExcelGrupal(wb, ws, D, CC, grupos, NUM);
   ws.columns=[{width:12},{width:16},{width:16},{width:15},...CC.map(()=>({width:15})),{width:8},{width:15}];
 
   ws.addRow(['Liquidación de Comisiones']).font={bold:true,size:13};
@@ -228,6 +268,55 @@ async function comExcel(){
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
   a.download=`Comisiones_${(D.desde||'').replace(/-/g,'')}_${(D.hasta||'').replace(/-/g,'')}.xlsx`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+// Excel GRUPAL: lo mismo que la impresión. Cada vendedor es un bloque completo;
+// entre bloques, renglones en blanco y una línea gruesa. Si el bloque no entra
+// en lo que queda de la hoja (≈ 48 renglones por A4) se pone un salto de
+// página antes; si es más largo que una hoja, se deja correr.
+async function _coExcelGrupal(wb, ws, D, CC, grupos, NUM){
+  const POR_HOJA=48, nCol=6+CC.length;
+  ws.columns=[{width:12},{width:16},{width:16},{width:15},...CC.map(()=>({width:15})),{width:8},{width:15}];
+  ws.pageSetup={paperSize:9, orientation:'portrait', fitToPage:true, fitToWidth:1, fitToHeight:0,
+                margins:{left:0.4,right:0.4,top:0.5,bottom:0.5,header:0.2,footer:0.2}};
+  const colPct=5+CC.length, colCom=6+CC.length;
+  const fmtFila=r=>{ r.getCell(4).numFmt=NUM; CC.forEach((_,i)=>{ r.getCell(5+i).numFmt=NUM; });
+                     r.getCell(colPct).numFmt='#,##0.00'; r.getCell(colCom).numFmt=NUM; };
+  const per=`Período ${_coFecha(D.desde)} a ${_coFecha(D.hasta)} · sobre lo cobrado, neto de IVA y percepciones, en pesos`;
+  let usados=0;                                  // renglones usados en la hoja actual
+  grupos.forEach((g,i)=>{
+    const alto=4+g.filas.length+1;               // título, período, blanco, encabezado, filas, total
+    const sep=i<grupos.length-1?4:0;             // blancos + línea de corte
+    if(i>0 && usados+alto>POR_HOJA && alto<=POR_HOJA){
+      ws.lastRow.addPageBreak(); usados=0;
+    }
+    const t=ws.addRow([`Liquidación de Comisiones — ${g.vend} · ${g.det}`]); t.font={bold:true,size:13};
+    ws.addRow([per]).font={italic:true,color:{argb:'FF666666'}};
+    ws.addRow([]);
+    const hr=ws.addRow(['Fecha','Recibo','Factura','Cobrado',...CC,'%','Comisión']);
+    hr.eachCell(c=>{ c.font={bold:true}; c.border={bottom:{style:'thin'}};
+                     c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE8EAED'}}; });
+    g.filas.forEach(x=>fmtFila(ws.addRow([_coFecha(x.fecha), x.recibo, x.comprobante, x.cobrado,
+      ...CC.map(c=>(x.cc&&x.cc[c])?x.cc[c]:null), x.pct, x.comision])));
+    const sub=_coSuma(g.filas, CC);
+    const rs=ws.addRow(['','',`TOTAL ${g.det}`, sub.cobrado, ...CC.map(c=>sub.cc[c]||null), null, sub.comision]);
+    rs.font={bold:true}; fmtFila(rs);
+    for(let c=1;c<=nCol;c++) rs.getCell(c).border={top:{style:'medium',color:{argb:'FF0A58CA'}}};
+    usados+=alto; if(usados>POR_HOJA) usados%=POR_HOJA;
+    if(sep){
+      ws.addRow([]); ws.addRow([]);
+      const lc=ws.addRow([]);
+      for(let c=1;c<=nCol;c++) lc.getCell(c).border={bottom:{style:'thick',color:{argb:'FF000000'}}};
+      ws.addRow([]);
+      usados+=sep;
+      if(usados>=POR_HOJA) usados=usados%POR_HOJA;
+    }
+  });
+  const buf=await wb.xlsx.writeBuffer();
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  a.download=`Comisiones_Gerencia_${(D.desde||'').replace(/-/g,'')}_${(D.hasta||'').replace(/-/g,'')}.xlsx`;
   a.click(); URL.revokeObjectURL(a.href);
 }
 
