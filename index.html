@@ -876,6 +876,11 @@
     <button class="btn" id="btn-reci-print" onclick="reciImprimirSel()">🖨 Imprimir</button>
     <button class="btn" id="btn-cfg-reci" style="display:none" onclick="openColCfg('reci')" title="Configurar columnas">⚙️ Columnas</button>
     <div class="spacer"></div>
+    <span style="font-size:11px;color:var(--t2)">Desde</span>
+    <input type="date" class="finp" id="reci-desde" style="width:140px" onchange="renderReci()">
+    <span style="font-size:11px;color:var(--t2)">Hasta</span>
+    <input type="date" class="finp" id="reci-hasta" style="width:140px" onchange="renderReci()">
+    <button class="btn" onclick="document.getElementById('reci-desde').value='';document.getElementById('reci-hasta').value='';renderReci()" title="Quitar el filtro de fechas">✕</button>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" onfocus="this.select()" onclick="this.select()" id="reci-q" placeholder="Buscar recibo o cliente..." oninput="renderReci()">
       <button class="srch-clr" onclick="clrSrch('reci-q',function(){renderReci()})" title="Limpiar">✕</button>

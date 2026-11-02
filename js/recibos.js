@@ -76,6 +76,10 @@ function getReciRows(){
     if(!rec || rec.anulado) return;
     rows.push({it, rec});
   });
+  // Filtro por FECHA del recibo (Ricardo, Nov 2026)
+  const fd=document.getElementById('reci-desde')?.value||'', fh=document.getElementById('reci-hasta')?.value||'';
+  if(fd) rows=rows.filter(({rec})=>String(rec.fecha||'').substring(0,10)>=fd);
+  if(fh) rows=rows.filter(({rec})=>String(rec.fecha||'').substring(0,10)<=fh);
   if(q) rows=rows.filter(({it,rec})=>
     String(rec.numero||'').includes(q) ||
     (it.comprobante||'').toLowerCase().includes(q) ||
