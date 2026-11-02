@@ -1130,7 +1130,8 @@ async function facImprimir(modo) {
   let letra = (prefijo.charAt(1)||'').toUpperCase();
   if(!['A','B','C','X'].includes(letra)){
     if(tiva==='I') letra='A';
-    else if(tiva==='C'||tiva==='M'||tiva==='N') letra='B';
+    else if(tiva==='M') letra='A';
+    else if(tiva==='C'||tiva==='N'||tiva==='E') letra='B';
     else letra='C';
   }
   let qrUrl = '';
