@@ -827,7 +827,9 @@ async function renderFacDetalle(f, vista) {
           <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>IVA 21%</span><span>${mon} ${fmt((f.fac_iva||0)*_fac)}</span></div>`:'')}
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Subtotal</span><span>${mon} ${fmt((f.fac_sub||0)*_fac)}</span></div>
         ${(Array.isArray(f.fac_percep_det)&&f.fac_percep_det.length)
-          ? f.fac_percep_det.map(p=>`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>${esc(p.detalle||'Percepción')} (${fmt(p.pct)}%)</span><span>${mon} ${fmt((Number(p.importe)||0)*_fac)}</span></div>`).join('')
+          ? f.fac_percep_det.map(p=>{ const _c=Number(f.fac_cotiz)||1, _d=1-(Number(f.fac_monpor)||0)/100;
+              const v=(Number(p.importe)||0)/_c/(vista==='afip'?1:(_d||1));   // guardado en pesos declarados
+              return `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>${esc(p.detalle||'Percepción')} (${fmt(p.pct)}%)</span><span>${mon} ${fmt(v)}</span></div>`; }).join('')
           : ((f.fac_percib||0)>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t2);padding:3px 0"><span>Percepción IIBB</span><span>${mon} ${fmt((f.fac_percib||0)*_fac)}</span></div>`:'')}
         <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--txt);padding:8px 0 3px;border-top:1px solid var(--b1);margin-top:4px"><span>TOTAL</span><span>${mon} ${fmt((f.fac_total||0)*_fac)}</span></div>
         ${tieneDto?`<div style="display:flex;gap:6px;margin-top:6px">
@@ -1342,7 +1344,9 @@ async function facImprimir(modo) {
         })()}
       `:''}
       ${(Array.isArray(f.fac_percep_det)&&f.fac_percep_det.length)
-        ? f.fac_percep_det.map(p=>`<div class="tot-row"><span class="tot-lbl">${esc(p.detalle||'Perc. IIBB')} (${fmt(p.pct)}%)</span><span class="tot-val">${_monImp} ${fmt((Number(p.importe)||0)*_factor)}</span></div>`).join('')
+        // El importe guardado YA está en pesos declarados (el server lo calcula sobre el neto
+        // declarado): en la factura va tal cual; en el borrador se pasa a la moneda real
+        ? f.fac_percep_det.map(p=>`<div class="tot-row"><span class="tot-lbl">${esc(p.detalle||'Perc. IIBB')} (${fmt(p.pct)}%)</span><span class="tot-val">${_monImp} ${fmt(_esAfip ? (Number(p.importe)||0) : (Number(p.importe)||0)/(((1-(Number(f.fac_monpor)||0)/100)*_cot)||1))}</span></div>`).join('')
         : ((f.fac_percib||0)>0?`<div class="tot-row"><span class="tot-lbl">Perc. IIBB</span><span class="tot-val">${_monImp} ${fmt((f.fac_percib||0)*_factor)}</span></div>`:'')}
       <div class="tot-row"><span class="tot-lbl">TOTAL</span><span class="tot-val">${_monImp} ${fmt(_vTotal)}</span></div>
     </div>
