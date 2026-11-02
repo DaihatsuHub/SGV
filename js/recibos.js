@@ -573,6 +573,17 @@ function renderReciDeud(){
     const cellAfip = sAfip > 0
       ? `<input type="text" value="${reciFmt(aAfip)}" onclick="event.stopPropagation()" onchange="reciAbonaAfipInput(${i},this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px;background:#3b2a5c;color:#e9d5ff;border-color:#6d28d9">`
       : `<span style="text-align:right;color:var(--t3)">—</span>`;
+    if(d._soloCont){
+      // SÓLO CONTABLE (ej. HA6): sin parte real; se ve y se carga sólo lo contable
+      const v=`<span style="text-align:right;color:var(--t3)">—</span>`;
+      return `<div onclick="reciAplicarFila(${i})" title="Comprobante sólo contable: clic para aplicar" style="display:grid;grid-template-columns:${RECI_DEUD_TPL};white-space:nowrap;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--b1);font-size:12px;font-family:var(--mono);cursor:pointer">
+        <span style="color:var(--acc)">${esc(d.fac_nro)} <span style="font-size:9px;background:#3b2a5c;color:#e9d5ff;padding:0 4px;border-radius:3px">CONT</span></span>
+        <span style="color:var(--t2)">${fec}</span>
+        ${v}${v}${v}${v}${v}
+        <span style="text-align:right;color:var(--txt);font-weight:600">$ ${reciFmt(sAfip)}</span>
+        <input type="text" value="${reciFmt(d.abona||0)}" onclick="event.stopPropagation()" onchange="reciAbonaSoloInput(${i},this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px;background:#3b2a5c;color:#e9d5ff;border-color:#6d28d9">
+      </div>`;
+    }
     return `<div onclick="reciAplicarFila(${i})" title="Clic para aplicar: ofrece el saldo del comprobante o lo que falta del saldo a aplicar" style="display:grid;grid-template-columns:${RECI_DEUD_TPL};white-space:nowrap;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--b1);font-size:12px;font-family:var(--mono);cursor:pointer">
       <span style="color:var(--acc)">${esc(d.fac_nro)}</span>
       <span style="color:var(--t2)">${fec}</span>
@@ -639,6 +650,14 @@ function reciAbonaInput(i,val){
   renderReciDeud(); reciReconcile();
 }
 // Al clickear el comprobante: ofrecer el menor entre saldo y lo que falta de instrumentos
+// Abono de un comprobante sólo contable: real = contable = lo cargado
+function reciAbonaSoloInput(i,val){
+  const d=_reciDeud[i]; if(!d) return;
+  let a=reciParseNum(val); if(a<0) a=0;
+  const tope=Number(d.saldo_afip)||0; if(a>tope) a=tope;
+  d.abona=d.abona_orig=d.abona_afip=round2(a); d._afipManual=true;
+  renderReciDeud(); reciReconcile();
+}
 function reciAplicarFila(i){
   if(_reciReadonly) return;
   const d=_reciDeud[i]; if(!d) return;
@@ -932,8 +951,12 @@ function reciTotInstrumentos(){
 function reciReconcile(){
   setTimeout(reciInstSync, 0);
   { const w=document.getElementById('rf-chqvar-wrap'), cv=document.getElementById('rf-chqvar');
-    const on=_reciEsSoloCont() || reciParseNum(cv?.value||'0')>0;
-    if(w) w.style.display = on ? '' : 'none'; }
+    const hay=_reciDeud.some(d=>d._soloCont);
+    const on=hay || reciParseNum(cv?.value||'0')>0;
+    if(w) w.style.display = on ? '' : 'none';
+    // Si TODOS los deudores son sólo contables, los cheques van sólo como "Cheques varios"
+    const box=document.querySelector('.rf-i[onclick="reciAbrirInst(\'cheq\')"]');
+    if(box) box.style.display = (hay && _reciDeud.every(d=>d._soloCont) && !_reciCheques.length) ? 'none' : ''; }
   const abonado = reciTotInstrumentos();   // total del recibo = instrumentos
   const aplicado = reciTotAplicado();       // repartido en comprobantes + A/Cuenta
   const saldoAplicar = round2(abonado - aplicado);
