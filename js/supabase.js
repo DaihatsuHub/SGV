@@ -38,15 +38,17 @@ async function sbGet(table, params='') {
   return res.rows;
 }
 
+// Las páginas de 1.000 se piden DE A 4 A LA VEZ, no una detrás de otra: con los
+// datos reales (miles de recibos, renglones, etc.) eran muchos viajes seguidos
+// y la primera entrada a cada módulo tardaba (Ricardo, Nov 2026)
 async function sbGetAll(table, orderField, extraParams='') {
-  const PAGE = 1000;
-  let all = [], offset = 0;
-  while (true) {
-    const params = `order=${orderField}.asc&limit=${PAGE}&offset=${offset}${extraParams ? '&'+extraParams : ''}`;
-    const rows = await sbGet(table, params);
-    all = all.concat(rows);
-    if (rows.length < PAGE) break;
-    offset += PAGE;
+  const PAGE = 1000, PAR = 4;
+  let all = [];
+  for (let base = 0; ; base += PAR) {
+    const lote = await Promise.all(Array.from({ length: PAR }, (_, k) =>
+      sbGet(table, `order=${orderField}.asc&limit=${PAGE}&offset=${(base + k) * PAGE}${extraParams ? '&'+extraParams : ''}`)));
+    lote.forEach(r => { all = all.concat(r || []); });
+    if (lote.some(r => !r || r.length < PAGE)) break;
   }
   return all;
 }
@@ -204,9 +206,11 @@ function ensureRecibos() {
   if (_recisPromise) return _recisPromise;
   _recisPromise = (async () => {
     try {
-      if (typeof sbLoadRecis==='function')     await sbLoadRecis();
-      if (typeof sbLoadReciItems==='function') await sbLoadReciItems();
-      if (typeof sbLoadCheques==='function')   await sbLoadCheques();
+      // Las tres cargas a la vez (antes, una detrás de otra)
+      await Promise.all([
+        typeof sbLoadRecis==='function'     ? sbLoadRecis()     : null,
+        typeof sbLoadReciItems==='function' ? sbLoadReciItems() : null,
+        typeof sbLoadCheques==='function'   ? sbLoadCheques()   : null ]);
     } catch(e) { console.error('ensureRecibos:', e); }
     _recisLoaded = true;
   })();
