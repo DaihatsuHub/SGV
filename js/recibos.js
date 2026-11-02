@@ -596,8 +596,9 @@ function renderReciDeud(){
       ${cellAfip}
     </div>`;
   }).join('');
-  const ts=document.getElementById('rf-tot-saldo'); if(ts) ts.textContent='$ '+reciFmt(_reciDeud.reduce((s,d)=>s+(d.saldo||0),0));
-  const ta=document.getElementById('rf-tot-abona'); if(ta) ta.textContent='$ '+reciFmt(reciTotAbonado());
+  // Los sólo contables (ej. HA6) no tienen saldo real: no suman en los totales reales
+  const ts=document.getElementById('rf-tot-saldo'); if(ts) ts.textContent='$ '+reciFmt(_reciDeud.reduce((s,d)=>s+(d._soloCont?0:(d.saldo||0)),0));
+  const ta=document.getElementById('rf-tot-abona'); if(ta) ta.textContent='$ '+reciFmt(_reciDeud.reduce((s,d)=>s+(d._soloCont?0:(d.abona||0)),0));
   const tsa=document.getElementById('rf-tot-saldo-afip');
   if(tsa) tsa.textContent='$ '+reciFmt(_reciDeud.reduce((s,d)=>s+(Number(d.saldo_afip)||0),0));
   const taa=document.getElementById('rf-tot-abona-afip');
@@ -933,7 +934,7 @@ function reciInstSync(){
   if(tot) tot.textContent='$ '+reciFmt(reciTotInstrumentos());
   // Total del bloque azul: lo que el cliente debe en los comprobantes listados
   const deb=document.getElementById('rf-debe-tot');
-  if(deb) deb.textContent='$ '+reciFmt(_reciDeud.reduce((a,d)=>a+(Number(d.saldo)||0),0));
+  if(deb) deb.textContent='$ '+reciFmt(_reciDeud.reduce((a,d)=>a+(d._soloCont?(Number(d.saldo_afip)||0):(Number(d.saldo)||0)),0));
   if(_reciInstAbierto){
     const t=document.getElementById('inst-tot');
     if(t) t.textContent='$ '+reciFmt(RECI_INST[_reciInstAbierto].tot());
