@@ -1122,8 +1122,8 @@ async function facImprimir(modo) {
   const prefijo = facGetPrefijo(f.fac_nro);
   const ctip = CTIPS.find(c=>c.prefijo===prefijo&&c.empresa===emp);
   // La LETRA sale del 2º carácter del prefijo (H·A·4 = Hatsu / letra A / suc 4).
-  //   A → discrimina IVA (Responsable Inscripto)
-  //   B → Monotributista o Consumidor Final: IVA incluido, se muestra discriminado
+  //   A → discrimina IVA (Responsable Inscripto o Monotributista, éste con leyenda Ley 27.618)
+  //   B → Consumidor Final / Exento / No Resp.: IVA incluido, se muestra discriminado
   //   X → no chequea condición de IVA; el total ES el precio facturado
   // Sólo si el prefijo no trae una letra válida se deduce por la condición del
   // cliente, como respaldo para comprobantes viejos.
