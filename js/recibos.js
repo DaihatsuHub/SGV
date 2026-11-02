@@ -239,6 +239,7 @@ function reciAlta(){
   document.getElementById('rf-cot-casio').value=reciFmt(_reciHdr.cotCasio);
   document.getElementById('rf-cot-tressa').value=reciFmt(_reciHdr.cotTressa);
   document.getElementById('rf-efectivo').value='0,00';
+  { const cv=document.getElementById('rf-chqvar'); if(cv) cv.value='0,00'; }
   document.getElementById('rf-ajuste').value='0,00';
   reciFillClienteList();
   renderReciDeud(); renderReciACuenta(); renderReciTransf(); renderReciCheques(); renderReciRetenc(); reciReconcile();
@@ -290,6 +291,7 @@ async function _reciOpenEditor(){
     document.getElementById('rf-vend').textContent=reciVendDesc(cli.CLI_VEND)||(cli.CLI_VEND||'—');
   }
   document.getElementById('rf-efectivo').value='0,00';
+  { const cv=document.getElementById('rf-chqvar'); if(cv) cv.value='0,00'; }
   document.getElementById('rf-ajuste').value='0,00';
   try{
     const items=await sbGet('recibo_items',`recibo_id=eq.${rc.id}&order=id.asc`);
@@ -306,7 +308,7 @@ async function _reciOpenEditor(){
         abona_afip: round2(Number(it.abona_afip)||0),
         // En MODIFICAR se comporta igual que en el alta: si se cambia el real,
         // el contable lo sigue. En sólo lectura da lo mismo, no se edita.
-        _afipManual: false };
+        _afipManual: false, _soloCont: _reciSoloCont(it.comprobante) };
     });
     _reciACuenta=items.filter(esAC).map(it=>({ moneda:it.moneda||'', cotizacion:it.cotizacion||1,
       importe:it.abona_orig||0, abona:it.abona||0, simbolo:reciMonInfo(it.moneda,_reciHdr).simbolo }));
@@ -315,6 +317,7 @@ async function _reciOpenEditor(){
     _reciRetenc=pagos.filter(p=>p.tipo==='retencion').map(p=>({codigo:p.ret_codigo,importe:p.importe||0}));
     const efe=pagos.find(p=>p.tipo==='efectivo'); document.getElementById('rf-efectivo').value=reciFmt(efe?efe.importe:0);
     const aju=pagos.find(p=>p.tipo==='ajuste');   document.getElementById('rf-ajuste').value=reciFmt(aju?aju.importe:0);
+    { const cvp=pagos.find(p=>p.tipo==='cheques_varios'), cv=document.getElementById('rf-chqvar'); if(cv) cv.value=reciFmt(cvp?cvp.importe:0); }
     const chs=await sbGet('cheques',`recibo_id=eq.${rc.id}`);
     // El ESTADO viene del cheque: si YA NO ESTÁ EN CARTERA (se depositó, se
     // entregó, rebotó) no se puede tocar desde el recibo — habría que deshacer
@@ -450,6 +453,15 @@ async function reciClienteChange(){
   }
 }
 
+// SÓLO CONTABLE: tipo Contable que baja depósito y NO stock (ej. HA6). No tiene
+// deuda real: en el recibo se ve y se cobra sólo el saldo contable (Nov 2026)
+function _reciSoloCont(nro){
+  const n=String(nro||'').trim().toUpperCase();
+  const ct=(typeof CTIPS!=='undefined'?CTIPS:[]).find(c=>(c.prefijo||'').toUpperCase()===n.substring(0,3) && (c.tipo||'').toUpperCase()===n.slice(-1));
+  return !!(ct && ct.contable && ct.tab_fact && !ct.tab_stk);
+}
+function _reciEsSoloCont(){ return _reciDeud.some(d=>d._soloCont && (d.abona||0)>0); }
+
 // ¿El tipo del comprobante es CONTABLE? (prefijo = 3 primeros caracteres + tipo = última letra)
 function _reciTipoContable(nro){
   const n=String(nro||'').trim().toUpperCase();
@@ -492,8 +504,11 @@ function reciLoadDeudores(){
            || (hayContableConStock && !!f.fac_tab_stk && !esCont(f))
            || (hayContableConStock && esChqRech));
       if((f.fac_cli||'').trim()===cod.trim() && mismaEmp && esDeudor && okTipo && (f.fac_saldo||0)>0){
-        const info=reciMonInfo(f.fac_moneda,_reciHdr);
-        const saldoOrig=round2(f.fac_saldo||0);
+        const soloC=_reciSoloCont(f.fac_nro);
+        if(soloC && !((f.fac_saldo_afip||0)>0.005)) return;
+        // Sólo contable: el saldo que se muestra y se cobra es el CONTABLE, en pesos
+        const info=soloC ? { simbolo:'$', cotiz:1 } : reciMonInfo(f.fac_moneda,_reciHdr);
+        const saldoOrig=round2(soloC ? (f.fac_saldo_afip||0) : (f.fac_saldo||0));
         _reciDeud.push({ fac_nro:f.fac_nro, fac_fec:f.fac_fec, fac_moneda:f.fac_moneda,
           simbolo:info.simbolo, saldo_orig:saldoOrig, cotizacion:info.cotiz,
           saldo:round2(saldoOrig*info.cotiz), abona:0, abona_orig:0,
@@ -502,7 +517,7 @@ function reciLoadDeudores(){
           // se muestra ni se calcula lo abonado contable.
           // …y sólo si el TIPO es CONTABLE (Tipos de Comprobantes) — Ricardo, Oct 2026
           saldo_afip: (f.fac_tab_fact && _reciTipoContable(f.fac_nro)) ? round2(f.fac_saldo_afip||0) : 0,
-          abona_afip:0 });
+          abona_afip:0, _soloCont:soloC, ...(soloC?{ fac_moneda:'P' }:{}) });
       }
     });
     // Si no quedó ninguno pero el cliente SÍ debe del otro tipo, el talonario
@@ -911,10 +926,14 @@ function reciTotInstrumentos(){
   const t=_reciTransf.reduce((s,x)=>s+(x.importe||0),0);
   const c=_reciCheques.reduce((s,x)=>s+(x.importe||0),0);
   const r=_reciRetenc.reduce((s,x)=>s+(x.importe||0),0);
-  return round2(efe+aju+t+c+r);
+  const cv=reciParseNum(document.getElementById('rf-chqvar')?.value||'0');
+  return round2(efe+aju+t+c+r+cv);
 }
 function reciReconcile(){
   setTimeout(reciInstSync, 0);
+  { const w=document.getElementById('rf-chqvar-wrap'), cv=document.getElementById('rf-chqvar');
+    const on=_reciEsSoloCont() || reciParseNum(cv?.value||'0')>0;
+    if(w) w.style.display = on ? '' : 'none'; }
   const abonado = reciTotInstrumentos();   // total del recibo = instrumentos
   const aplicado = reciTotAplicado();       // repartido en comprobantes + A/Cuenta
   const saldoAplicar = round2(abonado - aplicado);
@@ -938,6 +957,15 @@ async function saveReci(){
   const aCta=_reciACuenta.filter(a=>(a.abona||0)>0);
   const totAplicado=round2(items.reduce((s,d)=>s+(d.abona||0),0)+aCta.reduce((s,a)=>s+(a.abona||0),0));
   if(totAplicado<=0){ toast('Cargá al menos un importe a abonar o una A/Cuenta','err'); return; }
+  // Sólo contables (ej. HA6): recibo aparte, cheques como "Cheques varios"
+  { const nS=items.filter(d=>d._soloCont).length;
+    if(nS && (nS<items.length || aCta.length)){ toast('Los comprobantes sólo contables (ej. HA6) van en un recibo aparte: no se mezclan con otros ni con A/Cuenta','err'); return; }
+    if(nS){
+      items.forEach(d=>{ d.abona_afip=round2(d.abona||0); d._afipManual=true; });
+      if(_reciCheques.some(c=>(c.importe||0)>0 && !c.bloqueado)){ toast('En un recibo sólo contable los cheques van en "Cheques varios" (no se cargan a la cartera)','err'); return; }
+    } else if(reciParseNum(document.getElementById('rf-chqvar')?.value||'0')>0){
+      toast('"Cheques varios" es sólo para recibos de comprobantes sólo contables','err'); return;
+    } }
   if(Math.abs(reciTotInstrumentos()-totAplicado)>0.01){ toast('Los instrumentos no coinciden con lo abonado','err'); return; }
   // Un recibo FISCAL tiene que aplicar algo contablemente: su razón de ser es
   // cancelar la parte declarada. Los "X" no, porque cobran los no contables.
@@ -970,6 +998,7 @@ async function saveReci(){
     aCuenta:aCta.map(a=>({ moneda:a.moneda||null, cotizacion:Math.max(1,a.cotizacion),
           importe:round2(a.importe), abona:round2(a.abona) })),
     pagos:{ efectivo:round2(efe), ajuste:round2(aju),
+          chequesVarios:round2(reciParseNum(document.getElementById('rf-chqvar')?.value||'0')),
           transferencias:_reciTransf.filter(t=>(t.importe||0)>0).map(t=>({fecha:t.fecha||null,importe:round2(t.importe)})),
           retenciones:_reciRetenc.filter(r=>(r.importe||0)>0).map(r=>({codigo:r.codigo||null,importe:round2(r.importe)})) },
     cheques:_reciCheques.filter(c=>(c.importe||0)>0).map(c=>({fecha:c.fecha||null,numero:c.numero||null,importe:round2(c.importe),fisico:!!c.fisico,propio:!!c.propio,bloqueado:!!c.bloqueado}))
@@ -1022,7 +1051,7 @@ async function saveReci(){
 // Imprime el recibo SELECCIONADO en la grilla, sin abrir el editor: carga sus
 // datos en memoria, imprime y deja todo como estaba.
 // Efectivo y ajuste para imprimir sin el formulario abierto (null = leer del DOM)
-let _reciPrintEfe=null, _reciPrintAju=null;
+let _reciPrintEfe=null, _reciPrintAju=null, _reciPrintCv=null;
 
 async function reciImprimirSel(){
   const hdrPrev=_reciHdr, deudPrev=_reciDeud, acPrev=_reciACuenta,
@@ -1035,6 +1064,7 @@ async function reciImprimirSel(){
     // Guardar efectivo y ajuste ANTES de cerrar: después el DOM queda vacío
     _reciPrintEfe=reciParseNum(document.getElementById('rf-efectivo')?.value||'0');
     _reciPrintAju=reciParseNum(document.getElementById('rf-ajuste')?.value||'0');
+    _reciPrintCv=reciParseNum(document.getElementById('rf-chqvar')?.value||'0');
     closeOv('ov-reci');                        // no queremos el editor abierto
     reciImprimir();
   }catch(e){
@@ -1044,7 +1074,7 @@ async function reciImprimirSel(){
     _reciHdr=hdrPrev; _reciDeud=deudPrev; _reciACuenta=acPrev;
     _reciTransf=trPrev; _reciCheques=chPrev; _reciRetenc=retPrev;
     _reciReadonly=roPrev;
-    _reciPrintEfe=null; _reciPrintAju=null;
+    _reciPrintEfe=null; _reciPrintAju=null; _reciPrintCv=null;
   }
 }
 
@@ -1098,6 +1128,8 @@ function reciImprimir(){
     add(`Retención ${esc2(r.codigo)}${typeof reteDesc==='function'&&reteDesc(r.codigo)?' — '+esc2(reteDesc(r.codigo)):''}`,'',r.importe); });
   (_reciCheques||[]).forEach(c=>{ if((c.importe||0)>0)
     add(`Cheque ${c.fisico?'':'ECheq '}N° ${esc2(c.numero)}`, fec(c.fecha), c.importe); });
+  { const cv=(_reciPrintCv!==null) ? _reciPrintCv : reciParseNum(document.getElementById('rf-chqvar')?.value||'0');
+    if(cv>0) add('CHEQUES VARIOS','',cv); }
   (_reciTransf||[]).forEach(t=>{ if((t.importe||0)>0)
     add('Transferencia', fec(t.fecha), t.importe); });
   // Del formulario si está abierto; si no, de lo que dejó reciImprimirSel

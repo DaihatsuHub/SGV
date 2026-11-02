@@ -1862,6 +1862,13 @@
               onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
               onchange="this.value=reciFmt(reciParseNum(this.value));reciReconcile()">
           </div>
+          <!-- Sólo en recibos de comprobantes sólo contables (ej. HA6): total de cheques, sin cartera -->
+          <div class="rf-i" id="rf-chqvar-wrap" style="display:none">
+            <div class="rf-i-lbl">Cheques varios</div>
+            <input class="finp rf-i-inp" id="rf-chqvar" value="0,00" onfocus="this.select()"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+              onchange="this.value=reciFmt(reciParseNum(this.value));reciReconcile()">
+          </div>
           <div class="rf-i rf-i-click" onclick="reciAbrirInst('transf')" title="Ver y cargar transferencias">
             <div class="rf-i-lbl">Transferencias <span class="rf-i-n" id="rf-n-transf"></span></div>
             <div class="rf-i-val" id="rf-transf-sub">$ 0,00</div>
