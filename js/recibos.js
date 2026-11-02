@@ -308,7 +308,8 @@ async function _reciOpenEditor(){
         abona_afip: round2(Number(it.abona_afip)||0),
         // En MODIFICAR se comporta igual que en el alta: si se cambia el real,
         // el contable lo sigue. En sólo lectura da lo mismo, no se edita.
-        _afipManual: false, _soloCont: _reciSoloCont(it.comprobante) };
+        _afipManual: false, _soloCont: !it.percep && _reciSoloCont(it.comprobante), _percep: !!it.percep,
+        ...(it.percep ? { saldo_afip:0, abona_afip:0, simbolo:'$', fac_moneda:'P' } : {}) };
     });
     _reciACuenta=items.filter(esAC).map(it=>({ moneda:it.moneda||'', cotizacion:it.cotizacion||1,
       importe:it.abona_orig||0, abona:it.abona||0, simbolo:reciMonInfo(it.moneda,_reciHdr).simbolo }));
@@ -346,7 +347,7 @@ function reciBaja(){
     syncSaving();
     try{
       const res=await apiPost('/recibos/anular', { id:rc.id });
-      (res.facturas||[]).forEach(f=>{ const fac=FACS.find(x=>(x.fac_nro||'').trim()===String(f.fac_nro).trim()); if(fac) fac.fac_saldo=f.fac_saldo; });
+      (res.facturas||[]).forEach(f=>{ const fac=FACS.find(x=>(x.fac_nro||'').trim()===String(f.fac_nro).trim()); if(fac) fac.fac_saldo=f.fac_saldo; }); (res.percepciones||[]).forEach(f=>{ const fac=FACS.find(x=>(x.fac_nro||'').trim()===String(f.fac_nro).trim()); if(fac) fac.fac_percep_saldo=f.fac_percep_saldo; });
       const idx=RECIS.findIndex(x=>x.id===rc.id); if(idx>=0) RECIS.splice(idx,1);
       await sbLoadReciItems();
       if(typeof sbLoadCheques==='function'){ await sbLoadCheques(); if(typeof renderCart==='function') renderCart(); }
@@ -441,7 +442,7 @@ async function reciClienteChange(){
   if(_reciMode==='A'){
     const t=(talosDeEmpresa(_reciHdr.empresa)||[]).find(x=>x.tipo===_reciHdr.talonario);
     const contable = t ? t.contable!==false : !_reciEsX();
-    if(contable && !_reciDeud.some(d=>(Number(d.saldo_afip)||0)>0.005)){
+    if(contable && !_reciDeud.some(d=>(Number(d.saldo_afip)||0)>0.005 || d._percep)){
       sgvAviso({ titulo:'El cliente no tiene saldo contable deudor', tipo:'adv',
         texto:`${(c.CLI_RAZON||'').trim()} no tiene comprobantes con saldo contable.\n\nCon un talonario contable el recibo tiene que cancelar saldo contable: elegí un talonario X u otro cliente.` });
       const el=document.getElementById('rf-cli'); if(el){ el.value=''; }
@@ -529,6 +530,15 @@ function reciLoadDeudores(){
           && ['F','D','R'].includes(tipo) && (f.fac_saldo||0)>0
           && (_reciEsX() ? esCont(f) : !esCont(f));
     });
+    // PERCEPCIONES en pesos de facturas en otra moneda: renglón aparte, se pagan
+    // cuando el cliente quiera (Ricardo, Nov 2026). Van en el recibo contable (son de lo facturado).
+    if(!_reciEsX()) (FACS||[]).forEach(f=>{
+      const mismaEmp=(f.fac_empresa? f.fac_empresa===emp : (f.fac_nro||'').startsWith(emp));
+      const ps=round2(Number(f.fac_percep_saldo)||0);
+      if((f.fac_cli||'').trim()===cod.trim() && mismaEmp && !f.fac_anul && ps>0.005)
+        _reciDeud.push({ fac_nro:f.fac_nro, fac_fec:f.fac_fec, fac_moneda:'P', simbolo:'$', saldo_orig:ps, cotizacion:1,
+          saldo:ps, abona:0, abona_orig:0, saldo_afip:0, abona_afip:0, _percep:true });
+    });
     // De la más vieja a la más nueva (Ricardo, Oct 2026)
     _reciDeud.sort((a,b)=>String(a.fac_fec||'').localeCompare(String(b.fac_fec||'')) || String(a.fac_nro||'').localeCompare(String(b.fac_nro||'')));
   }
@@ -584,8 +594,9 @@ function renderReciDeud(){
         <input type="text" value="${reciFmt(d.abona||0)}" onclick="event.stopPropagation()" onchange="reciAbonaSoloInput(${i},this.value)" onfocus="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" style="text-align:right;font-family:var(--mono);font-size:12px;height:24px;background:#3b2a5c;color:#e9d5ff;border-color:#6d28d9">
       </div>`;
     }
+    const _tagP = d._percep ? ` <span style="font-size:9px;background:#0f766e;color:#fff;padding:0 4px;border-radius:3px" title="Percepciones en pesos de esta factura">PERCEP</span>` : '';
     return `<div onclick="reciAplicarFila(${i})" title="Clic para aplicar: ofrece el saldo del comprobante o lo que falta del saldo a aplicar" style="display:grid;grid-template-columns:${RECI_DEUD_TPL};white-space:nowrap;gap:6px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--b1);font-size:12px;font-family:var(--mono);cursor:pointer">
-      <span style="color:var(--acc)">${esc(d.fac_nro)}</span>
+      <span style="color:var(--acc)">${esc(d.fac_nro)}${_tagP}</span>
       <span style="color:var(--t2)">${fec}</span>
       <span style="text-align:right">${esc(d.simbolo)} ${reciFmt(d.saldo_orig)}</span>
       <span style="text-align:right;color:var(--t3)">${esc(d.simbolo)} ${reciFmt(d.abona_orig)}</span>
@@ -1018,7 +1029,8 @@ async function saveReci(){
           saldo_orig:round2(d.saldo_orig), cotizacion:Math.max(1,d.cotizacion),
           saldo:round2(d.saldo), abona:round2(d.abona), abona_orig:round2(d.abona_orig),
           // Sólo se manda si se cargó a mano: si no, lo calcula el server
-          abona_afip:d._afipManual?round2(d.abona_afip||0):null })),
+          abona_afip:d._percep?0:(d._afipManual?round2(d.abona_afip||0):null),
+          ...(d._percep?{ percep:true }:{}) })),
     aCuenta:aCta.map(a=>({ moneda:a.moneda||null, cotizacion:Math.max(1,a.cotizacion),
           importe:round2(a.importe), abona:round2(a.abona) })),
     pagos:{ efectivo:round2(efe), ajuste:round2(aju),
@@ -1040,7 +1052,7 @@ async function saveReci(){
       return;
     }
     // saldos de facturas actualizados por el server
-    (res.facturas||[]).forEach(f=>{ const fac=FACS.find(x=>(x.fac_nro||'').trim()===String(f.fac_nro).trim()); if(fac) fac.fac_saldo=f.fac_saldo; });
+    (res.facturas||[]).forEach(f=>{ const fac=FACS.find(x=>(x.fac_nro||'').trim()===String(f.fac_nro).trim()); if(fac) fac.fac_saldo=f.fac_saldo; }); (res.percepciones||[]).forEach(f=>{ const fac=FACS.find(x=>(x.fac_nro||'').trim()===String(f.fac_nro).trim()); if(fac) fac.fac_percep_saldo=f.fac_percep_saldo; });
     // bump del número de talonario (alta) — sigue del lado cliente por ahora
     if(_reciMode==='A' && res.talo){ const t=taloFind(res.talo.empresa,res.talo.tipo); if(t && (Number(res.talo.ultimo_nro)||0)>(Number(t.ultimo_nro)||0)) t.ultimo_nro=res.talo.ultimo_nro; }
     closeOv('ov-reci');
