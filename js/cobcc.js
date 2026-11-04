@@ -13,7 +13,14 @@ let _ccbData = null;
 function _ccbEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function _ccbFmt(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function _ccbFecha(f){ const p=(f||'').substring(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:(f||''); }
-function _ccbGrid(n){ return `86px 120px 125px minmax(160px,1fr) 125px repeat(${n},115px)`; }
+const CCB_GRID='100px 86px 70px minmax(170px,1fr) 125px 110px 125px 85px 135px';
+// Nombre del centro de costos (tabla CCOS); si no está, el código
+function _ccbCC(c){ const t=((typeof TABLAS!=='undefined'&&TABLAS['CCOS'])||[]).find(x=>(x.CODIGO||'').trim()===c); return t?(t.DETALLE||c):c; }
+// Recibo, fecha y cliente sólo en el primer renglón de cada recibo (como el listado del DOS)
+function _ccbFilas(){
+  let ant=null;
+  return (_ccbData.detalle||[]).map(x=>{ const pri=x.reciboId!==ant; ant=x.reciboId; return {...x, pri}; });
+}
 
 function renderCobCC(){
   _ccbStyle();
@@ -36,25 +43,25 @@ async function ccbConsultar(){
 }
 
 function _ccbPintar(){
-  const D=_ccbData, CC=D.centros||[], det=D.detalle||[], T=D.totales||{cobrado:0,cc:{}};
+  const D=_ccbData, CC=D.centros||[], T=D.totales||{cobrado:0,cc:{}};
   const head=document.getElementById('ccb-head'), body=document.getElementById('ccb-body');
-  const G=_ccbGrid(CC.length);
-  head.style.gridTemplateColumns=G;
-  head.innerHTML='<span>Fecha</span><span>Recibo</span><span>Factura</span><span>Cliente</span><span class="r">Cobrado c/IVA</span>'
-    + CC.map(c=>`<span class="r cc">${_ccbEsc(c)}</span>`).join('');
-  if(!det.length){ body.innerHTML='<div class="empty" style="margin-top:30px">Sin cobranzas aplicadas en el período</div>'; return; }
-  let html=det.map(x=>`<div class="ccb-row" style="grid-template-columns:${G}">
-      <span>${_ccbFecha(x.fecha)}</span><span class="t">${_ccbEsc(x.recibo)}</span>
-      <span class="t" style="color:var(--acc)">${_ccbEsc(x.comprobante)}</span><span class="t">${_ccbEsc(x.cliente)}</span>
-      <span class="r">${_ccbFmt(x.cobrado)}</span>
-      ${CC.map(c=>`<span class="r cc">${x.cc&&x.cc[c]?_ccbFmt(x.cc[c]):''}</span>`).join('')}</div>`).join('');
-  html+=`<div class="ccb-row ccb-tot" style="grid-template-columns:${G}">
-      <span><b>TOTAL</b></span><span></span><span></span><span>${det.length} cobros</span>
-      <span class="r">${_ccbFmt(T.cobrado)}</span>
-      ${CC.map(c=>`<span class="r cc">${_ccbFmt(T.cc[c])}</span>`).join('')}</div>`;
-  // Total por centro de costos, abajo
+  head.style.gridTemplateColumns=CCB_GRID;
+  head.innerHTML='<span>Recibo</span><span>Fecha</span><span>Cliente</span><span>Razón social</span><span>Factura</span>'
+    + '<span>C. Costos</span><span class="r">Importe</span><span class="r">Cotiz.</span><span class="r">Total $ c/IVA</span>';
+  const filas=_ccbFilas();
+  if(!filas.length){ body.innerHTML='<div class="empty" style="margin-top:30px">Sin cobranzas aplicadas en el período</div>'; return; }
+  let html=filas.map(x=>`<div class="ccb-row${x.pri?' pri':''}" style="grid-template-columns:${CCB_GRID}">
+      <span class="t">${x.pri?_ccbEsc(x.recibo):''}</span><span>${x.pri?_ccbFecha(x.fecha):''}</span>
+      <span>${x.pri?_ccbEsc(x.cli):''}</span><span class="t">${x.pri?_ccbEsc(x.cliente):''}</span>
+      <span class="t" style="color:var(--acc)">${_ccbEsc(x.comprobante)}</span>
+      <span class="t cc">${_ccbEsc(_ccbCC(x.ccos))}</span>
+      <span class="r">${_ccbFmt(x.importe)}</span><span class="r">${_ccbFmt(x.cotiz)}</span>
+      <span class="r">${_ccbFmt(x.total)}</span></div>`).join('');
+  html+=`<div class="ccb-row ccb-tot" style="grid-template-columns:${CCB_GRID}">
+      <span><b>TOTAL</b></span><span></span><span></span><span>${new Set(filas.map(x=>x.reciboId)).size} recibos</span>
+      <span></span><span></span><span></span><span></span><span class="r">${_ccbFmt(T.cobrado)}</span></div>`;
   html+=`<div class="ccb-res"><div class="ccb-res-t">Total por Centro de Costos</div>
-    ${CC.map(c=>`<div class="ccb-res-r"><span>${_ccbEsc(c)}</span><span class="r">${_ccbFmt(T.cc[c])}</span>
+    ${CC.map(c=>`<div class="ccb-res-r"><span>${_ccbEsc(_ccbCC(c))}</span><span class="r">${_ccbFmt(T.cc[c])}</span>
       <span class="r p">${T.cobrado?_ccbFmt((T.cc[c]||0)*100/T.cobrado):'0,00'}%</span></div>`).join('')}
     <div class="ccb-res-r tot"><span>TOTAL</span><span class="r">${_ccbFmt(T.cobrado)}</span><span class="r p">100,00%</span></div></div>`;
   body.innerHTML=html;
@@ -63,19 +70,19 @@ function _ccbPintar(){
 function ccbPrint(){
   if(!_ccbData||!(_ccbData.detalle||[]).length){ toast('No hay nada para imprimir','err'); return; }
   const D=_ccbData, CC=D.centros||[], T=D.totales;
-  const th=`<tr><th>Fecha</th><th>Recibo</th><th>Factura</th><th>Cliente</th><th class="r">Cobrado c/IVA</th>`
-    + CC.map(c=>`<th class="r cc">${_ccbEsc(c)}</th>`).join('')+'</tr>';
-  const filas=D.detalle.map(x=>`<tr><td>${_ccbFecha(x.fecha)}</td><td>${_ccbEsc(x.recibo)}</td><td>${_ccbEsc(x.comprobante)}</td>
-    <td>${_ccbEsc(sgvCorta(x.cliente,30))}</td><td class="r">${_ccbFmt(x.cobrado)}</td>
-    ${CC.map(c=>`<td class="r cc">${x.cc&&x.cc[c]?_ccbFmt(x.cc[c]):''}</td>`).join('')}</tr>`).join('');
-  const tot=`<tr class="fin"><td colspan="4"><b>TOTAL</b></td><td class="r">${_ccbFmt(T.cobrado)}</td>
-    ${CC.map(c=>`<td class="r cc">${_ccbFmt(T.cc[c])}</td>`).join('')}</tr>`;
+  const th='<tr><th>Recibo</th><th>Fecha</th><th>Cliente</th><th>Razón social</th><th>Factura</th><th>C. Costos</th>'
+    + '<th class="r">Importe</th><th class="r">Cotiz.</th><th class="r">Total $ c/IVA</th></tr>';
+  const filas=_ccbFilas().map(x=>`<tr${x.pri?' class="pri"':''}><td>${x.pri?_ccbEsc(x.recibo):''}</td><td>${x.pri?_ccbFecha(x.fecha):''}</td>
+    <td>${x.pri?_ccbEsc(x.cli):''}</td><td>${x.pri?_ccbEsc(sgvCorta(x.cliente,28)):''}</td><td>${_ccbEsc(x.comprobante)}</td>
+    <td>${_ccbEsc(_ccbCC(x.ccos))}</td><td class="r">${_ccbFmt(x.importe)}</td><td class="r">${_ccbFmt(x.cotiz)}</td>
+    <td class="r">${_ccbFmt(x.total)}</td></tr>`).join('');
+  const tot=`<tr class="fin"><td colspan="8"><b>TOTAL</b></td><td class="r">${_ccbFmt(T.cobrado)}</td></tr>`;
   const res=`<h3>Total por Centro de Costos</h3><table style="width:auto;min-width:50%"><thead><tr><th>Centro</th><th class="r">Importe</th><th class="r">%</th></tr></thead><tbody>
-    ${CC.map(c=>`<tr><td>${_ccbEsc(c)}</td><td class="r">${_ccbFmt(T.cc[c])}</td><td class="r">${T.cobrado?_ccbFmt((T.cc[c]||0)*100/T.cobrado):'0,00'}%</td></tr>`).join('')}
+    ${CC.map(c=>`<tr><td>${_ccbEsc(_ccbCC(c))}</td><td class="r">${_ccbFmt(T.cc[c])}</td><td class="r">${T.cobrado?_ccbFmt((T.cc[c]||0)*100/T.cobrado):'0,00'}%</td></tr>`).join('')}
     <tr class="fin"><td>TOTAL</td><td class="r">${_ccbFmt(T.cobrado)}</td><td class="r">100,00%</td></tr></tbody></table>`;
   sgvPrint({ titulo:'Cobranzas por Centro de Costos',
-    subtitulo:`Período ${_ccbFecha(D.desde)} a ${_ccbFecha(D.hasta)} · cobranzas reales sobre facturas · con IVA, sin percepciones · en pesos`,
-    estilos:'td.cc,th.cc{color:#6A5BD0}',
+    subtitulo:`Período ${_ccbFecha(D.desde)} a ${_ccbFecha(D.hasta)} · cobranzas reales sobre facturas · con IVA, sin percepciones · total en pesos`,
+    estilos:'tr.pri td{border-top:1px solid #999}',
     cuerpo:`<table><thead>${th}</thead><tbody>${filas}${tot}</tbody></table><div style="break-inside:avoid">${res}</div>` });
 }
 
@@ -89,21 +96,24 @@ async function ccbExcel(){
   }
   const D=_ccbData, CC=D.centros||[], T=D.totales, NUM='#,##0.00';
   const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('Cobranzas x CC');
-  ws.columns=[{width:12},{width:16},{width:16},{width:34},{width:16},...CC.map(()=>({width:15}))];
+  ws.columns=[{width:14},{width:12},{width:9},{width:34},{width:15},{width:16},{width:15},{width:10},{width:16}];
   ws.addRow(['Cobranzas por Centro de Costos']).font={bold:true,size:13};
-  ws.addRow([`Período ${_ccbFecha(D.desde)} a ${_ccbFecha(D.hasta)} · cobranzas reales sobre facturas · con IVA, sin percepciones · en pesos`])
+  ws.addRow([`Período ${_ccbFecha(D.desde)} a ${_ccbFecha(D.hasta)} · cobranzas reales sobre facturas · con IVA, sin percepciones · total en pesos`])
     .font={italic:true,color:{argb:'FF666666'}};
   ws.addRow([]);
-  const hr=ws.addRow(['Fecha','Recibo','Factura','Cliente','Cobrado c/IVA',...CC]);
+  const hr=ws.addRow(['Recibo','Fecha','Cliente','Razón social','Factura','C. Costos','Importe','Cotización','Total $ c/IVA']);
   hr.eachCell(c=>{ c.font={bold:true}; c.border={bottom:{style:'thin'}}; });
-  const fmt=r=>{ for(let i=5;i<=5+CC.length;i++) r.getCell(i).numFmt=NUM; };
-  D.detalle.forEach(x=>fmt(ws.addRow([_ccbFecha(x.fecha),x.recibo,x.comprobante,x.cliente,x.cobrado,...CC.map(c=>x.cc&&x.cc[c]?x.cc[c]:null)])));
-  const rt=ws.addRow(['','','','TOTAL',T.cobrado,...CC.map(c=>T.cc[c]||0)]); rt.font={bold:true}; fmt(rt);
+  _ccbFilas().forEach(x=>{
+    const r=ws.addRow([x.pri?x.recibo:'', x.pri?_ccbFecha(x.fecha):'', x.pri?x.cli:'', x.pri?x.cliente:'',
+                       x.comprobante, _ccbCC(x.ccos), x.importe, x.cotiz, x.total]);
+    r.getCell(7).numFmt=NUM; r.getCell(8).numFmt=NUM; r.getCell(9).numFmt=NUM;
+  });
+  const rt=ws.addRow(['TOTAL','','','','','','','',T.cobrado]); rt.font={bold:true}; rt.getCell(9).numFmt=NUM;
   rt.eachCell(c=>{ c.border={top:{style:'medium',color:{argb:'FF0A58CA'}}}; });
   ws.addRow([]); ws.addRow([]);
   ws.addRow(['Total por Centro de Costos']).font={bold:true};
   const h2=ws.addRow(['Centro','Importe','%']); h2.eachCell(c=>{ c.font={bold:true}; c.border={bottom:{style:'thin'}}; });
-  CC.forEach(c=>{ const r=ws.addRow([c,T.cc[c]||0,T.cobrado?(T.cc[c]||0)/T.cobrado:0]); r.getCell(2).numFmt=NUM; r.getCell(3).numFmt='0.00%'; });
+  CC.forEach(c=>{ const r=ws.addRow([_ccbCC(c),T.cc[c]||0,T.cobrado?(T.cc[c]||0)/T.cobrado:0]); r.getCell(2).numFmt=NUM; r.getCell(3).numFmt='0.00%'; });
   const rf=ws.addRow(['TOTAL',T.cobrado,1]); rf.font={bold:true}; rf.getCell(2).numFmt=NUM; rf.getCell(3).numFmt='0.00%';
   ws.views=[{state:'frozen', ySplit:4}];
   const buf=await wb.xlsx.writeBuffer(), a=document.createElement('a');
@@ -122,6 +132,7 @@ function _ccbStyle(){
     .ccb-row{font-size:13px;border-bottom:1px solid var(--b1);font-family:var(--mono)}
     .ccb-row .t{font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
     .ccb-row:hover{background:var(--s2)}
+    .ccb-row.pri{border-top:1px solid var(--b2,#999)}
     .ccb-row .cc,#ccb-head .cc{color:#6A5BD0}
     .ccb-row .cc{background:rgba(127,119,221,.07)}
     .ccb-tot{background:var(--s2);border-top:2px solid var(--acc);font-weight:700;position:sticky;bottom:0}
