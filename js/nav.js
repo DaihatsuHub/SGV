@@ -83,6 +83,7 @@ function showSubPage(menu, sub) {
   else if (sub==='dash') { if(typeof renderDashboard==='function') renderDashboard(); }
   else if (sub==='rcc') { if(typeof renderResultadoCcos==='function') renderResultadoCcos(); }
   else if (sub==='arm') { if(typeof renderArmador==='function') renderArmador(); }
+  else if (sub==='cobcc') { if(typeof renderCobCC==='function') renderCobCC(); }
   else if (sub==='com') { if(typeof renderComisiones==='function') renderComisiones(); }
   else if (sub==='rank') { if(typeof renderRanking==='function') renderRanking(); }
   else if (sub==='subd') { if(typeof renderSubdiario==='function') renderSubdiario(); }

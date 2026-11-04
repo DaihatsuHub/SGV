@@ -184,6 +184,7 @@ const MENU_DEF = [
     { id:'ddi-cart',    mod:'cart',    label:'💼 Cartera de Valores' },
     { id:'ddi-sdcob',   mod:'sdcob',   label:'📗 Subdiario de Cobranzas' },
     { id:'ddi-listcob', mod:'listcob', label:'📋 Listado de Cobranzas' },
+    { id:'ddi-cobcc',   mod:'cobcc',   label:'🏢 Cobranzas por Centro de Costos' },
     { id:'ddi-antig',   mod:'antig',   label:'⏳ Antigüedad de Saldos' },
     { id:'ddi-com',     mod:'comi',    label:'💰 Comisiones' },
     { id:'ddi-talo',    mod:'talo',    label:'📓 Talonarios' },

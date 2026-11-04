@@ -164,6 +164,7 @@
         <button class="dd-item" id="ddi-cart" onclick="showSubPage('cob','cart')">💼 Cartera de Valores</button>
         <button class="dd-item" id="ddi-sdcob" onclick="showSubPage('cob','sdcob')">📗 Subdiario de Cobranzas</button>
         <button class="dd-item" id="ddi-listcob" onclick="showSubPage('cob','listcob')">📋 Listado de Cobranzas</button>
+        <button class="dd-item" id="ddi-cobcc" onclick="showSubPage('cob','cobcc')">🏢 Cobranzas por Centro de Costos</button>
         <button class="dd-item" id="ddi-antig" onclick="showSubPage('cob','antig')">⏳ Antigüedad de Saldos</button>
         <button class="dd-item" id="ddi-com" onclick="showSubPage('cob','com')">💰 Comisiones</button>
         <div style="height:1px;background:rgba(255,255,255,0.15);margin:6px 12px"></div>
@@ -989,6 +990,25 @@
   </div>
   <div class="tbl-wrap">
     <div id="sd-body" class="tbl-body"><div class="empty" style="margin-top:40px">Elegí el período y tocá Consultar</div></div>
+  </div>
+</div>
+
+<div class="page" id="page-cobcc">
+  <div class="toolbar">
+    <span style="font-weight:600;font-size:14px;color:var(--acc)">🏢 Cobranzas por Centro de Costos</span>
+    <label style="font-size:12px;color:var(--t2)">Desde</label>
+    <input type="date" class="finp" id="ccb-desde" style="width:140px">
+    <label style="font-size:12px;color:var(--t2)">Hasta</label>
+    <input type="date" class="finp" id="ccb-hasta" style="width:140px">
+    <button class="btn pri" onclick="ccbConsultar()">🔍 Consultar</button>
+    <button class="btn" onclick="ccbPrint()">🖨 Imprimir</button>
+    <button class="btn" onclick="ccbExcel()">⬇ Excel</button>
+    <div class="spacer"></div>
+    <span style="font-size:11px;color:var(--t3)">Cobranzas reales sobre facturas · con IVA, sin percepciones · en pesos</span>
+  </div>
+  <div class="tbl-wrap">
+    <div id="ccb-head"></div>
+    <div id="ccb-body" class="tbl-body"></div>
   </div>
 </div>
 
@@ -2357,6 +2377,7 @@
 <script src="js/armador.js"></script>
 <script src="js/preguntasgv.js"></script>
 <script src="js/comisiones.js"></script>
+<script src="js/cobcc.js"></script>
 <script src="js/subdiario.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/vmes.js"></script>
