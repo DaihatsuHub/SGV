@@ -11,23 +11,24 @@
 
 // Posiciones en mm desde el borde superior izquierdo de la hoja A4
 const REM_POS = {
-  fecha:    { x:148, y:25 },
-  cliCod:   { x:16,  y:55 },     // "( 7780)"
+  fecha:    { x:188, y:25 },      // +4 cm (prueba 05/11)
   razon:    { x:29,  y:51 },
   domic:    { x:29,  y:59 },
   local:    { x:29,  y:63 },
   provin:   { x:34,  y:67 },
-  iva:      { x:131, y:50 },
-  cuit:     { x:136, y:58 },
+  iva:      { x:181, y:50 },      // +5 cm
+  cuit:     { x:186, y:58 },      // +5 cm
   transp:   { x:30,  y:75 },     // TRANSPORTE: nombre — dirección
-  items:    { y:87, alto:4.6, max:24, can:{x:33}, des:{x:37}, cod:{x:110}, desp:{x:138} },
+  // +4 renglones; descripción +2 caracteres; código y despacho +12 (1 caracter ≈ 2,33 mm)
+  items:    { y:105.4, alto:4.6, max:20, can:{x:33}, des:{x:41.7}, cod:{x:138}, desp:{x:166} },
   cajas:    { x:66,  y:209 },
   valor:    { x:66,  y:215 },
   factura:  { x:66,  y:221 },
   piezas:   { x:33,  y:236 },
   origen:   { x:61,  y:236 },
   aduana:   { x:61,  y:240 },
-  leyenda:  { x:22,  y:244 }
+  leyenda:  { x:105, y:236 },     // en el renglón de las piezas
+  web:      { x:105, y:240 }
 };
 const REM_LEYENDA = 'Distribuidor oficial de calculadoras Casio';
 
@@ -132,8 +133,8 @@ async function remImprimir(f, items, o){
 
   let html = '';
   html += t(P.fecha, fecha);
-  html += t(P.razon, cli.CLI_RAZON || f.fac_cli);
-  html += t(P.cliCod, '( ' + (f.fac_cli||'').trim() + ')');
+  // Razón social en negrita y más grande, con el código de cliente a continuación
+  html += `<div class="c" style="left:${P.razon.x + ax}mm;top:${P.razon.y - 1 + ay}mm"><b style="font-size:13pt">${esc(cli.CLI_RAZON || f.fac_cli || '')}</b> ( ${esc((f.fac_cli||'').trim())})</div>`;
   html += t(P.domic, cli.CLI_DOMIC);
   html += t(P.local, [cli.CLI_CODPOS ? '(' + String(cli.CLI_CODPOS).trim() + ')' : '', (cli.CLI_LOCAL||'').trim()].filter(Boolean).join('-'));
   html += t(P.provin, pcia);
@@ -149,12 +150,13 @@ async function remImprimir(f, items, o){
     html += t({ x: P.items.desp.x, y }, (it.ite_desp||'').trim());
   });
   html += t(P.cajas, `•  ${o.cajas} (${remLetras(o.cajas)}) CAJA${o.cajas === 1 ? '' : 'S'}`, 'font-family:Arial,sans-serif;font-weight:bold;font-size:13pt');
-  html += t(P.valor, `•  VALOR DECLARADO: $ ${fmtMil(o.valor)} ( ${remLetras(o.valor)} )`, 'font-family:Arial,sans-serif;font-weight:bold;font-size:13pt');
+  html += t(P.valor, `•  VALOR DECLARADO: $ ${fmtMil(o.valor)}`, 'font-family:Arial,sans-serif;font-weight:bold;font-size:13pt');
   if (o.contable) html += t(P.factura, `•  FACTURA N.° ${String(f.fac_nro).trim()}`, 'font-family:Arial,sans-serif;font-weight:bold;font-size:13pt');
   html += t(P.piezas, `${piezas} Piezas`);
   if (uniq('dep_proc')) html += t(P.origen, 'Origen: ' + uniq('dep_proc'));
   if (uniq('dep_adua')) html += t(P.aduana, 'Aduana: ' + uniq('dep_adua'));
   html += t(P.leyenda, REM_LEYENDA);
+  html += t(P.web, String(f.fac_nro||'').trim().charAt(0).toUpperCase() === 'T' ? 'www.tressa.com.ar' : 'www.daihatsu.com.ar');
   if (items.length > P.items.max) toast(`El remito tiene lugar para ${P.items.max} renglones: van los primeros`, 'err');
 
   const w = window.open('', '_blank');
