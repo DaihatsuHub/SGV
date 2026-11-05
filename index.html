@@ -152,6 +152,7 @@
         <button class="dd-item" id="ddi-arm" onclick="showSubPage('ven','arm')">🧩 Armá tu informe</button>
         <button class="dd-item" id="ddi-rank" onclick="showSubPage('ven','rank')">🏆 Ranking de Artículos</button>
         <button class="dd-item" id="ddi-subd" onclick="showSubPage('ven','subd')">📒 Subdiario de IVA</button>
+        <button class="dd-item" id="ddi-subdcc" onclick="showSubPage('ven','subdcc')">🏢 Subdiario de IVA por Centro de Costos</button>
         <button class="dd-item" id="ddi-saldo" onclick="showSubPage('ven','saldo')">📊 Saldos por Mes</button>
         <div style="height:1px;background:rgba(255,255,255,0.15);margin:6px 12px"></div>
         <button class="dd-item" id="ddi-ctip" onclick="showSubPage('ven','ctip')">📋 Tipos de Comprobantes</button>
@@ -970,6 +971,31 @@
 </div>
 
 <!-- ══════ COBRANZAS: LISTADO DE COBRANZAS ══════ -->
+<div class="page" id="page-subdcc">
+  <div class="toolbar">
+    <span style="font-weight:600;font-size:14px;color:var(--acc)">🏢 Subdiario de IVA por Centro de Costos</span>
+    <label style="font-size:12px;color:var(--t2)">Desde</label>
+    <input type="date" class="finp" id="scc-desde" style="width:140px">
+    <label style="font-size:12px;color:var(--t2)">Hasta</label>
+    <input type="date" class="finp" id="scc-hasta" style="width:140px">
+    <select class="fsel" id="scc-empresa" style="min-width:150px">
+      <option value="">Todas las empresas</option>
+      <option value="H">Hatsu</option>
+      <option value="T">Tressa</option>
+    </select>
+    <button class="btn pri" onclick="sccConsultar()">🔍 Consultar</button>
+    <button class="btn" onclick="sccResumen()">📊 Resumen General</button>
+    <button class="btn" onclick="sccPrint()">🖨 Imprimir</button>
+    <button class="btn" onclick="sccExcel()">⬇ Excel</button>
+    <div class="spacer"></div>
+    <span style="font-size:11px;color:var(--t3)">Valores declarados a AFIP · abiertos por centro de costos</span>
+  </div>
+  <div class="tbl-wrap">
+    <div id="scc-head"></div>
+    <div id="scc-body" class="tbl-body"><div class="empty" style="margin-top:40px">Elegí el período y tocá Consultar</div></div>
+  </div>
+</div>
+
 <div class="page" id="page-subd">
   <div class="toolbar">
     <span style="font-weight:600;font-size:14px;color:var(--acc);margin-right:4px">📒 Subdiario de IVA Ventas</span>
@@ -2380,6 +2406,7 @@
 <script src="js/comisiones.js"></script>
 <script src="js/cobcc.js"></script>
 <script src="js/subdiario.js"></script>
+<script src="js/subdcc.js"></script>
 <script src="js/calc.js"></script>
 <script src="js/vmes.js"></script>
 <script src="js/resumen.js"></script>
