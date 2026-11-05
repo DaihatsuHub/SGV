@@ -147,10 +147,10 @@ function pintarDash(){
         // Pie: los que VENCEN ESTA SEMANA, con cantidad e importe de Físicos y
         // de E-Cheq por separado (Ricardo, Nov 2026)
         (CH.vencenPronto
-          ? `Vencen esta semana:<br>Físicos ${CH.semana?.cantF||0} · ${_dFmt(CH.semana?.impF||0)}<br>E-Cheq ${CH.semana?.cantE||0} · ${_dFmt(CH.semana?.impE||0)}`
+          ? `Vencen esta semana:<br>Físicos ${CH.semana?.cantF||0} · <b class="dash-imp">$ ${_dFmt(CH.semana?.impF||0)}</b><br>E-Cheq ${CH.semana?.cantE||0} · <b class="dash-imp">$ ${_dFmt(CH.semana?.impE||0)}</b>`
           : 'ninguno vence esta semana'),
         ((CH.fisicos||0)>0.005||(CH.echeq||0)>0.005)
-          ? `<div class="dash-mon" style="flex-direction:column"><span><i>Físicos · ${CH.cantF||0}</i> ${_dFmt(CH.fisicos)}</span><span><i>E-Cheq · ${CH.cantE||0}</i> ${_dFmt(CH.echeq)}</span></div>`
+          ? `<div class="dash-mon" style="flex-direction:column"><span><i>Físicos · ${CH.cantF||0}</i> <b class="dash-imp">$ ${_dFmt(CH.fisicos)}</b></span><span><i>E-Cheq · ${CH.cantE||0}</i> <b class="dash-imp">$ ${_dFmt(CH.echeq)}</b></span></div>`
             + _dBarra([{v:CH.fisicos||0,c:'#7F77DD',t:'Físicos'},{v:CH.echeq||0,c:'#AFA9EC',t:'E-Cheq'}])
           : '',
         CH.vencenPronto?'#854F0B':null)}
@@ -230,6 +230,8 @@ function _dashStyle(){
     .dash-pie{font-size:12px;margin-top:4px}
     .dash-mon{display:flex;flex-wrap:wrap;gap:1px 12px;margin-top:4px;font-size:11px;color:var(--t2);font-family:var(--mono)}
     .dash-mon i{color:var(--t3);font-style:normal;margin-right:2px}
+    /* Importes en otro color y con $, para no confundirlos con las cantidades (Ricardo, Nov 2026) */
+    .dash-imp{color:#0F6E56;font-weight:600}
     .dash-bar2{display:flex;height:5px;border-radius:3px;overflow:hidden;margin-top:7px;background:rgba(0,0,0,.06)}
     .dash-fila{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:10px}
     .dash-panel{background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:12px 16px}
