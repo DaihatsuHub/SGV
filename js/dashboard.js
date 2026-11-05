@@ -144,12 +144,16 @@ function pintarDash(){
     ${tarjeta('cartera','wallet','Cheques en cartera',CH.cartera,
         // Pie: cantidad e importe de Físicos y de E-Cheq por separado (Ricardo, Nov 2026).
         // Los que vencen esta semana siguen en las alertas.
-        `${(CH.cantF||0)+(CH.cantE||0)} cheques: ${CH.cantF||0} físico${CH.cantF===1?'':'s'} y ${CH.cantE||0} e-cheq`,
+        // Pie: los que VENCEN ESTA SEMANA, con cantidad e importe de Físicos y
+        // de E-Cheq por separado (Ricardo, Nov 2026)
+        (CH.vencenPronto
+          ? `Vencen esta semana:<br>Físicos ${CH.semana?.cantF||0} · ${_dFmt(CH.semana?.impF||0)}<br>E-Cheq ${CH.semana?.cantE||0} · ${_dFmt(CH.semana?.impE||0)}`
+          : 'ninguno vence esta semana'),
         ((CH.fisicos||0)>0.005||(CH.echeq||0)>0.005)
           ? `<div class="dash-mon" style="flex-direction:column"><span><i>Físicos · ${CH.cantF||0}</i> ${_dFmt(CH.fisicos)}</span><span><i>E-Cheq · ${CH.cantE||0}</i> ${_dFmt(CH.echeq)}</span></div>`
             + _dBarra([{v:CH.fisicos||0,c:'#7F77DD',t:'Físicos'},{v:CH.echeq||0,c:'#AFA9EC',t:'E-Cheq'}])
           : '',
-        null)}
+        CH.vencenPronto?'#854F0B':null)}
   </div>`;
 
   // Gráfico: barras apiladas por moneda, con el total arriba de cada día
