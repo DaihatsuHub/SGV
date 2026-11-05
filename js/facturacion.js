@@ -735,6 +735,10 @@ async function renderFacDetalle(f, vista) {
        </div>`
     : '';
 
+  // FACTURA DE BORRADOR: se muestra de qué borrador salió (Ricardo, Nov 2026)
+  const borrInfo = (f.fac_borrador||'').trim()
+    ? `<div style="background:rgba(55,138,221,.10);color:var(--acc);border-radius:6px;padding:6px 12px;font-size:12px;margin-bottom:8px">📄 Factura del borrador <b style="font-family:var(--mono)">${esc(f.fac_borrador.trim())}</b> · Sólo contable</div>`
+    : '';
   const caeInfo=f.fac_anul?'':f.fac_cae
     ?`<div style="background:#1a3a1a;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:#4ade80;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
         <span>✅ CAE: ${f.fac_cae} &nbsp;·&nbsp; Vto: ${f.fac_cae_vto||'—'}</span>
@@ -770,7 +774,7 @@ async function renderFacDetalle(f, vista) {
           ${f.fac_usuario?`<div style="font-size:11px;color:var(--t3)">Emitió: ${esc(f.fac_usuario)}</div>`:''}
         </div>
       </div>
-      ${anulInfo}${_espera?`<div style="background:#3a1a1a;border-radius:6px;padding:8px 12px;font-size:13px;color:#f87171;margin-bottom:8px;font-weight:700">⛔ ESPERAR PAGO — no entregar sin autorización</div>`:''}${caeInfo}
+      ${anulInfo}${_espera?`<div style="background:#3a1a1a;border-radius:6px;padding:8px 12px;font-size:13px;color:#f87171;margin-bottom:8px;font-weight:700">⛔ ESPERAR PAGO — no entregar sin autorización</div>`:''}${borrInfo}${caeInfo}
       <div style="background:var(--s2);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px">
         <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 20px">
           <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
@@ -1554,7 +1558,7 @@ function facNavegar(fn) {
 }
 
 function facAlta() {
-  FAC_ITEMS_NUEVA=[]; NF_PERCEP=[]; if(typeof nfiReset==='function') nfiReset();
+  FAC_ITEMS_NUEVA=[]; NF_PERCEP=[]; if(typeof nfiReset==='function') nfiReset(); if(typeof nfbReset==='function') nfbReset();
   FAC_MODO='A';
   renderFacModal(new Date().toISOString().substring(0,10),'H','');
 }
@@ -1568,7 +1572,7 @@ function facBaja() {
 }
 function facCancelar() {
   nfDesbloquearCtip();
-  FAC_MODO=null; FAC_ITEMS_NUEVA=[]; if(typeof nfiReset==='function') nfiReset();
+  FAC_MODO=null; FAC_ITEMS_NUEVA=[]; if(typeof nfiReset==='function') nfiReset(); if(typeof nfbReset==='function') nfbReset();
   const ov=document.getElementById('ov-nf');
   if(ov) ov.classList.remove('open');
   const f=filtFacs()[facSelIdx];
@@ -1710,6 +1714,8 @@ function renderFacModal(fecha, empresa, cliCod) {
             <button class="btn" style="padding:2px 7px;font-size:11px" onclick="nfBuscarItemLimpiar()" title="Limpiar">✕</button>
           </span>
           <button id="nf-btn-grupo" class="btn" onclick="nfAbrirCargaGrupo()" style="padding:3px 10px;font-size:11px">📦 Grupo</button>
+          <span id="nf-borr-marca" style="font-size:11px;color:var(--acc);margin-right:4px;white-space:nowrap"></span>
+          <button id="nf-btn-borrador" class="btn" onclick="nfbAbrir()" title="Traer los ítems de un comprobante borrador, pesificados (la factura es SÓLO CONTABLE)" style="padding:3px 10px;font-size:11px">📄 Factura de Borrador</button>
           <button id="nf-btn-importar" class="btn" onclick="nfiAbrir()" title="Importar artículos desde un Excel (ej. ventas de Mercado Libre)" style="padding:3px 10px;font-size:11px">📥 Importar</button>
           <button id="nf-btn-resumir" class="btn" onclick="nfResumirItems()" style="padding:3px 10px;font-size:11px;color:var(--t2)">✂ Resumir</button>
           <button id="nf-btn-dtos" class="btn" onclick="nfDtosTodos()" title="Aplicar descuentos a todos los ítems cargados" style="padding:3px 10px;font-size:11px">% Dto</button>
@@ -3251,6 +3257,8 @@ async function nfGuardar() {
     fac_neto_afip:tot.netoAfip||0, fac_iva_afip:esA?(tot.ivaAfip||0):0, fac_percep_afip:tot.percepAfip||0, fac_total_afip:tot.totalAfip||0,
     fac_percep_det:NF_PERCEP.map(p=>({cod:p.cod,detalle:p.detalle,pct:p.pct,importe:p.importe})),
     fac_transp:transp,fac_remito:remito,fac_conpag:conpag,fac_monpor:dto,
+    // Factura de Borrador: tipo y número del borrador del que salieron los ítems
+    fac_borrador:(typeof NF_BORRADOR!=='undefined'&&NF_BORRADOR)?NF_BORRADOR:null,
     fac_vend:vend,
     fac_tab_stk:!!ct.tab_stk, fac_tab_fact:!!ct.tab_fact,
     fac_afip_st:'pendiente',fac_cae:null,fac_cae_vto:null
@@ -3342,6 +3350,7 @@ async function nfGuardar() {
     const facNro=res.facNro;
     // Si los renglones vinieron de un Excel: se baja la copia con la columna FACTURA
     if(typeof nfiTrasGrabar==='function') nfiTrasGrabar(facNro);
+    if(typeof nfbReset==='function') nfbReset();
     ct.ultimo_nro=res.nuevoUltimo; ct.bloqueado=false; ct.bloqueado_por=null;
     _nfCtipBloqueadoId=null;
     await facRefrescarNro(facNro);
