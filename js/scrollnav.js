@@ -37,7 +37,9 @@
     if (modal) return null;
     const pag = document.querySelector('.page.active') || document.body;
     let mejor = null, area = 0;
-    for (const el of pag.querySelectorAll('*')) {
+    // Sólo los contenedores (no cada renglón: una grilla puede tener miles)
+    const cand = pag.querySelectorAll('.tbl-body, .tbl-wrap, [id$="-body"], [class*="scroll"], [style*="overflow"]');
+    for (const el of cand) {
       if (!scrolleable(el) || !visible(el)) continue;
       const a = el.clientWidth * el.clientHeight;
       if (a > area) { area = a; mejor = el; }
