@@ -141,13 +141,15 @@ function pintarDash(){
     ${tarjeta('ventas','chart-bar','Vendido en '+nomMes,V.periodo,`${V.compPeriodo||0} comprobante${V.compPeriodo===1?'':'s'}`,_dPorMoneda(V.monPeriodo)+barVend)}
     ${tarjeta('cobro','cash','Cobrado hoy',CO.hoy,`${_dAbrev(CO.periodo)} en ${nomMes==='el período'?'el período':'el mes'}`)}
     ${tarjeta('deuda','receipt','Por cobrar',C.deuda, C.vencida>0?`${_dAbrev(C.vencida)} con +90 días`:'sin deuda vencida', _dPorMoneda(C.porMoneda)+barDeuda, C.vencida>0?'#A32D2D':null)}
-    ${tarjeta('cartera','wallet','Cheques en cartera',CH.cartera, CH.vencenPronto?`${CH.vencenPronto} vence${CH.vencenPronto===1?'':'n'} esta semana`:'ninguno vence esta semana',
-        // Físicos y E-Cheq por separado, dentro de la misma tarjeta
+    ${tarjeta('cartera','wallet','Cheques en cartera',CH.cartera,
+        // Pie: cantidad e importe de Físicos y de E-Cheq por separado (Ricardo, Nov 2026).
+        // Los que vencen esta semana siguen en las alertas.
+        `${(CH.cantF||0)+(CH.cantE||0)} cheques: ${CH.cantF||0} físico${CH.cantF===1?'':'s'} y ${CH.cantE||0} e-cheq`,
         ((CH.fisicos||0)>0.005||(CH.echeq||0)>0.005)
-          ? `<div class="dash-mon"><span><i>Físicos</i> ${_dFmt(CH.fisicos)}</span><span><i>E-Cheq</i> ${_dFmt(CH.echeq)}</span></div>`
+          ? `<div class="dash-mon" style="flex-direction:column"><span><i>Físicos · ${CH.cantF||0}</i> ${_dFmt(CH.fisicos)}</span><span><i>E-Cheq · ${CH.cantE||0}</i> ${_dFmt(CH.echeq)}</span></div>`
             + _dBarra([{v:CH.fisicos||0,c:'#7F77DD',t:'Físicos'},{v:CH.echeq||0,c:'#AFA9EC',t:'E-Cheq'}])
           : '',
-        CH.vencenPronto?'#854F0B':null)}
+        null)}
   </div>`;
 
   // Gráfico: barras apiladas por moneda, con el total arriba de cada día
