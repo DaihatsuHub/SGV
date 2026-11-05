@@ -10,25 +10,26 @@
    =========================================================================== */
 
 // Posiciones en mm desde el borde superior izquierdo de la hoja A4
+// 1 caracter (Courier 11pt) ≈ 2,33 mm. Ajustes de las pruebas del 05/11.
+const REM_CH = 2.33;
 const REM_POS = {
-  fecha:    { x:188, y:25 },      // +4 cm (prueba 05/11)
-  razon:    { x:29,  y:51 },
-  domic:    { x:29,  y:59 },
-  local:    { x:29,  y:63 },
-  provin:   { x:34,  y:67 },
-  iva:      { x:181, y:50 },      // +5 cm
-  cuit:     { x:186, y:58 },      // +5 cm
-  transp:   { x:30,  y:75 },     // TRANSPORTE: nombre — dirección
-  // +4 renglones; descripción +2 caracteres; código y despacho +12 (1 caracter ≈ 2,33 mm)
-  items:    { y:105.4, alto:4.6, max:20, can:{x:33}, des:{x:41.7}, cod:{x:138}, desp:{x:166} },
-  cajas:    { x:66,  y:209 },
-  valor:    { x:66,  y:215 },
-  factura:  { x:66,  y:221 },
-  piezas:   { x:33,  y:236 },
-  origen:   { x:61,  y:236 },
-  aduana:   { x:61,  y:240 },
-  leyenda:  { x:105, y:236 },     // en el renglón de las piezas
-  web:      { x:105, y:240 }
+  fecha:    { x:188 - 5*REM_CH, y:25 },
+  razon:    { x:29  - 5*REM_CH, y:51 },
+  domic:    { x:29  - 5*REM_CH, y:59 },
+  local:    { x:29  - 5*REM_CH, y:63 },     // la provincia va en este mismo renglón
+  iva:      { x:181 - 5*REM_CH, y:50 },
+  cuit:     { x:186 - 5*REM_CH, y:58 },
+  transp:   { x:30  - 5*REM_CH, y:75 },     // TRANSPORTE: nombre — dirección
+  items:    { y:105.4, alto:4.6, max:20, desMax:30,
+              can:{x:33 - 2*REM_CH}, des:{x:41.7 - 2*REM_CH}, cod:{x:138 - 9*REM_CH}, desp:{x:166 - 9*REM_CH} },
+  cajas:    { x:66  - 2*REM_CH, y:209 },
+  valor:    { x:66  - 2*REM_CH, y:215 },
+  factura:  { x:66  - 2*REM_CH, y:221 },
+  piezas:   { x:33  - 2*REM_CH, y:236 },
+  origen:   { x:61  - 2*REM_CH, y:236 },
+  aduana:   { x:61  - 2*REM_CH, y:240 },
+  leyenda:  { x:105 - 2*REM_CH, y:236 },
+  web:      { x:105 - 2*REM_CH, y:240 }
 };
 const REM_LEYENDA = 'Distribuidor oficial de calculadoras Casio';
 
@@ -136,8 +137,8 @@ async function remImprimir(f, items, o){
   // Razón social en negrita y más grande, con el código de cliente a continuación
   html += `<div class="c" style="left:${P.razon.x + ax}mm;top:${P.razon.y - 1 + ay}mm"><b style="font-size:13pt">${esc(cli.CLI_RAZON || f.fac_cli || '')}</b> ( ${esc((f.fac_cli||'').trim())})</div>`;
   html += t(P.domic, cli.CLI_DOMIC);
-  html += t(P.local, [cli.CLI_CODPOS ? '(' + String(cli.CLI_CODPOS).trim() + ')' : '', (cli.CLI_LOCAL||'').trim()].filter(Boolean).join('-'));
-  html += t(P.provin, pcia);
+  html += t(P.local, [cli.CLI_CODPOS ? '(' + String(cli.CLI_CODPOS).trim() + ')' : '', (cli.CLI_LOCAL||'').trim()].filter(Boolean).join('-')
+                     + (pcia ? '   ' + String(pcia).toUpperCase() : ''));
   html += t(P.iva, ivaTxt);
   html += t(P.cuit, cli.CLI_CUIT);
   html += t(P.transp, 'TRANSPORTE: ' + (tr ? [tr.DETALLE, tr.STRING1].filter(x => (x||'').trim()).join(' — ') : (f.fac_transp||'')));
@@ -145,7 +146,7 @@ async function remImprimir(f, items, o){
     const y = P.items.y + i * P.items.alto;
     html += t({ x: P.items.can.x - 12, y }, it.ite_can, 'width:12mm;text-align:right');
     const art = (ARTS||[]).find(x => (x.ART_COD||'').trim() === (it.ite_art||'').trim());
-    html += t({ x: P.items.des.x, y }, art ? art.ART_DES : '', 'max-width:70mm;overflow:hidden;white-space:nowrap');
+    html += t({ x: P.items.des.x, y }, String(art ? art.ART_DES || '' : '').substring(0, P.items.desMax));
     html += t({ x: P.items.cod.x, y }, (it.ite_art||'').trim());
     html += t({ x: P.items.desp.x, y }, (it.ite_desp||'').trim());
   });
