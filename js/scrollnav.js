@@ -10,9 +10,9 @@
 
   const st = document.createElement('style');
   st.textContent = `
-    #sgv-snav{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:900;
+    #sgv-snav{position:fixed;right:2px;top:50%;transform:translateY(-50%);z-index:900;
       display:none;flex-direction:column;gap:8px}
-    #sgv-snav button{width:38px;height:38px;border-radius:50%;border:1px solid var(--b1,#ccc);
+    #sgv-snav button{width:32px;height:32px;border-radius:50%;border:1px solid var(--b1,#ccc);
       background:var(--s1,#fff);color:var(--acc,#0a58ca);font-size:18px;line-height:1;cursor:pointer;
       box-shadow:0 2px 8px rgba(0,0,0,.18);opacity:.75;transition:opacity .15s}
     #sgv-snav button:hover{opacity:1}
