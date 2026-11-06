@@ -2371,7 +2371,13 @@ function nfOnCliBusqPick(){
        || (CLIS||[]).find(x=>(x.CLI_RAZON||'').trim().toLowerCase()===val);
   if(c) nfSetCliente(c);
 }
+// El cliente se toma SIEMPRE del server al elegirlo (regla de SGV): así el
+// NO VENDER, las percepciones, el grupo y las observaciones son los actuales.
 function nfSetCliente(cli) {
+  if(!cli) return;
+  cliFresco(cli.CLI_CODIGO).then(f=>_nfSetCliente(f||cli)).catch(()=>_nfSetCliente(cli));
+}
+function _nfSetCliente(cli) {
   // NO VENDER: no se le puede facturar (Ricardo, Nov 2026). Las NC y otros
   // comprobantes sí se pueden hacer.
   if(cli && cli.CLI_NODAR){

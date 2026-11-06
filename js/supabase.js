@@ -116,6 +116,22 @@ function artToDb(a) {
   };
 }
 
+// REGLA DE SGV: la grilla puede leerse de memoria, pero todo lo demás (detalle,
+// facturar, avisos) usa el dato del SERVER. Trae el cliente fresco y actualiza
+// CLIS. Si falla la consulta, devuelve el de memoria.
+async function cliFresco(cod){
+  const k=String(cod||'').trim(); if(!k) return null;
+  const mem=(CLIS||[]).find(c=>String(c.CLI_CODIGO||'').trim()===k)||null;
+  try{
+    const rows=await sbGet('clientes','cli_codigo=eq.'+encodeURIComponent(mem?mem.CLI_CODIGO:k));
+    if(!rows||!rows[0]) return mem;
+    const f=dbToCli(rows[0]);
+    const i=(CLIS||[]).findIndex(c=>String(c.CLI_CODIGO||'').trim()===k);
+    if(i>=0) CLIS[i]={...CLIS[i],...f}; else (CLIS||[]).push(f);
+    return i>=0?CLIS[i]:f;
+  }catch(e){ console.warn('cliFresco',e); return mem; }
+}
+
 function dbToCli(r) {
   return { CLI_CODIGO:r.cli_codigo, CLI_RAZON:r.cli_razon, CLI_DOMIC:r.cli_domic,
     CLI_LOCAL:r.cli_local, CLI_CODPOS:r.cli_codpos, CLI_PROVIN:r.cli_provin,

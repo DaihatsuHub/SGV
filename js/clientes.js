@@ -178,8 +178,8 @@ document.addEventListener('keydown', e => {
   }
 });
 
-function cliDetail(idx){
-  const c=CLIS[idx];
+async function cliDetail(idx){
+  const c=(await cliFresco(CLIS[idx]?.CLI_CODIGO))||CLIS[idx];   // del server, no de memoria
   document.getElementById('cli-dp-tit').textContent=c.CLI_CODIGO+' — '+c.CLI_RAZON;
   document.getElementById('cli-dp-body').innerHTML=[
     ['Código',c.CLI_CODIGO],['CUIT',c.CLI_CUIT||'—'],['Razón Social',c.CLI_RAZON||'—'],
