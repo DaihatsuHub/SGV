@@ -182,6 +182,8 @@ function rccDetCentro(i){
       <td style="${NUM}">${_rcFmt0(x.unidades)}</td>
       <td style="${NUM}">${org(x.vtaArt,x.moneda)}</td>
       <td style="${NUM}">${org(x.cosArt,x.monCos)}</td>
+      <td style="${PES};color:var(--t2)">${_rcFmt(x.bruto ?? x.ventas)}</td>
+      <td style="${PES};color:${x.nc?'var(--red)':'var(--t3)'}" title="Notas de crédito por importe (descuentos, bonificaciones) aplicadas a las facturas de este modelo">${x.nc?'-'+_rcFmt(x.nc):''}</td>
       <td style="${PES};color:var(--t2)">${_rcFmt(x.ventas)}</td>
       <td style="${PES};color:var(--t2)">${_rcFmt(x.costos)}</td>
       <td style="${PES};font-weight:600${x.resultado<0?';color:var(--red)':''}">${_rcFmt(x.resultado)}</td>
@@ -213,8 +215,8 @@ function rccDetCentro(i){
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr>${thI('Modelo')}${thI('Descripción')}${thD('Unid.')}
           ${thD('Venta')}${thD('Costo')}
-          ${thP('Ventas $')}${thP('Costos $')}${thP('Resultado $')}${thP('Margen')}</tr></thead>
-        <tbody>${fc||'<tr><td colspan="9" style="padding:8px;color:var(--t3)">Sin modelos</td></tr>'}</tbody>
+          ${thP('Facturado $')}${thP('NC $')}${thP('Ventas $')}${thP('Costos $')}${thP('Resultado $')}${thP('Margen')}</tr></thead>
+        <tbody>${fc||'<tr><td colspan="11" style="padding:8px;color:var(--t3)">Sin modelos</td></tr>'}</tbody>
       </table>
       ${gastos.length?`<div style="font-size:12px;font-weight:600;margin:14px 0 6px">Gastos (${gastos.length})</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
