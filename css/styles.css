@@ -245,3 +245,16 @@ body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:10
 .cli-globo-fis .cli-globo-tit{color:#185FA5}
 .cli-globo-ent{background:rgba(29,158,117,.08);border:1px solid rgba(29,158,117,.40)}
 .cli-globo-ent .cli-globo-tit{color:#0F6E56}
+.cli-globo-id{background:var(--s2);border:1px solid var(--b2)}
+.cli-globo-id .cli-globo-tit{color:var(--t2)}
+.cli-globo-con{background:rgba(127,119,221,.07);border:1px solid rgba(127,119,221,.35)}
+.cli-globo-con .cli-globo-tit{color:#534AB7}
+.cli-globo-cla{background:rgba(239,159,39,.08);border:1px solid rgba(239,159,39,.40)}
+.cli-globo-cla .cli-globo-tit{color:#854F0B}
+.cli-globo-imp{background:rgba(29,158,117,.05);border:1px solid rgba(29,158,117,.25)}
+.cli-globo-imp .cli-globo-tit{color:#0F6E56}
+.cli-globo-cre{background:var(--s2);border:1px solid var(--b2)}
+.cli-globo-cre .cli-globo-tit{color:var(--t2)}
+.cli-globo-est{background:rgba(226,75,74,.05);border:1px solid rgba(226,75,74,.30);padding-bottom:10px}
+.cli-globo-est .cli-globo-tit{color:#A32D2D}
+.cli-globo .tog-row{margin:0}

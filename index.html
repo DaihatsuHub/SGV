@@ -128,7 +128,7 @@
         <button class="dd-item" id="ddi-cpag" onclick="showSubPage('cli','cpag')">💳 Tabla Condiciones de Pago</button>
         <button class="dd-item" id="ddi-vend" onclick="showSubPage('cli','vend')">👤 Tabla de Vendedores</button>
         <button class="dd-item" id="ddi-cate" onclick="showSubPage('cli','cate')">🏷️ Tabla de Categorías</button>
-        <button class="dd-item" id="ddi-grup" onclick="showSubPage('cli','grup')">📂 Tabla de Grupos</button>
+        <button class="dd-item" id="ddi-grup" onclick="showSubPage('cli','grup')">📂 Tabla de Grupos de Compras</button>
         <button class="dd-item" id="ddi-perc" onclick="showSubPage('cli','perc')">🧾 Tabla de Percepciones</button>
         <button class="dd-item" id="ddi-expr" onclick="showSubPage('cli','expr')">🚚 Tabla de Transportes</button>
       </div>
@@ -281,6 +281,10 @@
     <select class="fsel" id="cli-prov" onchange="renderClis()"><option value="">Todas</option></select>
     <span class="flbl" style="margin-left:8px">Vendedor:</span>
     <select class="fsel" id="cli-vend" onchange="renderClis()"><option value="">Todos</option></select>
+    <span class="flbl" style="margin-left:8px">Categoría:</span>
+    <select class="fsel" id="cli-cate" onchange="renderClis()"><option value="">Todas</option></select>
+    <span class="flbl" style="margin-left:8px">Grupo de Compras:</span>
+    <select class="fsel" id="cli-grupo" onchange="renderClis()"><option value="">Todos</option></select>
   </div>
   <div class="dpanel" id="cli-dp">
     <div class="dp-hd">
@@ -1681,11 +1685,16 @@
       <button class="mcls" onclick="cliCerrarEditor()">✕</button>
     </div>
     <div class="mbdy">
-      <div class="fsec">Identificación</div>
+      <!-- Ficha del cliente en "globos" (Ricardo, Nov 2026) -->
       <div class="fg">
-        <div class="fgrp"><label class="flbl2">Código *</label><input class="finp" id="cf-cod" maxlength="6"></div>
-        <input type="hidden" id="cf-abc">
-        <div class="fgrp full"><label class="flbl2">Razón Social *</label><input class="finp" id="cf-razon" maxlength="30" style="text-transform:uppercase"></div>
+        <div class="fgrp full cli-globo cli-globo-id">
+          <div class="cli-globo-tit">🪪 Identificación</div>
+          <div class="fg">
+            <div class="fgrp"><label class="flbl2">Código *</label><input class="finp" id="cf-cod" maxlength="6"></div>
+            <input type="hidden" id="cf-abc">
+            <div class="fgrp full"><label class="flbl2">Razón Social *</label><input class="finp" id="cf-razon" maxlength="30" style="text-transform:uppercase"></div>
+          </div>
+        </div>
         <!-- DOMICILIO FISCAL (Ricardo, Nov 2026) -->
         <div class="fgrp full cli-globo cli-globo-fis">
           <div class="cli-globo-tit">🏛 Domicilio Fiscal</div>
@@ -1705,9 +1714,6 @@
             <option value="Z">Santa Cruz</option><option value="W">San Luis</option><option value="D">Santiago del Estero</option>
             <option value="V">Tierra del Fuego</option>
               </select>
-            </div>
-            <div class="fgrp"><label class="flbl2">Categoría</label>
-              <select class="finp" id="cf-cate"><option value="">—</option><option value="F">Franquicia</option><option value="M">Mayorista</option><option value="J">Joyería</option><option value="I">Impacto</option><option value="*">Varios</option></select>
             </div>
           </div>
         </div>
@@ -1733,49 +1739,64 @@
             </div>
           </div>
         </div>
-      </div>
-      <div class="fsec">Contacto</div>
-      <div class="fg">
-        <div class="fgrp"><label class="flbl2">Teléfono</label><input class="finp" id="cf-tel" maxlength="30"></div>
-        <div class="fgrp"><label class="flbl2">E-mail</label><input class="finp" id="cf-email" maxlength="40" type="email"></div>
-        <div class="fgrp"><label class="flbl2">Vendedor</label><select class="finp" id="cf-vend"><option value="">— Sin —</option></select></div>
-        <div class="fgrp"><label class="flbl2">Expreso</label><select class="finp" id="cf-expre"><option value="">— Sin —</option></select></div>
-      </div>
-      <div class="fsec">Impositivo</div>
-      <div class="fg">
-        <div class="fgrp"><label class="flbl2">CUIT</label><input class="finp" id="cf-cuit" maxlength="13" placeholder="XX-XXXXXXXX-X"></div>
-        <div class="fgrp"><label class="flbl2">Condición IVA</label>
-          <select class="finp" id="cf-iva">
-            <option value="I">Inscripto</option><option value="N">No Inscripto</option>
-            <option value="C">Cons. Final</option><option value="E">Exento</option>
-            <option value="M">Monotributo</option><option value="L">Ley 19640</option>
-          </select>
-        </div>
-        <div class="fgrp"><label class="flbl2">Cond. de Pago</label><select class="finp" id="cf-conpag"><option value="">— Sin —</option></select></div>
-        <div class="fgrp full"><label class="flbl2">Percepciones</label>
-          <div style="display:flex;gap:6px;margin-bottom:6px">
-            <select class="finp" id="cf-percep-sel" style="flex:1"></select>
-            <button type="button" class="btn" onclick="cliPercepAdd()">＋ Agregar</button>
+        <div class="fgrp full cli-globo cli-globo-con">
+          <div class="cli-globo-tit">📞 Contacto</div>
+          <div class="fg">
+            <div class="fgrp"><label class="flbl2">Teléfono</label><input class="finp" id="cf-tel" maxlength="30"></div>
+            <div class="fgrp"><label class="flbl2">E-mail</label><input class="finp" id="cf-email" maxlength="40" type="email"></div>
+            <div class="fgrp"><label class="flbl2">Vendedor</label><select class="finp" id="cf-vend"><option value="">— Sin —</option></select></div>
+            <div class="fgrp"><label class="flbl2">Expreso</label><select class="finp" id="cf-expre"><option value="">— Sin —</option></select></div>
           </div>
-          <div id="cf-percep-list"></div>
         </div>
-        <div class="fgrp"><label class="flbl2">Nro. Ing. Brutos</label><input class="finp" id="cf-nroib" maxlength="10"></div>
-        <div class="fgrp"><label class="flbl2">Tipo IB</label>
-          <select class="finp" id="cf-tipoib"><option value="0">0 - Otros</option><option value="1">1 - Cap. Federal</option><option value="2">2 - Convenio</option></select>
+        <div class="fgrp full cli-globo cli-globo-cla">
+          <div class="cli-globo-tit">🏷 Categoría y Grupo de Compras</div>
+          <div class="fg">
+            <div class="fgrp"><label class="flbl2">Categoría</label><select class="finp" id="cf-cate"><option value="">—</option></select></div>
+            <div class="fgrp"><label class="flbl2">Grupo de Compras</label><select class="finp" id="cf-grupo"><option value="">— Sin —</option></select></div>
+          </div>
         </div>
-      </div>
-      <div class="fsec">Crédito y Observaciones</div>
-      <div class="fg">
-        <div class="fgrp"><label class="flbl2">Crédito otorgado $</label><input class="finp" id="cf-icred" type="number" step="0.01" value="0"></div>
-        <div class="fgrp"><label class="flbl2">Vto. Crédito</label><input class="finp" id="cf-fcred" type="date"></div>
-        <div class="fgrp full"><label class="flbl2">Observaciones</label><input class="finp" id="cf-obs" maxlength="30"></div>
-      </div>
-      <div class="fsec">Estados especiales</div>
-      <div class="tog-row">
-        <div class="tog-wrap"><button class="tog" id="ctog-inc" onclick="togBtn('ctog-inc','cf-inc')"></button><span class="tog-lbl">Incobrable</span><input type="hidden" id="cf-inc" value="0"></div>
-        <div class="tog-wrap"><button class="tog" id="ctog-preinc" onclick="togBtn('ctog-preinc','cf-preinc')"></button><span class="tog-lbl">Pre-Incobrable</span><input type="hidden" id="cf-preinc" value="0"></div>
-        <div class="tog-wrap"><button class="tog" id="ctog-nodar" onclick="togBtn('ctog-nodar','cf-nodar')"></button><span class="tog-lbl">No Vender</span><input type="hidden" id="cf-nodar" value="0"></div>
-        <div class="tog-wrap"><button class="tog" id="ctog-perc" onclick="togBtn('ctog-perc','cf-perc')"></button><span class="tog-lbl">Percepción IIBB</span><input type="hidden" id="cf-perc" value="0"></div>
+        <div class="fgrp full cli-globo cli-globo-imp">
+          <div class="cli-globo-tit">🧾 Impositivo</div>
+          <div class="fg">
+            <div class="fgrp"><label class="flbl2">CUIT</label><input class="finp" id="cf-cuit" maxlength="13" placeholder="XX-XXXXXXXX-X"></div>
+            <div class="fgrp"><label class="flbl2">Condición IVA</label>
+              <select class="finp" id="cf-iva">
+                <option value="I">Inscripto</option><option value="N">No Inscripto</option>
+                <option value="C">Cons. Final</option><option value="E">Exento</option>
+                <option value="M">Monotributo</option><option value="L">Ley 19640</option>
+              </select>
+            </div>
+            <div class="fgrp"><label class="flbl2">Cond. de Pago</label><select class="finp" id="cf-conpag"><option value="">— Sin —</option></select></div>
+            <div class="fgrp full"><label class="flbl2">Percepciones</label>
+              <div style="display:flex;gap:6px;margin-bottom:6px">
+                <select class="finp" id="cf-percep-sel" style="flex:1"></select>
+                <button type="button" class="btn" onclick="cliPercepAdd()">＋ Agregar</button>
+              </div>
+              <div id="cf-percep-list"></div>
+            </div>
+            <div class="fgrp"><label class="flbl2">Nro. Ing. Brutos</label><input class="finp" id="cf-nroib" maxlength="10"></div>
+            <div class="fgrp"><label class="flbl2">Tipo IB</label>
+              <select class="finp" id="cf-tipoib"><option value="0">0 - Otros</option><option value="1">1 - Cap. Federal</option><option value="2">2 - Convenio</option></select>
+            </div>
+          </div>
+        </div>
+        <div class="fgrp full cli-globo cli-globo-cre">
+          <div class="cli-globo-tit">💰 Crédito y Observaciones</div>
+          <div class="fg">
+            <div class="fgrp"><label class="flbl2">Crédito otorgado $</label><input class="finp" id="cf-icred" type="number" step="0.01" value="0"></div>
+            <div class="fgrp"><label class="flbl2">Vto. Crédito</label><input class="finp" id="cf-fcred" type="date"></div>
+            <div class="fgrp full"><label class="flbl2">Observaciones</label><input class="finp" id="cf-obs" maxlength="30"></div>
+          </div>
+        </div>
+        <div class="fgrp full cli-globo cli-globo-est">
+          <div class="cli-globo-tit">⚠ Estados especiales</div>
+          <div class="tog-row">
+            <div class="tog-wrap"><button class="tog" id="ctog-inc" onclick="togBtn('ctog-inc','cf-inc')"></button><span class="tog-lbl">Incobrable</span><input type="hidden" id="cf-inc" value="0"></div>
+            <div class="tog-wrap"><button class="tog" id="ctog-preinc" onclick="togBtn('ctog-preinc','cf-preinc')"></button><span class="tog-lbl">Pre-Incobrable</span><input type="hidden" id="cf-preinc" value="0"></div>
+            <div class="tog-wrap"><button class="tog" id="ctog-nodar" onclick="togBtn('ctog-nodar','cf-nodar')"></button><span class="tog-lbl">No Vender</span><input type="hidden" id="cf-nodar" value="0"></div>
+            <div class="tog-wrap"><button class="tog" id="ctog-perc" onclick="togBtn('ctog-perc','cf-perc')"></button><span class="tog-lbl">Percepción IIBB</span><input type="hidden" id="cf-perc" value="0"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="mft">

@@ -24,6 +24,7 @@ function filtClis(){
   const q=document.getElementById('cli-q').value.toLowerCase();
   const pv=document.getElementById('cli-prov').value;
   const vd=document.getElementById('cli-vend').value;
+  const ct=document.getElementById('cli-cate')?.value||'', gr=document.getElementById('cli-grupo')?.value||'';
   return CLIS.filter(c=>{
     const mq=!q||c.CLI_CODIGO.toLowerCase().includes(q)||(c.CLI_RAZON||'').toLowerCase().includes(q);
     const me=cliFilt==='todos'
@@ -32,7 +33,8 @@ function filtClis(){
       ||(cliFilt==='nov'&&c.CLI_NODAR);
     const mp=!pv||c.CLI_PROVIN===pv;
     const mv=!vd||c.CLI_VEND===vd;
-    return mq&&me&&mp&&mv;
+    const mc=!ct||(c.CLI_CATE||'')===ct, mg=!gr||(c.CLI_GRUPO||'')===gr;
+    return mq&&me&&mp&&mv&&mc&&mg;
   }).sort((a,b)=>{
     const s=SORT_STATE['cli'];
     if(s&&s.col){
@@ -131,6 +133,12 @@ function updCliFilts(){
   };
   vd.innerHTML='<option value="">Todos los vendedores</option>'
     +vends.map(v=>`<option value="${v}"${v===curVd?' selected':''}>${esc(_vendDet(v))}</option>`).join('');
+  // Categoría y Grupo de Compras: sólo los que usa algún cliente, con código y descripción
+  const _det=(tab,cod)=>{ const t=((typeof TABLAS!=='undefined'&&TABLAS[tab])||[]).find(x=>x.CODIGO===cod); return t?(cod+' — '+t.DETALLE):cod; };
+  const llenar=(id,campo,tab,todos)=>{ const el=document.getElementById(id); if(!el) return; const cur=el.value;
+    const vals=[...new Set(CLIS.map(c=>c[campo]).filter(Boolean))].sort();
+    el.innerHTML=`<option value="">${todos}</option>`+vals.map(v=>`<option value="${esc(v)}"${v===cur?' selected':''}>${esc(_det(tab,v))}</option>`).join(''); };
+  llenar('cli-cate','CLI_CATE','CATE','Todas'); llenar('cli-grupo','CLI_GRUPO','GRUP','Todos');
 }
 
 function selCli(i){cliSelIdx=i;renderClis();}
@@ -175,7 +183,7 @@ function cliDetail(idx){
   document.getElementById('cli-dp-body').innerHTML=[
     ['Código',c.CLI_CODIGO],['CUIT',c.CLI_CUIT||'—'],['Razón Social',c.CLI_RAZON||'—'],
     ['Domicilio',c.CLI_DOMIC||'—'],['Localidad',c.CLI_LOCAL||'—'],['CP',c.CLI_CODPOS||'—'],
-    ['Provincia',PCIA[c.CLI_PROVIN]||c.CLI_PROVIN||'—'],['Categoría',c.CLI_CATE||'—'],
+    ['Provincia',PCIA[c.CLI_PROVIN]||c.CLI_PROVIN||'—'],['Categoría',c.CLI_CATE||'—'],['Grupo de Compras',((TABLAS['GRUP']||[]).find(x=>x.CODIGO===c.CLI_GRUPO)||{}).DETALLE||c.CLI_GRUPO||'—'],
     ...((c.CLI_ENT_DOMIC||'').trim()?[['Entrega',[c.CLI_ENT_DOMIC,c.CLI_ENT_LOCAL,c.CLI_ENT_CODPOS,PCIA[c.CLI_ENT_PROVIN]||c.CLI_ENT_PROVIN].filter(x=>(x||'').trim()).join(' · ')]]:[]),
     ['Teléfono',c.CLI_TELEF||'—'],['E-mail',c.CLI_EMAIL||'—'],
     ['IVA',IVA[c.CLI_IVA]||'—'],['Cond.Pago',c.CLI_CONPAG||'—'],['Dto %',c.CLI_DTO||0],
@@ -227,6 +235,15 @@ function cliPercepDel(i){ _cliPercep.splice(i,1); renderCliPercep(); }
 function cliPercepPct(i,val){ if(_cliPercep[i]) _cliPercep[i].pct = parseFloat(val)||0; }
 
 function fillCliSelects() {
+  // Categoría y Grupo de Compras salen de sus tablas (Ricardo, Nov 2026)
+  const CATE_FIJAS=[['F','Franquicia'],['M','Mayorista'],['J','Joyería'],['I','Impacto'],['*','Varios']];
+  const cateEl=document.getElementById('cf-cate'), grpEl=document.getElementById('cf-grupo');
+  if(cateEl){ const cur=cateEl.value; const t=(TABLAS['CATE']||[]);
+    cateEl.innerHTML='<option value="">—</option>'+(t.length?t.map(x=>[x.CODIGO,x.DETALLE]):CATE_FIJAS).map(([c,d])=>`<option value="${esc(c)}">${esc(c)} — ${esc(d)}</option>`).join('');
+    if(cur) cateEl.value=cur; }
+  if(grpEl){ const cur=grpEl.value;
+    grpEl.innerHTML='<option value="">— Sin —</option>'+(TABLAS['GRUP']||[]).map(x=>`<option value="${esc(x.CODIGO)}">${esc(x.CODIGO)} — ${esc(x.DETALLE)}</option>`).join('');
+    if(cur) grpEl.value=cur; }
   const vendEl = document.getElementById('cf-vend');
   const exprEl = document.getElementById('cf-expre');
   const cpagEl = document.getElementById('cf-conpag');
@@ -308,7 +325,7 @@ function clrCliForm(){
   ['cf-cod','cf-razon','cf-domic','cf-local','cf-cp','cf-tel','cf-email','cf-vend','cf-expre','cf-cuit','cf-conpag','cf-nroib','cf-obs'].forEach(i=>document.getElementById(i).value='');
   ['cf-icred'].forEach(i=>document.getElementById(i).value=0);
   document.getElementById('cf-fcred').value='';
-  ['cf-abc','cf-prov','cf-cate','cf-ent-domic','cf-ent-local','cf-ent-cp','cf-ent-prov'].forEach(i=>document.getElementById(i).value='');
+  ['cf-abc','cf-prov','cf-cate','cf-grupo','cf-ent-domic','cf-ent-local','cf-ent-cp','cf-ent-prov'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('cf-iva').value='I';
   document.getElementById('cf-tipoib').value='0';
   ['ctog-inc','ctog-preinc','ctog-nodar','ctog-perc'].forEach(t=>setTog(t,t.replace('ctog-','cf-'),false));
@@ -341,6 +358,7 @@ function fillCliForm(c){
   document.getElementById('cf-icred').value=c.CLI_ICRED||0;
   document.getElementById('cf-abc').value=c.CLI_ABC||'';
   document.getElementById('cf-cate').value=c.CLI_CATE||'';
+  document.getElementById('cf-grupo').value=c.CLI_GRUPO||'';
   setTog('ctog-inc','cf-inc',!!c.CLI_INCOB);
   setTog('ctog-preinc','cf-preinc',!!c.CLI_PREINC);
   setTog('ctog-nodar','cf-nodar',!!c.CLI_NODAR);
@@ -379,6 +397,7 @@ function saveCli(){
     CLI_ICRED:parseFloat(document.getElementById('cf-icred').value)||0,
     CLI_ABC:document.getElementById('cf-abc').value,
     CLI_CATE:document.getElementById('cf-cate').value,
+    CLI_GRUPO:document.getElementById('cf-grupo').value,
     CLI_INCOB:document.getElementById('cf-inc').value==='1',
     CLI_PREINC:document.getElementById('cf-preinc').value==='1',
     CLI_NODAR:document.getElementById('cf-nodar').value==='1',

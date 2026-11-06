@@ -60,6 +60,7 @@ const COL_DEFS = {
     {field:'CLI_NROIB',  label:'Nro IB',       width:'100px', active:false},
     {field:'CLI_OBS',    label:'Observaciones',width:'150px', active:false},
     {field:'CLI_CATE',   label:'Categoría',    width:'80px',  active:false},
+    {field:'CLI_GRUPO',  label:'Grupo Compras', width:'100px', active:false},
     {field:'CLI_DTO',    label:'Dto %',        width:'55px',  align:'right', active:false},
   ],
   reci: [
