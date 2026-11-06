@@ -687,11 +687,6 @@
     <button class="btn scs" onclick="facImprimir('afip')">🖨 Imprimir</button>
     <button class="btn" onclick="openTop10()" title="Top 10 productos más vendidos">🏆 Top 10</button>
     <div class="spacer"></div>
-    <select class="fsel" id="fac-empresa" onchange="renderFac()">
-      <option value="">Ambas empresas</option>
-      <option value="H">Hatsu Electronics</option>
-      <option value="T">Tressa Argentina</option>
-    </select>
     <div style="display:flex;flex-direction:column;gap:1px">
       <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--t2);cursor:pointer;white-space:nowrap" title="Sólo facturas sin fecha de entrega">
         <input type="checkbox" id="fac-pend" onchange="facSelIdx=null;renderFac()" style="accent-color:var(--acc)"> Pendientes de Entrega</label>
@@ -700,16 +695,16 @@
     </div>
     <input type="date" class="fsel" id="fac-fecha" onchange="setFacFecha(this.value)" title="Filtrar por fecha" style="cursor:pointer">
     <!-- Dos buscadores (Ricardo, Nov 2026): CLIENTE incremental (código o razón social) y N° de COMPROBANTE -->
-    <div class="srch-wrap" style="min-width:250px">
+    <div class="srch-wrap" style="min-width:0;width:230px">
       <span class="srch-ico">👤</span>
-      <input class="srch" id="fac-cli" list="fac-cli-list" autocomplete="off" placeholder="Cliente: código o razón social…"
+      <input class="srch" style="width:100%" id="fac-cli" list="fac-cli-list" autocomplete="off" placeholder="Cliente: código o razón social…"
              onfocus="facFillCliList();this.select()" oninput="facCliPick(false)" onkeydown="if(event.key==='Enter')facCliPick(true)">
       <datalist id="fac-cli-list"></datalist>
       <button class="srch-clr" onclick="document.getElementById('fac-cli').value=''" title="Limpiar">✕</button>
     </div>
-    <div class="srch-wrap" style="min-width:170px">
+    <div class="srch-wrap" style="min-width:0;width:160px">
       <span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" onclick="this.select()" id="fac-q" placeholder="N° comprobante…" onkeydown="if(event.key==='Enter')buscarFac()">
+      <input class="srch" style="width:100%" onfocus="this.select()" onclick="this.select()" id="fac-q" placeholder="N° comprobante…" onkeydown="if(event.key==='Enter')buscarFac()">
       <button class="srch-clr" onclick="clrSrch('fac-q',buscarFac)" title="Limpiar">✕</button>
     </div>
   </div>
