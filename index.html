@@ -699,9 +699,17 @@
         <input type="checkbox" id="fac-espera" onchange="facSelIdx=null;renderFac()" style="accent-color:var(--red)"> Esperando Pagos</label>
     </div>
     <input type="date" class="fsel" id="fac-fecha" onchange="setFacFecha(this.value)" title="Filtrar por fecha" style="cursor:pointer">
-    <div class="srch-wrap">
+    <!-- Dos buscadores (Ricardo, Nov 2026): CLIENTE incremental (código o razón social) y N° de COMPROBANTE -->
+    <div class="srch-wrap" style="min-width:250px">
+      <span class="srch-ico">👤</span>
+      <input class="srch" id="fac-cli" list="fac-cli-list" autocomplete="off" placeholder="Cliente: código o razón social…"
+             onfocus="facFillCliList();this.select()" oninput="facCliPick(false)" onkeydown="if(event.key==='Enter')facCliPick(true)">
+      <datalist id="fac-cli-list"></datalist>
+      <button class="srch-clr" onclick="document.getElementById('fac-cli').value=''" title="Limpiar">✕</button>
+    </div>
+    <div class="srch-wrap" style="min-width:170px">
       <span class="srch-ico">⌕</span>
-      <input class="srch" onfocus="this.select()" onclick="this.select()" id="fac-q" placeholder="Buscar factura o cliente..." onkeydown="if(event.key==='Enter')buscarFac()">
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="fac-q" placeholder="N° comprobante…" onkeydown="if(event.key==='Enter')buscarFac()">
       <button class="srch-clr" onclick="clrSrch('fac-q',buscarFac)" title="Limpiar">✕</button>
     </div>
   </div>
