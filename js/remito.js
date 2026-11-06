@@ -56,6 +56,15 @@ function remLetras(n){
   return partes.join(' ');
 }
 
+// Valor declarado con separador de miles mientras se escribe
+const _remMiles = n => (Math.round(Number(n) || 0)).toLocaleString('es-AR');
+const _remNum = v => parseInt(String(v || '').replace(/\D/g, ''), 10) || 0;
+function _remValorInput(el){
+  const n = _remNum(el.value);
+  el.value = n ? _remMiles(n) : '';
+  el.setSelectionRange(el.value.length, el.value.length);
+}
+
 function _remAjuste(){ try { return JSON.parse(localStorage.getItem('sgv_rem_ajuste') || '{}'); } catch(_) { return {}; } }
 function _remGuardarAjuste(a){ try { localStorage.setItem('sgv_rem_ajuste', JSON.stringify(a)); } catch(_) {} }
 
@@ -82,20 +91,23 @@ async function remAbrir(facNro){
     m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
     m.innerHTML = `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:12px;width:100%;max-width:420px;box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden">
       <div style="background:var(--acc);color:#fff;padding:12px 18px;font-size:15px;font-weight:600">🚚 Remito · ${esc(nro)}</div>
-      <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;gap:10px">
-          <div style="flex:0 0 110px"><label class="flbl2">Cajas</label>
-            <input id="rem-cajas" class="finp" type="number" min="1" step="1" value="1" style="width:100%;text-align:right"></div>
-          <div style="flex:1"><label class="flbl2">Valor declarado $ (sin IVA ni percep.)</label>
-            <input id="rem-valor" class="finp" type="number" min="0" step="1" value="${valor}" style="width:100%;text-align:right"></div>
+      <div style="padding:16px 18px 6px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:grid;grid-template-columns:90px 1fr;gap:12px;align-items:end">
+          <div><div style="font-size:11px;color:var(--t2);margin-bottom:4px">Cajas</div>
+            <input id="rem-cajas" class="finp" type="number" min="1" step="1" value="1" style="width:100%;text-align:right;font-family:var(--mono)"></div>
+          <div><div style="font-size:11px;color:var(--t2);margin-bottom:4px">Valor declarado <span style="color:var(--t3)">· $ sin IVA ni percepciones</span></div>
+            <input id="rem-valor" class="finp" inputmode="numeric" value="${_remMiles(valor)}" style="width:100%;text-align:right;font-family:var(--mono)"
+                   onfocus="this.select()" oninput="_remValorInput(this)"></div>
         </div>
-        <div style="font-size:11px;color:var(--t2)">${contable ? 'Lleva el número de factura.' : 'Comprobante no contable: no lleva número de factura.'}</div>
-        <details style="font-size:11px;color:var(--t2)"><summary style="cursor:pointer">Ajuste de impresión (mm)</summary>
-          <div style="display:flex;gap:10px;margin-top:6px;align-items:center">
-            ← → <input id="rem-ajx" class="finp" type="number" step="0.5" value="${Number(aj.x)||0}" style="width:70px;text-align:right">
-            ↑ ↓ <input id="rem-ajy" class="finp" type="number" step="0.5" value="${Number(aj.y)||0}" style="width:70px;text-align:right">
-            <span>positivo = a la derecha / hacia abajo</span>
-          </div></details>
+        <div style="font-size:11px;padding:6px 10px;border-radius:6px;${contable ? 'background:rgba(29,158,117,.10);color:#0F6E56' : 'background:var(--s2);color:var(--t2)'}">
+          ${contable ? '✓ Lleva el número de factura' : 'Comprobante no contable: no lleva número de factura'}</div>
+        <details style="font-size:11px;color:var(--t2)"><summary style="cursor:pointer;user-select:none">Ajuste de impresión</summary>
+          <div style="display:grid;grid-template-columns:auto 80px auto 80px;gap:8px 10px;align-items:center;margin-top:8px">
+            <span>Horizontal</span><input id="rem-ajx" class="finp" type="number" step="0.5" value="${Number(aj.x)||0}" style="width:100%;text-align:right">
+            <span>Vertical</span><input id="rem-ajy" class="finp" type="number" step="0.5" value="${Number(aj.y)||0}" style="width:100%;text-align:right">
+          </div>
+          <div style="margin-top:6px;color:var(--t3)">En milímetros. Positivo = a la derecha / hacia abajo. Queda guardado en esta PC.</div>
+        </details>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;padding:0 18px 16px">
         <button class="btn" onclick="document.getElementById('rem-modal').remove()">Cancelar</button>
@@ -105,7 +117,7 @@ async function remAbrir(facNro){
     m.addEventListener('keydown', e => { if (e.key === 'Escape') m.remove(); });
     m.querySelector('#rem-ok').onclick = () => {
       const cajas = parseInt(document.getElementById('rem-cajas').value, 10) || 0;
-      const val = Math.round(Number(document.getElementById('rem-valor').value) || 0);
+      const val = _remNum(document.getElementById('rem-valor').value);
       if (cajas <= 0) { toast('Indicá la cantidad de cajas','err'); return; }
       const ajuste = { x: Number(document.getElementById('rem-ajx').value) || 0, y: Number(document.getElementById('rem-ajy').value) || 0 };
       _remGuardarAjuste(ajuste);
