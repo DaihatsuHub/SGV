@@ -2371,6 +2371,18 @@ function nfOnCliBusqPick(){
   if(c) nfSetCliente(c);
 }
 function nfSetCliente(cli) {
+  // NO VENDER: no se le puede facturar (Ricardo, Nov 2026). Las NC y otros
+  // comprobantes sí se pueden hacer.
+  if(cli && cli.CLI_NODAR){
+    const ct=nfCtipActual(), tipo=(ct?.tipo||'F').toUpperCase();
+    if(tipo==='F'){
+      sgvAviso({ titulo:'Cliente con NO VENDER', tipo:'err',
+        texto:`${(cli.CLI_RAZON||'').trim()} (${(cli.CLI_CODIGO||'').trim()}) tiene marcado NO VENDER en el maestro de clientes.\n\nNo se le puede facturar.` });
+      const b=document.getElementById('nf-cli-busq'); if(b) b.value='';
+      const c=document.getElementById('nf-cli-cod'); if(c) c.value='';
+      return;
+    }
+  }
   // Setea todos los campos del cliente de una vez
   const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
   s('nf-cli-cod',  (cli.CLI_CODIGO||'').trim());

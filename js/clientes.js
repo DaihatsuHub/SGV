@@ -28,7 +28,7 @@ function filtClis(){
   return CLIS.filter(c=>{
     const mq=!q||c.CLI_CODIGO.toLowerCase().includes(q)||(c.CLI_RAZON||'').toLowerCase().includes(q);
     const me=cliFilt==='todos'
-      ||(cliFilt==='ok'&&!c.CLI_INCOB&&!c.CLI_NODAR&&!c.CLI_PREINC)
+      ||(cliFilt==='ok'&&!c.CLI_INCOB&&!c.CLI_NODAR)
       ||(cliFilt==='inc'&&c.CLI_INCOB)
       ||(cliFilt==='nov'&&c.CLI_NODAR);
     const mp=!pv||c.CLI_PROVIN===pv;
@@ -68,12 +68,13 @@ function renderClis(){
     const idx=CLIS.indexOf(c);
     const sel=cliSelIdx===idx?'sel':'';
     const cls=c.CLI_INCOB?'incob':c.CLI_NODAR?'nodar':'';
-    const st=c.CLI_INCOB?`<span class="pill pn">INCOB</span>`:c.CLI_PREINC?`<span class="pill po">PRE-INC</span>`:c.CLI_NODAR?`<span class="pill pp">NO DAR</span>`:`<span class="pill ps">OK</span>`;
+    const st=c.CLI_INCOB?`<span class="pill pn">INCOB</span>`:c.CLI_NODAR?`<span class="pill pp">NO DAR</span>`:`<span class="pill ps">OK</span>`;
 
     return `<div class="tr-cli ${sel} ${cls}" style="grid-template-columns:${gridTpl}" onclick="selCli(${idx})" ondblclick="cliDetail(${idx})">` +
       cols.map(col=>{
         if(col.field==='CLI_CODIGO') return `<span class="col-cod">${esc(c.CLI_CODIGO)}</span>`;
-        if(col.field==='CLI_RAZON')  return `<span class="col-des">${esc(c.CLI_RAZON||'')}</span>`;
+        // NO VENDER: la razón social titila en rojo (Ricardo, Nov 2026)
+        if(col.field==='CLI_RAZON')  return `<span class="col-des${c.CLI_NODAR?' cli-nodar':''}"${c.CLI_NODAR?' title="NO VENDER: no se le puede facturar"':''}>${esc(c.CLI_RAZON||'')}</span>`;
         // En negrita si el cliente tiene DOMICILIO DE ENTREGA (va en el remito); el título lo muestra
         if(col.field==='CLI_DOMIC')  return (c.CLI_ENT_DOMIC||'').trim()
           ? `<span class="col-sm" style="font-weight:700" title="Entrega: ${esc([c.CLI_ENT_DOMIC,c.CLI_ENT_LOCAL,c.CLI_ENT_CODPOS,PCIA[c.CLI_ENT_PROVIN]||c.CLI_ENT_PROVIN].filter(x=>(x||'').trim()).join(' · '))}">${esc(c.CLI_DOMIC||'')}</span>`
@@ -328,7 +329,7 @@ function clrCliForm(){
   ['cf-prov','cf-cate','cf-grupo','cf-ent-domic','cf-ent-local','cf-ent-cp','cf-ent-prov'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('cf-iva').value='I';
   document.getElementById('cf-tipoib').value='0';
-  ['ctog-inc','ctog-preinc','ctog-nodar','ctog-perc'].forEach(t=>setTog(t,t.replace('ctog-','cf-'),false));
+  ['ctog-inc','ctog-nodar','ctog-perc'].forEach(t=>setTog(t,t.replace('ctog-','cf-'),false));
   _cliPercep=[]; renderCliPercep();
 }
 function fillCliForm(c){
@@ -360,7 +361,6 @@ function fillCliForm(c){
   // Grupo de Compras = campo CLI_ABC del DOS (Ricardo, Nov 2026)
   document.getElementById('cf-grupo').value=c.CLI_ABC||'';
   setTog('ctog-inc','cf-inc',!!c.CLI_INCOB);
-  setTog('ctog-preinc','cf-preinc',!!c.CLI_PREINC);
   setTog('ctog-nodar','cf-nodar',!!c.CLI_NODAR);
   setTog('ctog-perc','cf-perc',c.CLI_PERCIB==='S');
   _cliPercep = Array.isArray(c.CLI_PERCEP) ? JSON.parse(JSON.stringify(c.CLI_PERCEP)) : [];
@@ -398,7 +398,7 @@ function saveCli(){
     CLI_CATE:document.getElementById('cf-cate').value,
     CLI_ABC:document.getElementById('cf-grupo').value,     // Grupo de Compras
     CLI_INCOB:document.getElementById('cf-inc').value==='1',
-    CLI_PREINC:document.getElementById('cf-preinc').value==='1',
+    CLI_PREINC:false,     // Pre-incobrable eliminado (Ricardo, Nov 2026)
     CLI_NODAR:document.getElementById('cf-nodar').value==='1',
   };
   if(window._ce==='A'){
