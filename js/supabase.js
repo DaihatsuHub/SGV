@@ -126,7 +126,7 @@ function dbToCli(r) {
     CLI_INCOB:r.cli_incob, CLI_NODAR:r.cli_nodar, CLI_PREINC:r.cli_preinc,
     CLI_ABC:r.cli_abc, CLI_ICRED:r.cli_icred, CLI_FCRED:r.cli_fcred,
     CLI_ESTADO:r.cli_estado, CLI_EMAIL:r.cli_email, CLI_CATE:r.cli_cate,
-    CLI_ENT_DOMIC:r.cli_ent_domic, CLI_ENT_LOCAL:r.cli_ent_local, CLI_ENT_CODPOS:r.cli_ent_codpos, CLI_ENT_PROVIN:r.cli_ent_provin, CLI_GRUPO:r.cli_grupo };
+    CLI_ENT_DOMIC:r.cli_ent_domic, CLI_ENT_LOCAL:r.cli_ent_local, CLI_ENT_CODPOS:r.cli_ent_codpos, CLI_ENT_PROVIN:r.cli_ent_provin };
 }
 
 function cliToDb(c) {
@@ -140,7 +140,7 @@ function cliToDb(c) {
     cli_incob:!!c.CLI_INCOB, cli_nodar:!!c.CLI_NODAR, cli_preinc:!!c.CLI_PREINC,
     cli_abc:c.CLI_ABC||null, cli_icred:c.CLI_ICRED||0, cli_fcred:c.CLI_FCRED||null,
     cli_estado:c.CLI_ESTADO||null, cli_email:c.CLI_EMAIL||null, cli_cate:c.CLI_CATE||null,
-    cli_ent_domic:c.CLI_ENT_DOMIC||null, cli_ent_local:c.CLI_ENT_LOCAL||null, cli_ent_codpos:c.CLI_ENT_CODPOS||null, cli_ent_provin:c.CLI_ENT_PROVIN||null, cli_grupo:c.CLI_GRUPO||null };
+    cli_ent_domic:c.CLI_ENT_DOMIC||null, cli_ent_local:c.CLI_ENT_LOCAL||null, cli_ent_codpos:c.CLI_ENT_CODPOS||null, cli_ent_provin:c.CLI_ENT_PROVIN||null };
 }
 
 // ── Carga inicial ─────────────────────────────────────────
