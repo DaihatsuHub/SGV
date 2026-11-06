@@ -56,7 +56,7 @@ function remLetras(n){
   return partes.join(' ');
 }
 
-function _remCopias(){ try { return parseInt(localStorage.getItem('sgv_rem_copias'), 10) || 1; } catch(_) { return 1; } }
+function _remCopias(){ try { return parseInt(localStorage.getItem('sgv_rem_copias'), 10) || 2; } catch(_) { return 2; } }
 
 // Valor declarado con separador de miles mientras se escribe
 const _remMiles = n => (Math.round(Number(n) || 0)).toLocaleString('es-AR');
