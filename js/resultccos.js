@@ -19,14 +19,39 @@ function renderResultadoCcos(){
   const d=document.getElementById('rcc-desde'), h=document.getElementById('rcc-hasta');
   if(d && !d.value){ const t=new Date(); d.value=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-01`; }
   if(h && !h.value) h.value=new Date().toISOString().substring(0,10);
-  // Dólar Aduana: se ofrece el de la moneda A de la tabla Monedas (Ricardo, Nov 2026)
+  // Dólar Aduana: de entrada el de HOY; si no se puede consultar, el de la
+  // moneda A de la tabla Monedas (Ricardo, Nov 2026)
   const dl=document.getElementById('rcc-dolar');
-  if(dl && !dl.value){ const a=(TABLAS['MONE']||[]).find(m=>m.CODIGO==='A'); if(a && parseFloat(a.STRING2)>1) dl.value=String(parseFloat(a.STRING2)).replace('.',','); }
+  if(dl && !dl.value){ const a=(TABLAS['MONE']||[]).find(m=>m.CODIGO==='A'); if(a && parseFloat(a.STRING2)>1) dl.value=_rcDolarTxt(parseFloat(a.STRING2)); }
   _rcStyle();
+  rccDolarRef(true);
   if(_rccData) _rcPintar(); else rccConsultar();
 }
 
+const _rcDolarTxt=n=>(Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+let _rcDolarHoyPuesto=false;
+// Referencia: promedio del dólar aduana en el período, al lado del campo.
+// Un clic lo pasa al campo.
+async function rccDolarRef(ponerHoy){
+  const ref=document.getElementById('rcc-dolar-ref'); if(!ref) return;
+  const g=id=>(document.getElementById(id)?.value||'').trim();
+  ref.textContent='⏳ dólar aduana…';
+  try{
+    const r=await apiGet(`/cotiz/dolar-aduana?desde=${g('rcc-desde')}&hasta=${g('rcc-hasta')}`);
+    if(!r.ok){ ref.textContent=''; return; }
+    const dl=document.getElementById('rcc-dolar');
+    if(ponerHoy && r.hoy && dl && !_rcDolarHoyPuesto){ dl.value=_rcDolarTxt(r.hoy.valor); dl.title=`Dólar aduana del ${_rcFecha(r.hoy.fecha)} · ${r.hoy.fuente}`; _rcDolarHoyPuesto=true; }
+    const p=r.promedio;
+    ref.innerHTML = p
+      ? `<a href="#" onclick="document.getElementById('rcc-dolar').value='${_rcDolarTxt(p.valor)}';rccConsultar();return false" style="color:var(--t2)"
+           title="Mín. ${_rcDolarTxt(p.min)} · Máx. ${_rcDolarTxt(p.max)} · clic para usarlo">Promedio ${_rcFecha(p.desde).slice(0,5)} al ${_rcFecha(p.hasta).slice(0,5)}: <b>$ ${_rcDolarTxt(p.valor)}</b></a>
+         <span style="color:var(--t3)">(${p.dias} días · ${_rcEsc(p.fuente)})</span>`
+      : '';
+  }catch(_){ ref.textContent=''; }
+}
+
 async function rccConsultar(){
+  rccDolarRef(false);
   const body=document.getElementById('rcc-body'); if(!body) return;
   const g=id=>(document.getElementById(id)?.value||'').trim();
   if(!g('rcc-desde')||!g('rcc-hasta')){ toast('Elegí el período','err'); return; }
