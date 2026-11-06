@@ -189,7 +189,7 @@ function cliDetail(idx){
     ['Teléfono',c.CLI_TELEF||'—'],['E-mail',c.CLI_EMAIL||'—'],
     ['IVA',IVA[c.CLI_IVA]||'—'],['Cond.Pago',c.CLI_CONPAG||'—'],['Dto %',c.CLI_DTO||0],
     ['Vendedor',c.CLI_VEND||'—'],['Expreso',c.CLI_EXPRE||'—'],['Crédito','$'+fmt(c.CLI_ICRED||0)],
-    ['Nro IB',c.CLI_NROIB||'—'],['Observ.',c.CLI_OBS||'—'],
+    ['Nro IB',c.CLI_NROIB||'—'],['Observ.',(c.CLI_OBS||'—').replace(/\n/g,' · ')],
   ].map(([l,v])=>`<div class="dpi"><span class="dpi-lbl">${l}</span><span class="dpi-val">${esc(String(v))}</span></div>`).join('');
   document.getElementById('cli-dp').classList.add('open');
 }
