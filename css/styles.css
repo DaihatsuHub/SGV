@@ -237,3 +237,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:10
 .fac-cae{background:var(--acc);color:#fff;border-radius:4px;padding:6px 12px;font-family:var(--mono);font-size:12px;text-align:center;margin:10px 0;letter-spacing:1px}
 
 .fac-lista .tbl-body{height:100%;overflow-y:auto}
+/* Maestro de clientes: Domicilio Fiscal y Domicilio de Entrega (Nov 2026) */
+.cli-globo{border-radius:10px;padding:10px 12px 4px;margin-top:4px}
+.cli-globo .fg{margin:0}
+.cli-globo-tit{font-size:12px;font-weight:700;margin-bottom:8px;letter-spacing:.3px}
+.cli-globo-fis{background:rgba(55,138,221,.07);border:1px solid rgba(55,138,221,.35)}
+.cli-globo-fis .cli-globo-tit{color:#185FA5}
+.cli-globo-ent{background:rgba(29,158,117,.08);border:1px solid rgba(29,158,117,.40)}
+.cli-globo-ent .cli-globo-tit{color:#0F6E56}

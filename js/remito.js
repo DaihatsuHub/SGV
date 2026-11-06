@@ -148,9 +148,13 @@ async function remImprimir(f, items, o){
   html += t(P.fecha, fecha);
   // Razón social en negrita y más grande, con el código de cliente a continuación
   html += `<div class="c" style="left:${P.razon.x + ax}mm;top:${P.razon.y - 1 + ay}mm"><b style="font-size:13pt">${esc(cli.CLI_RAZON || f.fac_cli || '')}</b> ( ${esc((f.fac_cli||'').trim())})</div>`;
-  html += t(P.domic, cli.CLI_DOMIC);
-  html += t(P.local, [cli.CLI_CODPOS ? '(' + String(cli.CLI_CODPOS).trim() + ')' : '', (cli.CLI_LOCAL||'').trim()].filter(Boolean).join('-')
-                     + (pcia ? '   ' + String(pcia).toUpperCase() : ''));
+  // Domicilio de ENTREGA si el cliente lo tiene cargado; si no, el fiscal
+  const ent = (cli.CLI_ENT_DOMIC||'').trim();
+  const dom = ent ? { d: cli.CLI_ENT_DOMIC, l: cli.CLI_ENT_LOCAL, cp: cli.CLI_ENT_CODPOS, p: (typeof PCIA !== 'undefined' ? PCIA[cli.CLI_ENT_PROVIN] : '') || cli.CLI_ENT_PROVIN || '' }
+                  : { d: cli.CLI_DOMIC, l: cli.CLI_LOCAL, cp: cli.CLI_CODPOS, p: pcia };
+  html += t(P.domic, dom.d);
+  html += t(P.local, [dom.cp ? '(' + String(dom.cp).trim() + ')' : '', (dom.l||'').trim()].filter(Boolean).join('-')
+                     + (dom.p ? '   ' + String(dom.p).toUpperCase() : ''));
   html += t(P.iva, ivaTxt);
   html += t(P.cuit, cli.CLI_CUIT);
   html += t(P.transp, 'TRANSPORTE: ' + (tr ? [tr.DETALLE, tr.STRING1].filter(x => (x||'').trim()).join(' — ') : (f.fac_transp||'')));

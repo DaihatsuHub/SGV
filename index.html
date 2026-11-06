@@ -1677,18 +1677,17 @@
       <div class="fsec">Identificación</div>
       <div class="fg">
         <div class="fgrp"><label class="flbl2">Código *</label><input class="finp" id="cf-cod" maxlength="6"></div>
-        <div class="fgrp"><label class="flbl2">ABC</label>
-          <select class="finp" id="cf-abc"><option value="">—</option><option value="A">A</option><option value="B">B</option><option value="C">C</option></select>
-        </div>
-        <div class="fgrp"><label class="flbl2">Categoría</label>
-          <select class="finp" id="cf-cate"><option value="">—</option><option value="F">Franquicia</option><option value="M">Mayorista</option><option value="J">Joyería</option><option value="I">Impacto</option><option value="*">Varios</option></select>
-        </div>
+        <input type="hidden" id="cf-abc">
         <div class="fgrp full"><label class="flbl2">Razón Social *</label><input class="finp" id="cf-razon" maxlength="30" style="text-transform:uppercase"></div>
-        <div class="fgrp full"><label class="flbl2">Domicilio</label><input class="finp" id="cf-domic" maxlength="30"></div>
-        <div class="fgrp"><label class="flbl2">Localidad</label><input class="finp" id="cf-local" maxlength="20"></div>
-        <div class="fgrp"><label class="flbl2">Código Postal</label><input class="finp" id="cf-cp" maxlength="4"></div>
-        <div class="fgrp"><label class="flbl2">Provincia</label>
-          <select class="finp" id="cf-prov">
+        <!-- DOMICILIO FISCAL (Ricardo, Nov 2026) -->
+        <div class="fgrp full cli-globo cli-globo-fis">
+          <div class="cli-globo-tit">🏛 Domicilio Fiscal</div>
+          <div class="fg">
+            <div class="fgrp full"><label class="flbl2">Domicilio</label><input class="finp" id="cf-domic" maxlength="30"></div>
+            <div class="fgrp"><label class="flbl2">Localidad</label><input class="finp" id="cf-local" maxlength="20"></div>
+            <div class="fgrp"><label class="flbl2">Código Postal</label><input class="finp" id="cf-cp" maxlength="4"></div>
+            <div class="fgrp"><label class="flbl2">Provincia</label>
+              <select class="finp" id="cf-prov">
             <option value="">—</option><option value="B">Buenos Aires</option><option value="C">Cap. Federal</option>
             <option value="X">Córdoba</option><option value="F">Santa Fe</option><option value="M">Mendoza</option>
             <option value="T">Tucumán</option><option value="E">Entre Ríos</option><option value="S">Salta</option>
@@ -1698,7 +1697,34 @@
             <option value="O">Formosa</option><option value="Y">Jujuy</option><option value="R">La Rioja</option>
             <option value="Z">Santa Cruz</option><option value="W">San Luis</option><option value="D">Santiago del Estero</option>
             <option value="V">Tierra del Fuego</option>
-          </select>
+              </select>
+            </div>
+            <div class="fgrp"><label class="flbl2">Categoría</label>
+              <select class="finp" id="cf-cate"><option value="">—</option><option value="F">Franquicia</option><option value="M">Mayorista</option><option value="J">Joyería</option><option value="I">Impacto</option><option value="*">Varios</option></select>
+            </div>
+          </div>
+        </div>
+        <!-- DOMICILIO DE ENTREGA: si existe, es el que va en el remito -->
+        <div class="fgrp full cli-globo cli-globo-ent">
+          <div class="cli-globo-tit">🚚 Domicilio de Entrega <span style="font-weight:400;font-size:10px;opacity:.8">· si está cargado, es el que sale en el remito</span></div>
+          <div class="fg">
+            <div class="fgrp full"><label class="flbl2">Domicilio</label><input class="finp" id="cf-ent-domic" maxlength="40"></div>
+            <div class="fgrp"><label class="flbl2">Localidad</label><input class="finp" id="cf-ent-local" maxlength="30"></div>
+            <div class="fgrp"><label class="flbl2">Código Postal</label><input class="finp" id="cf-ent-cp" maxlength="8"></div>
+            <div class="fgrp"><label class="flbl2">Provincia</label>
+              <select class="finp" id="cf-ent-prov">
+            <option value="">—</option><option value="B">Buenos Aires</option><option value="C">Cap. Federal</option>
+            <option value="X">Córdoba</option><option value="F">Santa Fe</option><option value="M">Mendoza</option>
+            <option value="T">Tucumán</option><option value="E">Entre Ríos</option><option value="S">Salta</option>
+            <option value="J">San Juan</option><option value="H">Chaco</option><option value="K">Misiones</option>
+            <option value="Q">Neuquén</option><option value="N">Río Negro</option><option value="I">Corrientes</option>
+            <option value="L">La Pampa</option><option value="A">Catamarca</option><option value="U">Chubut</option>
+            <option value="O">Formosa</option><option value="Y">Jujuy</option><option value="R">La Rioja</option>
+            <option value="Z">Santa Cruz</option><option value="W">San Luis</option><option value="D">Santiago del Estero</option>
+            <option value="V">Tierra del Fuego</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
       <div class="fsec">Contacto</div>

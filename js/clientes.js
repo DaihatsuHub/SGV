@@ -172,10 +172,12 @@ function cliDetail(idx){
   document.getElementById('cli-dp-body').innerHTML=[
     ['Código',c.CLI_CODIGO],['CUIT',c.CLI_CUIT||'—'],['Razón Social',c.CLI_RAZON||'—'],
     ['Domicilio',c.CLI_DOMIC||'—'],['Localidad',c.CLI_LOCAL||'—'],['CP',c.CLI_CODPOS||'—'],
-    ['Provincia',PCIA[c.CLI_PROVIN]||c.CLI_PROVIN||'—'],['Teléfono',c.CLI_TELEF||'—'],['E-mail',c.CLI_EMAIL||'—'],
+    ['Provincia',PCIA[c.CLI_PROVIN]||c.CLI_PROVIN||'—'],['Categoría',c.CLI_CATE||'—'],
+    ...((c.CLI_ENT_DOMIC||'').trim()?[['Entrega',[c.CLI_ENT_DOMIC,c.CLI_ENT_LOCAL,c.CLI_ENT_CODPOS,PCIA[c.CLI_ENT_PROVIN]||c.CLI_ENT_PROVIN].filter(x=>(x||'').trim()).join(' · ')]]:[]),
+    ['Teléfono',c.CLI_TELEF||'—'],['E-mail',c.CLI_EMAIL||'—'],
     ['IVA',IVA[c.CLI_IVA]||'—'],['Cond.Pago',c.CLI_CONPAG||'—'],['Dto %',c.CLI_DTO||0],
     ['Vendedor',c.CLI_VEND||'—'],['Expreso',c.CLI_EXPRE||'—'],['Crédito','$'+fmt(c.CLI_ICRED||0)],
-    ['Nro IB',c.CLI_NROIB||'—'],['ABC',c.CLI_ABC||'—'],['Observ.',c.CLI_OBS||'—'],
+    ['Nro IB',c.CLI_NROIB||'—'],['Observ.',c.CLI_OBS||'—'],
   ].map(([l,v])=>`<div class="dpi"><span class="dpi-lbl">${l}</span><span class="dpi-val">${esc(String(v))}</span></div>`).join('');
   document.getElementById('cli-dp').classList.add('open');
 }
@@ -303,7 +305,7 @@ function clrCliForm(){
   ['cf-cod','cf-razon','cf-domic','cf-local','cf-cp','cf-tel','cf-email','cf-vend','cf-expre','cf-cuit','cf-conpag','cf-nroib','cf-obs'].forEach(i=>document.getElementById(i).value='');
   ['cf-icred'].forEach(i=>document.getElementById(i).value=0);
   document.getElementById('cf-fcred').value='';
-  ['cf-abc','cf-prov','cf-cate'].forEach(i=>document.getElementById(i).value='');
+  ['cf-abc','cf-prov','cf-cate','cf-ent-domic','cf-ent-local','cf-ent-cp','cf-ent-prov'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('cf-iva').value='I';
   document.getElementById('cf-tipoib').value='0';
   ['ctog-inc','ctog-preinc','ctog-nodar','ctog-perc'].forEach(t=>setTog(t,t.replace('ctog-','cf-'),false));
@@ -316,6 +318,10 @@ function fillCliForm(c){
   document.getElementById('cf-local').value=c.CLI_LOCAL||'';
   document.getElementById('cf-cp').value=c.CLI_CODPOS||'';
   document.getElementById('cf-prov').value=c.CLI_PROVIN||'';
+  document.getElementById('cf-ent-domic').value=c.CLI_ENT_DOMIC||'';
+  document.getElementById('cf-ent-local').value=c.CLI_ENT_LOCAL||'';
+  document.getElementById('cf-ent-cp').value=c.CLI_ENT_CODPOS||'';
+  document.getElementById('cf-ent-prov').value=c.CLI_ENT_PROVIN||'';
   document.getElementById('cf-tel').value=c.CLI_TELEF||'';
   document.getElementById('cf-email').value=c.CLI_EMAIL||'';
   const vendSel=document.getElementById('cf-vend');
@@ -349,6 +355,11 @@ function saveCli(){
     CLI_LOCAL:document.getElementById('cf-local').value.trim(),
     CLI_CODPOS:document.getElementById('cf-cp').value.trim(),
     CLI_PROVIN:document.getElementById('cf-prov').value,
+    // Domicilio de ENTREGA (si está, va en el remito)
+    CLI_ENT_DOMIC:document.getElementById('cf-ent-domic').value.trim(),
+    CLI_ENT_LOCAL:document.getElementById('cf-ent-local').value.trim(),
+    CLI_ENT_CODPOS:document.getElementById('cf-ent-cp').value.trim(),
+    CLI_ENT_PROVIN:document.getElementById('cf-ent-prov').value,
     CLI_TELEF:document.getElementById('cf-tel').value.trim(),
     CLI_EMAIL:document.getElementById('cf-email').value.trim(),
     CLI_VEND:document.getElementById('cf-vend').value,

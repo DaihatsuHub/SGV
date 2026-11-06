@@ -56,7 +56,6 @@ const COL_DEFS = {
     {field:'CLI_EXPRE',  label:'Expreso',      width:'60px',  active:false},
     {field:'CLI_TELEF',  label:'Teléfono',     width:'120px', active:false},
     {field:'CLI_EMAIL',  label:'Email',        width:'140px', active:false},
-    {field:'CLI_ABC',    label:'ABC',          width:'45px',  active:false},
     {field:'CLI_ICRED',  label:'Crédito',      width:'90px',  align:'right', active:false},
     {field:'CLI_NROIB',  label:'Nro IB',       width:'100px', active:false},
     {field:'CLI_OBS',    label:'Observaciones',width:'150px', active:false},
