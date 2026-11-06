@@ -72,7 +72,10 @@ function renderClis(){
       cols.map(col=>{
         if(col.field==='CLI_CODIGO') return `<span class="col-cod">${esc(c.CLI_CODIGO)}</span>`;
         if(col.field==='CLI_RAZON')  return `<span class="col-des">${esc(c.CLI_RAZON||'')}</span>`;
-        if(col.field==='CLI_DOMIC')  return `<span class="col-sm">${esc(c.CLI_DOMIC||'')}</span>`;
+        // En negrita si el cliente tiene DOMICILIO DE ENTREGA (va en el remito); el título lo muestra
+        if(col.field==='CLI_DOMIC')  return (c.CLI_ENT_DOMIC||'').trim()
+          ? `<span class="col-sm" style="font-weight:700" title="Entrega: ${esc([c.CLI_ENT_DOMIC,c.CLI_ENT_LOCAL,c.CLI_ENT_CODPOS,PCIA[c.CLI_ENT_PROVIN]||c.CLI_ENT_PROVIN].filter(x=>(x||'').trim()).join(' · '))}">${esc(c.CLI_DOMIC||'')}</span>`
+          : `<span class="col-sm">${esc(c.CLI_DOMIC||'')}</span>`;
         if(col.field==='CLI_LOCAL')  return `<span class="col-sm">${esc(c.CLI_LOCAL||'')}</span>`;
         if(col.field==='CLI_CODPOS') return `<span class="col-sm">${esc(c.CLI_CODPOS||'')}</span>`;
         if(col.field==='CLI_PROVIN') return `<span class="col-sm">${esc(PCIA[c.CLI_PROVIN]||c.CLI_PROVIN||'')}</span>`;
