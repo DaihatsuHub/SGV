@@ -329,7 +329,7 @@ function clrCliForm(){
   ['cf-prov','cf-cate','cf-grupo','cf-ent-domic','cf-ent-local','cf-ent-cp','cf-ent-prov'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('cf-iva').value='I';
   document.getElementById('cf-tipoib').value='0';
-  ['ctog-inc','ctog-nodar','ctog-perc'].forEach(t=>setTog(t,t.replace('ctog-','cf-'),false));
+  ['ctog-inc','ctog-nodar'].forEach(t=>setTog(t,t.replace('ctog-','cf-'),false));
   _cliPercep=[]; renderCliPercep();
 }
 function fillCliForm(c){
@@ -362,7 +362,6 @@ function fillCliForm(c){
   document.getElementById('cf-grupo').value=c.CLI_ABC||'';
   setTog('ctog-inc','cf-inc',!!c.CLI_INCOB);
   setTog('ctog-nodar','cf-nodar',!!c.CLI_NODAR);
-  setTog('ctog-perc','cf-perc',c.CLI_PERCIB==='S');
   _cliPercep = Array.isArray(c.CLI_PERCEP) ? JSON.parse(JSON.stringify(c.CLI_PERCEP)) : [];
   renderCliPercep();
 }
@@ -392,7 +391,8 @@ function saveCli(){
     CLI_PERCEP:_cliPercep.slice(),
     CLI_NROIB:document.getElementById('cf-nroib').value.trim(),
     CLI_TIPOIB:document.getElementById('cf-tipoib').value,
-    CLI_PERCIB:document.getElementById('cf-perc').value==='1'?'S':'N',
+    // Percepción IIBB: ya no se marca acá (se maneja con las percepciones del cliente); se conserva lo que tenía
+    CLI_PERCIB:(window._ce==='M' && CLIS[cliSelIdx] ? CLIS[cliSelIdx].CLI_PERCIB : null),
     CLI_OBS:document.getElementById('cf-obs').value.trim(),
     CLI_ICRED:parseFloat(document.getElementById('cf-icred').value)||0,
     CLI_CATE:document.getElementById('cf-cate').value,
