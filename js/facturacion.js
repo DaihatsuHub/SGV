@@ -1593,6 +1593,7 @@ function facNavegar(fn) {
 }
 
 function facAlta() {
+  window._nfCliAvisado=null;
   FAC_ITEMS_NUEVA=[]; NF_PERCEP=[]; if(typeof nfiReset==='function') nfiReset(); if(typeof nfbReset==='function') nfbReset();
   FAC_MODO='A';
   renderFacModal(new Date().toISOString().substring(0,10),'H','');
@@ -2399,6 +2400,37 @@ function nfSetCliente(cli) {
   nfCalcTotales();
   nfRenderItems();
   nfChequearLetra();
+  nfAvisoCliente(cli);
+}
+
+// Al elegir el cliente, ANTES de cargar los ítems: si tiene Grupo de Compras u
+// Observaciones, se muestran en un popup (Ricardo, Nov 2026). Una vez por
+// cliente en cada factura.
+function nfAvisoCliente(cli){
+  const cod=(cli?.CLI_CODIGO||'').trim(); if(!cod || window._nfCliAvisado===cod) return;
+  window._nfCliAvisado=cod;
+  const grpCod=(cli.CLI_ABC||'').trim(), obs=(cli.CLI_OBS||'').trim();
+  if(!grpCod && !obs) return;
+  const grp=grpCod ? (((TABLAS['GRUP']||[]).find(x=>x.CODIGO===grpCod)||{}).DETALLE||'') : '';
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+  ov.innerHTML=`<div style="background:var(--s1,#fff);border-radius:14px;max-width:520px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden">
+    <div style="background:var(--acc,#0a58ca);color:#fff;padding:14px 20px;font-size:16px;font-weight:600">👤 ${esc((cli.CLI_RAZON||'').trim())} <span style="opacity:.75;font-weight:400">(${esc(cod)})</span></div>
+    <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px">
+      ${grpCod?`<div class="cli-globo cli-globo-cla" style="padding:10px 12px"><div class="cli-globo-tit" style="margin-bottom:4px">🏷 Grupo de Compras</div>
+        <div style="font-size:15px;font-weight:600">${esc(grp||grpCod)} <span style="color:var(--t3);font-weight:400;font-family:var(--mono)">${esc(grpCod)}</span></div></div>`:''}
+      ${obs?`<div class="cli-globo cli-globo-cre" style="padding:10px 12px"><div class="cli-globo-tit" style="margin-bottom:4px">📝 Observaciones</div>
+        <div style="font-size:15px;white-space:pre-wrap">${esc(obs)}</div></div>`:''}
+    </div>
+    <div style="display:flex;justify-content:flex-end;padding:0 20px 16px"><button class="btn pri" id="nfav-ok" style="padding:7px 20px">Continuar con los ítems</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  const cerrar=()=>{ ov.remove(); document.removeEventListener('keydown',tecla);
+    document.querySelector('#nf-items-wrap input, #nf-art-busq, [id^="nf-art"]')?.focus?.(); };
+  const tecla=e=>{ if(e.key==='Escape'||e.key==='Enter'){ e.preventDefault(); cerrar(); } };
+  document.addEventListener('keydown',tecla);
+  ov.querySelector('#nfav-ok').onclick=cerrar;
+  setTimeout(()=>ov.querySelector('#nfav-ok')?.focus(),30);
 }
 function nfLimpiarCliente() {
   const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
