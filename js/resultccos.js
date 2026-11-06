@@ -39,7 +39,7 @@ async function rccConsultar(){
 // unidades con costo convertido a la cotización vigente (estimado)
 function _rcAviso(f,i){
   if(f.sinCosto>0) return `<span class="rc-warn" onclick="rccDetalle(${i})" title="${_rcFmt0(f.sinCosto)} unidad(es) sin costo — clic para ver cuáles">⚠</span>`;
-  if(f.estimados>0) return `<span class="rc-est" title="${_rcFmt0(f.estimados)} unidad(es) con el costo convertido a la cotización vigente (estimado)">≈</span>`;
+  if(f.estimados>0) return `<span class="rc-est" title="${_rcFmt0(f.estimados)} unidad(es) con costo ESTIMADO: el despacho no tiene cotización y se usó el dólar aduana">≈</span>`;
   return '';
 }
 
