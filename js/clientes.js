@@ -188,7 +188,7 @@ async function cliDetail(idx){
     ...((c.CLI_ENT_DOMIC||'').trim()?[['Entrega',[c.CLI_ENT_DOMIC,c.CLI_ENT_LOCAL,c.CLI_ENT_CODPOS,PCIA[c.CLI_ENT_PROVIN]||c.CLI_ENT_PROVIN].filter(x=>(x||'').trim()).join(' · ')]]:[]),
     ['Teléfono',c.CLI_TELEF||'—'],['E-mail',c.CLI_EMAIL||'—'],
     ['IVA',IVA[c.CLI_IVA]||'—'],['Cond.Pago',c.CLI_CONPAG||'—'],['Dto %',c.CLI_DTO||0],
-    ['Vendedor',c.CLI_VEND||'—'],['Expreso',c.CLI_EXPRE||'—'],['Crédito','$'+fmt(c.CLI_ICRED||0)],
+    ['Vendedor',c.CLI_VEND||'—'],['Expreso',c.CLI_EXPRE||'—'],['Crédito','$'+fmt(c.CLI_ICRED||0)+(c.CLI_FCRED?' · vence '+String(c.CLI_FCRED).substring(0,10).split('-').reverse().join('/'):'')],
     ['Nro IB',c.CLI_NROIB||'—'],['Observ.',(c.CLI_OBS||'—').replace(/\n/g,' · ')],
   ].map(([l,v])=>`<div class="dpi"><span class="dpi-lbl">${l}</span><span class="dpi-val">${esc(String(v))}</span></div>`).join('');
   document.getElementById('cli-dp').classList.add('open');
@@ -357,6 +357,8 @@ function fillCliForm(c){
   document.getElementById('cf-tipoib').value=c.CLI_TIPOIB||'0';
   document.getElementById('cf-obs').value=c.CLI_OBS||'';
   document.getElementById('cf-icred').value=c.CLI_ICRED||0;
+  // Vto. del crédito: antes no se mostraba ni se grababa (y al guardar se borraba)
+  document.getElementById('cf-fcred').value=String(c.CLI_FCRED||'').substring(0,10);
   document.getElementById('cf-cate').value=c.CLI_CATE||'';
   // Grupo de Compras = campo CLI_ABC del DOS (Ricardo, Nov 2026)
   document.getElementById('cf-grupo').value=c.CLI_ABC||'';
@@ -395,6 +397,7 @@ function saveCli(){
     CLI_PERCIB:(window._ce==='M' && CLIS[cliSelIdx] ? CLIS[cliSelIdx].CLI_PERCIB : null),
     CLI_OBS:document.getElementById('cf-obs').value.trim(),
     CLI_ICRED:parseFloat(document.getElementById('cf-icred').value)||0,
+    CLI_FCRED:document.getElementById('cf-fcred').value||null,
     CLI_CATE:document.getElementById('cf-cate').value,
     CLI_ABC:document.getElementById('cf-grupo').value,     // Grupo de Compras
     CLI_INCOB:document.getElementById('cf-inc').value==='1',
