@@ -56,6 +56,8 @@ function remLetras(n){
   return partes.join(' ');
 }
 
+function _remCopias(){ try { return parseInt(localStorage.getItem('sgv_rem_copias'), 10) || 1; } catch(_) { return 1; } }
+
 // Valor declarado con separador de miles mientras se escribe
 const _remMiles = n => (Math.round(Number(n) || 0)).toLocaleString('es-AR');
 const _remNum = v => parseInt(String(v || '').replace(/\D/g, ''), 10) || 0;
@@ -63,6 +65,13 @@ function _remValorInput(el){
   const n = _remNum(el.value);
   el.value = n ? _remMiles(n) : '';
   el.setSelectionRange(el.value.length, el.value.length);
+}
+
+// Renglones repartidos en remitos de P.items.max renglones
+function remTramos(items){
+  const max = REM_POS.items.max, out = [];
+  for (let i = 0; i < items.length; i += max) out.push(items.slice(i, i + max));
+  return out.length ? out : [[]];
 }
 
 function _remAjuste(){ try { return JSON.parse(localStorage.getItem('sgv_rem_ajuste') || '{}'); } catch(_) { return {}; } }
@@ -92,13 +101,18 @@ async function remAbrir(facNro){
     m.innerHTML = `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:12px;width:100%;max-width:420px;box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden">
       <div style="background:var(--acc);color:#fff;padding:12px 18px;font-size:15px;font-weight:600">🚚 Remito · ${esc(nro)}</div>
       <div style="padding:16px 18px 6px;display:flex;flex-direction:column;gap:12px">
-        <div style="display:grid;grid-template-columns:90px 1fr;gap:12px;align-items:end">
+        <div style="display:grid;grid-template-columns:80px 80px 1fr;gap:12px;align-items:end">
+          <div><div style="font-size:11px;color:var(--t2);margin-bottom:4px">Copias</div>
+            <input id="rem-copias" class="finp" type="number" min="1" max="9" step="1" value="${_remCopias()}" style="width:100%;text-align:right;font-family:var(--mono)"></div>
           <div><div style="font-size:11px;color:var(--t2);margin-bottom:4px">Cajas</div>
             <input id="rem-cajas" class="finp" type="number" min="1" step="1" value="1" style="width:100%;text-align:right;font-family:var(--mono)"></div>
           <div><div style="font-size:11px;color:var(--t2);margin-bottom:4px">Valor declarado <span style="color:var(--t3)">· $ sin IVA ni percepciones</span></div>
             <input id="rem-valor" class="finp" inputmode="numeric" value="${_remMiles(valor)}" style="width:100%;text-align:right;font-family:var(--mono)"
                    onfocus="this.select()" oninput="_remValorInput(this)"></div>
         </div>
+        ${remTramos(items).length > 1 ? `<div style="font-size:12px;padding:8px 10px;border-radius:6px;background:rgba(239,159,39,.15);color:#854F0B;font-weight:600">
+          ⚠️ Son ${items.length} renglones y en un remito entran ${REM_POS.items.max}: van a ser <b>${remTramos(items).length} remitos</b>
+          (cada uno con las copias que pidas). Preparalos en la impresora.</div>` : ''}
         <div style="font-size:11px;padding:6px 10px;border-radius:6px;${contable ? 'background:rgba(29,158,117,.10);color:#0F6E56' : 'background:var(--s2);color:var(--t2)'}">
           ${contable ? '✓ Lleva el número de factura' : 'Comprobante no contable: no lleva número de factura'}</div>
         <details style="font-size:11px;color:var(--t2)"><summary style="cursor:pointer;user-select:none">Ajuste de impresión</summary>
@@ -119,10 +133,12 @@ async function remAbrir(facNro){
       const cajas = parseInt(document.getElementById('rem-cajas').value, 10) || 0;
       const val = _remNum(document.getElementById('rem-valor').value);
       if (cajas <= 0) { toast('Indicá la cantidad de cajas','err'); return; }
+      const copias = Math.min(9, Math.max(1, parseInt(document.getElementById('rem-copias').value, 10) || 1));
+      try { localStorage.setItem('sgv_rem_copias', String(copias)); } catch(_) {}
       const ajuste = { x: Number(document.getElementById('rem-ajx').value) || 0, y: Number(document.getElementById('rem-ajy').value) || 0 };
       _remGuardarAjuste(ajuste);
       m.remove();
-      remImprimir(f, items, { cajas, valor: val, contable, ajuste });
+      remImprimir(f, items, { cajas, valor: val, contable, ajuste, copias });
     };
     setTimeout(() => { const c = document.getElementById('rem-cajas'); c?.focus(); c?.select(); }, 50);
   } catch (e) { console.error('remAbrir:', e); toast('No se pudo armar el remito: ' + e.message, 'err'); }
@@ -144,43 +160,68 @@ async function remImprimir(f, items, o){
   const fmtMil = n => Number(n).toLocaleString('es-AR', { maximumFractionDigits: 0 });
   const t = (pos, txt, extra) => `<div class="c" style="left:${pos.x + ax}mm;top:${pos.y + ay}mm;${extra||''}">${esc(String(txt||''))}</div>`;
 
-  let html = '';
-  html += t(P.fecha, fecha);
+  // Encabezado: se repite en cada remito
+  let cab = '';
+  cab += t(P.fecha, fecha);
   // Razón social en negrita y más grande, con el código de cliente a continuación
-  html += `<div class="c" style="left:${P.razon.x + ax}mm;top:${P.razon.y - 1 + ay}mm"><b style="font-size:13pt">${esc(cli.CLI_RAZON || f.fac_cli || '')}</b> ( ${esc((f.fac_cli||'').trim())})</div>`;
+  cab += `<div class="c" style="left:${P.razon.x + ax}mm;top:${P.razon.y - 1 + ay}mm"><b style="font-size:13pt">${esc(cli.CLI_RAZON || f.fac_cli || '')}</b> ( ${esc((f.fac_cli||'').trim())})</div>`;
   // Domicilio de ENTREGA si el cliente lo tiene cargado; si no, el fiscal
   const ent = (cli.CLI_ENT_DOMIC||'').trim();
   const dom = ent ? { d: cli.CLI_ENT_DOMIC, l: cli.CLI_ENT_LOCAL, cp: cli.CLI_ENT_CODPOS, p: (typeof PCIA !== 'undefined' ? PCIA[cli.CLI_ENT_PROVIN] : '') || cli.CLI_ENT_PROVIN || '' }
                   : { d: cli.CLI_DOMIC, l: cli.CLI_LOCAL, cp: cli.CLI_CODPOS, p: pcia };
-  html += t(P.domic, dom.d);
-  html += t(P.local, [dom.cp ? '(' + String(dom.cp).trim() + ')' : '', (dom.l||'').trim()].filter(Boolean).join('-')
+  cab += t(P.domic, dom.d);
+  cab += t(P.local, [dom.cp ? '(' + String(dom.cp).trim() + ')' : '', (dom.l||'').trim()].filter(Boolean).join('-')
                      + (dom.p ? '   ' + String(dom.p).toUpperCase() : ''));
-  html += t(P.iva, ivaTxt);
-  html += t(P.cuit, cli.CLI_CUIT);
-  html += t(P.transp, 'TRANSPORTE: ' + (tr ? [tr.DETALLE, tr.STRING1].filter(x => (x||'').trim()).join(' — ') : (f.fac_transp||'')));
-  items.slice(0, P.items.max).forEach((it, i) => {
-    const y = P.items.y + i * P.items.alto;
-    html += t({ x: P.items.can.x - 12, y }, it.ite_can, 'width:12mm;text-align:right');
-    const art = (ARTS||[]).find(x => (x.ART_COD||'').trim() === (it.ite_art||'').trim());
-    html += t({ x: P.items.des.x, y }, String(art ? art.ART_DES || '' : '').substring(0, P.items.desMax));
-    html += t({ x: P.items.cod.x, y }, (it.ite_art||'').trim());
-    html += t({ x: P.items.desp.x, y }, (it.ite_desp||'').trim());
+  cab += t(P.iva, ivaTxt);
+  cab += t(P.cuit, cli.CLI_CUIT);
+  cab += t(P.transp, 'TRANSPORTE: ' + (tr ? [tr.DETALLE, tr.STRING1].filter(x => (x||'').trim()).join(' — ') : (f.fac_transp||'')));
+  const web = String(f.fac_nro||'').trim().charAt(0).toUpperCase() === 'T' ? 'www.tressa.com.ar' : 'www.daihatsu.com.ar';
+  const NEG = 'font-family:Arial,sans-serif;font-weight:bold;font-size:13pt';
+
+  // Si los renglones no entran en un remito, se reparten en varios (Ricardo, Nov 2026):
+  // en los que no son el último va "Continúa en el próximo remito..." y el pie
+  // (cajas, valor, factura, piezas) va sólo en el último.
+  const tramos = remTramos(items);
+  const paginas = tramos.map((tr8, n) => {
+    const ultimo = n === tramos.length - 1;
+    let h = cab;
+    tr8.forEach((it, i) => {
+      const y = P.items.y + i * P.items.alto;
+      h += t({ x: P.items.can.x - 12, y }, it.ite_can, 'width:12mm;text-align:right');
+      const art = (ARTS||[]).find(x => (x.ART_COD||'').trim() === (it.ite_art||'').trim());
+      h += t({ x: P.items.des.x, y }, String(art ? art.ART_DES || '' : '').substring(0, P.items.desMax));
+      h += t({ x: P.items.cod.x, y }, (it.ite_art||'').trim());
+      h += t({ x: P.items.desp.x, y }, (it.ite_desp||'').trim());
+    });
+    if (!ultimo) {
+      h += t({ x: P.items.des.x, y: P.items.y + P.items.max * P.items.alto + 2 },
+             `Continúa en el próximo remito...   (${n + 1} de ${tramos.length})`, NEG);
+    } else {
+      if (tramos.length > 1) h += t({ x: P.items.des.x, y: P.items.y + P.items.max * P.items.alto + 2 }, `(${n + 1} de ${tramos.length})`);
+      h += t(P.cajas, `•  ${o.cajas} (${remLetras(o.cajas)}) CAJA${o.cajas === 1 ? '' : 'S'}`, NEG);
+      h += t(P.valor, `•  VALOR DECLARADO: $ ${fmtMil(o.valor)}`, NEG);
+      if (o.contable) h += t(P.factura, `•  FACTURA N.° ${String(f.fac_nro).trim()}`, NEG);
+      h += t(P.piezas, `${piezas} Piezas`);
+      if (uniq('dep_proc')) h += t(P.origen, 'Origen: ' + uniq('dep_proc'));
+      if (uniq('dep_adua')) h += t(P.aduana, 'Aduana: ' + uniq('dep_adua'));
+    }
+    h += t(P.leyenda, REM_LEYENDA);
+    h += t(P.web, web);
+    return h;
   });
-  html += t(P.cajas, `•  ${o.cajas} (${remLetras(o.cajas)}) CAJA${o.cajas === 1 ? '' : 'S'}`, 'font-family:Arial,sans-serif;font-weight:bold;font-size:13pt');
-  html += t(P.valor, `•  VALOR DECLARADO: $ ${fmtMil(o.valor)}`, 'font-family:Arial,sans-serif;font-weight:bold;font-size:13pt');
-  if (o.contable) html += t(P.factura, `•  FACTURA N.° ${String(f.fac_nro).trim()}`, 'font-family:Arial,sans-serif;font-weight:bold;font-size:13pt');
-  html += t(P.piezas, `${piezas} Piezas`);
-  if (uniq('dep_proc')) html += t(P.origen, 'Origen: ' + uniq('dep_proc'));
-  if (uniq('dep_adua')) html += t(P.aduana, 'Aduana: ' + uniq('dep_adua'));
-  html += t(P.leyenda, REM_LEYENDA);
-  html += t(P.web, String(f.fac_nro||'').trim().charAt(0).toUpperCase() === 'T' ? 'www.tressa.com.ar' : 'www.daihatsu.com.ar');
-  if (items.length > P.items.max) toast(`El remito tiene lugar para ${P.items.max} renglones: van los primeros`, 'err');
+  // Primero las N copias del primer remito, después las del segundo, y así
+  const copias = Math.max(1, o.copias || 1);
+  const hojas = [];
+  paginas.forEach(pg => { for (let c = 0; c < copias; c++) hojas.push(`<div class="hoja">${pg}</div>`); });
+  const html = hojas.join('');
 
   const w = window.open('', '_blank');
   if (!w) { toast('El navegador bloqueó la ventana de impresión','err'); return; }
   w.document.write(`<html><head><meta charset="utf-8"><title>Remito ${esc(String(f.fac_nro).trim())}</title>
-    <style>@page{size:210mm 297mm;margin:0} html,body{margin:0;padding:0;width:210mm;height:297mm}
-      body{position:relative;font-family:"Courier New",Courier,monospace;font-size:11pt;color:#000}
+    <style>@page{size:210mm 297mm;margin:0} html,body{margin:0;padding:0}
+      body{font-family:"Courier New",Courier,monospace;font-size:11pt;color:#000}
+      .hoja{position:relative;width:210mm;height:296.5mm;overflow:hidden;page-break-after:always;break-after:page}
+      .hoja:last-child{page-break-after:auto;break-after:auto}
       .c{position:absolute;white-space:nowrap;line-height:1}</style></head>
     <body>${html}<script>window.onload=function(){setTimeout(function(){window.print()},200)}<\/script></body></html>`);
   w.document.close(); w.focus();
