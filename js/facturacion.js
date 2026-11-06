@@ -522,28 +522,42 @@ function buscarFac() {
     document.getElementById('fac-body')?.querySelector(`[data-idx="${idx}"]`)?.scrollIntoView({block:'center'});
     return;
   }
+  // Salta a la factura encontrada; si está oculta por un filtro, lo avisa
+  const ir=(nro)=>{
+    const list=filtFacs();
+    const idx=list.findIndex(f=>f.fac_nro===nro);
+    if(idx<0){ toast('La encontré, pero está oculta por un filtro (empresa, Pendientes de Entrega o Esperando Pagos)','err'); return; }
+    facSelIdx=idx; document.getElementById('fac-q').value=''; renderFac();
+    document.getElementById('fac-body')?.querySelector(`[data-idx="${idx}"]`)?.scrollIntoView({block:'center'});
+  };
+  const masReciente=(a,b)=>(b.fac_fec||'').localeCompare(a.fac_fec||'')||(b.fac_nro||'').localeCompare(a.fac_nro||'');
+  // Número de comprobante (empieza con H o T)
   if(/^[ht]/i.test(q)){
     facSort={col:'fac_nro',asc:true};
-    const list=filtFacs();
-    const idx=list.findIndex(f=>(f.fac_nro||'').toLowerCase().includes(q));
-    if(idx>=0){facSelIdx=idx;document.getElementById('fac-q').value='';renderFac();document.getElementById('fac-body')?.querySelector(`[data-idx="${idx}"]`)?.scrollIntoView({block:'center'});}
-    return;
+    const qn=q.replace(/[\s-]/g,'');
+    const f=FACS.find(f=>(f.fac_nro||'').toLowerCase().includes(q))
+         || FACS.find(f=>(f.fac_nro||'').toLowerCase().replace(/[\s-]/g,'').includes(qn));
+    if(!f){ toast(`No hay ningún comprobante "${q.toUpperCase()}"`,'err'); return; }
+    return ir(f.fac_nro);
+  }
+  // Sólo números: CÓDIGO DE CLIENTE exacto (la más reciente) o, si no, número de comprobante
+  if(/^\d+$/.test(q)){
+    const delCli=FACS.filter(f=>(f.fac_cli||'').trim()===q).sort(masReciente);
+    if(delCli.length){ facSort={col:'_razon',asc:true}; return ir(delCli[0].fac_nro); }
+    const n=parseInt(q,10);
+    const porNro=FACS.filter(f=>parseInt((f.fac_nro||'').slice(3,-1).replace(/\D/g,''),10)===n).sort(masReciente);
+    if(porNro.length){ facSort={col:'fac_nro',asc:true}; return ir(porNro[0].fac_nro); }
+    toast(`No hay cliente ni comprobante ${q}`,'err'); return;
   }
   // Búsqueda por RAZÓN SOCIAL: la grilla se ordena por razón social + fecha, y
-  // queda seleccionada la factura MÁS RECIENTE de ese cliente (antes ordenaba
-  // por código de cliente y saltaba a la más vieja).
+  // queda seleccionada la factura MÁS RECIENTE de ese cliente.
   facSort={col:'_razon',asc:true};
-  const emp=document.getElementById('fac-empresa')?.value||'';
-  const lc=FACS.filter(f=>(!emp||(f.fac_nro||'').startsWith(emp)))
+  const lc=FACS
     .map(f=>{const cli=facFindCli(f.fac_cli);return{...f,_r:(cli?.CLI_RAZON||f.fac_cli||'').toLowerCase()};})
     .filter(f=>f._r.includes(q))
-    .sort((a,b)=>(b.fac_fec||'').localeCompare(a.fac_fec||'')      // más reciente primero
-               ||(b.fac_nro||'').localeCompare(a.fac_nro||''));
-  if(lc.length>0){
-    const list=filtFacs();
-    const idx=list.findIndex(f=>f.fac_nro===lc[0].fac_nro);
-    if(idx>=0){facSelIdx=idx;document.getElementById('fac-q').value='';renderFac();document.getElementById('fac-body')?.querySelector(`[data-idx="${idx}"]`)?.scrollIntoView({block:'center'});}
-  }
+    .sort(masReciente);
+  if(!lc.length){ toast(`No hay facturas de un cliente "${q}"`,'err'); return; }
+  ir(lc[0].fac_nro);
 }
 
 function renderFac() {
