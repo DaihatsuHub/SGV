@@ -24,9 +24,13 @@ function renderResultadoCcos(){
   const dl=document.getElementById('rcc-dolar');
   if(dl && !dl.value){ const a=(TABLAS['MONE']||[]).find(m=>m.CODIGO==='A'); if(a && parseFloat(a.STRING2)>1) dl.value=_rcDolarTxt(parseFloat(a.STRING2)); }
   _rcStyle();
-  // Primero el dólar de hoy, así la primera consulta ya sale con ese cambio
-  if(_rccData){ _rcPintar(); rccDolarRef(true); }
-  else rccDolarRef(true).finally(()=>rccConsultar(true));
+  // NO se consulta solo: recién con el botón Consultar (Ricardo, Nov 2026).
+  // El promedio del dólar se actualiza cada vez que cambia el período.
+  ['rcc-desde','rcc-hasta'].forEach(id=>{ const el=document.getElementById(id);
+    if(el && !el.dataset.refDolar){ el.addEventListener('change',()=>rccDolarRef(false)); el.dataset.refDolar='1'; } });
+  if(_rccData) _rcPintar();
+  else { const b=document.getElementById('rcc-body'); if(b && !b.innerHTML.trim()) b.innerHTML='<div class="empty" style="margin-top:40px">Elegí el período y tocá Consultar</div>'; }
+  rccDolarRef(true);
 }
 
 const _rcDolarTxt=n=>(Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
