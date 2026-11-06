@@ -523,7 +523,7 @@ const _facMasReciente=(a,b)=>(b.fac_fec||'').localeCompare(a.fac_fec||'')||(b.fa
 function facFillCliList(){
   const dl=document.getElementById('fac-cli-list'); if(!dl || dl.dataset.filled) return;
   dl.innerHTML=(CLIS||[]).map(c=>`<option value="${esc((c.CLI_RAZON||'').trim())} — ${esc((c.CLI_CODIGO||'').trim())}">`).join('');
-  dl.dataset.filled='1';
+  if((CLIS||[]).length) dl.dataset.filled='1';   // si los clientes todavía no cargaron, se reintenta
 }
 function facCliPick(enter){
   const val=(document.getElementById('fac-cli')?.value||'').trim().toLowerCase();
