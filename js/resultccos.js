@@ -19,6 +19,9 @@ function renderResultadoCcos(){
   const d=document.getElementById('rcc-desde'), h=document.getElementById('rcc-hasta');
   if(d && !d.value){ const t=new Date(); d.value=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-01`; }
   if(h && !h.value) h.value=new Date().toISOString().substring(0,10);
+  // Dólar Aduana: se ofrece el de la moneda A de la tabla Monedas (Ricardo, Nov 2026)
+  const dl=document.getElementById('rcc-dolar');
+  if(dl && !dl.value){ const a=(TABLAS['MONE']||[]).find(m=>m.CODIGO==='A'); if(a && parseFloat(a.STRING2)>1) dl.value=String(parseFloat(a.STRING2)).replace('.',','); }
   _rcStyle();
   if(_rccData) _rcPintar(); else rccConsultar();
 }
@@ -29,7 +32,8 @@ async function rccConsultar(){
   if(!g('rcc-desde')||!g('rcc-hasta')){ toast('Elegí el período','err'); return; }
   body.innerHTML='<div class="empty" style="margin-top:30px">⏳ Calculando…</div>';
   try{
-    const r=await apiGet(`/informes/resultado-ccos?desde=${g('rcc-desde')}&hasta=${g('rcc-hasta')}`);
+    const dolar=parseFloat(g('rcc-dolar').replace(/\./g,'').replace(',','.'))||0;
+    const r=await apiGet(`/informes/resultado-ccos?desde=${g('rcc-desde')}&hasta=${g('rcc-hasta')}${dolar>0?'&dolar='+dolar:''}`);
     if(!r.ok){ body.innerHTML='<div class="empty" style="margin-top:30px">⚠️ '+_rcEsc(r.error||'Error')+'</div>'; return; }
     _rccData=r; _rcPintar();
   }catch(e){ body.innerHTML='<div class="empty" style="margin-top:30px">⚠️ '+_rcEsc(e.message||'Error')+'</div>'; }

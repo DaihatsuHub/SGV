@@ -1146,6 +1146,9 @@
     <input type="date" class="finp" id="rcc-desde" style="width:140px">
     <label style="font-size:12px;color:var(--t2)">Hasta</label>
     <input type="date" class="finp" id="rcc-hasta" style="width:140px">
+    <label style="font-size:12px;color:var(--t2)" title="Los costos en dólares se pasan a pesos con este cambio. Vacío = la cotización de cada despacho">Dólar Aduana:</label>
+    <input class="finp" id="rcc-dolar" inputmode="decimal" style="width:100px;text-align:right;font-family:var(--mono)" placeholder="del despacho"
+           onkeydown="if(event.key==='Enter')rccConsultar()">
     <button class="btn pri" onclick="rccConsultar()">🔍 Consultar</button>
     <button class="btn" onclick="rccPrint()">🖨 Imprimir</button>
     <button class="btn" onclick="rccExcel()">⬇ Excel</button>
