@@ -101,7 +101,8 @@ async function r2ModoMenu(i, modo){
   r2Pintar();
 }
 // El tilde → ocultar o mostrar según el modo del menú
-const _r2OcultarEn = (modo, checked) => modo==='no' ? checked : !checked;
+// Criterio ÚNICO (Ricardo, Nov 2026): tildado = LO VE (permitido); destildado = no lo ve.
+const _r2OcultarEn = (modo, checked) => !checked;
 let _R2 = [];   // árbol pintado (para los onclick)
 function r2Menu(i, on){ _r2Set(_R2[i].pants.flatMap(_r2Todo), _r2OcultarEn(_r2ModoDe(_R2[i].menu), on)); }
 function r2Pant(i, j, on){ _r2Set(_r2Todo(_R2[i].pants[j]), _r2OcultarEn(_r2ModoDe(_R2[i].menu), on)); }
@@ -114,22 +115,19 @@ function r2Pintar(){
   if(!_r2Grupo){ body.innerHTML='<div class="empty" style="margin-top:30px">Elegí un grupo</div>'; return; }
   _R2=_r2Arbol();
   // est = 'si' (oculto), 'no' (visible), 'parcial'. En modo "lo que SÍ ve" el tilde es lo visible.
-  const chk=(est,fn)=>{ const on=_r2Modo==='no'?est==='si':est==='no';   // _r2Modo = el del menú que se está pintando
+  const chk=(est,fn)=>{ const on=est==='no';   // tildado = lo ve
     return `<input type="checkbox" ${on?'checked':''} onclick="event.stopPropagation()" onchange="${fn}" data-parcial="${est==='parcial'?1:0}">`; };
   const tag=est=>est==='si'?'<span class="r2-tag no">No lo ve</span>':est==='parcial'?'<span class="r2-tag par">En parte</span>':'<span class="r2-tag si">Lo ve</span>';
   const solo=_r2MenuOc('cfg:solo-grupo');
   body.innerHTML=`<label class="r2-solo${solo?' on':''}"><input type="checkbox" ${solo?'checked':''} onchange="_r2Set([{k:'m',id:'cfg:solo-grupo'}],this.checked)">
       🧪 <b>Modo prueba:</b> el grupo ${esc(_r2Grupo)} se rige <b>SÓLO por esta pantalla</b> (no cuentan los Permisos por nivel).
       ${solo?'<span class="r2-tag no" style="margin-left:8px">ACTIVO</span>':''}</label>`
-   + `<div class="r2-cab">En cada menú elegí si marcás lo que <b>NO ve</b> o lo que <b>SÍ ve</b> el grupo ${esc(_r2Grupo)}.
-     Tildar un menú o una pantalla marca todo lo que tiene adentro.</div>`
+   + `<div class="r2-cab">✔ Tildado = el grupo <b>${esc(_r2Grupo)}</b> lo ve. Destildar un menú apaga todo lo que tiene adentro;
+     después podés volver a tildar sólo lo que sí tiene que ver.</div>`
    + _R2.map((m,i)=>{
       const em=_r2Estado(m.pants.flatMap(_r2Todo));
       const abM=_r2MenuAb.has(m.menu);
-      _r2Modo=_r2ModoDe(m.menu);
-      const md=`<span class="r2-md" onclick="event.stopPropagation()">Marcar:
-          <button class="${_r2Modo==='no'?'on':''}" onclick="r2ModoMenu(${i},'no')">lo que NO ve</button>
-          <button class="${_r2Modo==='si'?'on':''}" onclick="r2ModoMenu(${i},'si')">lo que SÍ ve</button></span>`;
+      const md='';
       return `<div class="r2-menu"><div class="r2-mrow">${chk(em,`r2Menu(${i},this.checked)`)}
           <b class="r2-mlbl" onclick="r2AbrirMenu(${i})">${abM?'▾':'▸'} ${esc(m.menu)}</b>
           ${md}<span class="r2-cnt" style="color:rgba(255,255,255,.8)">${m.pants.length} pantallas</span>${tag(em)}</div>`
@@ -168,12 +166,12 @@ function _r2Style(){
     .r2-md button.on{background:#fff;color:#1a5bd6;font-weight:700}
     .r2-mrow .r2-tag{background:#fff}
     /* SUBMENÚ: renglón blanco con raya azul a la izquierda, metido adentro */
-    .r2-pant{margin:0 0 0 22px;border-left:4px solid #8fb3f5;border-bottom:1px solid var(--b1);background:var(--s1)}
-    .r2-prow{display:flex;align-items:center;gap:10px;padding:8px 12px;font-size:13px;font-weight:600;text-transform:none}
+    .r2-pant{margin:0;border-left:6px solid #1a5bd6;border-bottom:1px solid #b9cdf3;background:#dbe7fc}
+    .r2-prow{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 26px;font-size:13px;font-weight:600;text-transform:none;color:#163a7a}
     .r2-plbl{flex:1;cursor:pointer}
     .r2-cnt{font-size:11px;color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0}
     /* CAMPOS y BOTONES: más adentro, letra chica */
-    .r2-hijos{margin-left:30px;padding:2px 12px 8px;border-left:2px dashed var(--b1)}
+    .r2-hijos{padding:4px 12px 8px 60px;background:var(--s1,#fff);border-top:1px solid #b9cdf3}
     .r2-sub{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--t3);margin:6px 0 2px}
     .r2-hrow{display:flex;align-items:center;gap:10px;padding:3px 0;font-size:12px;cursor:pointer;font-weight:400}
     .r2-tag{margin-left:auto;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;white-space:nowrap;text-transform:none;letter-spacing:0}
