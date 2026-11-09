@@ -44,17 +44,27 @@ function _r2Campos(sub, tabla){
   ((typeof COL_DEFS!=='undefined'&&COL_DEFS[g])||[]).forEach(d=>add(d.field, d.label));
   return out;
 }
-function _r2Arbol(){
-  const menus=[], porMenu={};
-  document.querySelectorAll('.dd-item[id^="ddi-"]').forEach(b=>{
-    const m=(b.closest('.dd-wrap')?.querySelector('.dd-btn')?.textContent||'Otros').trim();
-    if(!porMenu[m]){ porMenu[m]={ menu:m, pants:[] }; menus.push(porMenu[m]); }
-    const sub=b.id.replace('ddi-','');
-    const tabla=_r2TablaDe(sub);
-    const campos=_r2Campos(sub, tabla);
-    porMenu[m].pants.push({ sub, label:(b.textContent||'').trim(), campos, botones:(typeof reglBotones==='function'?reglBotones(sub):[]) });
+// MENÚS = los de la barra de arriba (Artículos, Clientes, Compras, Ventas,
+// Cobranzas, Dashboard, Utilidades, IA) y adentro sus submenús.
+function r2Menus(){
+  const out=[];
+  document.querySelectorAll('.topnav .tnav, nav .tnav, .tnav').forEach(t=>{
+    if(out.some(m=>m.el===t)) return;
+    const lbl=(t.childNodes[0]?.textContent||t.textContent||'').replace('▼','').trim();
+    const dd=(t.getAttribute('onclick')||'').match(/toggleDD\('([^']+)'/);
+    if(dd){
+      const subs=[...document.querySelectorAll('#'+dd[1]+' .dd-item[id^="ddi-"]')].map(b=>({ sub:b.id.replace('ddi-',''), label:(b.textContent||'').trim() }));
+      if(subs.length) out.push({ el:t, menu:lbl, subs });
+    } else if(t.id==='ddi-dash') out.push({ el:t, menu:lbl, subs:[{ sub:'dash', label:lbl }] });
+    else if(t.id==='tnav-ia')    out.push({ el:t, menu:lbl, subs:[{ sub:'psgv', label:'✨ Preguntale a SGV' }] });
   });
-  return menus;
+  return out;
+}
+function _r2Arbol(){
+  return r2Menus().map(m=>({ menu:m.menu, pants:m.subs.map(p=>{
+    const tabla=_r2TablaDe(p.sub);
+    return { sub:p.sub, label:p.label, campos:_r2Campos(p.sub, tabla), botones:(typeof reglBotones==='function'?reglBotones(p.sub):[]) };
+  }) }));
 }
 
 // ── Estado ──

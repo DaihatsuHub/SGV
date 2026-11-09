@@ -65,9 +65,8 @@ const REGL_BTN_DIN = { fac:[['fac-afip','⚡ Autorizar AFIP'],['fac-imprimir','�
    ['fac-borrador','📄 Factura de Borrador (al cargar)'],['fac-importar','📥 Importar Excel (al cargar)']] };
 
 function reglPantallas(){
-  return [...document.querySelectorAll('.dd-item[id^="ddi-"]')].map(b=>({
-    sub: b.id.replace('ddi-',''), label:(b.textContent||'').trim(),
-    menu:(b.closest('.dd-wrap')?.querySelector('.dd-btn')?.textContent||'').trim() }));
+  if(typeof r2Menus==='function') return r2Menus().flatMap(m=>m.subs.map(p=>({ ...p, menu:m.menu })));
+  return [...document.querySelectorAll('.dd-item[id^="ddi-"]')].map(b=>({ sub:b.id.replace('ddi-',''), label:(b.textContent||'').trim(), menu:'' }));
 }
 // Botones de UNA pantalla
 function reglBotones(sub){
