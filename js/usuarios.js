@@ -129,6 +129,9 @@ async function aplicarReglasMenu(){
     const r = await apiGet('/mis-reglas');
     if(!r || !r.ok) return;
     if(typeof sgvMarcarBotones==='function') sgvMarcarBotones();
+    // Modo prueba "sólo grupo": se vuelven a aplicar los permisos (ahora todo
+    // habilitado) y después el grupo oculta lo que corresponde
+    if((r.menu||[]).includes('cfg:solo-grupo') && typeof aplicarPermisos==='function') aplicarPermisos();
     window.MIS_REGLAS = r;
     // Si sólo puede ver ciertos vendedores, se recorta la tabla VEND: con eso
     // TODOS los selectores de vendedor de TODOS los informes dejan de ofrecer

@@ -93,7 +93,11 @@ function r2Pintar(){
   const chk=(est,fn)=>{ const on=_r2Modo==='no'?est==='si':est==='no';
     return `<input type="checkbox" ${on?'checked':''} onclick="event.stopPropagation()" onchange="${fn}" data-parcial="${est==='parcial'?1:0}">`; };
   const tag=est=>est==='si'?'<span class="r2-tag no">No lo ve</span>':est==='parcial'?'<span class="r2-tag par">En parte</span>':'<span class="r2-tag si">Lo ve</span>';
-  body.innerHTML=`<div class="r2-cab">${_r2Modo==='no'
+  const solo=_r2MenuOc('cfg:solo-grupo');
+  body.innerHTML=`<label class="r2-solo${solo?' on':''}"><input type="checkbox" ${solo?'checked':''} onchange="_r2Set([{k:'m',id:'cfg:solo-grupo'}],this.checked)">
+      🧪 <b>Modo prueba:</b> el grupo ${esc(_r2Grupo)} se rige <b>SÓLO por esta pantalla</b> (no cuentan los Permisos por nivel).
+      ${solo?'<span class="r2-tag no" style="margin-left:8px">ACTIVO</span>':''}</label>`
+   + `<div class="r2-cab">${_r2Modo==='no'
       ?`Tildá lo que el grupo <b>${esc(_r2Grupo)}</b> <b>NO</b> ve.`
       :`Tildá lo que el grupo <b>${esc(_r2Grupo)}</b> <b>SÍ</b> ve (lo destildado no lo ve).`}
      Tildar un menú o una pantalla marca todo lo que tiene adentro.</div>`
@@ -125,6 +129,9 @@ function _r2Style(){
   const st=document.createElement('style'); st.id='r2-style';
   st.textContent=`
     .r2-cab{padding:10px 14px;font-size:12px;color:var(--t2)}
+    .r2-solo{display:flex;align-items:center;gap:8px;margin:10px 12px 0;padding:10px 12px;border-radius:8px;font-size:13px;cursor:pointer;
+      background:rgba(239,159,39,.10);border:1px solid rgba(239,159,39,.4)}
+    .r2-solo.on{background:rgba(239,159,39,.25);border-width:2px}
     .r2-mlbl{flex:1;cursor:pointer}
     .r2-menu{margin:10px 12px;border:2px solid var(--acc);border-radius:10px;overflow:hidden}
     .r2-mrow{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--acc);color:#fff;font-size:15px;cursor:pointer}

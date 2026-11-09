@@ -30,6 +30,9 @@ function puedeh(modulo, accion) {
   if (!usuarioActual) return false;
   const nivel = nivelEfectivo();
   if (nivel >= 99) return true;   // superusuario por NIVEL real (no por código, que es falseable)
+  // Modo prueba "sólo grupo": no cuentan los permisos por nivel; manda el grupo
+  const _mr=(window.MIS_REGLAS&&window.MIS_REGLAS.menu)||[];
+  if (_mr.includes('cfg:solo-grupo')) return !_mr.includes(modulo);
   const p = _permisos.find(x => x.modulo === modulo && x.accion === accion);
   if (!p) return false;
   return nivel >= (p.nivel_min || 99);
