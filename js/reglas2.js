@@ -25,7 +25,7 @@ async function r2Cargar(){
   try{ const r=await apiGet('/reglas'); if(!r.ok) throw new Error(r.error||'Error'); _r2Data=r; r2Pintar(); }
   catch(e){ body.innerHTML='<div class="empty" style="margin-top:30px">⚠️ '+esc(e.message)+'</div>'; }
 }
-function r2OnGrupo(){ _r2Grupo=(document.getElementById('r2-grupo')?.value||'').trim(); r2Pintar(); }
+function r2OnGrupo(){ _r2Grupo=(document.getElementById('r2-grupo')?.value||'').trim(); r2Pintar(); _r2Corregir(); }
 
 // ── Qué hay en cada pantalla ──
 // Tabla de cada pantalla y TODOS sus campos: los de la lista de reglas más
@@ -124,7 +124,20 @@ function r2Item(i, j, k, on){
   // Habilitar un campo o botón habilita también ENTRAR a la pantalla (si no, no serviría)
   _r2Set(on && _r2MenuOc(p.sub) ? [it, { k:'m', id:p.sub }] : [it], !on);
 }
-function r2Entrar(i, j, on){ _r2Set([{ k:'m', id:_R2[i].pants[j].sub }], !on); }
+// Apagar la entrada apaga todo lo de adentro; prenderla sólo habilita entrar
+function r2Entrar(i, j, on){ const p=_R2[i].pants[j]; _r2Set(on ? [{ k:'m', id:p.sub }] : _r2Todo(p), !on); }
+
+// "EN PARTE" = ENTRA y sólo no ve lo destildado (Ricardo, Nov 2026). Si una
+// pantalla tiene algo habilitado adentro pero la entrada apagada (quedó así de
+// antes), se le habilita la entrada.
+async function _r2Corregir(){
+  if(!_r2Grupo) return;
+  const fix=[];
+  _r2Arbol().forEach(m=>m.pants.forEach(p=>{
+    if(_r2MenuOc(p.sub) && _r2Todo(p).slice(1).some(x=>!_r2Oc(x))) fix.push({ k:'m', id:p.sub });
+  }));
+  if(fix.length){ await _r2Set(fix, false); toast(`${fix.length} pantalla(s) "en parte" quedaron con entrada habilitada`,'scs'); }
+}
 function r2AbrirMenu(i){ const m=_R2[i]?.menu; if(!m) return; _r2MenuAb.has(m)?_r2MenuAb.delete(m):_r2MenuAb.add(m); r2Pintar(); }
 function r2Abrir(sub){ _r2Abiertos.has(sub)?_r2Abiertos.delete(sub):_r2Abiertos.add(sub); r2Pintar(); }
 
