@@ -358,3 +358,6 @@ function sgvFillVendCcos(pref){
     el.dataset.ok='1'; };
   llenar(pref+'-vend','VEND'); llenar(pref+'-ccos','CCOS');
 }
+
+// ¿El grupo del usuario tiene oculto este botón? (reglas 'btn:<id>')
+function sgvBtnOculto(id){ return ((window.MIS_REGLAS&&window.MIS_REGLAS.menu)||[]).includes('btn:'+id); }

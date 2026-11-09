@@ -26,8 +26,11 @@ const REGL_CAMPOS = {
     ['cli_dto',    'Descuento'],
     ['cli_obs',    'Observaciones'],
     ['cli_incob',  'Marca de incobrable'],
-    ['cli_preinc', 'Marca de pre-incobrable'],
-    ['cli_abc',    'Categoría ABC'],
+    ['cli_nodar',  'Marca de no vender'],
+    ['cli_abc',    'Grupo de Compras'],
+    ['cli_cate',   'Categoría'],
+    ['cli_fcred',  'Vencimiento del crédito'],
+    ['cli_ent_domic', 'Domicilio de entrega'],
     ['cli_email',  'E-mail']
   ]},
   facturas: { label:'Facturas', campos:[
@@ -63,6 +66,12 @@ function reglItemsMenu(){
   [...document.querySelectorAll('[data-regla]')].forEach(b=>{
     items.push({ id:'btn:'+b.dataset.regla, label:(b.textContent||'').trim(),
                  menu:'Botones dentro de las pantallas' });
+  });
+  // Botones que se ARMAN al abrir una pantalla (no están en el HTML de entrada)
+  [['fac-remito','🚚 Remito (Facturación)'],['fac-borrador','📄 Factura de Borrador (Facturación)'],
+   ['fac-importar','📥 Importar Excel (Facturación)'],['fac-firmar','✍ Firmar (Facturación)'],
+   ['fac-comentario','💬 Comentario (Facturación)']].forEach(([id,l])=>{
+    if(!items.find(x=>x.id==='btn:'+id)) items.push({ id:'btn:'+id, label:l, menu:'Botones dentro de las pantallas' });
   });
   return items;
 }
