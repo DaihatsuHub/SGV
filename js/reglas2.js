@@ -120,13 +120,15 @@ function _r2Style(){
   const st=document.createElement('style'); st.id='r2-style';
   st.textContent=`
     .r2-cab{padding:10px 14px;font-size:12px;color:var(--t2)}
-    .r2-menu{margin:8px 12px;border:1px solid var(--b1);border-radius:10px;overflow:hidden}
-    .r2-mrow{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--s2);font-size:14px;cursor:pointer}
-    .r2-pant{border-top:1px solid var(--b1)}
-    .r2-prow{display:flex;align-items:center;gap:10px;padding:6px 12px 6px 34px;font-size:13px}
+    .r2-menu{margin:14px 12px;border:2px solid var(--acc);border-radius:10px;overflow:hidden}
+    .r2-mrow{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--acc);color:#fff;font-size:15px;cursor:pointer}
+    .r2-mrow .r2-tag{background:rgba(255,255,255,.9)}
+    .r2-pant{border-top:2px solid var(--b2,#c9d3e0)}
+    .r2-pant:first-of-type{border-top:0}
+    .r2-prow{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 30px;font-size:13px;font-weight:600;background:var(--s2)}
     .r2-plbl{flex:1;cursor:pointer}
     .r2-cnt{font-size:11px;color:var(--t3)}
-    .r2-hijos{padding:2px 12px 8px 64px;background:rgba(0,0,0,.02)}
+    .r2-hijos{padding:2px 12px 8px 64px;border-top:1px dashed var(--b1)}
     .r2-sub{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--t3);margin:6px 0 2px}
     .r2-hrow{display:flex;align-items:center;gap:10px;padding:3px 0;font-size:12px;cursor:pointer}
     .r2-tag{margin-left:auto;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;white-space:nowrap}
