@@ -1,0 +1,124 @@
+/* ===========================================================================
+   QUÉ VE CADA GRUPO — versión SIMPLE (prueba, Ricardo, Nov 2026)
+   Utilidades → 🧪 Qué ve cada grupo (nuevo). Convive con la actual: usa LAS
+   MISMAS reglas guardadas (grupo_reglas), así que no se pierde nada.
+   - Se elige el grupo y se ve el árbol: MENÚ → pantallas → Campos y Botones.
+   - Todo lo tildado = "No lo ve".
+   - Tildar un MENÚ (ej. Cobranzas) tilda todo lo que tiene adentro; tildar
+     una PANTALLA tilda sus campos y botones. Destildar, al revés.
+   =========================================================================== */
+
+let _r2Data = null, _r2Grupo = '', _r2Abiertos = new Set();
+
+function renderReglas2(){
+  _r2Style();
+  const gs=document.getElementById('r2-grupo');
+  if(gs && gs.options.length<=1){
+    gs.innerHTML='<option value="">— Elegí un grupo —</option>'
+      +(((typeof TABLAS!=='undefined'&&TABLAS['GRTR'])||[]).map(g=>`<option value="${esc(g.CODIGO)}">${esc(g.CODIGO)} — ${esc(g.DETALLE)}</option>`).join(''));
+  }
+  r2Cargar();
+}
+async function r2Cargar(){
+  const body=document.getElementById('r2-body'); if(!body) return;
+  try{ const r=await apiGet('/reglas'); if(!r.ok) throw new Error(r.error||'Error'); _r2Data=r; r2Pintar(); }
+  catch(e){ body.innerHTML='<div class="empty" style="margin-top:30px">⚠️ '+esc(e.message)+'</div>'; }
+}
+function r2OnGrupo(){ _r2Grupo=(document.getElementById('r2-grupo')?.value||'').trim(); r2Pintar(); }
+
+// ── Qué hay en cada pantalla ──
+function _r2Arbol(){
+  const menus=[], porMenu={};
+  document.querySelectorAll('.dd-item[id^="ddi-"]').forEach(b=>{
+    const m=(b.closest('.dd-wrap')?.querySelector('.dd-btn')?.textContent||'Otros').trim();
+    if(!porMenu[m]){ porMenu[m]={ menu:m, pants:[] }; menus.push(porMenu[m]); }
+    const sub=b.id.replace('ddi-','');
+    const tabla=(typeof REGL_TABLA_DE!=='undefined'&&REGL_TABLA_DE[sub])||'';
+    const campos=tabla && typeof REGL_CAMPOS!=='undefined' && REGL_CAMPOS[tabla] ? REGL_CAMPOS[tabla].campos.map(([c,l])=>({ tabla, campo:c, label:l })) : [];
+    porMenu[m].pants.push({ sub, label:(b.textContent||'').trim(), campos, botones:(typeof reglBotones==='function'?reglBotones(sub):[]) });
+  });
+  return menus;
+}
+
+// ── Estado ──
+const _r2MenuOc  = id => (_r2Data?.grupo||[]).some(r=>r.grupo===_r2Grupo&&(r.tipo||'')==='menu'&&r.campo===id);
+const _r2CampoOc = (t,c) => (_r2Data?.grupo||[]).some(r=>r.grupo===_r2Grupo&&r.tabla===t&&(r.tipo||'campo')==='campo'&&r.campo===c);
+// Todo lo de una pantalla: ella, sus campos y sus botones
+const _r2Todo = p => [{ k:'m', id:p.sub }, ...p.botones.map(b=>({ k:'m', id:b.id })), ...p.campos.map(c=>({ k:'c', t:c.tabla, id:c.campo }))];
+const _r2Oc = x => x.k==='m' ? _r2MenuOc(x.id) : _r2CampoOc(x.t, x.id);
+function _r2Estado(lista){ const n=lista.filter(_r2Oc).length; return n===0?'no':(n===lista.length?'si':'parcial'); }
+
+// ── Guardar (una o muchas reglas) ──
+async function _r2Set(lista, ocultar){
+  if(!_r2Grupo){ toast('Elegí un grupo','err'); return; }
+  const cambiar=lista.filter(x=>_r2Oc(x)!==ocultar);
+  if(!cambiar.length) return;
+  const body=document.getElementById('r2-body'); body.style.opacity='.6';
+  try{
+    for(const x of cambiar){
+      const p = x.k==='m' ? { grupo:_r2Grupo, tabla:'menu', tipo:'menu', campo:x.id, quitar:!ocultar }
+                          : { grupo:_r2Grupo, tabla:x.t, campo:x.id, quitar:!ocultar };
+      const r=await apiPost('/reglas/guardar',p);
+      if(!r||r.ok===false) throw new Error((r&&r.error)||'No se pudo guardar');
+      const tabla = x.k==='m' ? 'menu' : x.t, tipo = x.k==='m' ? 'menu' : 'campo';
+      _r2Data.grupo=(_r2Data.grupo||[]).filter(g=>!(g.grupo===_r2Grupo&&g.tabla===tabla&&(g.tipo||'campo')===tipo&&g.campo===x.id));
+      if(ocultar) _r2Data.grupo.push({ grupo:_r2Grupo, tabla, tipo, campo:x.id });
+    }
+    toast(ocultar?`${cambiar.length} oculto(s)`:`${cambiar.length} visible(s) de nuevo`,'scs');
+  }catch(e){ toast('Error: '+e.message,'err'); }
+  body.style.opacity=''; r2Pintar();
+}
+let _R2 = [];   // árbol pintado (para los onclick)
+function r2Menu(i, on){ _r2Set(_R2[i].pants.flatMap(_r2Todo), on); }
+function r2Pant(i, j, on){ _r2Set(_r2Todo(_R2[i].pants[j]), on); }
+function r2Item(i, j, k, on){ const p=_R2[i].pants[j]; _r2Set([_r2Todo(p).slice(1)[k]], on); }
+function r2Abrir(sub){ _r2Abiertos.has(sub)?_r2Abiertos.delete(sub):_r2Abiertos.add(sub); r2Pintar(); }
+
+function r2Pintar(){
+  const body=document.getElementById('r2-body'); if(!body) return;
+  if(!_r2Grupo){ body.innerHTML='<div class="empty" style="margin-top:30px">Elegí un grupo</div>'; return; }
+  _R2=_r2Arbol();
+  const chk=(est,fn)=>`<input type="checkbox" ${est==='si'?'checked':''} onclick="event.stopPropagation()" onchange="${fn}" data-parcial="${est==='parcial'?1:0}">`;
+  const tag=est=>est==='si'?'<span class="r2-tag no">No lo ve</span>':est==='parcial'?'<span class="r2-tag par">En parte</span>':'<span class="r2-tag si">Lo ve</span>';
+  body.innerHTML=`<div class="r2-cab">Tildá lo que el grupo <b>${esc(_r2Grupo)}</b> <b>NO</b> ve. Tildar un menú o una pantalla tilda todo lo que tiene adentro.</div>`
+   + _R2.map((m,i)=>{
+      const em=_r2Estado(m.pants.flatMap(_r2Todo));
+      return `<div class="r2-menu"><label class="r2-mrow">${chk(em,`r2Menu(${i},this.checked)`)}<b>${esc(m.menu)}</b>${tag(em)}</label>`
+      + m.pants.map((p,j)=>{
+          const todo=_r2Todo(p), ep=_r2Estado(todo), ab=_r2Abiertos.has(p.sub), hijos=todo.slice(1);
+          return `<div class="r2-pant"><div class="r2-prow">${chk(ep,`r2Pant(${i},${j},this.checked)`)}
+              <span class="r2-plbl" onclick="r2Abrir('${p.sub}')">${hijos.length?(ab?'▾':'▸'):'·'} ${esc(p.label)}</span>
+              <span class="r2-cnt">${p.campos.length?p.campos.length+' campos · ':''}${p.botones.length} botones</span>${tag(ep)}</div>`
+            + (ab&&hijos.length ? `<div class="r2-hijos">`
+                + (p.campos.length?`<div class="r2-sub">Campos</div>`+p.campos.map((c,k)=>{ const on=_r2CampoOc(c.tabla,c.campo);
+                    return `<label class="r2-hrow">${chk(on?'si':'no',`r2Item(${i},${j},${p.botones.length+k},this.checked)`)}${esc(c.label)}${tag(on?'si':'no')}</label>`; }).join(''):'')
+                + (p.botones.length?`<div class="r2-sub">Botones</div>`+p.botones.map((b,k)=>{ const on=_r2MenuOc(b.id);
+                    return `<label class="r2-hrow">${chk(on?'si':'no',`r2Item(${i},${j},${k},this.checked)`)}${esc(b.label)}${tag(on?'si':'no')}</label>`; }).join(''):'')
+              + `</div>` : '')
+            + `</div>`;
+        }).join('') + `</div>`;
+    }).join('');
+  body.querySelectorAll('input[data-parcial="1"]').forEach(x=>{ x.indeterminate=true; });
+}
+
+function _r2Style(){
+  if(document.getElementById('r2-style')) return;
+  const st=document.createElement('style'); st.id='r2-style';
+  st.textContent=`
+    .r2-cab{padding:10px 14px;font-size:12px;color:var(--t2)}
+    .r2-menu{margin:8px 12px;border:1px solid var(--b1);border-radius:10px;overflow:hidden}
+    .r2-mrow{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--s2);font-size:14px;cursor:pointer}
+    .r2-pant{border-top:1px solid var(--b1)}
+    .r2-prow{display:flex;align-items:center;gap:10px;padding:6px 12px 6px 34px;font-size:13px}
+    .r2-plbl{flex:1;cursor:pointer}
+    .r2-cnt{font-size:11px;color:var(--t3)}
+    .r2-hijos{padding:2px 12px 8px 64px;background:rgba(0,0,0,.02)}
+    .r2-sub{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--t3);margin:6px 0 2px}
+    .r2-hrow{display:flex;align-items:center;gap:10px;padding:3px 0;font-size:12px;cursor:pointer}
+    .r2-tag{margin-left:auto;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;white-space:nowrap}
+    .r2-tag.si{background:rgba(29,158,117,.12);color:#0F6E56}
+    .r2-tag.no{background:rgba(226,75,74,.12);color:#A32D2D}
+    .r2-tag.par{background:rgba(239,159,39,.15);color:#854F0B}
+  `;
+  document.head.appendChild(st);
+}

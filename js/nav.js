@@ -55,6 +55,7 @@ function showSubPage(menu, sub) {
   else if (sub==='estu') renderTabGral('ESTU');
   else if (sub==='mstk') { if(typeof renderMovStock==='function') renderMovStock(); }
   else if (sub==='grtr') renderTabGral('GRTR');
+  else if (sub==='regl2') { if(typeof renderReglas2==='function') renderReglas2(); }
   else if (sub==='regl') { if(typeof renderReglas==='function') renderReglas(); }
   else if (sub==='gast') { if(typeof renderGastos==='function') renderGastos(); }
   else if (sub==='prov') renderTabGral('PROV');

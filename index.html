@@ -183,6 +183,7 @@
         <button class="dd-item" id="ddi-usua" onclick="showSubPage('util','usua')">🔑 Usuarios</button>
         <button class="dd-item" id="ddi-grtr" onclick="showSubPage('util','grtr')">👥 Grupos de Trabajo</button>
         <button class="dd-item" id="ddi-regl" onclick="showSubPage('util','regl')">🔒 Qué ve cada grupo</button>
+        <button class="dd-item" id="ddi-regl2" onclick="showSubPage('util','regl2')">🧪 Qué ve cada grupo (nuevo)</button>
         <button class="dd-item" id="btn-permisos" onclick="utilRun(openPermisos)">🛡️ Permisos</button>
         <button class="dd-item" id="ddi-edd" onclick="showSubPage('util','edd')">🧮 Editor de datos</button>
       </div>
@@ -397,6 +398,16 @@
     <div class="th-tab"><span>Código</span><span>Concepto</span><span></span><span></span></div>
     <div class="tbl-body" id="cgas-body"></div>
   </div>
+</div>
+
+<div class="page" id="page-regl2">
+  <div class="toolbar">
+    <span style="font-weight:600;font-size:14px;color:var(--acc)">🧪 Qué ve cada grupo (nuevo)</span>
+    <select class="fsel" id="r2-grupo" style="width:240px" onchange="r2OnGrupo()"><option value="">— Elegí un grupo —</option></select>
+    <div class="spacer"></div>
+    <span style="font-size:11px;color:var(--t3)">Prueba · usa las mismas reglas que la pantalla actual</span>
+  </div>
+  <div class="tbl-wrap"><div id="r2-body" class="tbl-body"></div></div>
 </div>
 
 <div class="page" id="page-regl">
@@ -2429,6 +2440,7 @@
 <script src="js/tablas.js"></script>
 <script src="js/usuarios.js"></script>
 <script src="js/reglas.js"></script>
+<script src="js/reglas2.js"></script>
 <script src="js/permisos.js"></script>
 <script src="js/facturacion.js"></script>
 <script src="js/despachos.js"></script>

@@ -202,6 +202,7 @@ const MENU_DEF = [
     { id:'ddi-usua',   mod:'usuarios', label:'🔑 Usuarios' },
     { id:'ddi-grtr',   mod:'grtr',     label:'👥 Grupos de Trabajo', tabla:true },
     { id:'ddi-regl',   mod:'regl',     label:'🔒 Qué ve cada grupo' },
+    { id:'ddi-regl2',  nivelMin:88,    label:'🧪 Qué ve cada grupo (nuevo)' },
     { id:'btn-permisos', nivelMin:88,  label:'🛡️ Permisos' },
     { id:'ddi-edd',      nivelMin:99,  label:'🧮 Editor de datos' },
   ]},
