@@ -975,6 +975,9 @@
     <button class="btn" onclick="cartExcel()">📥 Excel</button>
     <div class="spacer"></div>
     <span style="font-size:12px;color:var(--t3);margin-right:10px">Sel: <b id="cart-selcount2" style="color:var(--acc)">0</b> · <b id="cart-seltotal" style="color:var(--acc);font-family:var(--mono)">0,00</b> &nbsp;|&nbsp; Cheques: <b id="cart-count" style="color:var(--txt)">0</b> · Total: <b id="cart-total" style="color:var(--txt);font-family:var(--mono)">0,00</b></span>
+    <div class="srch-wrap" style="margin-right:6px"><span class="srch-ico">$</span>
+      <input class="srch" id="cart-imp" style="width:120px;text-align:right" placeholder="Importe + Enter" inputmode="decimal" onkeydown="if(event.key==='Enter'){event.preventDefault();cheqBuscarImporte()}">
+    </div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" onfocus="this.select()" onclick="this.select()" id="cart-q" placeholder="Buscar cheque, cliente o recibo..." oninput="renderCart()">
       <button class="srch-clr" onclick="clrSrch('cart-q',function(){renderCart()})" title="Limpiar">✕</button>

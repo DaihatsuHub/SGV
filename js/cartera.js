@@ -111,6 +111,27 @@ function getCheqRows(){
   return list;
 }
 
+// Buscador por importe: Enter ordena la grilla por importe, se posiciona
+// en el cheque de importe más cercano y blanquea el campo.
+function cheqBuscarImporte(){
+  const inp=document.getElementById('cart-imp'); if(!inp) return;
+  let t=(inp.value||'').trim().replace(/[$\s]/g,'');
+  inp.value='';
+  if(!t) return;
+  if(t.includes(',')) t=t.replace(/\./g,'').replace(',','.');
+  else if((t.match(/\./g)||[]).length>1) t=t.replace(/\./g,'');
+  const v=parseFloat(t);
+  if(isNaN(v)){ toast('Importe no válido','err'); return; }
+  SORT_STATE.cart={col:'CHQ_IMP',asc:true};
+  const list=getCheqRows();
+  if(!list.length){ renderCart(); return; }
+  let best=0, dif=Infinity;
+  list.forEach((c,i)=>{ const d=Math.abs((c.importe||0)-v); if(d<dif){ dif=d; best=i; } });
+  cheqSelIdx=best;
+  renderCart();
+  document.getElementById('cart-body')?.querySelector(`[data-idx="${best}"]`)?.scrollIntoView({block:'center'});
+}
+
 function renderCart(){
   const body=document.getElementById('cart-body'); if(!body) return;
   // Sólo se traen los cheques del filtro (no todos los recibos con sus renglones)
