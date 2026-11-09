@@ -141,26 +141,29 @@ function r2Pintar(){
 }
 
 function _r2Style(){
-  if(document.getElementById('r2-style')) return;
+  document.getElementById('r2-style')?.remove();
   const st=document.createElement('style'); st.id='r2-style';
   st.textContent=`
     .r2-cab{padding:10px 14px;font-size:12px;color:var(--t2)}
     .r2-solo{display:flex;align-items:center;gap:8px;margin:10px 12px 0;padding:10px 12px;border-radius:8px;font-size:13px;cursor:pointer;
       background:rgba(239,159,39,.10);border:1px solid rgba(239,159,39,.4)}
     .r2-solo.on{background:rgba(239,159,39,.25);border-width:2px}
+    /* MENÚ: barra azul, mayúsculas */
+    .r2-menu{margin:10px 12px;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+    .r2-mrow{display:flex;align-items:center;gap:10px;padding:11px 14px;background:#1a5bd6;color:#fff;
+      font-size:15px;text-transform:uppercase;letter-spacing:.6px;cursor:pointer}
     .r2-mlbl{flex:1;cursor:pointer}
-    .r2-menu{margin:10px 12px;border:2px solid var(--acc);border-radius:10px;overflow:hidden}
-    .r2-mrow{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--acc);color:#fff;font-size:15px;cursor:pointer}
-    .r2-mrow .r2-tag{background:rgba(255,255,255,.9)}
-    .r2-pant{border-top:2px solid var(--b2,#c9d3e0)}
-    .r2-pant:first-of-type{border-top:0}
-    .r2-prow{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 30px;font-size:13px;font-weight:600;background:var(--s2)}
+    .r2-mrow .r2-tag{background:#fff}
+    /* SUBMENÚ: renglón blanco con raya azul a la izquierda, metido adentro */
+    .r2-pant{margin:0 0 0 22px;border-left:4px solid #8fb3f5;border-bottom:1px solid var(--b1);background:var(--s1)}
+    .r2-prow{display:flex;align-items:center;gap:10px;padding:8px 12px;font-size:13px;font-weight:600;text-transform:none}
     .r2-plbl{flex:1;cursor:pointer}
-    .r2-cnt{font-size:11px;color:var(--t3)}
-    .r2-hijos{padding:2px 12px 8px 64px;border-top:1px dashed var(--b1)}
+    .r2-cnt{font-size:11px;color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0}
+    /* CAMPOS y BOTONES: más adentro, letra chica */
+    .r2-hijos{margin-left:30px;padding:2px 12px 8px;border-left:2px dashed var(--b1)}
     .r2-sub{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--t3);margin:6px 0 2px}
-    .r2-hrow{display:flex;align-items:center;gap:10px;padding:3px 0;font-size:12px;cursor:pointer}
-    .r2-tag{margin-left:auto;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;white-space:nowrap}
+    .r2-hrow{display:flex;align-items:center;gap:10px;padding:3px 0;font-size:12px;cursor:pointer;font-weight:400}
+    .r2-tag{margin-left:auto;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;white-space:nowrap;text-transform:none;letter-spacing:0}
     .r2-tag.si{background:rgba(29,158,117,.12);color:#0F6E56}
     .r2-tag.no{background:rgba(226,75,74,.12);color:#A32D2D}
     .r2-tag.par{background:rgba(239,159,39,.15);color:#854F0B}
