@@ -105,10 +105,6 @@ async function loginOk() {
   }
   // Datos cargados → preparar y revelar la app
   document.getElementById('b-user').textContent = usuarioActual.codigo;
-  const ddiUsua = document.getElementById('ddi-usua');
-  if (ddiUsua) ddiUsua.style.display = usuarioActual.nivel > 80 ? 'block' : 'none';
-  const btnPerm = document.getElementById('btn-permisos');
-  if (btnPerm) btnPerm.style.display = usuarioActual.codigo === 'RGRDELTA' ? '' : 'none';
   if (typeof aplicarPermisos === 'function') aplicarPermisos();
   if (typeof sgvPermisosVista === 'function') sgvPermisosVista();   // lo que no puede hacer, no se muestra
   await aplicarReglasMenu();   // el grupo de trabajo puede esconder pantallas
@@ -134,8 +130,8 @@ async function aplicarReglasMenu(){
     // OJO: primero se guardan las reglas, después se reaplican los permisos
     // (antes se reaplicaban con las reglas sin cargar y mandaba el nivel)
     window.MIS_REGLAS = r;
-    if((r.menu||[]).includes('cfg:solo-grupo') && typeof aplicarPermisos==='function') aplicarPermisos();
-    if((r.menu||[]).includes('cfg:solo-grupo') && typeof sgvPermisosVista==='function') sgvPermisosVista();
+    if(typeof aplicarPermisos==='function') aplicarPermisos();
+    if(typeof sgvPermisosVista==='function') sgvPermisosVista();
     // Si sólo puede ver ciertos vendedores, se recorta la tabla VEND: con eso
     // TODOS los selectores de vendedor de TODOS los informes dejan de ofrecer
     // los que no corresponden, sin tocarlos uno por uno (Ricardo, Oct 2026).

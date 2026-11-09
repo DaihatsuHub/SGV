@@ -149,10 +149,7 @@ function r2Pintar(){
   const chk=(est,fn)=>{ const on=est==='no';   // tildado = lo ve
     return `<input type="checkbox" ${on?'checked':''} onclick="event.stopPropagation()" onchange="${fn}" data-parcial="${est==='parcial'?1:0}">`; };
   const tag=est=>est==='si'?'<span class="r2-tag no">No lo ve</span>':est==='parcial'?'<span class="r2-tag par">En parte</span>':'<span class="r2-tag si">Lo ve</span>';
-  const solo=_r2MenuOc('cfg:solo-grupo');
-  body.innerHTML=`<label class="r2-solo${solo?' on':''}"><input type="checkbox" ${solo?'checked':''} onchange="_r2Set([{k:'m',id:'cfg:solo-grupo'}],this.checked)">
-      🧪 <b>Modo prueba:</b> el grupo ${esc(_r2Grupo)} se rige <b>SÓLO por esta pantalla</b> (no cuentan los Permisos por nivel).
-      ${solo?'<span class="r2-tag no" style="margin-left:8px">ACTIVO</span>':''}</label>`
+  body.innerHTML=``
    + `<div class="r2-cab">✔ Tildado = el grupo <b>${esc(_r2Grupo)}</b> lo ve. Destildar un menú apaga todo lo que tiene adentro;
      después podés volver a tildar sólo lo que sí tiene que ver.</div>`
    + _R2.map((m,i)=>{

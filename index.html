@@ -179,12 +179,10 @@
     <div class="dd-wrap">
       <button class="tnav" id="tnav-util" onclick="toggleDD('dd-util',this)">🔧 Utilidades <span class="dd-arrow" id="arr-util">▼</span></button>
       <div class="dd-menu" id="dd-util">
-        <button class="dd-item" id="ddi-backup" onclick="utilRun(hacerBackup)">🗄️ Backup</button>
         <button class="dd-item" id="ddi-usua" onclick="showSubPage('util','usua')">🔑 Usuarios</button>
         <button class="dd-item" id="ddi-grtr" onclick="showSubPage('util','grtr')">👥 Grupos de Trabajo</button>
-        <button class="dd-item" id="ddi-regl" onclick="showSubPage('util','regl')">🔒 Qué ve cada grupo</button>
-        <button class="dd-item" id="ddi-regl2" onclick="showSubPage('util','regl2')">🧪 Qué ve cada grupo (nuevo)</button>
-        <button class="dd-item" id="btn-permisos" onclick="utilRun(openPermisos)">🛡️ Permisos</button>
+        <button class="dd-item" id="ddi-regl2" onclick="showSubPage('util','regl2')">🔒 Qué ve cada grupo</button>
+        <button class="dd-item" id="ddi-backup" onclick="utilRun(hacerBackup)">🗄️ Backup</button>
         <button class="dd-item" id="ddi-edd" onclick="showSubPage('util','edd')">🧮 Editor de datos</button>
       </div>
     </div>
@@ -402,10 +400,10 @@
 
 <div class="page" id="page-regl2">
   <div class="toolbar">
-    <span style="font-weight:600;font-size:14px;color:var(--acc)">🧪 Qué ve cada grupo (nuevo)</span>
+    <span style="font-weight:600;font-size:14px;color:var(--acc)">🔒 Qué ve cada grupo</span>
     <select class="fsel" id="r2-grupo" style="width:240px" onchange="r2OnGrupo()"><option value="">— Elegí un grupo —</option></select>
     <div class="spacer"></div>
-    <span style="font-size:11px;color:var(--t3)">Prueba · usa las mismas reglas que la pantalla actual</span>
+    <span style="font-size:11px;color:var(--t3)">Sin grupo, o grupo sin reglas = ve todo</span>
   </div>
   <div class="tbl-wrap"><div id="r2-body" class="tbl-body"></div></div>
 </div>

@@ -30,9 +30,11 @@ function puedeh(modulo, accion) {
   if (!usuarioActual) return false;
   const nivel = nivelEfectivo();
   if (nivel >= 99) return true;   // superusuario por NIVEL real (no por código, que es falseable)
-  // Modo prueba "sólo grupo": no cuentan los permisos por nivel; manda el grupo
+  // REGLA ÚNICA (Ricardo, Nov 2026): manda el GRUPO DE TRABAJO. Puede todo lo
+  // que su grupo no le oculte; sin grupo, o grupo sin reglas, ve todo. Los
+  // permisos por nivel ya no cuentan (salvo administración, por nivel mínimo).
   const _mr=(window.MIS_REGLAS&&window.MIS_REGLAS.menu)||[];
-  if (_mr.includes('cfg:solo-grupo')) return !_mr.includes(modulo);
+  return !_mr.includes(modulo);
   const p = _permisos.find(x => x.modulo === modulo && x.accion === accion);
   if (!p) return false;
   return nivel >= (p.nivel_min || 99);
@@ -201,13 +203,12 @@ const MENU_DEF = [
     { id:'ddi-dash', mod:'dash', label:'📊 Dashboard' },
   ]},
   { grupo:'🔧 Utilidades', tnav:'tnav-util', items:[
+    // Administración: sigue por NIVEL (no la abre cualquiera aunque no tenga grupo)
+    { id:'ddi-usua',   nivelMin:88,    label:'🔑 Usuarios' },
+    { id:'ddi-grtr',   nivelMin:88,    label:'👥 Grupos de Trabajo', tabla:true },
+    { id:'ddi-regl2',  nivelMin:88,    label:'🔒 Qué ve cada grupo' },
     { id:'ddi-backup', mod:'backup',   label:'🗄️ Backup' },
-    { id:'ddi-usua',   mod:'usuarios', label:'🔑 Usuarios' },
-    { id:'ddi-grtr',   mod:'grtr',     label:'👥 Grupos de Trabajo', tabla:true },
-    { id:'ddi-regl',   mod:'regl',     label:'🔒 Qué ve cada grupo' },
-    { id:'ddi-regl2',  nivelMin:88,    label:'🧪 Qué ve cada grupo (nuevo)' },
-    { id:'btn-permisos', nivelMin:88,  label:'🛡️ Permisos' },
-    { id:'ddi-edd',      nivelMin:99,  label:'🧮 Editor de datos' },
+    { id:'ddi-edd',    nivelMin:99,    label:'🧮 Editor de datos' },
   ]},
 ];
 
