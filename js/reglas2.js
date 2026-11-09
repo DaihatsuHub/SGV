@@ -74,6 +74,9 @@ const _r2CampoOc = (t,c) => (_r2Data?.grupo||[]).some(r=>r.grupo===_r2Grupo&&r.t
 const _r2Todo = p => [{ k:'m', id:p.sub }, ...p.botones.map(b=>({ k:'m', id:b.id })), ...p.campos.map(c=>({ k:'c', t:c.tabla, id:c.campo }))];
 const _r2Oc = x => x.k==='m' ? _r2MenuOc(x.id) : _r2CampoOc(x.t, x.id);
 function _r2Estado(lista){ const n=lista.filter(_r2Oc).length; return n===0?'no':(n===lista.length?'si':'parcial'); }
+// Una pantalla: si la ENTRADA está apagada, no la ve (aunque tenga cosas tildadas adentro)
+function _r2EstPant(p){ return _r2MenuOc(p.sub) ? 'si' : _r2Estado(_r2Todo(p)); }
+function _r2EstMenu(m){ const e=m.pants.map(_r2EstPant); return e.every(x=>x==='si')?'si':(e.every(x=>x==='no')?'no':'parcial'); }
 
 // ── Guardar (una o muchas reglas, de una sola vez) ──
 async function _r2Set(lista, ocultar){
@@ -116,7 +119,12 @@ const _r2OcultarEn = (modo, checked) => !checked;
 let _R2 = [];   // árbol pintado (para los onclick)
 function r2Menu(i, on){ _r2Set(_R2[i].pants.flatMap(_r2Todo), _r2OcultarEn(_r2ModoDe(_R2[i].menu), on)); }
 function r2Pant(i, j, on){ _r2Set(_r2Todo(_R2[i].pants[j]), _r2OcultarEn(_r2ModoDe(_R2[i].menu), on)); }
-function r2Item(i, j, k, on){ const p=_R2[i].pants[j]; _r2Set([_r2Todo(p).slice(1)[k]], _r2OcultarEn(_r2ModoDe(_R2[i].menu), on)); }
+function r2Item(i, j, k, on){
+  const p=_R2[i].pants[j], it=_r2Todo(p).slice(1)[k];
+  // Habilitar un campo o botón habilita también ENTRAR a la pantalla (si no, no serviría)
+  _r2Set(on && _r2MenuOc(p.sub) ? [it, { k:'m', id:p.sub }] : [it], !on);
+}
+function r2Entrar(i, j, on){ _r2Set([{ k:'m', id:_R2[i].pants[j].sub }], !on); }
 function r2AbrirMenu(i){ const m=_R2[i]?.menu; if(!m) return; _r2MenuAb.has(m)?_r2MenuAb.delete(m):_r2MenuAb.add(m); r2Pintar(); }
 function r2Abrir(sub){ _r2Abiertos.has(sub)?_r2Abiertos.delete(sub):_r2Abiertos.add(sub); r2Pintar(); }
 
@@ -135,18 +143,19 @@ function r2Pintar(){
    + `<div class="r2-cab">✔ Tildado = el grupo <b>${esc(_r2Grupo)}</b> lo ve. Destildar un menú apaga todo lo que tiene adentro;
      después podés volver a tildar sólo lo que sí tiene que ver.</div>`
    + _R2.map((m,i)=>{
-      const em=_r2Estado(m.pants.flatMap(_r2Todo));
+      const em=_r2EstMenu(m);
       const abM=_r2MenuAb.has(m.menu);
       const md='';
       return `<div class="r2-menu"><div class="r2-mrow">${chk(em,`r2Menu(${i},this.checked)`)}
           <b class="r2-mlbl" onclick="r2AbrirMenu(${i})">${abM?'▾':'▸'} ${esc(m.menu)}</b>
           ${md}<span class="r2-cnt" style="color:rgba(255,255,255,.8)">${m.pants.length} pantallas</span>${tag(em)}</div>`
       + (!abM ? '' : m.pants.map((p,j)=>{
-          const todo=_r2Todo(p), ep=_r2Estado(todo), ab=_r2Abiertos.has(p.sub), hijos=todo.slice(1);
+          const todo=_r2Todo(p), ep=_r2EstPant(p), ab=_r2Abiertos.has(p.sub), hijos=todo.slice(1);
           return `<div class="r2-pant"><div class="r2-prow">${chk(ep,`r2Pant(${i},${j},this.checked)`)}
-              <span class="r2-plbl" onclick="r2Abrir('${p.sub}')">${hijos.length?(ab?'▾':'▸'):'·'} ${esc(p.label)}</span>
+              <span class="r2-plbl" onclick="r2Abrir('${p.sub}')">${ab?'▾':'▸'} ${esc(p.label)}</span>
               <span class="r2-cnt">${p.campos.length?p.campos.length+' campos · ':''}${p.botones.length} botones</span>${tag(ep)}</div>`
-            + (ab&&hijos.length ? `<div class="r2-hijos">`
+            + (ab ? `<div class="r2-hijos">`
+                + `<label class="r2-hrow" style="font-weight:700">${chk(_r2MenuOc(p.sub)?'si':'no',`r2Entrar(${i},${j},this.checked)`)}🚪 Entrar a la pantalla${tag(_r2MenuOc(p.sub)?'si':'no')}</label>`
                 + (p.campos.length?`<div class="r2-sub">Campos</div>`+p.campos.map((c,k)=>{ const on=_r2CampoOc(c.tabla,c.campo);
                     return `<label class="r2-hrow">${chk(on?'si':'no',`r2Item(${i},${j},${p.botones.length+k},this.checked)`)}${esc(c.label)}${tag(on?'si':'no')}</label>`; }).join(''):'')
                 + (p.botones.length?`<div class="r2-sub">Botones</div>`+p.botones.map((b,k)=>{ const on=_r2MenuOc(b.id);
