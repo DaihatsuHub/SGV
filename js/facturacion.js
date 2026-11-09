@@ -776,13 +776,13 @@ async function renderFacDetalle(f, vista) {
   const caeInfo=f.fac_anul?'':f.fac_cae
     ?`<div style="background:#1a3a1a;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:#4ade80;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
         <span>✅ CAE: ${f.fac_cae} &nbsp;·&nbsp; Vto: ${f.fac_cae_vto||'—'}</span>
-        ${_esContable?`<button onclick="facImprimir('afip')" class="btn scs" style="padding:3px 10px;font-size:11px">🖨 Imprimir</button>`:''}
+        ${_esContable&&!sgvBtnOculto('fac-imprimir')?`<button onclick="facImprimir('afip')" class="btn scs" style="padding:3px 10px;font-size:11px">🖨 Imprimir</button>`:''}
       </div>`
     :esBorrador
       ?`<div style="background:#2a2a1a;border-radius:6px;padding:8px 12px;font-size:11px;color:#facc15;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
           <span>⚠️ Borrador — pendiente de autorización AFIP</span>
-          ${_esContable?`<button onclick="facImprimir('afip')" class="btn" style="padding:3px 10px;font-size:11px" title="Ver el formato factura antes de autorizar. Sale marcado SIN VALOR FISCAL.">🖨 Ver formato factura</button>`:''}
-          ${_esContable?`<button onclick="facAutorizarAfip('${f.fac_nro}')" class="btn pri" style="padding:3px 10px;font-size:11px;background:#b45309;border-color:#b45309">⚡ Autorizar AFIP</button>`:''}
+          ${_esContable&&!sgvBtnOculto('fac-verformato')?`<button onclick="facImprimir('afip')" class="btn" style="padding:3px 10px;font-size:11px" title="Ver el formato factura antes de autorizar. Sale marcado SIN VALOR FISCAL.">🖨 Ver formato factura</button>`:''}
+          ${_esContable&&!sgvBtnOculto('fac-afip')?`<button onclick="facAutorizarAfip('${f.fac_nro}')" class="btn pri" style="padding:3px 10px;font-size:11px;background:#b45309;border-color:#b45309">⚡ Autorizar AFIP</button>`:''}
         </div>`
       :'';
 
@@ -793,13 +793,13 @@ async function renderFacDetalle(f, vista) {
           <div style="font-size:18px;font-weight:700;color:var(--txt);letter-spacing:1px">${esc(empLabel)}</div>
           <div style="font-size:11px;color:var(--t3);margin-top:2px">I.V.A Responsable Inscripto</div>
           <div style="display:flex;flex-wrap:nowrap;gap:6px;margin-top:8px">
-          ${tipoChar==='C'?`<button onclick="ncAbrirAplicar('${f.fac_nro}')" class="btn pri" style="padding:5px 12px;font-size:12px;white-space:nowrap">📌 ${(f.fac_saldo||0)>0?'Aplicar saldo de NC':'Ver / cancelar aplicaciones'}</button>`:''}
+          ${tipoChar==='C'&&!sgvBtnOculto('fac-aplicarnc')?`<button onclick="ncAbrirAplicar('${f.fac_nro}')" class="btn pri" style="padding:5px 12px;font-size:12px;white-space:nowrap">📌 ${(f.fac_saldo||0)>0?'Aplicar saldo de NC':'Ver / cancelar aplicaciones'}</button>`:''}
           ${sgvBtnOculto('fac-comentario')?'':`<button onclick="facComentario('${f.fac_nro}')" class="btn" style="padding:5px 12px;font-size:12px;white-space:nowrap;${f.fac_coment?'background:#facc15;color:#1a1a1a;font-weight:600':''}" title="${f.fac_coment?esc(f.fac_coment):'Sin comentario'}">💬 Comentario</button>`}
-          ${(tieneDto||!esContable)?`<button onclick="facImprimirBorrador()" class="btn" style="padding:5px 12px;font-size:12px;background:var(--acc);color:#fff;white-space:nowrap">🖨 Imprimir Borrador</button>`:''}
-          ${_puedeAnular?`<button onclick="facAnular('${f.fac_nro}')" class="btn" style="padding:5px 12px;font-size:12px;background:var(--red);color:#fff;white-space:nowrap">🚫 Anular</button>`:''}
+          ${(tieneDto||!esContable)&&!sgvBtnOculto('fac-impborrador')?`<button onclick="facImprimirBorrador()" class="btn" style="padding:5px 12px;font-size:12px;background:var(--acc);color:#fff;white-space:nowrap">🖨 Imprimir Borrador</button>`:''}
+          ${_puedeAnular&&!sgvBtnOculto('fac-anular')?`<button onclick="facAnular('${f.fac_nro}')" class="btn" style="padding:5px 12px;font-size:12px;background:var(--red);color:#fff;white-space:nowrap">🚫 Anular</button>`:''}
           ${esFactura&&!sgvBtnOculto('fac-remito')?`<button onclick="if(typeof remAbrir==='function')remAbrir('${f.fac_nro}');else toast('Falta cargar remito.js','err')" class="btn" style="padding:5px 12px;font-size:12px;white-space:nowrap" title="Imprimir el remito preimpreso">🚚 Remito</button>`:''}
           ${esFactura&&!sgvBtnOculto('fac-firmar')?`<button onclick="facFirmar('${f.fac_nro}')" class="btn" style="padding:5px 12px;font-size:12px;white-space:nowrap;${(f.fac_preparo&&f.fac_controlo)?'background:#166534;color:#fff':''}" title="Preparó: ${esc(f.fac_preparo||'—')} · Controló: ${esc(f.fac_controlo||'—')}">✍ Firmar</button>`:''}
-          ${_puedeElim?`<button onclick="facEliminar('${f.fac_nro}')" class="btn" style="padding:5px 12px;font-size:12px;background:#7f1d1d;color:#fff;white-space:nowrap" title="Borra el comprobante y libera el número. Sólo dentro del mes.">🗑 Eliminar</button>`:''}
+          ${_puedeElim&&!sgvBtnOculto('fac-eliminar')?`<button onclick="facEliminar('${f.fac_nro}')" class="btn" style="padding:5px 12px;font-size:12px;background:#7f1d1d;color:#fff;white-space:nowrap" title="Borra el comprobante y libera el número. Sólo dentro del mes.">🗑 Eliminar</button>`:''}
           </div>
         </div>
         <div style="text-align:right">

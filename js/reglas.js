@@ -68,7 +68,10 @@ function reglItemsMenu(){
                  menu:'Botones dentro de las pantallas' });
   });
   // Botones que se ARMAN al abrir una pantalla (no están en el HTML de entrada)
-  [['fac-remito','🚚 Remito (Facturación)'],['fac-borrador','📄 Factura de Borrador (Facturación)'],
+  [['fac-afip','⚡ Autorizar AFIP (Facturación)'],['fac-imprimir','🖨 Imprimir factura autorizada (Facturación)'],
+   ['fac-verformato','🖨 Ver formato factura (Facturación)'],['fac-impborrador','🖨 Imprimir Borrador (Facturación)'],
+   ['fac-anular','🚫 Anular (Facturación)'],['fac-eliminar','🗑 Eliminar (Facturación)'],['fac-aplicarnc','📌 Aplicar NC (Facturación)'],
+   ['fac-remito','🚚 Remito (Facturación)'],['fac-borrador','📄 Factura de Borrador (Facturación)'],
    ['fac-importar','📥 Importar Excel (Facturación)'],['fac-firmar','✍ Firmar (Facturación)'],
    ['fac-comentario','💬 Comentario (Facturación)']].forEach(([id,l])=>{
     if(!items.find(x=>x.id==='btn:'+id)) items.push({ id:'btn:'+id, label:l, menu:'Botones dentro de las pantallas' });
