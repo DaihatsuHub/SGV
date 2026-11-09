@@ -48,39 +48,53 @@ const _r2Todo = p => [{ k:'m', id:p.sub }, ...p.botones.map(b=>({ k:'m', id:b.id
 const _r2Oc = x => x.k==='m' ? _r2MenuOc(x.id) : _r2CampoOc(x.t, x.id);
 function _r2Estado(lista){ const n=lista.filter(_r2Oc).length; return n===0?'no':(n===lista.length?'si':'parcial'); }
 
-// ── Guardar (una o muchas reglas) ──
+// ── Guardar (una o muchas reglas, de una sola vez) ──
 async function _r2Set(lista, ocultar){
   if(!_r2Grupo){ toast('Elegí un grupo','err'); return; }
   const cambiar=lista.filter(x=>_r2Oc(x)!==ocultar);
   if(!cambiar.length) return;
   const body=document.getElementById('r2-body'); body.style.opacity='.6';
   try{
-    for(const x of cambiar){
-      const p = x.k==='m' ? { grupo:_r2Grupo, tabla:'menu', tipo:'menu', campo:x.id, quitar:!ocultar }
-                          : { grupo:_r2Grupo, tabla:x.t, campo:x.id, quitar:!ocultar };
-      const r=await apiPost('/reglas/guardar',p);
-      if(!r||r.ok===false) throw new Error((r&&r.error)||'No se pudo guardar');
-      const tabla = x.k==='m' ? 'menu' : x.t, tipo = x.k==='m' ? 'menu' : 'campo';
-      _r2Data.grupo=(_r2Data.grupo||[]).filter(g=>!(g.grupo===_r2Grupo&&g.tabla===tabla&&(g.tipo||'campo')===tipo&&g.campo===x.id));
-      if(ocultar) _r2Data.grupo.push({ grupo:_r2Grupo, tabla, tipo, campo:x.id });
-    }
-    toast(ocultar?`${cambiar.length} oculto(s)`:`${cambiar.length} visible(s) de nuevo`,'scs');
+    const items=cambiar.map(x=>x.k==='m'?{ tabla:'menu', tipo:'menu', campo:x.id }:{ tabla:x.t, tipo:'campo', campo:x.id });
+    const r=await apiPost('/reglas/lote',{ grupo:_r2Grupo, ocultar, items });
+    if(!r||r.ok===false) throw new Error((r&&r.error)||'No se pudo guardar');
+    items.forEach(it=>{
+      _r2Data.grupo=(_r2Data.grupo||[]).filter(g=>!(g.grupo===_r2Grupo&&g.tabla===it.tabla&&(g.tipo||'campo')===it.tipo&&g.campo===it.campo));
+      if(ocultar) _r2Data.grupo.push({ grupo:_r2Grupo, ...it });
+    });
+    toast(ocultar?`${items.length} oculto(s)`:`${items.length} visible(s)`,'scs');
   }catch(e){ toast('Error: '+e.message,'err'); }
   body.style.opacity=''; r2Pintar();
 }
+// MODO (Ricardo, Nov 2026): marcar lo que NO ve, o ir por la negativa y
+// marcar lo que SÍ ve. Sólo cambia qué significa el tilde; lo guardado es igual.
+let _r2Modo='no';
+function r2Modo(m){ _r2Modo=m; document.querySelectorAll('.r2-modo').forEach(b=>b.classList.toggle('pri',b.dataset.m===m)); r2Pintar(); }
+// El tilde → ocultar o mostrar según el modo
+const _r2Ocultar = checked => _r2Modo==='no' ? checked : !checked;
+function r2Todo(ocultar){
+  const todo=_r2Arbol().flatMap(m=>m.pants.flatMap(_r2Todo));
+  if(!confirm(ocultar?`¿Ocultar TODO al grupo ${_r2Grupo}? Después marcás lo que sí ve.`:`¿Mostrar TODO al grupo ${_r2Grupo}?`)) return;
+  _r2Set(todo, ocultar);
+}
 let _R2 = [];   // árbol pintado (para los onclick)
-function r2Menu(i, on){ _r2Set(_R2[i].pants.flatMap(_r2Todo), on); }
-function r2Pant(i, j, on){ _r2Set(_r2Todo(_R2[i].pants[j]), on); }
-function r2Item(i, j, k, on){ const p=_R2[i].pants[j]; _r2Set([_r2Todo(p).slice(1)[k]], on); }
+function r2Menu(i, on){ _r2Set(_R2[i].pants.flatMap(_r2Todo), _r2Ocultar(on)); }
+function r2Pant(i, j, on){ _r2Set(_r2Todo(_R2[i].pants[j]), _r2Ocultar(on)); }
+function r2Item(i, j, k, on){ const p=_R2[i].pants[j]; _r2Set([_r2Todo(p).slice(1)[k]], _r2Ocultar(on)); }
 function r2Abrir(sub){ _r2Abiertos.has(sub)?_r2Abiertos.delete(sub):_r2Abiertos.add(sub); r2Pintar(); }
 
 function r2Pintar(){
   const body=document.getElementById('r2-body'); if(!body) return;
   if(!_r2Grupo){ body.innerHTML='<div class="empty" style="margin-top:30px">Elegí un grupo</div>'; return; }
   _R2=_r2Arbol();
-  const chk=(est,fn)=>`<input type="checkbox" ${est==='si'?'checked':''} onclick="event.stopPropagation()" onchange="${fn}" data-parcial="${est==='parcial'?1:0}">`;
+  // est = 'si' (oculto), 'no' (visible), 'parcial'. En modo "lo que SÍ ve" el tilde es lo visible.
+  const chk=(est,fn)=>{ const on=_r2Modo==='no'?est==='si':est==='no';
+    return `<input type="checkbox" ${on?'checked':''} onclick="event.stopPropagation()" onchange="${fn}" data-parcial="${est==='parcial'?1:0}">`; };
   const tag=est=>est==='si'?'<span class="r2-tag no">No lo ve</span>':est==='parcial'?'<span class="r2-tag par">En parte</span>':'<span class="r2-tag si">Lo ve</span>';
-  body.innerHTML=`<div class="r2-cab">Tildá lo que el grupo <b>${esc(_r2Grupo)}</b> <b>NO</b> ve. Tildar un menú o una pantalla tilda todo lo que tiene adentro.</div>`
+  body.innerHTML=`<div class="r2-cab">${_r2Modo==='no'
+      ?`Tildá lo que el grupo <b>${esc(_r2Grupo)}</b> <b>NO</b> ve.`
+      :`Tildá lo que el grupo <b>${esc(_r2Grupo)}</b> <b>SÍ</b> ve (lo destildado no lo ve).`}
+     Tildar un menú o una pantalla marca todo lo que tiene adentro.</div>`
    + _R2.map((m,i)=>{
       const em=_r2Estado(m.pants.flatMap(_r2Todo));
       return `<div class="r2-menu"><label class="r2-mrow">${chk(em,`r2Menu(${i},this.checked)`)}<b>${esc(m.menu)}</b>${tag(em)}</label>`
