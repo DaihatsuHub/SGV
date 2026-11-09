@@ -93,7 +93,9 @@ async function renderFicha(){
   if(_tit) _tit.textContent=_fichaContables
     ? 'Comprobantes con saldo contable (en pesos)'
     : 'Comprobantes con saldo';
+  // Comprobantes y A/Cuenta JUNTOS, ordenados por fecha de menor a mayor (Ricardo, Nov 2026)
   let totP=0, totT=0, totC=0, lrows='';
+  const _filas=[];
   (D.comprobantes||[]).forEach(f=>{
     const key=reciMonKey(f.moneda);
     // Una NOTA DE CRÉDITO resta del saldo: antes se sumaba como cualquier
@@ -104,22 +106,23 @@ async function renderFicha(){
     const fec=(f.fec||'').split('-').reverse().join('/');
     const cell = esNC ? '- '+reciFmt(v0) : reciFmt(v0);
     const est = esNC ? 'color:var(--red);font-weight:700' : '';
-    lrows+=`<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:var(--ffs,12px);font-family:var(--mono);padding:2px 0;${est}">
+    _filas.push({fec:f.fec||'', k:f.nro||'', h:`<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:var(--ffs,12px);font-family:var(--mono);padding:2px 0;${est}">
       <span style="${esNC?'':'color:var(--t3)'}">${fec}</span><span style="${esNC?'':'color:var(--acc)'};overflow:hidden;text-overflow:ellipsis">${esc(f.nro||'')}</span>
       <span style="text-align:right">${key==='pesos'?cell:''}</span>
       <span style="text-align:right">${key==='tressa'?cell:''}</span>
-      <span style="text-align:right">${key==='casio'?cell:''}</span></div>`;
+      <span style="text-align:right">${key==='casio'?cell:''}</span></div>`});
   });
   (D.acuenta||[]).forEach(a=>{
     const key=reciMonKey(a.moneda), v=a.importe||0;
     if(key==='pesos') totP-=v; else if(key==='tressa') totT-=v; else totC-=v;
     const fec=(a.fec||'').split('-').reverse().join('/'), cell='- '+reciFmt(v);
-    lrows+=`<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:var(--ffs,12px);font-family:var(--mono);padding:2px 0;color:var(--grn)">
+    _filas.push({fec:a.fec||'', k:'~'+(a.desc||''), h:`<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:var(--ffs,12px);font-family:var(--mono);padding:2px 0;color:var(--grn)">
       <span>${fec}</span><span style="overflow:hidden;text-overflow:ellipsis">${esc(a.desc||'A/Cuenta')}</span>
       <span style="text-align:right">${key==='pesos'?cell:''}</span>
       <span style="text-align:right">${key==='tressa'?cell:''}</span>
-      <span style="text-align:right">${key==='casio'?cell:''}</span></div>`;
+      <span style="text-align:right">${key==='casio'?cell:''}</span></div>`});
   });
+  _filas.sort((x,y)=>x.fec.localeCompare(y.fec)||x.k.localeCompare(y.k)).forEach(r=>{ lrows+=r.h; });
   if(!lrows){ izq.innerHTML='<div style="color:var(--t3);padding:12px">Sin comprobantes con saldo ni A/Cuenta.</div>'; }
   else izq.innerHTML=
     `<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:calc(var(--ffs,12px) - 1px);color:var(--t2);font-weight:600;border-bottom:1px solid var(--b1);padding:4px 0;margin-bottom:4px;position:sticky;top:-8px;background:var(--s2);z-index:1">
