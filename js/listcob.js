@@ -59,6 +59,9 @@ async function renderListCob(){
     const qs=[];
     if(desde) qs.push('desde='+desde);
     if(hasta) qs.push('hasta='+hasta);
+    const vd=document.getElementById('lcob-vend')?.value||'', cc=document.getElementById('lcob-ccos')?.value||'';
+    if(vd) qs.push('vend='+encodeURIComponent(vd));
+    if(cc) qs.push('ccos='+encodeURIComponent(cc));
     const r=await apiGet('/informes/cobranzas'+(qs.length?'?'+qs.join('&'):''));
     if(!r.ok){ body.innerHTML='<div class="empty" style="margin-top:40px">⚠️ '+(r.error||'Error')+'</div>'; return; }
 

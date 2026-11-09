@@ -770,8 +770,10 @@
       <option value="H">Hatsu</option>
       <option value="T">Tressa</option>
     </select>
+    <label style="font-size:12px;color:var(--t2)">Vendedor:</label>
+    <select class="finp" id="saldo-vend" style="width:150px" onfocus="sgvFillVendCcos('saldo')"><option value="">Todos</option></select>
     <label style="font-size:12px;color:var(--t2)">Centro de Costos:</label>
-    <select class="finp" id="saldo-ccos" style="width:150px" onfocus="saldoFillCcos()"><option value="">Todos</option></select>
+    <select class="finp" id="saldo-ccos" style="width:150px" onfocus="sgvFillVendCcos('saldo')"><option value="">Todos</option></select>
     <button class="btn pri" onclick="renderSaldos()">🔍 Consultar</button>
     <button class="btn" onclick="printSaldos()">🖨 Imprimir</button>
   </div>
@@ -1251,6 +1253,10 @@
     <input type="date" class="finp" id="lcob-desde" style="width:150px">
     <label style="font-size:12px;color:var(--t2)">Hasta</label>
     <input type="date" class="finp" id="lcob-hasta" style="width:150px">
+    <label style="font-size:12px;color:var(--t2)">Vendedor:</label>
+    <select class="finp" id="lcob-vend" style="width:150px" onfocus="sgvFillVendCcos('lcob')"><option value="">Todos</option></select>
+    <label style="font-size:12px;color:var(--t2)">Centro de Costos:</label>
+    <select class="finp" id="lcob-ccos" style="width:150px" onfocus="sgvFillVendCcos('lcob')"><option value="">Todos</option></select>
     <button class="btn pri" onclick="renderListCob()">🔍 Consultar</button>
     <label style="font-size:12px;color:var(--t2);display:flex;align-items:center;gap:5px;cursor:pointer" title="Une todas las retenciones en una sola columna">
       <input type="checkbox" id="lcob-rettot" onchange="lcobToggleRetTot()"> Totalizar retenciones

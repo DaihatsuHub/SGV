@@ -349,3 +349,12 @@ function exportToXls(titulo, headers, rows) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   toast('Exportado: ' + rows.length + ' registros', 'scs');
 }
+// Selectores "Vendedor" y "Centro de Costos" (Todos o uno) de los informes
+// <pref>-vend y <pref>-ccos — Ricardo, Nov 2026
+function sgvFillVendCcos(pref){
+  const llenar=(id,tab)=>{ const el=document.getElementById(id); if(!el||el.dataset.ok) return;
+    const t=(TABLAS[tab]||[]); if(!t.length) return;
+    el.innerHTML='<option value="">Todos</option>'+t.map(x=>`<option value="${esc(x.CODIGO)}">${esc(x.CODIGO)} — ${esc(x.DETALLE||'')}</option>`).join('');
+    el.dataset.ok='1'; };
+  llenar(pref+'-vend','VEND'); llenar(pref+'-ccos','CCOS');
+}
