@@ -13,6 +13,7 @@ async function renderSaldos() {
   const body    = document.getElementById('saldo-body');
   const nMeses  = parseInt(document.getElementById('saldo-meses')?.value||3);
   const empFilt = (document.getElementById('saldo-empresa')?.value||'').toUpperCase();
+  const ccFilt = document.getElementById('saldo-ccos')?.value||'';
   document.getElementById('saldo-fixed-hdr')?.remove();
   body.innerHTML = '<div class="empty" style="margin-top:40px">⏳ Cargando...</div>';
 
@@ -20,7 +21,7 @@ async function renderSaldos() {
     // El informe lo arma EL SERVER: antes el navegador se traía TODAS las
     // facturas con saldo de a 1.000 por vuelta y las agrupaba acá
     // (Ricardo, Oct 2026).
-    const r = await apiGet(`/informes/saldos?meses=${nMeses}${empFilt?'&emp='+empFilt:''}`);
+    const r = await apiGet(`/informes/saldos?meses=${nMeses}${empFilt?'&emp='+empFilt:''}${ccFilt?'&ccos='+encodeURIComponent(ccFilt):''}`);
     if(!r.ok){ body.innerHTML='<div class="empty" style="margin-top:40px">⚠️ '+esc(r.error||'Error')+'</div>'; return; }
 
     const MONEDAS = TABLAS['MONE']||[];
@@ -149,4 +150,13 @@ function printSaldos() {
     estilos:`tr.grp td{background:#dde3ea !important;font-weight:bold;border-top:2px solid #8a9099}`,
     cuerpo:`<table><thead>${cab}</thead><tbody>${cuerpo}${totGral}</tbody></table>`
   });
+}
+
+// Centro de Costos: Todos, o uno (los importes son la parte de ese centro en
+// cada comprobante, según sus artículos) — Ricardo, Nov 2026
+function saldoFillCcos(){
+  const el=document.getElementById('saldo-ccos'); if(!el||el.dataset.ok) return;
+  const t=(TABLAS['CCOS']||[]); if(!t.length) return;
+  el.innerHTML='<option value="">Todos</option>'+t.map(x=>`<option value="${esc(x.CODIGO)}">${esc(x.CODIGO)} — ${esc(x.DETALLE||'')}</option>`).join('');
+  el.dataset.ok='1';
 }
