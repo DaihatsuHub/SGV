@@ -128,6 +128,7 @@ async function aplicarReglasMenu(){
   try{
     const r = await apiGet('/mis-reglas');
     if(!r || !r.ok) return;
+    if(typeof sgvMarcarBotones==='function') sgvMarcarBotones();
     window.MIS_REGLAS = r;
     // Si sólo puede ver ciertos vendedores, se recorta la tabla VEND: con eso
     // TODOS los selectores de vendedor de TODOS los informes dejan de ofrecer

@@ -361,3 +361,21 @@ function sgvFillVendCcos(pref){
 
 // ¿El grupo del usuario tiene oculto este botón? (reglas 'btn:<id>')
 function sgvBtnOculto(id){ return ((window.MIS_REGLAS&&window.MIS_REGLAS.menu)||[]).includes('btn:'+id); }
+
+// Marca TODOS los botones de cada pantalla con data-regla="<pantalla>-<texto>"
+// (los que no lo tengan), para poder ocultarlos por grupo de trabajo
+// (Ricardo, Nov 2026). Se llama al entrar y desde "Qué ve cada grupo".
+function sgvMarcarBotones(){
+  document.querySelectorAll('.page[id^="page-"]').forEach(pg=>{
+    const sub=pg.id.slice(5), usados=new Set();
+    pg.querySelectorAll('button').forEach(b=>{
+      if(b.dataset.regla){ usados.add(b.dataset.regla); return; }
+      if(b.classList.contains('srch-clr')) return;
+      const txt=(b.textContent||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()
+        .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+      if(!txt) return;
+      let id=sub+'-'+txt, n=2; while(usados.has(id)) id=sub+'-'+txt+'-'+(n++);
+      usados.add(id); b.dataset.regla=id;
+    });
+  });
+}

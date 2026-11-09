@@ -52,35 +52,33 @@ const REGL_CAMPOS = {
 
 let _reglData = null, _reglGrupo = '', _reglTabla = 'articulos', _reglSolapa = 'campos';
 
-// Los ítems del MENÚ se leen de la página: así no hay una lista que se
-// desactualice cada vez que agregamos una pantalla (Ricardo, Oct 2026).
-function reglItemsMenu(){
-  const items = [...document.querySelectorAll('.dd-item[id^="ddi-"]')].map(b=>({
-    id: b.id.replace('ddi-',''),
-    label: (b.textContent||'').trim(),
-    menu: (b.closest('.dd-wrap')?.querySelector('.dd-btn')?.textContent||'').trim()
-  }));
-  // Además de las pantallas del menú, los BOTONES de cada pantalla (Resumen,
-  // Excel, Autorizar AFIP…), AGRUPADOS POR PANTALLA (Ricardo, Nov 2026).
-  // Los del HTML se marcan con data-regla; la pantalla sale del .page que los contiene.
-  const pantalla = sub => { const it=document.getElementById('ddi-'+sub); return it ? (it.textContent||'').trim() : sub; };
-  [...document.querySelectorAll('[data-regla]')].forEach(b=>{
-    const pg=(b.closest('.page')?.id||'').replace(/^page-/,'');
-    items.push({ id:'btn:'+b.dataset.regla, label:(b.textContent||'').trim(),
-                 menu:'Botones · '+(pg?pantalla(pg):'Otras pantallas') });
-  });
-  // Botones que se ARMAN al abrir la pantalla (no están en el HTML de entrada)
-  const FAC='Botones · '+pantalla('fac');
-  [['fac-afip','⚡ Autorizar AFIP'],['fac-imprimir','🖨 Imprimir factura autorizada'],
+// PANTALLA elegida (Ricardo, Nov 2026): manda en las dos solapas.
+//   Campos    → los campos de la tabla de esa pantalla (si tiene)
+//   Pantallas → si entra a la pantalla + TODOS sus botones
+let _reglPant = 'art';
+const REGL_TABLA_DE = { art:'articulos', cli:'clientes', ficha:'clientes', ctacte:'clientes', fac:'facturas', desp:'despachos' };
+// Botones que se arman al abrir la pantalla (no están en el HTML de entrada)
+const REGL_BTN_DIN = { fac:[['fac-afip','⚡ Autorizar AFIP'],['fac-imprimir','🖨 Imprimir factura autorizada'],
    ['fac-verformato','🖨 Ver formato factura (antes de autorizar)'],['fac-impborrador','🖨 Imprimir Borrador'],
    ['fac-anular','🚫 Anular'],['fac-eliminar','🗑 Eliminar'],['fac-aplicarnc','📌 Aplicar NC'],
    ['fac-remito','🚚 Remito'],['fac-firmar','✍ Firmar'],['fac-comentario','💬 Comentario'],
-   ['fac-borrador','📄 Factura de Borrador (al cargar)'],['fac-importar','📥 Importar Excel (al cargar)']].forEach(([id,l])=>{
-    if(!items.find(x=>x.id==='btn:'+id)) items.push({ id:'btn:'+id, label:l, menu:FAC });
+   ['fac-borrador','📄 Factura de Borrador (al cargar)'],['fac-importar','📥 Importar Excel (al cargar)']] };
+
+function reglPantallas(){
+  return [...document.querySelectorAll('.dd-item[id^="ddi-"]')].map(b=>({
+    sub: b.id.replace('ddi-',''), label:(b.textContent||'').trim(),
+    menu:(b.closest('.dd-wrap')?.querySelector('.dd-btn')?.textContent||'').trim() }));
+}
+// Botones de UNA pantalla
+function reglBotones(sub){
+  if(typeof sgvMarcarBotones==='function') sgvMarcarBotones();
+  const out=[], vistos=new Set();
+  document.querySelectorAll(`#page-${sub} [data-regla]`).forEach(b=>{
+    const id=b.dataset.regla; if(vistos.has(id)) return; vistos.add(id);
+    out.push({ id:'btn:'+id, label:(b.textContent||'').trim()||id });
   });
-  // Primero los menús, después los botones agrupados por pantalla
-  items.sort((x,y)=>(x.menu.startsWith('Botones')?1:0)-(y.menu.startsWith('Botones')?1:0));
-  return items;
+  (REGL_BTN_DIN[sub]||[]).forEach(([id,l])=>{ if(!vistos.has(id)) out.push({ id:'btn:'+id, label:l }); });
+  return out;
 }
 
 function _rgEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -94,11 +92,12 @@ function renderReglas(){
       + (((typeof TABLAS!=='undefined'&&TABLAS['GRTR'])||[])
          .map(g=>`<option value="${_rgEsc(g.CODIGO)}">${_rgEsc(g.CODIGO)} — ${_rgEsc(g.DETALLE)}</option>`).join(''));
   }
-  // Tablas
+  // Pantallas, agrupadas por menú
   const ts=document.getElementById('regl-tabla');
   if(ts && !ts.options.length){
-    ts.innerHTML=Object.entries(REGL_CAMPOS)
-      .map(([k,v])=>`<option value="${k}"${k===_reglTabla?' selected':''}>${v.label}</option>`).join('');
+    const porMenu={}; reglPantallas().forEach(p=>{ (porMenu[p.menu]||(porMenu[p.menu]=[])).push(p); });
+    ts.innerHTML=Object.entries(porMenu).map(([m,l])=>`<optgroup label="${_rgEsc(m)}">`+
+      l.map(p=>`<option value="${p.sub}"${p.sub===_reglPant?' selected':''}>${_rgEsc(p.label)}</option>`).join('')+'</optgroup>').join('');
   }
   reglCargar();
 }
@@ -116,7 +115,8 @@ async function reglCargar(){
 
 function reglOnCambio(){
   _reglGrupo=(document.getElementById('regl-grupo')?.value||'').trim();
-  _reglTabla=(document.getElementById('regl-tabla')?.value||'articulos').trim();
+  _reglPant=(document.getElementById('regl-tabla')?.value||'art').trim();
+  _reglTabla=REGL_TABLA_DE[_reglPant]||'';
   _rgPintar();
 }
 
@@ -159,30 +159,31 @@ function _rgPintar(){
     return;
   }
   // ── Solapa PANTALLAS: a qué ítems del menú no entra ──
+  const pant=reglPantallas().find(p=>p.sub===_reglPant)||{ sub:_reglPant, label:_reglPant };
   if(_reglSolapa==='menu'){
-    const items=reglItemsMenu();
+    // La PANTALLA elegida: si entra, y TODOS sus botones
+    const items=[{ id:pant.sub, label:'Entrar a '+pant.label, menu:'Pantalla' },
+                 ...reglBotones(pant.sub).map(b=>({ ...b, menu:'Botones' }))];
     const ocul=items.filter(i=>_rgMenuOculto(i.id)).length;
-    const porMenu={};
-    items.forEach(i=>{ (porMenu[i.menu||'—']||(porMenu[i.menu||'—']=[])).push(i); });
     body.innerHTML=`
       <div class="rg-cab">
-        Tildá las pantallas a las que el grupo <b>${_rgEsc(_reglGrupo)}</b> <b>NO</b> entra.
-        <span class="rg-cnt">${ocul} oculta(s)</span>
+        <b>${_rgEsc(pant.label)}</b>: tildá lo que el grupo <b>${_rgEsc(_reglGrupo)}</b> <b>NO</b> puede usar.
+        <span class="rg-cnt">${ocul} oculto(s)</span>
       </div>`
-      + Object.entries(porMenu).map(([men,lista])=>`
-        <div class="rg-men">${_rgEsc(men)}</div>
-        ${lista.map(i=>{
+      + ['Pantalla','Botones'].map(men=>{ const lista=items.filter(i=>i.menu===men); if(!lista.length) return '';
+        return `<div class="rg-men">${men}</div>`+lista.map(i=>{
           const on=_rgMenuOculto(i.id);
-          return `<label class="rg-fila${on?' on':''}" style="grid-template-columns:28px 1fr 120px 90px">
+          return `<label class="rg-fila${on?' on':''}" style="grid-template-columns:28px 1fr 160px 90px">
             <input type="checkbox" ${on?'checked':''} onchange="reglToggleMenu('${i.id}',this.checked)">
             <span class="rg-lbl">${_rgEsc(i.label)}</span>
             <span class="rg-col">${_rgEsc(i.id)}</span>
-            <span class="rg-est">${on?'No entra':'Entra'}</span>
-          </label>`;
-        }).join('')}`).join('');
+            <span class="rg-est">${on?'No':'Sí'}</span>
+          </label>`; }).join(''); }).join('')
+      + (items.length===1?'<div class="empty" style="margin-top:20px">Esta pantalla no tiene botones para ocultar</div>':'');
     return;
   }
 
+  if(!REGL_CAMPOS[_reglTabla]){ body.innerHTML=`<div class="empty" style="margin-top:30px">${_rgEsc(pant.label)} no tiene campos configurables. Mirá la solapa Pantallas.</div>`; return; }
   const def=REGL_CAMPOS[_reglTabla];
   if(!def){ body.innerHTML='<div class="empty" style="margin-top:30px">Tabla sin campos configurables</div>'; return; }
 
