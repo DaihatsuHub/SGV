@@ -948,6 +948,7 @@
 <div class="page" id="page-cart">
   <div class="toolbar" style="flex-wrap:wrap;row-gap:6px">
     <button class="btn" id="btn-cart-edit" onclick="cheqEdit()">✏️ Estado / Salida</button>
+    <button class="btn" id="btn-cart-modif" onclick="cheqModificar()">📝 Modificar</button>
     <button class="btn pri" id="btn-cart-confirm" onclick="openCheqBulk()" style="opacity:.5" disabled>✓ Confirmar (<span id="cart-selcount">0</span>)</button>
     <button class="btn" id="btn-cfg-cart" style="display:none" onclick="openColCfg('cart')" title="Configurar columnas">⚙️ Columnas</button>
     <div id="cart-filtros" style="display:flex;gap:4px;margin-left:8px">
@@ -2253,6 +2254,32 @@
     <div class="mft">
       <button class="btn" onclick="closeOv('ov-cart')">Cancelar</button>
       <button class="btn pri" onclick="saveCheq()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ov-cartmod">
+  <div class="modal" style="width:460px">
+    <div class="mhd">
+      <div class="mtit"><span id="cm-tit">Modificar cheque</span><span class="mtag tag-m">MODIFICAR</span></div>
+      <button class="mcls" onclick="closeOv('ov-cartmod')">✕</button>
+    </div>
+    <div class="mbdy">
+      <div style="font-size:13px;color:var(--t2);margin-bottom:12px" id="cm-info">—</div>
+      <div class="fg">
+        <div class="fgrp"><label class="flbl2">Fecha</label>
+          <input class="finp" id="cm-fecha" type="date"></div>
+        <div class="fgrp"><label class="flbl2">Número</label>
+          <input class="finp" id="cm-numero" maxlength="30"></div>
+        <div class="fgrp"><label class="flbl2">Tipo</label>
+          <select class="finp" id="cm-fisico"><option value="1">Cheque</option><option value="0">ECheq</option></select></div>
+        <div class="fgrp"><label class="flbl2">Propio / Terceros</label>
+          <select class="finp" id="cm-propio"><option value="1">Propio</option><option value="0">Terceros</option></select></div>
+      </div>
+    </div>
+    <div class="mft">
+      <button class="btn" onclick="closeOv('ov-cartmod')">Cancelar</button>
+      <button class="btn pri" onclick="saveCheqMod()">💾 Guardar</button>
     </div>
   </div>
 </div>

@@ -286,6 +286,40 @@ async function saveCheq(){
   }catch(e){ console.error('saveCheq:', e); toast('Error al guardar','err'); }
 }
 
+// ── Modificar datos del cheque (Fecha, Tipo, Número, PoT) ──
+// Los datos se traen frescos del servidor, no de la grilla.
+let _cheqMod=null;
+async function cheqModificar(){
+  if(cheqSelIdx===null){ toast('Seleccioná un cheque','err'); return; }
+  const g=getCheqRows()[cheqSelIdx]; if(!g){ toast('Seleccioná un cheque','err'); return; }
+  let c;
+  try{ c=(await sbGet('cheques','id=eq.'+g.id))[0]; }catch(e){ console.error(e); }
+  if(!c){ toast('No se pudo leer el cheque del servidor','err'); return; }
+  _cheqMod=g;
+  const cli=CLIS.find(k=>(k.CLI_CODIGO||'').trim()===(c.cliente||'').trim());
+  document.getElementById('cm-tit').textContent=`Cheque Nº ${c.numero||''}`;
+  document.getElementById('cm-info').textContent=`${reciFmt(c.importe||0)} · ${cli?cli.CLI_RAZON:(c.cliente||'')}`;
+  document.getElementById('cm-fecha').value=(c.fecha||'').substring(0,10);
+  document.getElementById('cm-numero').value=c.numero||'';
+  document.getElementById('cm-fisico').value=c.fisico?'1':'0';
+  document.getElementById('cm-propio').value=c.propio?'1':'0';
+  document.getElementById('ov-cartmod').classList.add('open');
+}
+async function saveCheqMod(){
+  if(!_cheqMod) return;
+  const fecha=document.getElementById('cm-fecha').value;
+  const numero=document.getElementById('cm-numero').value.trim();
+  if(!fecha){ toast('Falta la fecha','err'); return; }
+  if(!numero){ toast('Falta el número','err'); return; }
+  const fisico=document.getElementById('cm-fisico').value==='1';
+  const propio=document.getElementById('cm-propio').value==='1';
+  try{
+    await apiPost('/cheques/modificar',{ id:_cheqMod.id, fecha, numero, fisico, propio });
+    Object.assign(_cheqMod,{ fecha, numero, fisico, propio });
+    closeOv('ov-cartmod'); renderCart(); toast('Cheque modificado','scs');
+  }catch(e){ console.error('saveCheqMod:', e); toast('Error al guardar: '+(e.message||''),'err'); }
+}
+
 // ── Confirmación masiva (varios seleccionados) ────────────
 function openCheqBulk(){
   if(selectedCheqIds.size===0){ toast('No hay valores seleccionados','err'); return; }
