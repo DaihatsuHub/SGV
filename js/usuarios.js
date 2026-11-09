@@ -131,8 +131,11 @@ async function aplicarReglasMenu(){
     if(typeof sgvMarcarBotones==='function') sgvMarcarBotones();
     // Modo prueba "sólo grupo": se vuelven a aplicar los permisos (ahora todo
     // habilitado) y después el grupo oculta lo que corresponde
-    if((r.menu||[]).includes('cfg:solo-grupo') && typeof aplicarPermisos==='function') aplicarPermisos();
+    // OJO: primero se guardan las reglas, después se reaplican los permisos
+    // (antes se reaplicaban con las reglas sin cargar y mandaba el nivel)
     window.MIS_REGLAS = r;
+    if((r.menu||[]).includes('cfg:solo-grupo') && typeof aplicarPermisos==='function') aplicarPermisos();
+    if((r.menu||[]).includes('cfg:solo-grupo') && typeof sgvPermisosVista==='function') sgvPermisosVista();
     // Si sólo puede ver ciertos vendedores, se recorta la tabla VEND: con eso
     // TODOS los selectores de vendedor de TODOS los informes dejan de ofrecer
     // los que no corresponden, sin tocarlos uno por uno (Ricardo, Oct 2026).
