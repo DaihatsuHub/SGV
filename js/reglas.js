@@ -60,22 +60,26 @@ function reglItemsMenu(){
     label: (b.textContent||'').trim(),
     menu: (b.closest('.dd-wrap')?.querySelector('.dd-btn')?.textContent||'').trim()
   }));
-  // Además de las pantallas del menú, los BOTONES que abren otro informe
-  // dentro de un maestro (el Resumen de Artículos, por ejemplo). Se marcan en
-  // el HTML con data-regla (Ricardo, Oct 2026).
+  // Además de las pantallas del menú, los BOTONES de cada pantalla (Resumen,
+  // Excel, Autorizar AFIP…), AGRUPADOS POR PANTALLA (Ricardo, Nov 2026).
+  // Los del HTML se marcan con data-regla; la pantalla sale del .page que los contiene.
+  const pantalla = sub => { const it=document.getElementById('ddi-'+sub); return it ? (it.textContent||'').trim() : sub; };
   [...document.querySelectorAll('[data-regla]')].forEach(b=>{
+    const pg=(b.closest('.page')?.id||'').replace(/^page-/,'');
     items.push({ id:'btn:'+b.dataset.regla, label:(b.textContent||'').trim(),
-                 menu:'Botones dentro de las pantallas' });
+                 menu:'Botones · '+(pg?pantalla(pg):'Otras pantallas') });
   });
-  // Botones que se ARMAN al abrir una pantalla (no están en el HTML de entrada)
-  [['fac-afip','⚡ Autorizar AFIP (Facturación)'],['fac-imprimir','🖨 Imprimir factura autorizada (Facturación)'],
-   ['fac-verformato','🖨 Ver formato factura (Facturación)'],['fac-impborrador','🖨 Imprimir Borrador (Facturación)'],
-   ['fac-anular','🚫 Anular (Facturación)'],['fac-eliminar','🗑 Eliminar (Facturación)'],['fac-aplicarnc','📌 Aplicar NC (Facturación)'],
-   ['fac-remito','🚚 Remito (Facturación)'],['fac-borrador','📄 Factura de Borrador (Facturación)'],
-   ['fac-importar','📥 Importar Excel (Facturación)'],['fac-firmar','✍ Firmar (Facturación)'],
-   ['fac-comentario','💬 Comentario (Facturación)']].forEach(([id,l])=>{
-    if(!items.find(x=>x.id==='btn:'+id)) items.push({ id:'btn:'+id, label:l, menu:'Botones dentro de las pantallas' });
+  // Botones que se ARMAN al abrir la pantalla (no están en el HTML de entrada)
+  const FAC='Botones · '+pantalla('fac');
+  [['fac-afip','⚡ Autorizar AFIP'],['fac-imprimir','🖨 Imprimir factura autorizada'],
+   ['fac-verformato','🖨 Ver formato factura (antes de autorizar)'],['fac-impborrador','🖨 Imprimir Borrador'],
+   ['fac-anular','🚫 Anular'],['fac-eliminar','🗑 Eliminar'],['fac-aplicarnc','📌 Aplicar NC'],
+   ['fac-remito','🚚 Remito'],['fac-firmar','✍ Firmar'],['fac-comentario','💬 Comentario'],
+   ['fac-borrador','📄 Factura de Borrador (al cargar)'],['fac-importar','📥 Importar Excel (al cargar)']].forEach(([id,l])=>{
+    if(!items.find(x=>x.id==='btn:'+id)) items.push({ id:'btn:'+id, label:l, menu:FAC });
   });
+  // Primero los menús, después los botones agrupados por pantalla
+  items.sort((x,y)=>(x.menu.startsWith('Botones')?1:0)-(y.menu.startsWith('Botones')?1:0));
   return items;
 }
 
