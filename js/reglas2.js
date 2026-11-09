@@ -8,7 +8,8 @@
      una PANTALLA tilda sus campos y botones. Destildar, al revés.
    =========================================================================== */
 
-let _r2Data = null, _r2Grupo = '', _r2Abiertos = new Set();
+let _r2Data = null, _r2Grupo = '', _r2Abiertos = new Set(), _r2MenuAb = new Set();
+// Primero sólo los MENÚS (Artículos, Clientes, Compras…); al abrir uno, sus submenús
 
 function renderReglas2(){
   _r2Style();
@@ -81,6 +82,7 @@ let _R2 = [];   // árbol pintado (para los onclick)
 function r2Menu(i, on){ _r2Set(_R2[i].pants.flatMap(_r2Todo), _r2Ocultar(on)); }
 function r2Pant(i, j, on){ _r2Set(_r2Todo(_R2[i].pants[j]), _r2Ocultar(on)); }
 function r2Item(i, j, k, on){ const p=_R2[i].pants[j]; _r2Set([_r2Todo(p).slice(1)[k]], _r2Ocultar(on)); }
+function r2AbrirMenu(i){ const m=_R2[i]?.menu; if(!m) return; _r2MenuAb.has(m)?_r2MenuAb.delete(m):_r2MenuAb.add(m); r2Pintar(); }
 function r2Abrir(sub){ _r2Abiertos.has(sub)?_r2Abiertos.delete(sub):_r2Abiertos.add(sub); r2Pintar(); }
 
 function r2Pintar(){
@@ -97,8 +99,11 @@ function r2Pintar(){
      Tildar un menú o una pantalla marca todo lo que tiene adentro.</div>`
    + _R2.map((m,i)=>{
       const em=_r2Estado(m.pants.flatMap(_r2Todo));
-      return `<div class="r2-menu"><label class="r2-mrow">${chk(em,`r2Menu(${i},this.checked)`)}<b>${esc(m.menu)}</b>${tag(em)}</label>`
-      + m.pants.map((p,j)=>{
+      const abM=_r2MenuAb.has(m.menu);
+      return `<div class="r2-menu"><div class="r2-mrow">${chk(em,`r2Menu(${i},this.checked)`)}
+          <b class="r2-mlbl" onclick="r2AbrirMenu(${i})">${abM?'▾':'▸'} ${esc(m.menu)}</b>
+          <span class="r2-cnt" style="color:rgba(255,255,255,.8)">${m.pants.length} pantallas</span>${tag(em)}</div>`
+      + (!abM ? '' : m.pants.map((p,j)=>{
           const todo=_r2Todo(p), ep=_r2Estado(todo), ab=_r2Abiertos.has(p.sub), hijos=todo.slice(1);
           return `<div class="r2-pant"><div class="r2-prow">${chk(ep,`r2Pant(${i},${j},this.checked)`)}
               <span class="r2-plbl" onclick="r2Abrir('${p.sub}')">${hijos.length?(ab?'▾':'▸'):'·'} ${esc(p.label)}</span>
@@ -110,7 +115,7 @@ function r2Pintar(){
                     return `<label class="r2-hrow">${chk(on?'si':'no',`r2Item(${i},${j},${k},this.checked)`)}${esc(b.label)}${tag(on?'si':'no')}</label>`; }).join(''):'')
               + `</div>` : '')
             + `</div>`;
-        }).join('') + `</div>`;
+        }).join('')) + `</div>`;
     }).join('');
   body.querySelectorAll('input[data-parcial="1"]').forEach(x=>{ x.indeterminate=true; });
 }
@@ -120,7 +125,8 @@ function _r2Style(){
   const st=document.createElement('style'); st.id='r2-style';
   st.textContent=`
     .r2-cab{padding:10px 14px;font-size:12px;color:var(--t2)}
-    .r2-menu{margin:14px 12px;border:2px solid var(--acc);border-radius:10px;overflow:hidden}
+    .r2-mlbl{flex:1;cursor:pointer}
+    .r2-menu{margin:10px 12px;border:2px solid var(--acc);border-radius:10px;overflow:hidden}
     .r2-mrow{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--acc);color:#fff;font-size:15px;cursor:pointer}
     .r2-mrow .r2-tag{background:rgba(255,255,255,.9)}
     .r2-pant{border-top:2px solid var(--b2,#c9d3e0)}
