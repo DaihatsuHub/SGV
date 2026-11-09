@@ -379,3 +379,24 @@ function sgvMarcarBotones(){
     });
   });
 }
+
+// BAJA sólo si NO tiene movimientos (Ricardo, Nov 2026): al seleccionar un
+// artículo, cliente o despacho se pregunta al server; si ya se usó en
+// comprobantes, el botón Baja se oculta (clase con !important, así no lo
+// vuelven a mostrar los permisos).
+let _sgvUsoT=null, _sgvUsoN=0;
+function sgvBajaSegunUso(btnId, tabla, cod, art){
+  const b=document.getElementById(btnId); if(!b) return;
+  if(!document.getElementById('sgv-uso-st')){ const st=document.createElement('style'); st.id='sgv-uso-st';
+    st.textContent='.sgv-usado{display:none!important}'; document.head.appendChild(st); }
+  b.classList.remove('sgv-usado'); b.title='';
+  clearTimeout(_sgvUsoT); const n=++_sgvUsoN;
+  if(!cod) return;
+  _sgvUsoT=setTimeout(async()=>{
+    try{
+      const r=await apiGet(`/uso/${tabla}?cod=${encodeURIComponent(String(cod).trim())}${art?'&art='+encodeURIComponent(String(art).trim()):''}`);
+      if(n!==_sgvUsoN) return;            // ya se eligió otro
+      if(r&&r.usado){ b.classList.add('sgv-usado'); b.title='No se puede dar de baja: '+(r.motivo||'tiene movimientos'); }
+    }catch(_){}
+  }, 250);
+}

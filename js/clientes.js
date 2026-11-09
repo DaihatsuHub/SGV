@@ -142,7 +142,7 @@ function updCliFilts(){
   llenar('cli-cate','CLI_CATE','CATE','Todas'); llenar('cli-grupo','CLI_ABC','GRUP','Todos');
 }
 
-function selCli(i){cliSelIdx=i;renderClis();}
+function selCli(i){cliSelIdx=i;renderClis();sgvBajaSegunUso('btn-cli-baja','clientes',CLIS[i]?.CLI_CODIGO);}
 function setCliFilt(v){
   cliFilt=v;
   // Los botones del filtro usan el prefijo `cfil-`: con `cf-` chocaban con los

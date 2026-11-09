@@ -226,6 +226,7 @@ function togArtFact() {
 function selArt(i) {
   document.querySelector('#art-body .tr-art.sel')?.classList.remove('sel');
   artSelIdx = i;
+  sgvBajaSegunUso('btn-art-baja','articulos', ARTS[i]?.ART_COD);
   const list = filtArts();
   const pos = list.findIndex(a => ARTS.indexOf(a) === i);
   if(pos < 0) return;

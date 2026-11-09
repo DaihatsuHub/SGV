@@ -132,6 +132,7 @@ function renderDesp() {
 
 function selDesp(i) {
   despSelIdx=i; renderDesp();
+  { const d=filtDesps()[i]; sgvBajaSegunUso('btn-desp-baja','despachos', d?.dep_desp, d?.dep_art); }
   const rows=document.querySelectorAll('#desp-body .tr-art');
   if(rows[i]) rows[i].scrollIntoView({block:'nearest'});
 }
