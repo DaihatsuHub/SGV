@@ -38,6 +38,8 @@ function showSubPage(menu, sub) {
     return;
   }
   _setPageTitle(sub);
+  // Botones que se agregaron después de entrar: se marcan para que las reglas del grupo los alcancen
+  setTimeout(()=>{ if(typeof sgvMarcarBotones==='function') sgvMarcarBotones(); }, 300);
   document.querySelectorAll('.dd-menu').forEach(m=>m.classList.remove('open'));
   document.querySelectorAll('.dd-arrow').forEach(a=>a.classList.remove('open'));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));

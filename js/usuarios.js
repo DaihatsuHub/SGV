@@ -139,6 +139,13 @@ async function aplicarReglasMenu(){
     if(Array.isArray(r.vendedores) && typeof TABLAS!=='undefined' && TABLAS['VEND']){
       TABLAS['VEND'] = TABLAS['VEND'].filter(v => r.vendedores.includes((v.CODIGO||'').trim()));
     }
+    // Botones ocultos por el grupo: con una regla CSS, así siguen ocultos aunque
+    // la pantalla los vuelva a mostrar o los redibuje (Ricardo, Nov 2026)
+    { const ocul=(r.menu||[]).filter(x=>x.startsWith('btn:')).map(x=>x.slice(4));
+      document.getElementById('sgv-btn-ocultos')?.remove();
+      if(ocul.length){ const st=document.createElement('style'); st.id='sgv-btn-ocultos';
+        st.textContent=ocul.map(x=>`[data-regla="${x.replace(/"/g,'')}"]`).join(',')+'{display:none!important}';
+        document.head.appendChild(st); } }
     (r.menu||[]).forEach(id=>{
       if(id.startsWith('btn:')){
         // Botón dentro de una pantalla (Resumen, Excel, Imprimir…)
