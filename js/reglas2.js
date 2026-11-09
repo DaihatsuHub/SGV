@@ -28,14 +28,30 @@ async function r2Cargar(){
 function r2OnGrupo(){ _r2Grupo=(document.getElementById('r2-grupo')?.value||'').trim(); r2Pintar(); }
 
 // ── Qué hay en cada pantalla ──
+// Tabla de cada pantalla y TODOS sus campos: los de la lista de reglas más
+// todas las columnas de su grilla (Ricardo, Nov 2026: faltaban campos).
+const _R2_TABLA = { art:'articulos', cli:'clientes', ficha:'clientes', ctacte:'clientes', comp:'clientes',
+  fac:'facturas', desp:'despachos', reci:'recibos', cart:'cheques', oc:'ordenes_compra', ctip:'comp_tipos' };
+const _R2_GRILLA = { art:'art', cli:'cli', desp:'desp', reci:'reci', cart:'cart', oc:'oc', ctip:'ctip' };
+const _R2_CLAVES = new Set(['art_cod','cli_codigo','dep_id','fac_nro']);   // la clave no se oculta
+function _r2TablaDe(sub){ return _R2_TABLA[sub] || ((typeof REGL_TABLA_DE!=='undefined'&&REGL_TABLA_DE[sub])||''); }
+function _r2Campos(sub, tabla){
+  if(!tabla) return [];
+  const out=[], vistos=new Set();
+  const add=(c,l)=>{ c=String(c||'').toLowerCase(); if(!c||vistos.has(c)||_R2_CLAVES.has(c)) return; vistos.add(c); out.push({ tabla, campo:c, label:l||c }); };
+  ((typeof REGL_CAMPOS!=='undefined'&&REGL_CAMPOS[tabla]?.campos)||[]).forEach(([c,l])=>add(c,l));
+  const g=_R2_GRILLA[sub] || Object.keys(_R2_GRILLA).find(k=>_R2_TABLA[k]===tabla && _R2_GRILLA[k]);
+  ((typeof COL_DEFS!=='undefined'&&COL_DEFS[g])||[]).forEach(d=>add(d.field, d.label));
+  return out;
+}
 function _r2Arbol(){
   const menus=[], porMenu={};
   document.querySelectorAll('.dd-item[id^="ddi-"]').forEach(b=>{
     const m=(b.closest('.dd-wrap')?.querySelector('.dd-btn')?.textContent||'Otros').trim();
     if(!porMenu[m]){ porMenu[m]={ menu:m, pants:[] }; menus.push(porMenu[m]); }
     const sub=b.id.replace('ddi-','');
-    const tabla=(typeof REGL_TABLA_DE!=='undefined'&&REGL_TABLA_DE[sub])||'';
-    const campos=tabla && typeof REGL_CAMPOS!=='undefined' && REGL_CAMPOS[tabla] ? REGL_CAMPOS[tabla].campos.map(([c,l])=>({ tabla, campo:c, label:l })) : [];
+    const tabla=_r2TablaDe(sub);
+    const campos=_r2Campos(sub, tabla);
     porMenu[m].pants.push({ sub, label:(b.textContent||'').trim(), campos, botones:(typeof reglBotones==='function'?reglBotones(sub):[]) });
   });
   return menus;
