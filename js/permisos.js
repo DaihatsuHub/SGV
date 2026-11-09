@@ -177,7 +177,7 @@ const MENU_DEF = [
     { id:'ddi-rank', mod:'rank', label:'🏆 Ranking de Artículos' },
     { id:'ddi-subd', mod:'subd', label:'📒 Subdiario de IVA' },
     { id:'ddi-subdcc', mod:'subdcc', label:'🏢 Subdiario de IVA por Centro de Costos' },
-    { id:'ddi-saldo',mod:'saldo',label:'📊 Saldos por Mes' },
+    { id:'ddi-saldo',mod:'saldo',label:'📊 Saldos de Clientes por Mes' },
     { id:'ddi-ctip', mod:'ctip', label:'📋 Tipos de Comprobantes' },
   ]},
   { grupo:'💼 Cobranzas', tnav:'tnav-cob', items:[

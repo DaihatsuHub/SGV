@@ -30,7 +30,8 @@ async function renderSaldos() {
     const meses = (r.meses||[]).map(m=>({ ...m,
       label: new Date(m.anio, m.mes-1, 1).toLocaleString('es-AR',{month:'short'}).toUpperCase().substring(0,3) }));
 
-    const lista = r.filas||[];
+    // Un total de menos de $1 (centavos que quedan de redondeos) se toma como 0: el cliente no aparece (Ricardo, Nov 2026)
+    const lista = (r.filas||[]).filter(x=>Math.abs(Number(x.total)||0)>=1);
     if(!lista.length) {
       body.innerHTML = '<div class="empty" style="margin-top:40px">Sin saldos</div>';
       return;
@@ -41,7 +42,7 @@ async function renderSaldos() {
 
     // Actualizar título en toolbar
     const salTit = document.getElementById('saldo-tit');
-    if(salTit) salTit.textContent = `📊 Saldos por Mes — ${hoy}`;
+    if(salTit) salTit.textContent = `📊 Saldos de Clientes por Mes — ${hoy}`;
     body.innerHTML = '';
 
     const NCOLS = 4 + nMeses + 2;
@@ -143,7 +144,7 @@ function printSaldos() {
     `<td class="n"><b>${saldoFmt(T.otros)}</b></td><td class="n"><b>${saldoFmt(T.total)}</b></td><td class="n"><b>${saldoFmt(T.cheq)}</b></td></tr>`;
 
   sgvPrint({
-    titulo:'Saldos por Mes',
+    titulo:'Saldos de Clientes por Mes',
     subtitulo:`Daihatsu Electronics — ${hoy} · ${_saldoLista.length} cliente(s)`,
     estilos:`tr.grp td{background:#dde3ea !important;font-weight:bold;border-top:2px solid #8a9099}`,
     cuerpo:`<table><thead>${cab}</thead><tbody>${cuerpo}${totGral}</tbody></table>`
