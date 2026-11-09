@@ -120,9 +120,20 @@ const SORT_STATE = { art:{col:null,asc:true}, cli:{col:null,asc:true}, desp:{col
 // distintas (la unidad CSS 'ch' variaría según la fuente y desalinearía).
 const CHAR_PX = 8;
 
+// PERMISOS POR GRUPO (Ricardo, Nov 2026): si el grupo del usuario no ve un
+// campo, tampoco se muestra su COLUMNA en la grilla ni se ofrece en "Columnas".
+// Las reglas llegan en MIS_REGLAS.campos = { tabla: ['art_costo', …] }.
+const _COL_TABLA = { art:'articulos', cli:'clientes', desp:'despachos', reci:'recibos', cart:'cheques', oc:'ordenes_compra', ctip:'comp_tipos', fac:'facturas' };
+function colsPermitidas(grid, defs){
+  const ocultos = (window.MIS_REGLAS && window.MIS_REGLAS.campos && window.MIS_REGLAS.campos[_COL_TABLA[grid]]) || [];
+  if(!ocultos.length) return defs;
+  const set = new Set(ocultos.map(c => String(c).toLowerCase()));
+  return defs.filter(d => !set.has(String(d.field||'').toLowerCase()));
+}
+
 function getActiveCols(grid) {
   const cfg  = getConfigUI(grid);
-  const defs = COL_DEFS[grid];
+  const defs = colsPermitidas(grid, COL_DEFS[grid]);
   const userChars = (cfg && cfg.chars) || {};
   // Ancho FIJO por caracteres = chars × CHAR_PX (px). Prioridad: config del usuario > def.
   const norm = c => {
@@ -156,7 +167,7 @@ function sortArrow(grid, field) {
 }
 
 function openColCfg(grid) {
-  const defs = COL_DEFS[grid];
+  const defs = colsPermitidas(grid, COL_DEFS[grid]);
   const cfg  = getConfigUI(grid);
   let ordered;
   if (cfg && cfg.orden && cfg.orden.length > 0) {
