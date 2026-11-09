@@ -85,19 +85,27 @@ async function _r2Set(lista, ocultar){
 }
 // MODO (Ricardo, Nov 2026): marcar lo que NO ve, o ir por la negativa y
 // marcar lo que SÍ ve. Sólo cambia qué significa el tilde; lo guardado es igual.
+// MODO POR MENÚ (Ricardo, Nov 2026): en cada menú se elige si se marca lo que
+// NO ve o lo que SÍ ve. Pasar un menú a "SÍ ve" lo oculta entero y después se
+// tilda lo que sí ve. Se recuerda por grupo y menú en esta PC.
 let _r2Modo='no';
-function r2Modo(m){ _r2Modo=m; document.querySelectorAll('.r2-modo').forEach(b=>b.classList.toggle('pri',b.dataset.m===m)); r2Pintar(); }
-// El tilde → ocultar o mostrar según el modo
-const _r2Ocultar = checked => _r2Modo==='no' ? checked : !checked;
-function r2Todo(ocultar){
-  const todo=_r2Arbol().flatMap(m=>m.pants.flatMap(_r2Todo));
-  if(!confirm(ocultar?`¿Ocultar TODO al grupo ${_r2Grupo}? Después marcás lo que sí ve.`:`¿Mostrar TODO al grupo ${_r2Grupo}?`)) return;
-  _r2Set(todo, ocultar);
+const _r2ModoKey = m => 'sgv_r2modo|'+_r2Grupo+'|'+m;
+function _r2ModoDe(m){ try{ return localStorage.getItem(_r2ModoKey(m))||'no'; }catch(_){ return 'no'; } }
+async function r2ModoMenu(i, modo){
+  const m=_R2[i]; if(!m) return;
+  try{ localStorage.setItem(_r2ModoKey(m.menu), modo); }catch(_){}
+  if(modo==='si'){
+    const todo=m.pants.flatMap(_r2Todo);
+    if(todo.some(x=>!_r2Oc(x)) && confirm(`${m.menu}: ¿ocultar todo y marcar después lo que SÍ ve?`)) { await _r2Set(todo, true); return; }
+  }
+  r2Pintar();
 }
+// El tilde → ocultar o mostrar según el modo del menú
+const _r2OcultarEn = (modo, checked) => modo==='no' ? checked : !checked;
 let _R2 = [];   // árbol pintado (para los onclick)
-function r2Menu(i, on){ _r2Set(_R2[i].pants.flatMap(_r2Todo), _r2Ocultar(on)); }
-function r2Pant(i, j, on){ _r2Set(_r2Todo(_R2[i].pants[j]), _r2Ocultar(on)); }
-function r2Item(i, j, k, on){ const p=_R2[i].pants[j]; _r2Set([_r2Todo(p).slice(1)[k]], _r2Ocultar(on)); }
+function r2Menu(i, on){ _r2Set(_R2[i].pants.flatMap(_r2Todo), _r2OcultarEn(_r2ModoDe(_R2[i].menu), on)); }
+function r2Pant(i, j, on){ _r2Set(_r2Todo(_R2[i].pants[j]), _r2OcultarEn(_r2ModoDe(_R2[i].menu), on)); }
+function r2Item(i, j, k, on){ const p=_R2[i].pants[j]; _r2Set([_r2Todo(p).slice(1)[k]], _r2OcultarEn(_r2ModoDe(_R2[i].menu), on)); }
 function r2AbrirMenu(i){ const m=_R2[i]?.menu; if(!m) return; _r2MenuAb.has(m)?_r2MenuAb.delete(m):_r2MenuAb.add(m); r2Pintar(); }
 function r2Abrir(sub){ _r2Abiertos.has(sub)?_r2Abiertos.delete(sub):_r2Abiertos.add(sub); r2Pintar(); }
 
@@ -106,23 +114,25 @@ function r2Pintar(){
   if(!_r2Grupo){ body.innerHTML='<div class="empty" style="margin-top:30px">Elegí un grupo</div>'; return; }
   _R2=_r2Arbol();
   // est = 'si' (oculto), 'no' (visible), 'parcial'. En modo "lo que SÍ ve" el tilde es lo visible.
-  const chk=(est,fn)=>{ const on=_r2Modo==='no'?est==='si':est==='no';
+  const chk=(est,fn)=>{ const on=_r2Modo==='no'?est==='si':est==='no';   // _r2Modo = el del menú que se está pintando
     return `<input type="checkbox" ${on?'checked':''} onclick="event.stopPropagation()" onchange="${fn}" data-parcial="${est==='parcial'?1:0}">`; };
   const tag=est=>est==='si'?'<span class="r2-tag no">No lo ve</span>':est==='parcial'?'<span class="r2-tag par">En parte</span>':'<span class="r2-tag si">Lo ve</span>';
   const solo=_r2MenuOc('cfg:solo-grupo');
   body.innerHTML=`<label class="r2-solo${solo?' on':''}"><input type="checkbox" ${solo?'checked':''} onchange="_r2Set([{k:'m',id:'cfg:solo-grupo'}],this.checked)">
       🧪 <b>Modo prueba:</b> el grupo ${esc(_r2Grupo)} se rige <b>SÓLO por esta pantalla</b> (no cuentan los Permisos por nivel).
       ${solo?'<span class="r2-tag no" style="margin-left:8px">ACTIVO</span>':''}</label>`
-   + `<div class="r2-cab">${_r2Modo==='no'
-      ?`Tildá lo que el grupo <b>${esc(_r2Grupo)}</b> <b>NO</b> ve.`
-      :`Tildá lo que el grupo <b>${esc(_r2Grupo)}</b> <b>SÍ</b> ve (lo destildado no lo ve).`}
+   + `<div class="r2-cab">En cada menú elegí si marcás lo que <b>NO ve</b> o lo que <b>SÍ ve</b> el grupo ${esc(_r2Grupo)}.
      Tildar un menú o una pantalla marca todo lo que tiene adentro.</div>`
    + _R2.map((m,i)=>{
       const em=_r2Estado(m.pants.flatMap(_r2Todo));
       const abM=_r2MenuAb.has(m.menu);
+      _r2Modo=_r2ModoDe(m.menu);
+      const md=`<span class="r2-md" onclick="event.stopPropagation()">Marcar:
+          <button class="${_r2Modo==='no'?'on':''}" onclick="r2ModoMenu(${i},'no')">lo que NO ve</button>
+          <button class="${_r2Modo==='si'?'on':''}" onclick="r2ModoMenu(${i},'si')">lo que SÍ ve</button></span>`;
       return `<div class="r2-menu"><div class="r2-mrow">${chk(em,`r2Menu(${i},this.checked)`)}
           <b class="r2-mlbl" onclick="r2AbrirMenu(${i})">${abM?'▾':'▸'} ${esc(m.menu)}</b>
-          <span class="r2-cnt" style="color:rgba(255,255,255,.8)">${m.pants.length} pantallas</span>${tag(em)}</div>`
+          ${md}<span class="r2-cnt" style="color:rgba(255,255,255,.8)">${m.pants.length} pantallas</span>${tag(em)}</div>`
       + (!abM ? '' : m.pants.map((p,j)=>{
           const todo=_r2Todo(p), ep=_r2Estado(todo), ab=_r2Abiertos.has(p.sub), hijos=todo.slice(1);
           return `<div class="r2-pant"><div class="r2-prow">${chk(ep,`r2Pant(${i},${j},this.checked)`)}
@@ -153,6 +163,9 @@ function _r2Style(){
     .r2-mrow{display:flex;align-items:center;gap:10px;padding:11px 14px;background:#1a5bd6;color:#fff;
       font-size:15px;text-transform:uppercase;letter-spacing:.6px;cursor:pointer}
     .r2-mlbl{flex:1;cursor:pointer}
+    .r2-md{font-size:11px;text-transform:none;letter-spacing:0;display:flex;gap:4px;align-items:center}
+    .r2-md button{font-size:11px;padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.6);background:transparent;color:#fff;cursor:pointer}
+    .r2-md button.on{background:#fff;color:#1a5bd6;font-weight:700}
     .r2-mrow .r2-tag{background:#fff}
     /* SUBMENÚ: renglón blanco con raya azul a la izquierda, metido adentro */
     .r2-pant{margin:0 0 0 22px;border-left:4px solid #8fb3f5;border-bottom:1px solid var(--b1);background:var(--s1)}
