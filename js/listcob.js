@@ -20,8 +20,10 @@ function lcobToggleRetTot(){ if(_lcobRows.length) _lcobPintar(); }
 
 // Plantilla de columnas: se arma según cuántas retenciones haya
 function _lcobTpl(){
-  const rets=_lcobRetCols().map(()=>'95px').join(' ');
-  return `display:grid;grid-template-columns:85px 115px 60px minmax(170px,1fr) 55px 100px 100px 100px 100px ${rets} 95px 120px;gap:6px;align-items:center`;
+  // Columnas de ANCHO FIJO (Ricardo, Nov 2026): con una columna "1fr" cada
+  // renglón calculaba su propio ancho y se desarmaba el encolumnado.
+  const rets=_lcobRetCols().map(()=>'92px').join(' ');
+  return `display:grid;grid-template-columns:72px 100px 48px 200px 40px 108px 104px 108px 108px ${rets} 84px 120px;gap:6px;align-items:center;width:max-content`;
 }
 
 function _lcobFecha(f){
@@ -99,18 +101,18 @@ function _lcobPintar(){
   const TPL=_lcobTpl();
   const numCell=v=>`<span style="text-align:right;font-family:var(--mono)">${_lcobFmt(v)}</span>`;
   body.innerHTML=_lcobRows.map(x=>`
-    <div style="${TPL};padding:6px 12px;border-bottom:1px solid var(--b1);font-size:13px;min-width:max-content">
+    <div class="lcob-r" style="${TPL};padding:5px 12px;border-bottom:1px solid var(--b1);font-size:12px">
       <span style="color:var(--t2);font-family:var(--mono)">${_lcobFecha(x.rec.fecha)}</span>
       <span style="font-family:var(--mono);color:var(--acc)">${esc(_lcobRecNum(x.rec))}</span>
       <span style="font-family:var(--mono);color:var(--t2)">${esc((x.rec.cliente||'').trim())}</span>
-      <span title="${esc(_lcobCliRazon(x.rec.cliente,x.rec))}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sgvCorta(_lcobCliRazon(x.rec.cliente,x.rec)))}</span>
+      <span title="${esc(_lcobCliRazon(x.rec.cliente,x.rec))}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${esc(_lcobCliRazon(x.rec.cliente,x.rec))}</span>
       <span style="font-family:var(--mono);color:var(--t2)">${esc(_lcobVend(x.rec.cliente,x.rec))}</span>
       ${numCell(x.ins.efectivo)}${numCell(x.ins.transf)}${numCell(x.ins.cheqF)}${numCell(x.ins.cheqE)}
       ${RC.map(c=>numCell(_lcobRetVal(x.ins,c.key))).join('')}
       ${numCell(x.ins.ajuste)}
       <span style="text-align:right;font-family:var(--mono);font-weight:700">${_lcobFmt0(x.total)}</span>
     </div>`).join('')
-    + `<div style="${TPL};padding:9px 12px;border-top:2px solid var(--b1);font-weight:700;font-family:var(--mono);min-width:max-content">
+    + `<div class="lcob-r lcob-tot" style="${TPL};padding:8px 12px;border-top:2px solid var(--acc);font-weight:700;font-family:var(--mono);font-size:11.5px;background:var(--s2);position:sticky;bottom:0">
         <span></span><span></span><span></span><span style="text-align:right">TOTALES (${_lcobRows.length})</span><span></span>
         <span style="text-align:right">${_lcobFmt0(T.efectivo)}</span>
         <span style="text-align:right">${_lcobFmt0(T.transf)}</span>
@@ -140,7 +142,9 @@ function _lcobHead(){
   const th=document.querySelector('#page-listcob .th-tab'); if(!th) return;
   // min-width:max-content → el encabezado mide lo mismo que las filas, si no
   // las columnas se comprimen y dejan de coincidir al scrollear.
-  th.setAttribute('style', _lcobTpl()+';padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--b1);font-size:11px;color:var(--t2);min-width:max-content;will-change:transform');
+  th.setAttribute('style', _lcobTpl()+';padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--b1);font-size:11px;color:var(--t2);will-change:transform');
+  if(!document.getElementById('lcob-st')){ const st=document.createElement('style'); st.id='lcob-st';
+    st.textContent='.lcob-r>span{overflow:hidden;white-space:nowrap;min-width:0}'; document.head.appendChild(st); }
   th.innerHTML=`<span>Fecha</span><span>Recibo</span><span>Cód</span><span>Cliente</span><span>Vend</span>`+
     `<span style="text-align:right">Efectivo</span><span style="text-align:right">Transfer.</span><span style="text-align:right">Cheque</span><span style="text-align:right">Echeq</span>`+
     _lcobRetCols().map(c=>`<span style="text-align:right" title="Retención ${esc(c.label)}">${esc(c.label)}</span>`).join('')+
