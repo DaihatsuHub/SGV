@@ -17,23 +17,26 @@ const REM_RG = 4.23;   // 1 renglón (6 por pulgada)
 // (condensada), código -10, despacho -15; pie -3 y 5 renglones abajo; cajas -6
 // y 6 renglones abajo, con el valor declarado en el mismo renglón.
 const REM_POS = {
-  fecha:    { x:188 - 23*REM_CH, y:25 },
-  razon:    { x:29  - 8*REM_CH, y:51 },
-  domic:    { x:29  - 8*REM_CH, y:59 },
-  local:    { x:29  - 8*REM_CH, y:63 },     // la provincia va en este mismo renglón
-  iva:      { x:181 - 10*REM_CH, y:50 },
-  cuit:     { x:186 - 12*REM_CH, y:58 },
-  transp:   { x:30  - 8*REM_CH, y:75 - REM_RG },     // TRANSPORTE: nombre — dirección
-  items:    { y:105.4 - 6*REM_RG, alto:4.6, max:20, desMax:45,
-              can:{x:33 - 4*REM_CH}, des:{x:41.7 - 6*REM_CH}, cod:{x:138 - 14*REM_CH}, desp:{x:166 - 11*REM_CH} },
+  fecha:    { x:188 - 22*REM_CH, y:25 },
+  razon:    { x:29  - 7*REM_CH, y:51 },
+  domic:    { x:29  - 7*REM_CH, y:59 },
+  local:    { x:29  - 7*REM_CH, y:63 },     // la provincia va en este mismo renglón
+  iva:      { x:181 - 13*REM_CH, y:50 },
+  cuit:     { x:186 - 15*REM_CH, y:58 },
+  transp:   { x:30  - 7*REM_CH, y:75 - REM_RG },     // TRANSPORTE: nombre — dirección
+  items:    { y:105.4 - 6*REM_RG, alto:4.6, max:0,   // max: se calcula abajo
+              desMax:45,
+              can:{x:33 - 3*REM_CH}, des:{x:41.7 - 5*REM_CH}, cod:{x:138 - 14*REM_CH}, desp:{x:166 - 15*REM_CH} },
   cajas:    { x:66  - 8*REM_CH, y:209 + 8*REM_RG },   // + valor declarado en el mismo renglón
   factura:  { x:66  - 8*REM_CH, y:215 + 8*REM_RG },
-  piezas:   { x:33  - 2*REM_CH, y:236 + 3*REM_RG },
-  origen:   { x:61  - 2*REM_CH, y:236 + 3*REM_RG },
-  aduana:   { x:61  - 2*REM_CH, y:240 + 3*REM_RG },
-  leyenda:  { x:105 - 2*REM_CH, y:236 + 3*REM_RG },
-  web:      { x:105 - 2*REM_CH, y:240 + 3*REM_RG }
+  piezas:   { x:33  - 5*REM_CH, y:236 + 3*REM_RG },
+  origen:   { x:61  - 5*REM_CH, y:236 + 3*REM_RG },
+  aduana:   { x:61  - 5*REM_CH, y:240 + 3*REM_RG },
+  leyenda:  { x:105 - 5*REM_CH, y:236 + 3*REM_RG },
+  web:      { x:105 - 5*REM_CH, y:240 + 3*REM_RG }
 };
+// Renglones de ítems por remito: hasta 2 renglones antes de la línea de cajas
+REM_POS.items.max = Math.floor((REM_POS.cajas.y - 2*REM_RG - REM_POS.items.y) / REM_POS.items.alto) + 1;
 const REM_LEYENDA = 'Distribuidor oficial de calculadoras Casio';
 
 // Número en letras (enteros), para "2 (DOS) CAJAS" y "$ 100.000 (CIEN MIL)"
