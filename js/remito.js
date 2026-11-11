@@ -21,18 +21,18 @@ const REM_POS = {
   razon:    { x:29  - 8*REM_CH, y:51 },
   domic:    { x:29  - 8*REM_CH, y:59 },
   local:    { x:29  - 8*REM_CH, y:63 },     // la provincia va en este mismo renglón
-  iva:      { x:181 - 5*REM_CH, y:50 },
-  cuit:     { x:186 - 8*REM_CH, y:58 },
+  iva:      { x:181 - 10*REM_CH, y:50 },
+  cuit:     { x:186 - 12*REM_CH, y:58 },
   transp:   { x:30  - 8*REM_CH, y:75 - REM_RG },     // TRANSPORTE: nombre — dirección
-  items:    { y:105.4, alto:4.6, max:20, desMax:45,
+  items:    { y:105.4 - 6*REM_RG, alto:4.6, max:20, desMax:45,
               can:{x:33 - 4*REM_CH}, des:{x:41.7 - 6*REM_CH}, cod:{x:138 - 14*REM_CH}, desp:{x:166 - 11*REM_CH} },
   cajas:    { x:66  - 8*REM_CH, y:209 + 8*REM_RG },   // + valor declarado en el mismo renglón
   factura:  { x:66  - 8*REM_CH, y:215 + 8*REM_RG },
-  piezas:   { x:33  - 5*REM_CH, y:236 + 3*REM_RG },
-  origen:   { x:61  - 5*REM_CH, y:236 + 3*REM_RG },
-  aduana:   { x:61  - 5*REM_CH, y:240 + 3*REM_RG },
-  leyenda:  { x:105 - 5*REM_CH, y:236 + 3*REM_RG },
-  web:      { x:105 - 5*REM_CH, y:240 + 3*REM_RG }
+  piezas:   { x:33  - 2*REM_CH, y:236 + 3*REM_RG },
+  origen:   { x:61  - 2*REM_CH, y:236 + 3*REM_RG },
+  aduana:   { x:61  - 2*REM_CH, y:240 + 3*REM_RG },
+  leyenda:  { x:105 - 2*REM_CH, y:236 + 3*REM_RG },
+  web:      { x:105 - 2*REM_CH, y:240 + 3*REM_RG }
 };
 const REM_LEYENDA = 'Distribuidor oficial de calculadoras Casio';
 
