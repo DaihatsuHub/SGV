@@ -12,24 +12,27 @@
 // Posiciones en mm desde el borde superior izquierdo de la hoja A4
 // 1 caracter (Courier 11pt) ≈ 2,33 mm. Ajustes de las pruebas del 05/11.
 const REM_CH = 2.33;
+const REM_RG = 4.23;   // 1 renglón (6 por pulgada)
+// Ajustes de las pruebas del 11/11: encabezado -5, cantidad -3, descripción -4
+// (condensada), código -10, despacho -15; pie -3 y 5 renglones abajo; cajas -6
+// y 6 renglones abajo, con el valor declarado en el mismo renglón.
 const REM_POS = {
-  fecha:    { x:188 - 5*REM_CH, y:25 },
-  razon:    { x:29  - 5*REM_CH, y:51 },
-  domic:    { x:29  - 5*REM_CH, y:59 },
-  local:    { x:29  - 5*REM_CH, y:63 },     // la provincia va en este mismo renglón
-  iva:      { x:181 - 5*REM_CH, y:50 },
-  cuit:     { x:186 - 5*REM_CH, y:58 },
-  transp:   { x:30  - 5*REM_CH, y:75 },     // TRANSPORTE: nombre — dirección
-  items:    { y:105.4, alto:4.6, max:20, desMax:30,
-              can:{x:33 - 2*REM_CH}, des:{x:41.7 - 2*REM_CH}, cod:{x:138 - 9*REM_CH}, desp:{x:166 - 9*REM_CH} },
-  cajas:    { x:66  - 2*REM_CH, y:209 },
-  valor:    { x:66  - 2*REM_CH, y:215 },
-  factura:  { x:66  - 2*REM_CH, y:221 },
-  piezas:   { x:33  - 2*REM_CH, y:236 },
-  origen:   { x:61  - 2*REM_CH, y:236 },
-  aduana:   { x:61  - 2*REM_CH, y:240 },
-  leyenda:  { x:105 - 2*REM_CH, y:236 },
-  web:      { x:105 - 2*REM_CH, y:240 }
+  fecha:    { x:188 - 10*REM_CH, y:25 },
+  razon:    { x:29  - 10*REM_CH, y:51 },
+  domic:    { x:29  - 10*REM_CH, y:59 },
+  local:    { x:29  - 10*REM_CH, y:63 },     // la provincia va en este mismo renglón
+  iva:      { x:181 - 10*REM_CH, y:50 },
+  cuit:     { x:186 - 10*REM_CH, y:58 },
+  transp:   { x:30  - 10*REM_CH, y:75 },     // TRANSPORTE: nombre — dirección
+  items:    { y:105.4, alto:4.6, max:20, desMax:45,
+              can:{x:33 - 5*REM_CH}, des:{x:41.7 - 6*REM_CH}, cod:{x:138 - 19*REM_CH}, desp:{x:166 - 24*REM_CH} },
+  cajas:    { x:66  - 8*REM_CH, y:209 + 6*REM_RG },   // + valor declarado en el mismo renglón
+  factura:  { x:66  - 8*REM_CH, y:215 + 6*REM_RG },
+  piezas:   { x:33  - 5*REM_CH, y:236 + 5*REM_RG },
+  origen:   { x:61  - 5*REM_CH, y:236 + 5*REM_RG },
+  aduana:   { x:61  - 5*REM_CH, y:240 + 5*REM_RG },
+  leyenda:  { x:105 - 5*REM_CH, y:236 + 5*REM_RG },
+  web:      { x:105 - 5*REM_CH, y:240 + 5*REM_RG }
 };
 const REM_LEYENDA = 'Distribuidor oficial de calculadoras Casio';
 
@@ -177,6 +180,7 @@ async function remImprimir(f, items, o){
   cab += t(P.transp, 'TRANSPORTE: ' + (tr ? [tr.DETALLE, tr.STRING1].filter(x => (x||'').trim()).join(' — ') : (f.fac_transp||'')));
   const web = String(f.fac_nro||'').trim().charAt(0).toUpperCase() === 'T' ? 'www.tressa.com.ar' : 'www.daihatsu.com.ar';
   const NEG = 'font-family:Arial,sans-serif;font-weight:bold;font-size:13pt';
+  const COND = 'transform:scaleX(.6);transform-origin:left top';   // letra condensada
 
   // Si los renglones no entran en un remito, se reparten en varios (Ricardo, Nov 2026):
   // en los que no son el último va "Continúa en el próximo remito..." y el pie
@@ -189,7 +193,7 @@ async function remImprimir(f, items, o){
       const y = P.items.y + i * P.items.alto;
       h += t({ x: P.items.can.x - 12, y }, it.ite_can, 'width:12mm;text-align:right');
       const art = (ARTS||[]).find(x => (x.ART_COD||'').trim() === (it.ite_art||'').trim());
-      h += t({ x: P.items.des.x, y }, String(art ? art.ART_DES || '' : '').substring(0, P.items.desMax));
+      h += t({ x: P.items.des.x, y }, String(art ? art.ART_DES || '' : '').substring(0, P.items.desMax), COND);
       h += t({ x: P.items.cod.x, y }, (it.ite_art||'').trim());
       h += t({ x: P.items.desp.x, y }, (it.ite_desp||'').trim());
     });
@@ -198,8 +202,7 @@ async function remImprimir(f, items, o){
              `Continúa en el próximo remito...   (${n + 1} de ${tramos.length})`, NEG);
     } else {
       if (tramos.length > 1) h += t({ x: P.items.des.x, y: P.items.y + P.items.max * P.items.alto + 2 }, `(${n + 1} de ${tramos.length})`);
-      h += t(P.cajas, `•  ${o.cajas} (${remLetras(o.cajas)}) CAJA${o.cajas === 1 ? '' : 'S'}`, NEG);
-      h += t(P.valor, `•  VALOR DECLARADO: $ ${fmtMil(o.valor)}`, NEG);
+      h += t(P.cajas, `•  ${o.cajas} (${remLetras(o.cajas)}) CAJA${o.cajas === 1 ? '' : 'S'}     VALOR DECLARADO: $ ${fmtMil(o.valor)}`, NEG + ';white-space:pre');
       if (o.contable) h += t(P.factura, `•  FACTURA N.° ${String(f.fac_nro).trim()}`, NEG);
       h += t(P.piezas, `${piezas} Piezas`);
       if (uniq('dep_proc')) h += t(P.origen, 'Origen: ' + uniq('dep_proc'));
