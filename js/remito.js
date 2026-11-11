@@ -195,7 +195,8 @@ async function remImprimir(f, items, o){
       const art = (ARTS||[]).find(x => (x.ART_COD||'').trim() === (it.ite_art||'').trim());
       h += t({ x: P.items.des.x, y }, String(art ? art.ART_DES || '' : '').substring(0, P.items.desMax), COND);
       h += t({ x: P.items.cod.x, y }, (it.ite_art||'').trim());
-      h += t({ x: P.items.desp.x, y }, (it.ite_desp||'').trim());
+      // Despacho sin la letra de empresa (T/H) adelante, condensado
+      h += t({ x: P.items.desp.x, y }, (it.ite_desp||'').trim().replace(/^[TH]/i, ''), COND);
     });
     if (!ultimo) {
       h += t({ x: P.items.des.x, y: P.items.y + P.items.max * P.items.alto + 2 },
