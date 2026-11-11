@@ -27,8 +27,8 @@ const REM_POS = {
   items:    { y:105.4 - 6*REM_RG, alto:4.6, max:0,   // max: se calcula abajo
               desMax:45,
               can:{x:33 - 3*REM_CH}, des:{x:41.7 - 5*REM_CH}, cod:{x:138 - 14*REM_CH}, desp:{x:166 - 15*REM_CH} },
-  cajas:    { x:66  - 8*REM_CH, y:209 + 8*REM_RG },   // + valor declarado en el mismo renglón
-  factura:  { x:66  - 8*REM_CH, y:215 + 8*REM_RG },
+  cajas:    { x:66  - 8*REM_CH, y:209 + 7*REM_RG },   // + valor declarado en el mismo renglón
+  factura:  { x:66  - 8*REM_CH, y:215 + 7*REM_RG },
   piezas:   { x:33  - 5*REM_CH, y:236 + 3*REM_RG },
   origen:   { x:61  - 5*REM_CH, y:236 + 3*REM_RG },
   aduana:   { x:61  - 5*REM_CH, y:240 + 3*REM_RG },
@@ -176,8 +176,10 @@ async function remImprimir(f, items, o){
   const dom = ent ? { d: cli.CLI_ENT_DOMIC, l: cli.CLI_ENT_LOCAL, cp: cli.CLI_ENT_CODPOS, p: (typeof PCIA !== 'undefined' ? PCIA[cli.CLI_ENT_PROVIN] : '') || cli.CLI_ENT_PROVIN || '' }
                   : { d: cli.CLI_DOMIC, l: cli.CLI_LOCAL, cp: cli.CLI_CODPOS, p: pcia };
   cab += t(P.domic, dom.d);
-  cab += t(P.local, [dom.cp ? '(' + String(dom.cp).trim() + ')' : '', (dom.l||'').trim()].filter(Boolean).join('-')
-                     + (dom.p ? '   ' + String(dom.p).toUpperCase() : ''));
+  // Localidad " - " PROVINCIA en negrita
+  cab += `<div class="c" style="left:${P.local.x + ax}mm;top:${P.local.y + ay}mm">`
+       + esc([dom.cp ? '(' + String(dom.cp).trim() + ')' : '', (dom.l||'').trim()].filter(Boolean).join('-'))
+       + (dom.p ? ' - <b>' + esc(String(dom.p).toUpperCase()) + '</b>' : '') + '</div>';
   cab += t(P.iva, ivaTxt);
   cab += t(P.cuit, cli.CLI_CUIT);
   cab += t(P.transp, 'TRANSPORTE: ' + (tr ? [tr.DETALLE, tr.STRING1].filter(x => (x||'').trim()).join(' — ') : (f.fac_transp||'')));
