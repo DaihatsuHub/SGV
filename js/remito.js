@@ -17,22 +17,22 @@ const REM_RG = 4.23;   // 1 renglón (6 por pulgada)
 // (condensada), código -10, despacho -15; pie -3 y 5 renglones abajo; cajas -6
 // y 6 renglones abajo, con el valor declarado en el mismo renglón.
 const REM_POS = {
-  fecha:    { x:188 - 25*REM_CH, y:25 },
-  razon:    { x:29  - 10*REM_CH, y:51 },
-  domic:    { x:29  - 10*REM_CH, y:59 },
-  local:    { x:29  - 10*REM_CH, y:63 },     // la provincia va en este mismo renglón
-  iva:      { x:181 - 10*REM_CH, y:50 },
-  cuit:     { x:186 - 10*REM_CH, y:58 },
-  transp:   { x:30  - 10*REM_CH, y:75 },     // TRANSPORTE: nombre — dirección
+  fecha:    { x:188 - 23*REM_CH, y:25 },
+  razon:    { x:29  - 8*REM_CH, y:51 },
+  domic:    { x:29  - 8*REM_CH, y:59 },
+  local:    { x:29  - 8*REM_CH, y:63 },     // la provincia va en este mismo renglón
+  iva:      { x:181 - 5*REM_CH, y:50 },
+  cuit:     { x:186 - 8*REM_CH, y:58 },
+  transp:   { x:30  - 8*REM_CH, y:75 - REM_RG },     // TRANSPORTE: nombre — dirección
   items:    { y:105.4, alto:4.6, max:20, desMax:45,
-              can:{x:33 - 5*REM_CH}, des:{x:41.7 - 6*REM_CH}, cod:{x:138 - 19*REM_CH}, desp:{x:166 - 24*REM_CH} },
-  cajas:    { x:66  - 8*REM_CH, y:209 + 6*REM_RG },   // + valor declarado en el mismo renglón
-  factura:  { x:66  - 8*REM_CH, y:215 + 6*REM_RG },
-  piezas:   { x:33  - 5*REM_CH, y:236 + 5*REM_RG },
-  origen:   { x:61  - 5*REM_CH, y:236 + 5*REM_RG },
-  aduana:   { x:61  - 5*REM_CH, y:240 + 5*REM_RG },
-  leyenda:  { x:105 - 5*REM_CH, y:236 + 5*REM_RG },
-  web:      { x:105 - 5*REM_CH, y:240 + 5*REM_RG }
+              can:{x:33 - 4*REM_CH}, des:{x:41.7 - 6*REM_CH}, cod:{x:138 - 14*REM_CH}, desp:{x:166 - 11*REM_CH} },
+  cajas:    { x:66  - 8*REM_CH, y:209 + 8*REM_RG },   // + valor declarado en el mismo renglón
+  factura:  { x:66  - 8*REM_CH, y:215 + 8*REM_RG },
+  piezas:   { x:33  - 5*REM_CH, y:236 + 3*REM_RG },
+  origen:   { x:61  - 5*REM_CH, y:236 + 3*REM_RG },
+  aduana:   { x:61  - 5*REM_CH, y:240 + 3*REM_RG },
+  leyenda:  { x:105 - 5*REM_CH, y:236 + 3*REM_RG },
+  web:      { x:105 - 5*REM_CH, y:240 + 3*REM_RG }
 };
 const REM_LEYENDA = 'Distribuidor oficial de calculadoras Casio';
 
