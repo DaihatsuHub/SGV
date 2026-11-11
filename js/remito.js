@@ -17,7 +17,7 @@ const REM_RG = 4.23;   // 1 renglón (6 por pulgada)
 // (condensada), código -10, despacho -15; pie -3 y 5 renglones abajo; cajas -6
 // y 6 renglones abajo, con el valor declarado en el mismo renglón.
 const REM_POS = {
-  fecha:    { x:188 - 10*REM_CH, y:25 },
+  fecha:    { x:188 - 25*REM_CH, y:25 },
   razon:    { x:29  - 10*REM_CH, y:51 },
   domic:    { x:29  - 10*REM_CH, y:59 },
   local:    { x:29  - 10*REM_CH, y:63 },     // la provincia va en este mismo renglón
