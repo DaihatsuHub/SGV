@@ -238,7 +238,8 @@ function rccDetCentro(i){
   ov.innerHTML=`<div class="modal" style="max-width:1080px;width:96%;max-height:84vh;display:flex;flex-direction:column">
     <div class="mhd" style="display:flex;align-items:center;justify-content:space-between">
       <span style="font-weight:600;color:var(--acc)">${_rcEsc(f.ccos)} ${_rcEsc(f.detalle)}</span>
-      <button class="btn" id="rcc-x" style="padding:2px 9px">✕</button>
+      <span style="display:flex;gap:6px"><button class="btn" id="rcc-xls" style="padding:2px 9px">📥 Excel</button>
+      <button class="btn" id="rcc-x" style="padding:2px 9px">✕</button></span>
     </div>
     <div style="padding:6px 16px;font-size:12px;color:var(--t2)">
       Ventas ${_rcFmt(f.ventas)} · Costos ${_rcFmt(f.costos)} · Gastos ${_rcFmt((f.impuestos||0)+(f.otros||0))} ·
@@ -246,7 +247,7 @@ function rccDetCentro(i){
     </div>
     <div style="overflow:auto;padding:0 16px 14px">
       <div style="font-size:12px;font-weight:600;margin:6px 0">Modelos (${arts.length})</div>
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <table id="rcc-dt" style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr>${thI('Modelo')}${thI('Descripción')}${thD('Unid.')}
           ${thD('Venta')}${thD('Costo')}
           ${thP('Facturado $')}${thP('NC $')}${thP('Ventas $')}${thP('Costos $')}${thP('Resultado $')}${thP('Margen')}</tr></thead>
@@ -264,7 +265,61 @@ function rccDetCentro(i){
   const esc=e=>{ if(e.key==='Escape') cerrar(); };
   document.addEventListener('keydown',esc);
   ov.querySelector('#rcc-x').onclick=cerrar;
+  ov.querySelector('#rcc-xls').onclick=()=>rccDetExcel(i);
   ov.onclick=e=>{ if(e.target===ov) cerrar(); };
+  // La grilla respeta el ancho del popup: si no entra, se achica la letra
+  const tb=ov.querySelector('#rcc-dt'), cont=tb&&tb.parentElement;
+  if(tb){
+    let fs=12;
+    const ajustar=()=>{ fs=12; tb.style.fontSize=fs+'px';
+      while(fs>8 && tb.scrollWidth>cont.clientWidth-32){ fs-=0.5; tb.style.fontSize=fs+'px';
+        tb.querySelectorAll('th,td').forEach(c=>{ c.style.padding=(fs<11?'4px 3px':'5px 6px'); }); } };
+    ajustar();
+    const ro=new ResizeObserver(ajustar); ro.observe(cont);
+  }
+}
+
+/* ─────────── Excel del detalle de un centro ─────────── */
+async function rccDetExcel(i){
+  const f=(_rccData?.filas||[])[i]; if(!f) return;
+  if(!window.ExcelJS){
+    try{ await new Promise((res,rej)=>{ const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+      s.onload=res; s.onerror=()=>rej(new Error('No se pudo cargar ExcelJS')); document.head.appendChild(s); }); }
+    catch(e){ toast(e.message,'err'); return; }
+  }
+  const D=_rccData, NUM='#,##0.00';
+  const wb=new ExcelJS.Workbook(); const ws=wb.addWorksheet('Modelos');
+  ws.columns=[{width:14},{width:34},{width:9},{width:7},{width:15},{width:7},{width:15},{width:15},{width:13},{width:15},{width:15},{width:15},{width:10}];
+  ws.addRow([`${f.ccos||''} ${f.detalle||''} — ${_rcFecha(D.desde)} a ${_rcFecha(D.hasta)}`]).font={bold:true,size:13};
+  ws.addRow([`Ventas ${_rcFmt(f.ventas)} · Costos ${_rcFmt(f.costos)} · Gastos ${_rcFmt((f.impuestos||0)+(f.otros||0))} · Resultado ${_rcFmt(f.resultado)}`]).font={italic:true,color:{argb:'FF666666'}};
+  ws.addRow([]);
+  const hr=ws.addRow(['Modelo','Descripción','Unid.','Mon.','Venta','Mon.','Costo','Facturado $','NC $','Ventas $','Costos $','Resultado $','Margen %']);
+  hr.eachCell(c=>{ c.font={bold:true}; c.border={bottom:{style:'thin'}}; });
+  const t={u:0,b:0,nc:0,v:0,c:0,r:0};
+  (f.detArt||[]).forEach(x=>{
+    const r=ws.addRow([x.art,x.des,x.unidades,_rcSimb(x.moneda),x.vtaArt,_rcSimb(x.monCos),x.cosArt,
+      x.bruto ?? x.ventas, x.nc?-x.nc:null, x.ventas, x.costos, x.resultado, x.margen]);
+    [5,7,8,9,10,11,12,13].forEach(k=>{ r.getCell(k).numFmt=NUM; });
+    t.u+=x.unidades||0; t.b+=(x.bruto ?? x.ventas)||0; t.nc+=x.nc||0; t.v+=x.ventas||0; t.c+=x.costos||0; t.r+=x.resultado||0;
+  });
+  const tr=ws.addRow(['','Total',t.u,'','','','',t.b,t.nc?-t.nc:null,t.v,t.c,t.r,t.c?Math.round((t.v-t.c)/t.c*10000)/100:null]);
+  [8,9,10,11,12,13].forEach(k=>{ tr.getCell(k).numFmt=NUM; });
+  tr.eachCell(c=>{ c.font={bold:true}; c.border={top:{style:'medium',color:{argb:'FF0A58CA'}}}; });
+  ws.views=[{state:'frozen', ySplit:4}];
+  if((f.detGastos||[]).length){
+    const wg=wb.addWorksheet('Gastos');
+    wg.columns=[{width:12},{width:14},{width:40},{width:15}];
+    const h=wg.addRow(['Fecha','Concepto','Detalle','Importe']); h.eachCell(c=>{ c.font={bold:true}; c.border={bottom:{style:'thin'}}; });
+    let tg=0;
+    f.detGastos.forEach(x=>{ const r=wg.addRow([_rcFecha(x.fecha),x.concepto+(x.impuesto?' (imp.)':''),x.detalle||'',x.importe]); r.getCell(4).numFmt=NUM; tg+=x.importe||0; });
+    const r=wg.addRow(['','','Total',tg]); r.getCell(4).numFmt=NUM; r.eachCell(c=>{ c.font={bold:true}; });
+  }
+  const buf=await wb.xlsx.writeBuffer();
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  a.download=`Resultado_${(f.ccos||'SinAsignar').trim()}_${(D.desde||'').replace(/-/g,'')}_${(D.hasta||'').replace(/-/g,'')}.xlsx`;
+  a.click(); URL.revokeObjectURL(a.href);
 }
 
 /* ─────────── Imprimir ─────────── */
