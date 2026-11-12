@@ -89,6 +89,7 @@ async function remAbrir(facNro){
     const fr = await sbGet('facturas', 'fac_nro=eq.' + encodeURIComponent(facNro));
     const f = fr && fr[0]; if (!f) { toast('No se encontró el comprobante','err'); return; }
     const items = (await sbLoadItemsFac(f.fac_nro)) || [];
+    if (typeof cliFresco === 'function') await cliFresco(f.fac_cli);   // domicilio de entrega al día
     const nro = String(f.fac_nro).trim();
     const ct = (CTIPS||[]).find(c => c.prefijo === nro.substring(0,3) && c.tipo === nro.slice(-1));
     const contable = !!(ct && ct.contable);
@@ -183,7 +184,7 @@ async function remImprimir(f, items, o){
   cab += t(P.iva, ivaTxt);
   cab += t(P.cuit, cli.CLI_CUIT);
   cab += t(P.transp, 'TRANSPORTE: ' + (tr ? [tr.DETALLE, tr.STRING1].filter(x => (x||'').trim()).join(' — ') : (f.fac_transp||'')));
-  const web = String(f.fac_nro||'').trim().charAt(0).toUpperCase() === 'T' ? 'www.tressa.com.ar' : 'www.daihatsu.com.ar';
+  const web = (o.empresa || String(f.fac_nro||'').trim().charAt(0)).toUpperCase() === 'T' ? 'www.tressa.com.ar' : 'www.daihatsu.com.ar';
   const NEG = 'font-family:Arial,sans-serif;font-weight:bold;font-size:13pt';
   const COND = 'transform:scaleX(.6);transform-origin:left top';   // letra condensada
 
@@ -210,7 +211,7 @@ async function remImprimir(f, items, o){
       if (tramos.length > 1) h += t({ x: P.items.des.x, y: P.items.y + P.items.max * P.items.alto + 2 }, `(${n + 1} de ${tramos.length})`);
       h += t(P.cajas, `•  ${o.cajas} (${remLetras(o.cajas)}) CAJA${o.cajas === 1 ? '' : 'S'}     VALOR DECLARADO: $ ${fmtMil(o.valor)}`, NEG + ';white-space:pre');
       if (o.contable) h += t(P.factura, `•  FACTURA N.° ${String(f.fac_nro).trim()}`, NEG);
-      h += t(P.piezas, `${piezas} Piezas`);
+      if (tr8.length) h += t(P.piezas, `${piezas} Piezas`);
       if (uniq('dep_proc')) h += t(P.origen, 'Origen: ' + uniq('dep_proc'));
       if (uniq('dep_adua')) h += t(P.aduana, 'Aduana: ' + uniq('dep_adua'));
     }
@@ -234,4 +235,57 @@ async function remImprimir(f, items, o){
       .c{position:absolute;white-space:nowrap;line-height:1}</style></head>
     <body>${html}<script>window.onload=function(){setTimeout(function(){window.print()},200)}<\/script></body></html>`);
   w.document.close(); w.focus();
+}
+
+/* ===========================================================================
+   REMITO SIN DETALLE (Clientes → 🚚 Remito) — Ricardo, Nov 2026
+   Mercadería que se manda sin detallar: se pide Empresa, Cajas y Valor
+   declarado; la fecha es la de hoy. Mismo formato que el de ventas, sin
+   renglones. Domicilio de ENTREGA si el cliente lo tiene.
+   =========================================================================== */
+async function remAbrirCliente(){
+  if (cliSelIdx === null || !CLIS[cliSelIdx]) { toast('Seleccioná un cliente','err'); return; }
+  const cod = (CLIS[cliSelIdx].CLI_CODIGO || '').trim();
+  const cli = await cliFresco(cod);   // datos frescos del server
+  if (!cli) { toast('No se encontró el cliente','err'); return; }
+  const aj = _remAjuste();
+  document.getElementById('rem-modal')?.remove();
+  const m = document.createElement('div'); m.id = 'rem-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  m.innerHTML = `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:12px;width:100%;max-width:440px;box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden">
+    <div style="background:var(--acc);color:#fff;padding:12px 18px;font-size:15px;font-weight:600">🚚 Remito sin detalle · ${esc(cli.CLI_RAZON||cod)}</div>
+    <div style="padding:16px 18px 6px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:grid;grid-template-columns:110px 70px 70px 1fr;gap:12px;align-items:end">
+        <div><div style="font-size:11px;color:var(--t2);margin-bottom:4px">Empresa</div>
+          <select id="rem-emp" class="finp" style="width:100%"><option value="H">Hatsu</option><option value="T">Tressa</option></select></div>
+        <div><div style="font-size:11px;color:var(--t2);margin-bottom:4px">Copias</div>
+          <input id="rem-copias" class="finp" type="number" min="1" max="9" step="1" value="${_remCopias()}" style="width:100%;text-align:right;font-family:var(--mono)"></div>
+        <div><div style="font-size:11px;color:var(--t2);margin-bottom:4px">Cajas</div>
+          <input id="rem-cajas" class="finp" type="number" min="1" step="1" value="1" style="width:100%;text-align:right;font-family:var(--mono)"></div>
+        <div><div style="font-size:11px;color:var(--t2);margin-bottom:4px">Valor declarado $</div>
+          <input id="rem-valor" class="finp" inputmode="numeric" value="" style="width:100%;text-align:right;font-family:var(--mono)"
+                 onfocus="this.select()" oninput="_remValorInput(this)"></div>
+      </div>
+      <div style="font-size:11px;color:var(--t2)">Fecha de hoy · ${(cli.CLI_ENT_DOMIC||'').trim() ? 'va al <b>domicilio de entrega</b>' : 'va al domicilio fiscal'}</div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;padding:0 18px 16px">
+      <button class="btn" onclick="document.getElementById('rem-modal').remove()">Cancelar</button>
+      <button class="btn pri" id="rem-ok">🖨 Imprimir remito</button>
+    </div></div>`;
+  document.body.appendChild(m);
+  m.addEventListener('keydown', e => { if (e.key === 'Escape') m.remove(); });
+  m.querySelector('#rem-ok').onclick = () => {
+    const cajas = parseInt(document.getElementById('rem-cajas').value, 10) || 0;
+    const val = _remNum(document.getElementById('rem-valor').value);
+    if (cajas <= 0) { toast('Indicá la cantidad de cajas','err'); return; }
+    if (val <= 0) { toast('Indicá el valor declarado','err'); return; }
+    const emp = document.getElementById('rem-emp').value;
+    const copias = Math.min(9, Math.max(1, parseInt(document.getElementById('rem-copias').value, 10) || 1));
+    try { localStorage.setItem('sgv_rem_copias', String(copias)); } catch(_) {}
+    m.remove();
+    const d = new Date(), hoy = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const f = { fac_nro: emp + ' REMITO ' + cod, fac_fec: hoy, fac_cli: cod, fac_tiva: '', fac_transp: (cli.CLI_EXPRE || '').trim() };
+    remImprimir(f, [], { cajas, valor: val, contable: false, ajuste: { x: Number(aj.x) || 0, y: Number(aj.y) || 0 }, copias, empresa: emp });
+  };
+  setTimeout(() => { const c = document.getElementById('rem-cajas'); c?.focus(); c?.select(); }, 50);
 }
