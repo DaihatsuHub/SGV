@@ -109,6 +109,7 @@ function renderEdd(){
       <div class="spacer"></div>
       <button class="btn" onclick="eddCopiar()" title="Copia la grilla para pegarla en Excel">📋 Copiar grilla</button>
       <button class="btn pri" id="edd-guardar" onclick="eddGuardar()" disabled>💾 Grabar cambios</button>
+      <button class="btn" onclick="eddCerrar()" title="Cerrar el editor">✕ Cerrar</button>
     </div>
     <div class="edd-aviso">⚠️ Sin controles de SGV: lo que se graba acá va directo a la base. Cada cambio queda registrado.
       Para pegar desde Excel, hacé clic en la celda donde empieza y Ctrl+V.</div>
@@ -144,6 +145,16 @@ function renderEdd(){
       <button class="btn" onclick="eddGlobal()">⚡ Aplicar</button>
     </div>
     <div id="edd-wrap" style="overflow:auto;height:calc(100vh - 270px);padding:0 14px 14px"></div>`;
+}
+
+// Cerrar: descarta la tabla cargada y cierra la pantalla. La próxima vez
+// arranca de cero (Ricardo, Nov 2026)
+function eddCerrar(){
+  if(_eddPendientes() && !confirm('Hay cambios sin grabar. ¿Descartarlos y cerrar?')) return;
+  _edd = { tabla:'', pk:'', cols:[], filas:[], total:0, cambios:{} };
+  const pg=document.getElementById('page-edd');
+  if(pg){ pg.innerHTML=''; pg.classList.remove('active'); }
+  const tb=document.getElementById('page-titlebar'); if(tb) tb.style.display='none';
 }
 
 const _eddFiltros = () => [1,2].map(n=>({
