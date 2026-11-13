@@ -272,3 +272,5 @@ body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:10
 .btn.tb-act{background:#dbeafe;border-color:var(--acc);color:var(--acc)}
 .tb-chips{display:inline-flex;flex-direction:column;gap:2px;margin-left:4px}
 .tb-chips .chip{padding:1px 10px;font-size:11px;line-height:1.3}
+/* Artículos: buscadores más cortos para que la barra entre en un renglón */
+#art-q,#art-qb{width:150px}
