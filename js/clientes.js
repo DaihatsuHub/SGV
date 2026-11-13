@@ -48,6 +48,7 @@ function filtClis(){
 }
 
 function renderClis(){
+  cliFiltrosCant();
   const list=filtClis();
   const body=document.getElementById('cli-body');
   const cols=getActiveCols('cli');
@@ -139,7 +140,7 @@ function updCliFilts(){
   const llenar=(id,campo,tab,todos)=>{ const el=document.getElementById(id); if(!el) return; const cur=el.value;
     const vals=[...new Set(CLIS.map(c=>c[campo]).filter(Boolean))].sort();
     el.innerHTML=`<option value="">${todos}</option>`+vals.map(v=>`<option value="${esc(v)}"${v===cur?' selected':''}>${esc(_det(tab,v))}</option>`).join(''); };
-  llenar('cli-cate','CLI_CATE','CATE','Todas'); llenar('cli-grupo','CLI_ABC','GRUP','Todos');
+  llenar('cli-cate','CLI_CATE','CATE','Todas las categorías'); llenar('cli-grupo','CLI_ABC','GRUP','Todos los grupos de compras');
 }
 
 function selCli(i){cliSelIdx=i;renderClis();sgvBajaSegunUso('btn-cli-baja','clientes',CLIS[i]?.CLI_CODIGO);}
@@ -414,4 +415,16 @@ function printCli(){
   const list=filtClis();
   const rows=list.map(c=>`<tr><td style="font-family:monospace">${esc(c.CLI_CODIGO)}</td><td>${esc(c.CLI_RAZON||'')}</td><td>${esc(c.CLI_DOMIC||'')}</td><td>${esc(c.CLI_LOCAL||'')}</td><td style="font-family:monospace">${esc(c.CLI_CUIT||'')}</td><td>${IVA[c.CLI_IVA]||'—'}</td><td>${esc(c.CLI_CONPAG||'')}</td></tr>`).join('');
   openPrint('👥 Listado de Clientes',`<table><thead><tr><th>CÓDIGO</th><th>RAZÓN SOCIAL</th><th>DOMICILIO</th><th>LOCALIDAD</th><th>CUIT</th><th>IVA</th><th>COND.PAGO</th></tr></thead><tbody>${rows}</tbody></table>`,list.length);
+}
+
+// Botón "Filtros ▾": muestra cuántos hay puestos y se pinta si hay alguno
+function cliFiltrosCant(){
+  const n=['cli-prov','cli-vend','cli-cate','cli-grupo'].filter(id=>document.getElementById(id)?.value).length;
+  const b=document.getElementById('cli-fbtn'); if(!b) return;
+  b.textContent = n ? `🔽 Filtros (${n}) ▾` : '🔽 Filtros ▾';
+  b.classList.toggle('tb-act', !!n);
+}
+function cliLimpiarFiltros(){
+  ['cli-prov','cli-vend','cli-cate','cli-grupo'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  renderClis();
 }
