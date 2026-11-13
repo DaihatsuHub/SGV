@@ -64,6 +64,7 @@ function filtDesps() {
 }
 
 function renderDesp() {
+  despFiltrosCant();
   const body  = document.getElementById('desp-body');
   // ── Carga diferida: la 1ra vez que se abre Despachos, traer sus datos (no se cargan al login) ──
   if(!window._despLoaded){
@@ -667,4 +668,16 @@ function despImportMonError(distintos, mone){
     </div>
   </div>`;
   ov.classList.add('open');
+}
+
+// Botón "Filtros ▾": muestra cuántos hay puestos y se pinta si hay alguno
+function despFiltrosCant(){
+  const n=['desp-nro','desp-emp','desp-stk'].filter(id=>document.getElementById(id)?.value).length;
+  const b=document.getElementById('desp-fbtn'); if(!b) return;
+  b.textContent = n ? `🔽 Filtros (${n}) ▾` : '🔽 Filtros ▾';
+  b.classList.toggle('tb-act', !!n);
+}
+function despLimpiarFiltros(){
+  ['desp-nro','desp-emp','desp-stk'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  renderDesp();
 }

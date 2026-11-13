@@ -862,27 +862,39 @@
     <button class="btn pri" id="btn-desp-alta" onclick="despAlta()">＋ Alta</button>
     <button class="btn" id="btn-desp-modif" onclick="despModif()">✏️ Modificar</button>
     <button class="btn dng" id="btn-desp-baja" onclick="despBaja()">✕ Baja</button>
-    <button class="btn" onclick="despAplicarGasto()" title="Aplicar % de gasto al despacho seleccionado">％ Gasto</button>
-    <button class="btn scs" data-perm="desp:alta" onclick="despImportarExcel()" title="Importar despacho desde Excel">📥 Importar desde Excel</button>
-    <button class="btn" id="btn-cfg-desp" style="display:none" onclick="openColCfg('desp')" title="Configurar columnas">⚙️ Columnas</button>
-    <div class="spacer"></div>
-    <select class="fsel" id="desp-nro" onchange="renderDesp()"><option value="">Todos los despachos</option></select>
-    <select class="fsel" id="desp-sort" onchange="renderDesp()" title="Ordenar por">
+    <span class="tb-sep"></span>
+    <div class="tb-dd">
+      <button class="btn" onclick="tbDd(this)">⚙️ Más ▾</button>
+      <div class="tb-dd-menu">
+        <button class="tb-dd-it" data-regla="desp-gasto" onclick="despAplicarGasto()" title="Aplicar % de gasto al despacho seleccionado">％ Gasto</button>
+        <button class="tb-dd-it" data-regla="desp-importar-desde-excel" data-perm="desp:alta" onclick="despImportarExcel()" title="Importar despacho desde Excel">📥 Importar desde Excel</button>
+        <button class="tb-dd-it" id="btn-cfg-desp" style="display:none;border-top:1px solid var(--b1)" onclick="openColCfg('desp')" title="Configurar columnas">⚙️ Columnas</button>
+      </div>
+    </div>
+    <div class="tb-dd">
+      <button class="btn" id="desp-fbtn" onclick="tbDd(this)">🔽 Filtros ▾</button>
+      <div class="tb-dd-menu" style="padding:8px;min-width:220px">
+        <select class="fsel" id="desp-nro" style="width:100%;margin-bottom:6px" onchange="renderDesp()" title="Despacho"><option value="">Todos los despachos</option></select>
+        <select class="fsel" id="desp-emp" style="width:100%;margin-bottom:6px" onchange="renderDesp()" title="Empresa del despacho">
+          <option value="">Ambas empresas</option>
+          <option value="H">Hatsu</option>
+          <option value="T">Tressa</option>
+        </select>
+        <select class="fsel" id="desp-stk" style="width:100%;margin-bottom:6px" onchange="renderDesp()" title="Stock del despacho">
+          <option value="">Con y sin stock</option>
+          <option value="S">Con stock</option>
+          <option value="N">Sin stock</option>
+        </select>
+        <a href="#" style="font-size:12px;color:var(--acc)" onclick="event.preventDefault();despLimpiarFiltros()">Limpiar filtros</a>
+      </div>
+    </div>
+    <select class="fsel" id="desp-sort" style="width:110px" onchange="renderDesp()" title="Ordenar por">
       <option value="fec-desc">📅 Fecha ↓</option>
       <option value="fec-asc">📅 Fecha ↑</option>
       <option value="nro-asc">Nro ↑</option>
       <option value="nro-desc">Nro ↓</option>
     </select>
-    <select class="fsel" id="desp-emp" style="width:130px" onchange="renderDesp()" title="Empresa del despacho">
-      <option value="">Ambas empresas</option>
-      <option value="H">Hatsu</option>
-      <option value="T">Tressa</option>
-    </select>
-    <select class="fsel" id="desp-stk" style="width:130px" onchange="renderDesp()" title="Stock del despacho">
-      <option value="">Todos</option>
-      <option value="S">Con stock</option>
-      <option value="N">Sin stock</option>
-    </select>
+    <div class="spacer"></div>
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" onfocus="this.select()" onclick="this.select()" id="desp-qart" placeholder="Buscar artículo" oninput="despQArt()">
       <button class="srch-clr" onclick="clrSrch('desp-qart',function(){renderDesp()})" title="Limpiar">✕</button>

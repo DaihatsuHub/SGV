@@ -87,7 +87,7 @@ async function renderFicha(){
   // Comprobante con el ancho justo; los importes se reparten el resto y no se
   // cortan nunca (Ricardo, Oct 2026: antes sobraba lugar entre Comprobante y
   // Pesos y el negativo grande desbordaba la columna).
-  const LGRID='68px 92px repeat(3,minmax(0,1fr))';
+  const LGRID='56px 92px repeat(3,minmax(0,1fr))';
   // En la vista contable todo va en pesos: se avisa arriba del bloque
   const _tit=document.getElementById('ficha-izq-tit');
   if(_tit) _tit.textContent=_fichaContables
@@ -103,7 +103,7 @@ async function renderFicha(){
     const esNC = f.tipo==='C';
     const v0 = f.saldo||0, v = esNC ? -v0 : v0;
     if(key==='pesos') totP+=v; else if(key==='tressa') totT+=v; else totC+=v;
-    const fec=(f.fec||'').split('-').reverse().join('/');
+    const fec=_fichaFec(f.fec);
     const cell = esNC ? '- '+reciFmt(v0) : reciFmt(v0);
     const est = esNC ? 'color:var(--red);font-weight:700' : '';
     _filas.push({fec:f.fec||'', k:f.nro||'', h:`<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:var(--ffs,12px);font-family:var(--mono);padding:2px 0;${est}">
@@ -115,7 +115,7 @@ async function renderFicha(){
   (D.acuenta||[]).forEach(a=>{
     const key=reciMonKey(a.moneda), v=a.importe||0;
     if(key==='pesos') totP-=v; else if(key==='tressa') totT-=v; else totC-=v;
-    const fec=(a.fec||'').split('-').reverse().join('/'), cell='- '+reciFmt(v);
+    const fec=_fichaFec(a.fec), cell='- '+reciFmt(v);
     _filas.push({fec:a.fec||'', k:'~'+(a.desc||''), h:`<div style="display:grid;grid-template-columns:${LGRID};white-space:nowrap;gap:6px;font-size:var(--ffs,12px);font-family:var(--mono);padding:2px 0;color:var(--grn)">
       <span>${fec}</span><span style="overflow:hidden;text-overflow:ellipsis">${esc(a.desc||'A/Cuenta')}</span>
       <span style="text-align:right">${key==='pesos'?cell:''}</span>
@@ -137,10 +137,10 @@ async function renderFicha(){
   // El server ya manda sólo los que corresponden (desde una semana antes, y los
   // en cartera de hasta 30 días), ordenados por fecha: los que no están en cartera van en gris
 
-  const RGRID='68px 64px repeat(2,minmax(0,1fr)) 96px';
+  const RGRID='56px 64px repeat(2,minmax(0,1fr)) 96px';
   let totFis=0, totEch=0, rrows='';
   const chRow=(ch,gris)=>{
-    const fec=(ch.fec||'').split('-').reverse().join('/');
+    const fec=_fichaFec(ch.fec);
     const est=(typeof cheqEstadoLabel==='function')?cheqEstadoLabel(ch.estado):(ch.estado||'');
     const imp=ch.importe||0;
     if(ch.fisico) totFis+=imp; else totEch+=imp;
@@ -166,7 +166,7 @@ async function renderFicha(){
   const _cred = document.getElementById('ficha-cred');
   if(_cred){
     const _icred = c.CLI_ICRED || 0;
-    const _fcred = c.CLI_FCRED ? c.CLI_FCRED.substring(0,10).split('-').reverse().join('/') : '—';
+    const _fcred = c.CLI_FCRED ? _fichaFec(c.CLI_FCRED) : '—';
     _cred.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:8px 12px">
         <span style="color:var(--t2)">💳 Crédito otorgado: <b style="color:var(--txt);font-family:var(--mono)">$ ${reciFmt(_icred)}</b></span>
         <span style="color:var(--t2)">📅 Vto: <b style="color:var(--txt)">${_fcred}</b></span>
@@ -212,3 +212,6 @@ function fichaAjustarLetra(el){
   while(fs>9 && desborda()){ fs-=0.5; el.style.setProperty('--ffs', fs+'px'); }
 }
 window.addEventListener('resize', ()=>{ fichaAjustarLetra(document.getElementById('ficha-izq')); fichaAjustarLetra(document.getElementById('ficha-der')); });
+
+// Fechas de la ficha en dd/mm/aa (Ricardo, Nov 2026)
+function _fichaFec(f){ const p=String(f||'').substring(0,10).split('-'); return p.length===3 ? `${p[2]}/${p[1]}/${p[0].slice(-2)}` : ''; }
