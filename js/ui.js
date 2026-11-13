@@ -354,7 +354,8 @@ function exportToXls(titulo, headers, rows) {
 function sgvFillVendCcos(pref){
   const llenar=(id,tab)=>{ const el=document.getElementById(id); if(!el||el.dataset.ok) return;
     const t=(TABLAS[tab]||[]); if(!t.length) return;
-    el.innerHTML='<option value="">Todos</option>'+t.map(x=>`<option value="${esc(x.CODIGO)}">${esc(x.CODIGO)} — ${esc(x.DETALLE||'')}</option>`).join('');
+    const todos = tab==='VEND' ? 'Todos los vendedores' : 'Todos los centros de costos';
+    el.innerHTML=`<option value="">${todos}</option>`+t.map(x=>`<option value="${esc(x.CODIGO)}">${esc(x.CODIGO)} — ${esc(x.DETALLE||'')}</option>`).join('');
     el.dataset.ok='1'; };
   llenar(pref+'-vend','VEND'); llenar(pref+'-ccos','CCOS');
 }
@@ -415,3 +416,15 @@ document.addEventListener('click', e=>{
   if(!e.target.closest('.tb-dd')) document.querySelectorAll('.tb-dd-menu.open').forEach(x=>x.classList.remove('open'));
 });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') document.querySelectorAll('.tb-dd-menu.open').forEach(x=>x.classList.remove('open')); });
+
+// Botón "Filtros ▾" genérico: muestra cuántos filtros hay puestos y se pinta
+function tbFiltrosCant(btnId, ids){
+  const n=ids.filter(id=>(document.getElementById(id)?.value||'').trim()).length;
+  const b=document.getElementById(btnId); if(!b) return;
+  b.textContent = n ? `🔽 Filtros (${n}) ▾` : '🔽 Filtros ▾';
+  b.classList.toggle('tb-act', !!n);
+}
+function tbLimpiarFiltros(btnId, ids){
+  ids.forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  tbFiltrosCant(btnId, ids);
+}

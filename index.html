@@ -794,16 +794,20 @@
       <option value="4">4</option>
       <option value="5">5</option>
     </select>
-    <label style="font-size:12px;color:var(--t2)">Empresa:</label>
-    <select class="finp" id="saldo-empresa" style="width:120px">
-      <option value="">Todas</option>
-      <option value="H">Hatsu</option>
-      <option value="T">Tressa</option>
-    </select>
-    <label style="font-size:12px;color:var(--t2)">Vendedor:</label>
-    <select class="finp" id="saldo-vend" style="width:150px" onfocus="sgvFillVendCcos('saldo')"><option value="">Todos</option></select>
-    <label style="font-size:12px;color:var(--t2)">Centro de Costos:</label>
-    <select class="finp" id="saldo-ccos" style="width:150px" onfocus="sgvFillVendCcos('saldo')"><option value="">Todos</option></select>
+    <div class="tb-dd">
+      <button class="btn" id="saldo-fbtn" onclick="sgvFillVendCcos('saldo');tbDd(this)">🔽 Filtros ▾</button>
+      <div class="tb-dd-menu" style="padding:8px;min-width:240px" onchange="tbFiltrosCant('saldo-fbtn',['saldo-empresa','saldo-vend','saldo-ccos'])">
+        <select class="finp" id="saldo-empresa" style="width:100%;margin-bottom:6px" title="Empresa">
+          <option value="">Ambas empresas</option>
+          <option value="H">Hatsu</option>
+          <option value="T">Tressa</option>
+        </select>
+        <select class="finp" id="saldo-vend" style="width:100%;margin-bottom:6px" title="Vendedor"><option value="">Todos los vendedores</option></select>
+        <select class="finp" id="saldo-ccos" style="width:100%;margin-bottom:6px" title="Centro de costos"><option value="">Todos los centros de costos</option></select>
+        <a href="#" style="font-size:12px;color:var(--acc)" onclick="event.preventDefault();tbLimpiarFiltros('saldo-fbtn',['saldo-empresa','saldo-vend','saldo-ccos'])">Limpiar filtros</a>
+      </div>
+    </div>
+    <span class="tb-sep"></span>
     <button class="btn pri" onclick="renderSaldos()">🔍 Consultar</button>
     <button class="btn" onclick="printSaldos()">🖨 Imprimir</button>
   </div>
