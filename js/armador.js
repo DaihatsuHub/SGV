@@ -87,6 +87,7 @@ function _amCod(id){
 
 // La pregunta, escrita en castellano: es lo que evita elegir mal sin darse cuenta
 function _amFrase(){
+  armFiltrosCant();
   const el=document.getElementById('am-frase'); if(!el) return;
   const d=_amVal('am-desde'), h=_amVal('am-hasta');
   let s='Ventas';
@@ -250,13 +251,14 @@ function _amStyle(){
   if(document.getElementById('am-style')) return;
   const st=document.createElement('style'); st.id='am-style';
   st.textContent=`
-    .am-wrap{margin:10px 14px}
+    .am-wrap{margin:6px 14px}
+    .am-per.pri{font-weight:700;color:var(--acc)}
     .am-paso{border-top:1px solid var(--b1);padding-top:9px;margin-top:9px}
     .am-lbl{font-size:12px;color:var(--t2);margin-bottom:5px}
     .am-lbl small{color:var(--t3)}
-    .am-filtros{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+    .am-filtros.open{display:grid;grid-template-columns:1fr 1fr;gap:6px}
     .am-filtros .fsel,.am-filtros .finp{width:100%}
-    .am-frase{margin-top:10px;padding:9px 12px;border-radius:8px;font-size:13px;line-height:1.5;
+    .am-frase{padding:9px 12px;border-radius:8px;font-size:13px;line-height:1.5;
       background:rgba(55,138,221,.10);color:#185FA5}
     #am-head,.am-row{display:grid;gap:8px;align-items:center;padding:6px 12px}
     #am-head{background:var(--s2);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1);position:sticky;top:0;z-index:3}
@@ -272,4 +274,17 @@ function _amStyle(){
       background:rgba(239,159,39,.12);color:#854F0B;border-left:3px solid #EF9F27}
   `;
   document.head.appendChild(st);
+}
+
+// Barra en un renglón (Nov 2026): el botón Filtros muestra cuántos hay puestos
+const ARM_FILTROS=['am-art','am-vend','am-marca','am-rubro','am-grupo','am-ccos','am-prov','am-moneda','am-empresa'];
+function armFiltrosCant(){
+  const n=ARM_FILTROS.filter(id=>(document.getElementById(id)?.value||'').trim()).length;
+  const b=document.getElementById('am-fbtn'); if(!b) return;
+  b.textContent = n ? `🔽 Filtros (${n}) ▾` : '🔽 Filtros ▾';
+  b.classList.toggle('tb-act', !!n);
+}
+function armLimpiarFiltros(){
+  ARM_FILTROS.forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  _amFrase();
 }
