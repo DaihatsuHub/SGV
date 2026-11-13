@@ -400,3 +400,18 @@ function sgvBajaSegunUso(btnId, tabla, cod, art){
     }catch(_){}
   }, 250);
 }
+
+// Menús desplegables de las barras de botones (.tb-dd). Uno abierto a la vez;
+// se cierran al hacer clic afuera o al elegir una opción del menú.
+function tbDd(btn){
+  const m=btn.parentElement.querySelector('.tb-dd-menu'); if(!m) return;
+  const abrir=!m.classList.contains('open');
+  document.querySelectorAll('.tb-dd-menu.open').forEach(x=>x.classList.remove('open'));
+  if(abrir) m.classList.add('open');
+}
+document.addEventListener('click', e=>{
+  const it=e.target.closest('.tb-dd-it');
+  if(it){ it.closest('.tb-dd-menu')?.classList.remove('open'); return; }
+  if(!e.target.closest('.tb-dd')) document.querySelectorAll('.tb-dd-menu.open').forEach(x=>x.classList.remove('open'));
+});
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') document.querySelectorAll('.tb-dd-menu.open').forEach(x=>x.classList.remove('open')); });

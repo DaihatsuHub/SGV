@@ -38,6 +38,7 @@ function filtArts(){
   // queda es la que sale por impresora y por Excel (Ricardo, Sep 2026).
   const fv = id => (document.getElementById(id)?.value||'').trim();
   const fMarca=fv('af-marca'), fRubro=fv('af-rubro'), fSrub=fv('aflt-srub'), fGrupo=fv('af-grupo');
+  artFiltrosCant();
   let list = ARTS.filter(a => {
     const mq = !q || a.ART_COD.toLowerCase().includes(q) || a.ART_DES.toLowerCase().includes(q);
     const ms = !artSoloStock || ((a.ART_STK||0) + (a.ART_STKT||0)) !== 0;
@@ -212,14 +213,12 @@ function togArtStock() {
   artSoloStock = !artSoloStock;
   const btn = document.getElementById('af-stock');
   btn.classList.toggle('on', artSoloStock);
-  btn.textContent = artSoloStock ? '📦 Todos' : '📦 Con Stock';
   renderArts();
 }
 function togArtFact() {
   artSoloFact = !artSoloFact;
   const btn = document.getElementById('af-fact');
   btn.classList.toggle('on', artSoloFact);
-  btn.textContent = artSoloFact ? '🧾 Todos' : '🧾 Con Stock p/Facturar';
   renderArts();
 }
 
@@ -640,4 +639,16 @@ function artMascaraPrecio(){
     if(mon) mon.addEventListener('change', refrescarSigno);
   }
   if(inp.value !== '') inp.value = artPrecioFmt(inp.value);
+}
+
+// Botón "Filtros ▾": muestra cuántos hay puestos y se pinta si hay alguno
+function artFiltrosCant(){
+  const n=['af-marca','af-rubro','aflt-srub','af-grupo'].filter(id=>document.getElementById(id)?.value).length;
+  const b=document.getElementById('af-btn'); if(!b) return;
+  b.textContent = n ? `🔽 Filtros (${n}) ▾` : '🔽 Filtros ▾';
+  b.classList.toggle('tb-act', !!n);
+}
+function artLimpiarFiltros(){
+  ['af-marca','af-rubro','aflt-srub','af-grupo'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  artOnFiltro();
 }

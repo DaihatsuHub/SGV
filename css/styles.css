@@ -261,3 +261,14 @@ body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:10
 /* Cliente con NO VENDER: la razón social titila (Nov 2026) */
 @keyframes cliNodar{0%,49%{opacity:1}50%,100%{opacity:.15}}
 .cli-nodar{color:#E24B4A!important;font-weight:700;animation:cliNodar 1s step-end infinite}
+
+/* Barra de botones: separador, menús desplegables y chips apilados (Nov 2026) */
+.tb-sep{width:1px;height:24px;background:var(--b2);margin:0 4px;flex-shrink:0}
+.tb-dd{position:relative;display:inline-block}
+.tb-dd-menu{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:500;background:var(--s1);border:1px solid var(--b2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px 0;min-width:160px}
+.tb-dd-menu.open{display:block}
+.tb-dd-it{display:block;width:100%;text-align:left;background:none;border:none;padding:7px 14px;font-size:13px;color:var(--t1);cursor:pointer;font-family:var(--sans);white-space:nowrap}
+.tb-dd-it:hover{background:var(--s2)}
+.btn.tb-act{background:#dbeafe;border-color:var(--acc);color:var(--acc)}
+.tb-chips{display:inline-flex;flex-direction:column;gap:2px;margin-left:4px}
+.tb-chips .chip{padding:1px 10px;font-size:11px;line-height:1.3}

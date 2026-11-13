@@ -215,16 +215,30 @@
     <button class="btn" id="btn-art-modif" onclick="aModif()">✏️ Modificar</button>
     <button class="btn dng" id="btn-art-baja" onclick="aBaja()">✕ Baja</button>
     <button class="btn" id="btn-art-dup" data-perm="art:alta" onclick="aDuplicar()" title="Duplicar el artículo seleccionado">⧉ Duplicar</button>
-    <button class="btn scs" data-regla="art-imprimir" onclick="printArt()">🖨 Imprimir</button>
-    <button class="btn scs" data-regla="art-excel" onclick="excelArt()">⬇ Excel</button>
-    <button class="btn scs" data-regla="art-resumen" onclick="abrirResumen()">📊 Resumen</button>
-    <button class="btn" id="btn-cfg-art" style="display:none" onclick="openColCfg('art')" title="Configurar columnas">⚙️ Columnas</button>
-    <select class="fsel" id="af-marca" style="width:135px;margin-left:4px" onchange="artOnFiltro()" title="Marca"><option value="">Todas las marcas</option></select>
-    <select class="fsel" id="af-rubro" style="width:135px" onchange="artOnFiltro()" title="Rubro"><option value="">Todos los rubros</option></select>
-    <select class="fsel" id="aflt-srub" style="width:135px" onchange="artOnFiltro()" title="Sub-rubro"><option value="">Todos los sub-rubros</option></select>
-    <select class="fsel" id="af-grupo" style="width:135px" onchange="artOnFiltro()" title="Grupo"><option value="">Todos los grupos</option></select>
-    <button class="chip" id="af-stock" onclick="togArtStock()" style="margin-left:4px">📦 Con Stock</button>
-    <button class="chip" id="af-fact" onclick="togArtFact()" style="margin-left:4px">🧾 Con Stock p/Facturar</button>
+    <span class="tb-sep"></span>
+    <div class="tb-dd">
+      <button class="btn" onclick="tbDd(this)">📤 Salidas ▾</button>
+      <div class="tb-dd-menu">
+        <button class="tb-dd-it" data-regla="art-imprimir" onclick="printArt()">🖨 Imprimir</button>
+        <button class="tb-dd-it" data-regla="art-excel" onclick="excelArt()">⬇ Excel</button>
+        <button class="tb-dd-it" data-regla="art-resumen" onclick="abrirResumen()">📊 Resumen</button>
+        <button class="tb-dd-it" id="btn-cfg-art" style="display:none;border-top:1px solid var(--b1)" onclick="openColCfg('art')" title="Configurar columnas">⚙️ Columnas</button>
+      </div>
+    </div>
+    <div class="tb-dd">
+      <button class="btn" id="af-btn" onclick="tbDd(this)">🔽 Filtros ▾</button>
+      <div class="tb-dd-menu" style="padding:8px;min-width:210px">
+        <select class="fsel" id="af-marca" style="width:100%;margin-bottom:6px" onchange="artOnFiltro()" title="Marca"><option value="">Todas las marcas</option></select>
+        <select class="fsel" id="af-rubro" style="width:100%;margin-bottom:6px" onchange="artOnFiltro()" title="Rubro"><option value="">Todos los rubros</option></select>
+        <select class="fsel" id="aflt-srub" style="width:100%;margin-bottom:6px" onchange="artOnFiltro()" title="Sub-rubro"><option value="">Todos los sub-rubros</option></select>
+        <select class="fsel" id="af-grupo" style="width:100%;margin-bottom:6px" onchange="artOnFiltro()" title="Grupo"><option value="">Todos los grupos</option></select>
+        <a href="#" style="font-size:12px;color:var(--acc)" onclick="event.preventDefault();artLimpiarFiltros()">Limpiar filtros</a>
+      </div>
+    </div>
+    <span class="tb-chips">
+      <button class="chip" id="af-stock" onclick="togArtStock()">📦 Con stock</button>
+      <button class="chip" id="af-fact" data-regla="art-con-stock-p-facturar" onclick="togArtFact()">🧾 Stock p/facturar</button>
+    </span>
     <div class="spacer"></div>
     <div class="srch-wrap">
       <span class="srch-ico">⌕</span>
