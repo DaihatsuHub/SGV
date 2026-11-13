@@ -23,8 +23,9 @@ function vmesRenderMarcas(){
     ? marc.map(m=>`<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--txt);cursor:pointer">
         <input type="checkbox" value="${esc(m.CODIGO)}" style="accent-color:var(--acc);cursor:pointer"> ${esc(m.CODIGO)}</label>`).join('')
     : '<span style="color:var(--t3);font-size:12px">No hay marcas cargadas.</span>';
+  vmesMarcasCant();
 }
-function vmesSetAllMarcas(on){ document.querySelectorAll('#vmes-marcas input').forEach(c=>c.checked=on); }
+function vmesSetAllMarcas(on){ document.querySelectorAll('#vmes-marcas input').forEach(c=>c.checked=on); vmesMarcasCant(); }
 
 // ── Filtros de cliente y vendedor ─────────────────────────
 // Al elegir uno de los dos, el listado deja de ser "qué hay" y pasa a ser
@@ -65,6 +66,7 @@ function vmesFillFiltros(){
     sv.addEventListener('change', function(){ if(sv.value && cli) cli.value=''; vmesSyncFiltros(); });
   }
   vmesSyncFiltros();
+  vmesFiltrosCant();
 }
 
 function vmesSyncFiltros(){
@@ -296,4 +298,23 @@ async function vmesExportar(){
     setTimeout(()=>URL.revokeObjectURL(a.href),1000);
     if(status) status.textContent=`${rows.length} artículo(s)`;
   }catch(e){ console.error(e); toast('Error generando el Excel','err'); if(status) status.textContent=''; }
+}
+
+// Barra en un renglón (Nov 2026): los botones Marcas y Filtros muestran
+// cuántos hay elegidos y se pintan si hay alguno
+function vmesMarcasCant(){
+  const n=document.querySelectorAll('#vmes-marcas input:checked').length;
+  const b=document.getElementById('vmes-mbtn'); if(!b) return;
+  b.textContent = n ? `🏷 Marcas (${n}) ▾` : '🏷 Marcas ▾';
+  b.classList.toggle('tb-act', !!n);
+}
+function vmesFiltrosCant(){
+  const n=['vmes-vend','vmes-rubro','vmes-srub'].filter(id=>document.getElementById(id)?.value).length;
+  const b=document.getElementById('vmes-fbtn'); if(!b) return;
+  b.textContent = n ? `🔽 Filtros (${n}) ▾` : '🔽 Filtros ▾';
+  b.classList.toggle('tb-act', !!n);
+}
+function vmesLimpiarFiltros(){
+  ['vmes-vend','vmes-rubro','vmes-srub'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  vmesSyncFiltros(); vmesFiltrosCant();
 }

@@ -1520,44 +1520,38 @@
 </div>
 
 <div class="page" id="page-vmes">
-  <div class="toolbar" style="flex-wrap:wrap;row-gap:8px;align-items:flex-start">
-    <div style="display:flex;align-items:center;gap:6px">
-      <label style="font-size:12px;color:var(--t2)">Meses:</label>
-      <select class="finp" id="vmes-meses" style="width:62px">
-        <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option selected>6</option>
-      </select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:4px;margin-left:10px">
-      <div style="display:flex;align-items:center;gap:8px">
-        <label style="font-size:12px;color:var(--t2)">Marcas:</label>
-        <button class="btn" style="padding:2px 8px;font-size:11px" onclick="vmesSetAllMarcas(true)">Todas</button>
-        <button class="btn" style="padding:2px 8px;font-size:11px" onclick="vmesSetAllMarcas(false)">Ninguna</button>
-      </div>
-      <div id="vmes-marcas" style="display:flex;flex-wrap:wrap;gap:4px 14px;max-height:96px;overflow:auto;background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:6px 10px;min-width:380px"></div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:4px;margin-left:10px">
-      <label style="font-size:12px;color:var(--t2)">Cliente (opcional):</label>
-      <div style="display:flex;align-items:center;gap:4px">
-        <input class="finp" id="vmes-cli" list="vmes-cli-list" placeholder="Todos los clientes" style="width:240px" onfocus="this.select()">
-        <datalist id="vmes-cli-list"></datalist>
-        <button class="btn" style="padding:2px 7px;font-size:11px" onclick="vmesLimpiarCli()" title="Todos los clientes">✕</button>
+  <div class="toolbar">
+    <label style="font-size:12px;color:var(--t2)">Meses:</label>
+    <select class="finp" id="vmes-meses" style="width:62px">
+      <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option selected>6</option>
+    </select>
+    <span class="tb-sep"></span>
+    <div class="tb-dd">
+      <button class="btn" id="vmes-mbtn" onclick="tbDd(this)">🏷 Marcas ▾</button>
+      <div class="tb-dd-menu" style="padding:8px 10px;min-width:380px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <button class="btn" style="padding:2px 8px;font-size:11px" onclick="vmesSetAllMarcas(true)">Todas</button>
+          <button class="btn" style="padding:2px 8px;font-size:11px" onclick="vmesSetAllMarcas(false)">Ninguna</button>
+        </div>
+        <div id="vmes-marcas" onchange="vmesMarcasCant()" style="display:flex;flex-wrap:wrap;gap:4px 14px;max-height:260px;overflow:auto"></div>
       </div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:4px;margin-left:10px">
-      <label style="font-size:12px;color:var(--t2)">Vendedor:</label>
-      <select class="finp" id="vmes-vend" style="width:200px"><option value="">Todos los vendedores</option></select>
+    <input class="finp" id="vmes-cli" list="vmes-cli-list" placeholder="Todos los clientes" style="width:220px" onfocus="this.select()" title="Cliente (opcional): por razón social o código">
+    <datalist id="vmes-cli-list"></datalist>
+    <button class="btn" style="padding:2px 7px;font-size:11px" onclick="vmesLimpiarCli()" title="Todos los clientes">✕</button>
+    <div class="tb-dd">
+      <button class="btn" id="vmes-fbtn" onclick="tbDd(this)">🔽 Filtros ▾</button>
+      <div class="tb-dd-menu" style="padding:8px;min-width:230px">
+        <select class="finp" id="vmes-vend" style="width:100%;margin-bottom:6px" onchange="vmesFiltrosCant()" title="Vendedor"><option value="">Todos los vendedores</option></select>
+        <select class="finp" id="vmes-rubro" style="width:100%;margin-bottom:6px" onchange="vmesFiltrosCant()" title="Rubro"><option value="">Todos los rubros</option></select>
+        <select class="finp" id="vmes-srub" style="width:100%;margin-bottom:6px" onchange="vmesFiltrosCant()" title="Subrubro"><option value="">Todos los subrubros</option></select>
+        <a href="#" style="font-size:12px;color:var(--acc)" onclick="event.preventDefault();vmesLimpiarFiltros()">Limpiar filtros</a>
+      </div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:4px;margin-left:10px">
-      <label style="font-size:12px;color:var(--t2)">Rubro:</label>
-      <select class="finp" id="vmes-rubro" style="width:170px"><option value="">Todos los rubros</option></select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:4px;margin-left:10px">
-      <label style="font-size:12px;color:var(--t2)">Subrubro:</label>
-      <select class="finp" id="vmes-srub" style="width:170px"><option value="">Todos los subrubros</option></select>
-    </div>
-    <button class="btn pri" onclick="vmesGenerar()" style="align-self:center">▶ Generar</button>
-    <button class="btn" onclick="vmesExportar()" style="align-self:center" title="Exportar a Excel (CSV)">⬇ Excel</button>
-    <span id="vmes-status" style="font-size:12px;color:var(--t3);align-self:center"></span>
+    <span class="tb-sep"></span>
+    <button class="btn pri" onclick="vmesGenerar()">▶ Generar</button>
+    <button class="btn" onclick="vmesExportar()" title="Exportar a Excel">⬇ Excel</button>
+    <span id="vmes-status" style="font-size:12px;color:var(--t3)"></span>
   </div>
   <div class="tbl-wrap">
     <div class="th-tab" id="vmes-thead" style="display:grid;gap:6px;padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--b1);font-size:11px;color:var(--t2);font-family:var(--mono)"></div>
