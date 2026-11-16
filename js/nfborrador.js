@@ -35,7 +35,9 @@ function nfbAbrir(){
             '.\n\nEn Tipos de Comprobantes: Contable y p/Facturar marcados, Mueve stock sin marcar.' });
     return;
   }
-  const prefs = [...new Set((CTIPS||[]).filter(c => (c.tipo||'') === 'F').map(c => c.prefijo))].sort();
+  // Sólo los tipos de la MISMA EMPRESA de la factura en curso (Nov 2026)
+  const emp = document.getElementById('nf-empresa')?.value || 'H';
+  const prefs = [...new Set((CTIPS||[]).filter(c => (c.tipo||'') === 'F' && (c.empresa||'') === emp).map(c => c.prefijo))].sort();
   document.getElementById('nfb-modal')?.remove();
   const m = document.createElement('div'); m.id = 'nfb-modal';
   m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
@@ -45,8 +47,8 @@ function nfbAbrir(){
       <div style="font-size:12px;color:var(--t2);line-height:1.5">Se traen los ítems del borrador pesificados con la cotización de hoy. Después se pueden modificar.</div>
       <div style="display:flex;gap:10px">
         <div style="flex:0 0 110px"><label class="flbl2">Tipo</label>
-          <input id="nfb-pref" class="finp" list="nfb-pref-list" maxlength="3" style="width:100%;text-transform:uppercase" placeholder="HXX">
-          <datalist id="nfb-pref-list">${prefs.map(p => `<option value="${esc(p)}">`).join('')}</datalist></div>
+          <select id="nfb-pref" class="finp" style="width:100%">${prefs.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('')}</select>
+</div>
         <div style="flex:1"><label class="flbl2">Número</label>
           <input id="nfb-num" class="finp" inputmode="numeric" style="width:100%" placeholder="204368"
                  onkeydown="if(event.key==='Enter'){event.preventDefault();nfbTraer()}"></div>
@@ -59,7 +61,7 @@ function nfbAbrir(){
     </div></div>`;
   document.body.appendChild(m);
   m.addEventListener('keydown', e => { if (e.key === 'Escape') m.remove(); });
-  setTimeout(() => document.getElementById('nfb-pref')?.focus(), 50);
+  setTimeout(() => document.getElementById('nfb-num')?.focus(), 50);
 }
 
 // Busca el comprobante por tipo + número, sin depender del formato del número
@@ -94,11 +96,25 @@ async function nfbTraer(){
     if (!cotiz) { err(`No hay cotización cargada para la moneda ${mone?.DETALLE || monB} (tabla Monedas)`); return; }
 
     if (msg) msg.textContent = '⏳ Armando los renglones…';
-    await _nfbCargar(f, items, cotiz);
-    NF_BORRADOR = String(f.fac_nro).trim();
-    nfbPintarMarca();
+    const r = await _nfbCargar(f, items, cotiz);
     document.getElementById('nfb-modal')?.remove();
-    toast(`Ítems de ${NF_BORRADOR} cargados` + (cotiz !== 1 ? ` (cotización ${cotiz})` : ''), 'scs');
+    const nro = String(f.fac_nro).trim();
+    // a) Ningún modelo con stock para facturar → se abandona el alta
+    if (!r.cargados) {
+      facCancelar();
+      sgvAviso({ titulo:'Factura de Borrador', tipo:'err',
+        texto:`No hay stock para facturar ninguno de los modelos del borrador ${nro}.\n\n${r.faltan.join('\n')}\n\nSe abandonó el alta de la factura.` });
+      return;
+    }
+    NF_BORRADOR = nro;
+    nfbPintarMarca();
+    // b) Parcial → se cargó lo que hay (la cantidad máxima) y se avisa qué faltó
+    if (r.faltan.length) {
+      sgvAviso({ titulo:'Factura de Borrador', tipo:'adv',
+        texto:`Algunos modelos del borrador ${nro} no tienen stock suficiente para facturar.\nSe cargó sólo lo que hay:\n\n${r.faltan.join('\n')}` });
+    } else {
+      toast(`Ítems de ${nro} cargados` + (cotiz !== 1 ? ` (cotización ${cotiz})` : ''), 'scs');
+    }
   } catch (e) { console.error('nfbTraer:', e); err(e.message || 'Error al traer el borrador'); }
 }
 
@@ -146,12 +162,15 @@ async function _nfbCargar(f, items, cotiz){
       const usa = Math.min(resta, d._libre); d._libre -= usa; resta -= usa;
       nuevos.push(renglon(d, usa));
     }
-    if (resta > 0) faltan.push(`${cod}: faltan ${resta} en depósito`);
+    if (resta > 0) faltan.push(resta === can
+      ? `• ${cod}: pedía ${can}, sin stock → no se carga`
+      : `• ${cod}: pedía ${can}, hay ${can - resta} → se cargan ${can - resta}`);
   }
-  if (faltan.length) throw new Error('No alcanza el depósito para facturar:\n' + faltan.join('\n'));
+  if (!nuevos.length) return { cargados: 0, faltan };
   // Moneda de la factura: PESOS
   const mon = document.getElementById('nf-moneda');
   if (mon && mon.value !== 'P') { mon.value = 'P'; if (typeof nfOnMonedaChange === 'function') nfOnMonedaChange(); }
   FAC_ITEMS_NUEVA.push(...nuevos);
   nfRenderItems(); nfCalcTotales();
+  return { cargados: nuevos.length, faltan };
 }
