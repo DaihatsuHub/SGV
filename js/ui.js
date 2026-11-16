@@ -442,3 +442,13 @@ function sgvParseNum(v){
   else if((t.match(/\./g)||[]).length>1) t=t.replace(/\./g,'');
   const n=parseFloat(t); return isNaN(n)?0:n;
 }
+
+// Al salir de un campo de importe (Enter, Tab o clic afuera) se muestra con el
+// formato acordado: punto de miles y coma decimal (Ricardo, Nov 2026).
+// Vale para todo <input inputmode="decimal">; el que no quiera, data-sinfmt.
+document.addEventListener('change', e=>{
+  const el=e.target;
+  if(!el || el.tagName!=='INPUT' || el.getAttribute('inputmode')!=='decimal' || el.hasAttribute('data-sinfmt')) return;
+  if(!String(el.value||'').trim()) return;
+  el.value=sgvParseNum(el.value).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+});

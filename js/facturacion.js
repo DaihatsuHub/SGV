@@ -2051,7 +2051,7 @@ function nfDtosTodos(){
   ov.innerHTML=`<div class="modal" style="max-width:440px;width:92%">
     <div class="mhd"><span style="font-weight:600;color:var(--acc)">% Descuento a todos los ítems</span></div>
     <div style="padding:14px 16px">
-      <div style="font-size:12px;color:var(--t2);margin-bottom:10px">Se aplica sobre el precio de lista de cada uno de los ${FAC_ITEMS_NUEVA.length} ítem(s). Con todo en 0 vuelven al precio original.</div>
+      <div style="font-size:12px;color:var(--t2);margin-bottom:10px">${(typeof NF_BORRADOR!=='undefined'&&NF_BORRADOR)?'Factura de borrador: se aplica sobre el precio que tiene cada renglón (el del borrador o el que tipeaste)':'Se aplica sobre el precio de lista'} de cada uno de los ${FAC_ITEMS_NUEVA.length} ítem(s). Con todo en 0 vuelven a ese precio.</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">${[1,2,3,4].map(inp).join('')}</div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;padding:0 16px 14px">
@@ -2616,6 +2616,9 @@ function nfItemChange(idx,campo,valor) {
     }
   }
   FAC_ITEMS_NUEVA[idx][campo]=valor;
+  // Factura de borrador: el precio que se tipea pasa a ser la base de los
+  // descuentos (% Dto se calcula sobre lo que está, no sobre el maestro)
+  if(campo==='ite_uni' && typeof NF_BORRADOR!=='undefined' && NF_BORRADOR) it.ite_preori=valor;
   const esA=nfEsFacturaA();
   const div=1+(it.ite_iva_porc||0)/100;
   const neto=esA?it.ite_uni/div:it.ite_uni;
