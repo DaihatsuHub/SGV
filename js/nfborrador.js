@@ -2,7 +2,7 @@
    FACTURA DE BORRADOR  (Facturación → Nueva → Ítems)   — Ricardo, Nov 2026
    - Se pide el TIPO y NÚMERO de un comprobante "borrador" (ej. HXX 204368) y
      se traen sus ítems para facturar, PESIFICADOS con la cotización de HOY
-     (tabla Monedas). Los ítems se pueden modificar (cantidades y precios).
+     (tabla Monedas). El precio del borrador se toma como NETO (+ IVA). Los ítems se pueden modificar (cantidades y precios).
    - El comprobante que se graba es SÓLO CONTABLE: el talonario tiene que ser un
      tipo Contable que baja depósito y NO stock (ej. HA6). Con eso hereda todo:
      no mueve stock (ya lo movió el borrador), baja depósito, no es deuda real
@@ -140,7 +140,11 @@ async function _nfbCargar(f, items, cotiz){
     if (!cod || can <= 0) continue;
     const a = (ARTS||[]).find(x => norm(x.ART_COD) === cod) || {};
     const iva = (a.ART_IVA!==null && a.ART_IVA!==undefined) ? Number(a.ART_IVA) : (Number(it.ite_iva_porc) || 21);
-    const pre = Math.round((Number(it.ite_uni) || 0) * cotiz * 100) / 100;      // PESIFICADO
+    // PESIFICADO y tomado como NETO: el precio final del borrador pasa a ser
+    // el neto de la factura y el IVA va encima (Ricardo, Nov 2026: u$c 100 ×
+    // 1600 con 50% de dto → $80.000 + IVA, no $80.000 final). ite_uni va con
+    // IVA incluido, como el resto de los renglones.
+    const pre = Math.round((Number(it.ite_uni) || 0) * cotiz * (1 + iva/100) * 100) / 100;
     const todos = desps[cod] || [];
     // El despacho del borrador primero, después los más viejos
     const orden = [...todos.filter(d => it.ite_dep_id && String(d.dep_id) === String(it.ite_dep_id)),
