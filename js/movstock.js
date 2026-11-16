@@ -149,7 +149,7 @@ async function mstkGuardar(){
     const r=await apiPost('/mstk/guardar',{
       fecha:_msVal('msf-fecha'), articulo:cod, tipo:_msVal('msf-tipo'),
       dep_id:_msVal('msf-desp')||undefined, cantidad:can,
-      importe:(parseFloat(String(_msVal('msf-imp')).replace(/\./g,'').replace(',','.'))||0),
+      importe:sgvParseNum(_msVal('msf-imp')),
       mueve_stk:mueveStk, mueve_dep:mueveDep, concepto:_msVal('msf-con')
     });
     if(!r || r.ok===false){

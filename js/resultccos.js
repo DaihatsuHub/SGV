@@ -62,7 +62,7 @@ async function rccConsultar(sinRef){
   if(!g('rcc-desde')||!g('rcc-hasta')){ toast('Elegí el período','err'); return; }
   body.innerHTML='<div class="empty" style="margin-top:30px">⏳ Calculando…</div>';
   try{
-    const dolar=parseFloat(g('rcc-dolar').replace(/\./g,'').replace(',','.'))||0;
+    const dolar=sgvParseNum(g('rcc-dolar'));
     const r=await apiGet(`/informes/resultado-ccos?desde=${g('rcc-desde')}&hasta=${g('rcc-hasta')}${dolar>0?'&dolar='+dolar:''}`);
     if(!r.ok){ body.innerHTML='<div class="empty" style="margin-top:30px">⚠️ '+_rcEsc(r.error||'Error')+'</div>'; return; }
     _rccData=r; _rcPintar();

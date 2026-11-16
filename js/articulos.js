@@ -561,9 +561,7 @@ function exportArt() {
 // Texto con formato → número. OJO: `parseFloat` NO sirve acá, con
 // "1.049.900,00" devuelve 1.
 function artPrecioNum(v){
-  const t = String(v==null?'':v).replace(/[^0-9,.-]/g,'').replace(/\./g,'').replace(',','.');
-  const n = Number(t);
-  return isNaN(n) ? 0 : n;
+  return sgvParseNum(v);
 }
 function artPrecioFmt(v){
   if(v==='' || v==null) return '';

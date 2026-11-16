@@ -52,9 +52,7 @@ function reciFmt(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFracti
 // Fecha DD/MM/AA (año 2 dígitos)
 function _reciFecha(f){ if(!f) return ''; const p=String(f).substring(0,10).split('-'); return p.length<3?String(f):(p[2]+'/'+p[1]+'/'+p[0].slice(-2)); }
 function reciParseNum(s){
-  if (typeof s==='number') return s;
-  s = String(s||'').trim().replace(/\./g,'').replace(',','.');
-  const n = parseFloat(s); return isNaN(n)?0:n;
+  return sgvParseNum(s);
 }
 function reciVendDesc(cod){ const v=(TABLAS['VEND']||[]).find(x=>x.CODIGO===cod); return v?v.DETALLE:''; }
 

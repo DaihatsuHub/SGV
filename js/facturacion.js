@@ -94,6 +94,17 @@ function nfDespDeEmpresa(d) {
   if(l!=='H' && l!=='T') return true;
   return l===((document.getElementById('nf-empresa')?.value)||'H').toUpperCase();
 }
+// Despachos de esos artículos, leídos por el SERVER (no por la lectura común,
+// que le saca al usuario los campos que su grupo tiene ocultos: dep_desp,
+// dep_art, dep_stk… y el renglón quedaba con despacho "undefined").
+// Vienen del más nuevo al más viejo y sólo de la empresa que se factura.
+async function nfDespachosDe(cods){
+  const ct=nfCtipActual();
+  if(!ct) return [];
+  const r=await apiPost('/facturas/disponibles',{ ctId:ct.id, arts:cods });
+  if(!r||!r.ok) throw new Error((r&&r.error)||'No se pudieron leer los despachos');
+  return (r.despachos||[]).filter(nfDespDeEmpresa).reverse();
+}
 function nfDispDesp(d) {
   const stk=(d.dep_stk!=null)?d.dep_stk:((d.dep_ent||0)-(d.dep_sal||0));
   const ct=(typeof nfCtipActual==='function')?nfCtipActual():null;
@@ -189,12 +200,7 @@ function nfMonSimbolo(cod){
 // sirve como coma decimal. Si hay coma, la coma es el decimal y los puntos
 // son de miles ("146.090,81"); si hay un solo punto y ninguna coma, el punto
 // es el decimal ("16276.16"); con varios puntos, son de miles ("1.234.567").
-function nfParseNum(s){
-  let t=String(s||'').trim().replace(/[\s$]/g,'');
-  if(t.includes(',')) t=t.replace(/\./g,'').replace(',','.');
-  else if((t.match(/\./g)||[]).length>1) t=t.replace(/\./g,'');
-  return parseFloat(t)||0;
-}
+function nfParseNum(s){ return sgvParseNum(s); }
 
 const TIPO_LABEL = { F:'Factura', C:'Nota de Crédito', D:'Nota de Débito', R:'Cheque Rechazado' };
 
@@ -2149,8 +2155,8 @@ async function nfCargarGrupo() {
       aviso(`⏳ Despachos ${Math.min(i+200,cods.length)} de ${cods.length}…`);
       // Entre comillas: los códigos traen guiones y barras
       const lista=lote.map(c=>'"'+String(c).replace(/"/g,'')+'"').join(',');
-      const rows=await sbGet('despachos',`dep_art=in.(${encodeURIComponent(lista)})&order=dep_fec.desc`);
-      (rows||[]).filter(nfDespDeEmpresa).forEach(d=>{ (despsPorArt[d.dep_art]||(despsPorArt[d.dep_art]=[])).push(d); });
+      const rows=await nfDespachosDe(lote);
+      (rows||[]).forEach(d=>{ (despsPorArt[d.dep_art]||(despsPorArt[d.dep_art]=[])).push(d); });
     }
   }catch(e){ console.error('nfCargarGrupo desps:',e); }
   // "Solo con stock" se decide por el stock de los DESPACHOS, no por el de la
@@ -2532,7 +2538,7 @@ async function nfItemArtChange(idx,cod) {
   FAC_ITEMS_NUEVA[idx].ite_iva_porc=art.ART_IVA!==null&&art.ART_IVA!==undefined?Number(art.ART_IVA):21;
   try {
     const esNC=nfEsNC();
-    const desps=((await sbGet('despachos',`dep_art=eq.${encodeURIComponent(codUp)}&order=dep_fec.desc`))||[]).filter(nfDespDeEmpresa);
+    const desps=await nfDespachosDe([codUp]);
     const despsFilt=esNC?desps:desps.filter(d=>nfDispDesp(d)>0);
     FAC_ITEMS_NUEVA[idx]._desps=despsFilt;
     // Se ofrece el despacho MÁS ANTIGUO (vienen del más nuevo al más viejo)

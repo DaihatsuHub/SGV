@@ -19,9 +19,8 @@ function ocFmt(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFraction
 function ocFmt3(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:3,maximumFractionDigits:3}); }
 function ocNum(v){
   if(v===''||v==null) return null;
-  let s=String(v).trim().replace(/\s/g,'');
-  if(s.includes(',')) s=s.replace(/\./g,'').replace(',','.');   // 1.234,56 -> 1234.56
-  const n=parseFloat(s); return isNaN(n)?null:n;
+  if(!String(v).trim()) return null;
+  return sgvParseNum(v);
 }
 function ocInt(n){ return (Number(n)||0).toLocaleString('es-AR'); }
 function ocFecFmt(d){ return d ? String(d).substring(0,10).split('-').reverse().join('/') : ''; }

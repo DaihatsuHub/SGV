@@ -420,7 +420,7 @@ function despGastoModal(desp, items){
 
 async function despGastoConfirmar(desp){
   // Formato es-AR: "1.500,00" → 1500
-  const num = id => parseFloat(String(document.getElementById(id)?.value||'').replace(/\./g,'').replace(',','.'))||0;
+  const num = id => sgvParseNum(document.getElementById(id)?.value);
   const pct   = num('di-gasto');
   const cotiz = num('di-cotiz');
   // Los dos son obligatorios: sin gasto o sin cotización el costo queda
@@ -462,8 +462,7 @@ function despNum(v){
   if(typeof v==='number') return v;
   const s=String(v==null?'':v).trim();
   if(!s) return 0;
-  if(s.indexOf(',')>=0) return parseFloat(s.replace(/\./g,'').replace(',','.'))||0;
-  return parseFloat(s)||0;
+  return sgvParseNum(s);
 }
 
 function despImportarExcel(){

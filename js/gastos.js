@@ -14,7 +14,7 @@ let _gastoTotal = 0;
 
 function _gEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function _gFmt(n){ return (Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function _gNum(v){ const t=String(v==null?'':v).replace(/[^0-9,.-]/g,'').replace(/\./g,'').replace(',','.'); const n=Number(t); return isNaN(n)?0:n; }
+function _gNum(v){ return sgvParseNum(v); }
 function _gHoy(){ return new Date().toISOString().substring(0,10); }
 function _gFechaTxt(f){ const p=(f||'').substring(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:(f||''); }
 function _gPuede(acc){ return (typeof puedeh!=='function') || puedeh('gast',acc); }

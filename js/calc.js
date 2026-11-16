@@ -36,7 +36,7 @@
     ent=(ent||'0').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
     return (neg?'-':'')+ent+(dec!==undefined?(','+dec):'');
   }
-  function toNum(s){ return parseFloat(String(s).replace(/\./g,'').replace(',','.'))||0; }
+  function toNum(s){ return sgvParseNum(s); }
 
   // ── Lógica ──────────────────────────────────────────────
   function setDisplay(){

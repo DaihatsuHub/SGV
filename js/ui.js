@@ -428,3 +428,17 @@ function tbLimpiarFiltros(btnId, ids){
   ids.forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
   tbFiltrosCant(btnId, ids);
 }
+
+// ── Importes que se TIPEAN (regla general, Ricardo Nov 2026) ──
+// El "." del teclado numérico sirve como coma decimal:
+//   con coma        → la coma es el decimal, los puntos de miles  ("146.090,81")
+//   un solo punto   → el punto es el decimal                      ("16276.16")
+//   varios puntos   → son de miles                                ("1.234.567")
+// Para mostrar se sigue usando punto de miles y coma decimal.
+function sgvParseNum(v){
+  if(typeof v==='number') return isNaN(v)?0:v;
+  let t=String(v==null?'':v).trim().replace(/[^0-9,.\-]/g,'');
+  if(t.includes(',')) t=t.replace(/\./g,'').replace(',','.');
+  else if((t.match(/\./g)||[]).length>1) t=t.replace(/\./g,'');
+  const n=parseFloat(t); return isNaN(n)?0:n;
+}
