@@ -1600,7 +1600,8 @@ function facNavegar(fn) {
   fn();
 }
 
-function facAlta() {
+async function facAlta() {
+  await sgvTablaFresca('MONE');   // cotizaciones del server, no las del login
   window._nfCliAvisado=null;
   FAC_ITEMS_NUEVA=[]; NF_PERCEP=[]; if(typeof nfiReset==='function') nfiReset(); if(typeof nfbReset==='function') nfbReset();
   FAC_MODO='A';

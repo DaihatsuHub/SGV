@@ -286,11 +286,17 @@ function tabAlta(tipo) {
   document.getElementById('ov-tab').classList.add('open');
 }
 
-function tabModif(tipo) {
+async function tabModif(tipo) {
   const idx = _tabGralSel[tipo];
   if (idx===undefined||idx===null) { toast('Seleccioná un registro','err'); return; }
-  const r = getTabGralRows(tipo)[idx];
-  if (!r) { toast('Seleccioná un registro','err'); return; }
+  const r0 = getTabGralRows(tipo)[idx];
+  if (!r0) { toast('Seleccioná un registro','err'); return; }
+  // Modificar = datos del SERVER (otro usuario pudo haberlo cambiado)
+  await sgvTablaFresca(tipo);
+  const r = (TABLAS[tipo]||[]).find(x => x.CODIGO === r0.CODIGO);
+  if (!r) { toast('Ese registro ya no existe','err'); renderTabGral(tipo); return; }
+  renderTabGral(tipo);
+  _tabGralSel[tipo] = getTabGralRows(tipo).findIndex(x => x.CODIGO === r.CODIGO);
   _tabEditTipo = tipo; _tabEditMode = 'M';
   document.getElementById('tf-cod').value = r.CODIGO;
   document.getElementById('tf-cod').disabled = true;

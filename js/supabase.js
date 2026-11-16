@@ -326,3 +326,14 @@ async function saveConfigUI(pantalla, orden, activas, labels, chars) {
 function save() {}
 function saveTablas() {}
 function syncNow() { sbLoad().then(ok => { if(ok){ renderArts(); renderClis(); renderTab&&renderTab(); renderUsua&&renderUsua(); }}); }
+// Trae del SERVER una tabla auxiliar y reemplaza la de memoria. Se usa antes
+// de facturar, hacer un recibo o modificar la tabla, así se trabaja con lo que
+// hay en la base (ej. la cotización que cambió otro usuario) — Ricardo, Nov 2026.
+// VEND y USUA no: en memoria vienen filtradas para el usuario.
+async function sgvTablaFresca(tipo){
+  if(tipo==='VEND' || tipo==='USUA') return;
+  try{
+    const r=await apiGet('/tablas');
+    if(r && r.tablas && r.tablas[tipo]) TABLAS[tipo]=r.tablas[tipo];
+  }catch(e){ console.warn('sgvTablaFresca', tipo, e); }
+}

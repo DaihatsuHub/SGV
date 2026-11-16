@@ -89,7 +89,8 @@ async function nfbTraer(){
     const items = await sbLoadItemsFac(f.fac_nro);
     if (!(items||[]).length) { err('Ese comprobante no tiene ítems'); return; }
 
-    // Cotización de HOY de la moneda del borrador
+    // Cotización de HOY de la moneda del borrador (fresca del server)
+    await sgvTablaFresca('MONE');
     const monB = f.fac_moneda || 'P';
     const mone = (TABLAS['MONE']||[]).find(x => x.CODIGO === monB);
     const cotiz = monB === 'P' ? 1 : (parseFloat(mone?.STRING2) || 0);

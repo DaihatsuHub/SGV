@@ -221,7 +221,8 @@ function reciInstallNav(){
 function selReci(i){ reciSelIdx=i; reciSelId=getReciRows()[i]?.rec?.id ?? null; renderReci(); }
 
 // ════════════════ EDITOR — apertura ════════════════
-function reciAlta(){
+async function reciAlta(){
+  await sgvTablaFresca('MONE');   // cotizaciones del server, no las del login
   ensureFacturas();  // arranca la carga de facturas (la necesita reciLoadDeudores al elegir cliente)
   const _wrapCre=document.getElementById('rf-creado-wrap'); if(_wrapCre) _wrapCre.hidden=true;  // recibo nuevo: sin creador aún
   _reciMode='A'; _reciOrig=null; reciResetEnabled();
