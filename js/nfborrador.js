@@ -97,6 +97,7 @@ async function nfbTraer(){
     if (!cotiz) { err(`No hay cotización cargada para la moneda ${mone?.DETALLE || monB} (tabla Monedas)`); return; }
 
     if (msg) msg.textContent = '⏳ Armando los renglones…';
+    if (typeof nfStockFresco === 'function') await nfStockFresco(true);
     const r = await _nfbCargar(f, items, cotiz);
     document.getElementById('nfb-modal')?.remove();
     const nro = String(f.fac_nro).trim();

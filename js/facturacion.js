@@ -105,6 +105,27 @@ async function nfDespachosDe(cods){
   if(!r||!r.ok) throw new Error((r&&r.error)||'No se pudieron leer los despachos');
   return (r.despachos||[]).filter(nfDespDeEmpresa).reverse();
 }
+// STOCK DE ARTÍCULOS FRESCO DEL SERVER (Ricardo, Nov 2026): al facturar el
+// stock no puede venir de la memoria del login — si otro usuario cargó stock,
+// se tiene que ver. Se refresca al abrir la búsqueda, cargar por grupo o
+// elegir un artículo (como mucho una vez cada 15 segundos).
+let _nfStkTs=0, _nfStkProm=null;
+async function nfStockFresco(forzar){
+  if(!forzar && Date.now()-_nfStkTs<15000) return;
+  if(_nfStkProm) return _nfStkProm;
+  _nfStkProm=(async()=>{
+    try{
+      const r=await apiGet('/articulos/stock');
+      if(r && r.ok){
+        const m=new Map(r.stock.map(x=>[String(x[0]||'').trim(),x]));
+        (ARTS||[]).forEach(a=>{ const x=m.get(String(a.ART_COD||'').trim()); if(x){ a.ART_STK=x[1]; a.ART_STKT=x[2]; a.ART_DEPH=x[3]; a.ART_DEPT=x[4]; } });
+        _nfStkTs=Date.now();
+      }
+    }catch(e){ console.warn('nfStockFresco',e); }
+    finally{ _nfStkProm=null; }
+  })();
+  return _nfStkProm;
+}
 function nfDispDesp(d) {
   const stk=(d.dep_stk!=null)?d.dep_stk:((d.dep_ent||0)-(d.dep_sal||0));
   const ct=(typeof nfCtipActual==='function')?nfCtipActual():null;
@@ -1949,7 +1970,7 @@ function nfLimpiarBusqCli() {
 
 let _nfArtPopupIdx = null;
 
-function nfAbrirBusqArt(idx) {
+async function nfAbrirBusqArt(idx) {
   if(!nfItemsHabilitados()){
     const inc=nfLetraIncompatible();
     toast(inc||'Completá empresa, tipo y cliente primero','err');
@@ -1961,7 +1982,10 @@ function nfAbrirBusqArt(idx) {
   document.getElementById('nf-art-overlay').style.display='block';
   const q=document.getElementById('nf-art-q');
   if(q){q.value='';q.focus();}
-  nfFiltrarPopupArt('');
+  const lista=document.getElementById('nf-art-lista');
+  if(lista) lista.innerHTML='<div style="text-align:center;color:var(--t3);padding:20px;font-size:12px">⏳ Actualizando stock…</div>';
+  await nfStockFresco(true);
+  nfFiltrarPopupArt(q?q.value:'');
 }
 function nfCerrarBusqArt() {
   document.getElementById('nf-art-popup').style.display='none';
@@ -2115,6 +2139,7 @@ function nfAplicarDtos(precio, d1, d2, d3, d4) {
   return Math.round(p*100)/100;
 }
 async function nfCargarGrupo() {
+  await nfStockFresco(true);   // stock del server, no de la memoria
   const marc  = document.getElementById('ng-marc')?.value||'';
   const rubr  = document.getElementById('ng-rubr')?.value||'';
   const srub  = document.getElementById('ng-srub')?.value||'';
@@ -2500,6 +2525,7 @@ async function nfItemArtChange(idx,cod) {
     nfRenderItems();
     return;
   }
+  await nfStockFresco();      // stock del server, no de la memoria
   const empresa=document.getElementById('nf-empresa')?.value||'H';
   const monFac=document.getElementById('nf-moneda')?.value||'P';
   const monArt=art.ART_MONEDA||'P';
