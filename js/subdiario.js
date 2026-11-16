@@ -263,3 +263,91 @@ async function sdExcel(){
   a.download=`Subdiario_IVA_${(_sdData.desde||'').substring(0,7)}${_sdData.empresa?'_'+_sdData.empresa:''}.xlsx`;
   a.click(); URL.revokeObjectURL(a.href);
 }
+
+
+/* ─────────── Resumen por Provincia (Ricardo, Nov 2026) ───────────
+   Provincia FISCAL del cliente. Mismos importes declarados del subdiario. */
+function _sdProvNom(cod){
+  const k=String(cod||'').trim(); if(!k) return '(sin provincia)';
+  const t=((typeof TABLAS!=='undefined'&&TABLAS['PCIA'])||[]).find(x=>String(x.CODIGO||'').trim()===k);
+  return (t&&t.DETALLE) || ((typeof PCIA!=='undefined'&&PCIA[k])||k);
+}
+function _sdResProvDatos(){
+  const F=_sdData.filas||[], AL=_sdData.alicuotas||[], PE=_sdData.percepciones||[];
+  const m={};
+  F.forEach(r=>{
+    const k=r.provin||'';
+    const x=m[k]||(m[k]={prov:_sdProvNom(k), cant:0, neto:0, iva:0, exento:0, perc:0, total:0});
+    x.cant++;
+    AL.forEach(a=>{ x.neto+=Number(r.porAlic[a]?.neto)||0; x.iva+=Number(r.porAlic[a]?.iva)||0; });
+    x.exento+=Number(r.exento)||0;
+    PE.forEach(p=>{ x.perc+=Number(r.perc[p.cod])||0; });
+    x.total+=Number(r.total)||0;
+  });
+  const filas=Object.values(m).sort((a,b)=>b.total-a.total);
+  const T=filas.reduce((t,x)=>{ ['cant','neto','iva','exento','perc','total'].forEach(k=>t[k]+=x[k]); return t; },{cant:0,neto:0,iva:0,exento:0,perc:0,total:0});
+  return { filas, T, hayEx: !!_sdData.hayExento, hayPe: PE.length>0 };
+}
+function sdResProv(){
+  if(!_sdData || !(_sdData.filas||[]).length){ toast('Consultá primero','err'); return; }
+  const D=_sdResProvDatos();
+  const cols='minmax(150px,1fr) 60px 130px 120px'+(D.hayEx?' 115px':'')+(D.hayPe?' 120px':'')+' 135px';
+  const fila=(x,b)=>`<div style="display:grid;grid-template-columns:${cols};gap:8px;padding:6px 12px;border-bottom:1px solid var(--b1);font-size:13px;${b?'font-weight:700;background:var(--s2);border-top:2px solid var(--acc)':''}">
+      <span>${_sdEsc(x.prov)}</span><span class="sd-num">${x.cant}</span>
+      <span class="sd-num">${_sdFmt0(x.neto)}</span><span class="sd-num">${_sdFmt0(x.iva)}</span>
+      ${D.hayEx?`<span class="sd-num">${_sdFmt0(x.exento)}</span>`:''}${D.hayPe?`<span class="sd-num">${_sdFmt0(x.perc)}</span>`:''}
+      <span class="sd-num">${_sdFmt0(x.total)}</span></div>`;
+  const per=`${_sdData.desde?_sdFecha(_sdData.desde):'inicio'} a ${_sdData.hasta?_sdFecha(_sdData.hasta):'hoy'}`;
+  document.getElementById('sdp-ov')?.remove();
+  const ov=document.createElement('div'); ov.id='sdp-ov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML=`<div style="background:var(--s1);border-radius:12px;width:100%;max-width:900px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--b1)">
+      <span style="font-weight:600;color:var(--acc)">🗺 Resumen por Provincia <span style="font-weight:400;color:var(--t3);font-size:12px">· ${per}</span></span>
+      <span style="display:flex;gap:6px"><button class="btn" onclick="sdResProvPrint()">🖨 Imprimir</button>
+        <button class="btn" onclick="sdResProvExcel()">📥 Excel</button>
+        <button class="btn" onclick="document.getElementById('sdp-ov').remove()">✕</button></span>
+    </div>
+    <div style="overflow:auto">
+      <div style="display:grid;grid-template-columns:${cols};gap:8px;padding:7px 12px;background:var(--s2);font-size:11px;color:var(--t2);position:sticky;top:0">
+        <span>Provincia</span><span class="sd-num">Comp.</span><span class="sd-num">Neto gravado</span><span class="sd-num">IVA</span>
+        ${D.hayEx?'<span class="sd-num">Exento</span>':''}${D.hayPe?'<span class="sd-num">Percepciones</span>':''}<span class="sd-num">Total</span></div>
+      ${D.filas.map(x=>fila(x)).join('')}
+      ${fila({...D.T, prov:'TOTAL'}, true)}
+    </div></div>`;
+  document.body.appendChild(ov);
+  ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  ov.addEventListener('keydown',e=>{ if(e.key==='Escape') ov.remove(); });
+  _sdInjectStyle();
+}
+function sdResProvPrint(){
+  const D=_sdResProvDatos();
+  const per=`${_sdData.desde?_sdFecha(_sdData.desde):'inicio'} a ${_sdData.hasta?_sdFecha(_sdData.hasta):'hoy'}`;
+  const empTxt=_sdData.empresa==='H'?'Hatsu':_sdData.empresa==='T'?'Tressa':'Todas las empresas';
+  const th=`<tr><th>Provincia</th><th class="n">Comp.</th><th class="n">Neto gravado</th><th class="n">IVA</th>${D.hayEx?'<th class="n">Exento</th>':''}${D.hayPe?'<th class="n">Percepciones</th>':''}<th class="n">Total</th></tr>`;
+  const tr=(x,c)=>`<tr${c?' class="tot"':''}><td>${_sdEsc(x.prov)}</td><td class="n">${x.cant}</td><td class="n">${_sdFmt0(x.neto)}</td><td class="n">${_sdFmt0(x.iva)}</td>${D.hayEx?`<td class="n">${_sdFmt0(x.exento)}</td>`:''}${D.hayPe?`<td class="n">${_sdFmt0(x.perc)}</td>`:''}<td class="n">${_sdFmt0(x.total)}</td></tr>`;
+  sgvPrint({ titulo:'Subdiario de IVA Ventas — Resumen por Provincia',
+    subtitulo:`${empTxt} — Período: ${per} — provincia fiscal del cliente`,
+    cuerpo:`<table><thead>${th}</thead><tbody>${D.filas.map(x=>tr(x)).join('')}${tr({...D.T,prov:'TOTAL'},true)}</tbody></table>` });
+}
+async function sdResProvExcel(){
+  let ExcelJS; try{ ExcelJS=await _sdLoadExcelJS(); }catch(e){ toast(e.message,'err'); return; }
+  const D=_sdResProvDatos(), NUM='#,##0.00';
+  const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('Por provincia');
+  const head=['Provincia','Comp.','Neto gravado','IVA',...(D.hayEx?['Exento']:[]),...(D.hayPe?['Percepciones']:[]),'Total'];
+  ws.columns=head.map((h,i)=>({width:i===0?26:(i===1?8:17)}));
+  const per=`${_sdData.desde?_sdFecha(_sdData.desde):'inicio'} a ${_sdData.hasta?_sdFecha(_sdData.hasta):'hoy'}`;
+  ws.addRow(['Subdiario de IVA Ventas — Resumen por Provincia']).font={bold:true,size:13};
+  ws.addRow([`Período: ${per} — provincia fiscal del cliente`]).font={italic:true,color:{argb:'FF666666'}};
+  ws.addRow([]);
+  const hr=ws.addRow(head); hr.eachCell(c=>{ c.font={bold:true}; c.border={bottom:{style:'medium'}}; });
+  const add=(x,tot)=>{ const r=ws.addRow([x.prov,x.cant,x.neto,x.iva,...(D.hayEx?[x.exento]:[]),...(D.hayPe?[x.perc]:[]),x.total]);
+    for(let i=3;i<=head.length;i++) r.getCell(i).numFmt=NUM;
+    if(tot){ r.font={bold:true}; r.eachCell(c=>{ c.border={top:{style:'double'}}; }); } };
+  D.filas.forEach(x=>add(x)); add({...D.T,prov:'TOTAL'},true);
+  const buf=await wb.xlsx.writeBuffer();
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  a.download=`Subdiario_IVA_por_provincia_${(_sdData.desde||'').replace(/-/g,'')}_${(_sdData.hasta||'').replace(/-/g,'')}.xlsx`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
