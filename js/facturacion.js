@@ -86,6 +86,14 @@ function nfDispArt(a, empresa) {
   return emp==='T' ? (a.ART_STKT||0) : (a.ART_STK||0);
 }
 
+// Sólo se ofrecen los despachos de la EMPRESA que se factura: la empresa es la
+// primera letra del número de despacho (H/T). Si no empieza con H ni T, se
+// ofrece igual (Ricardo, Nov 2026)
+function nfDespDeEmpresa(d) {
+  const l=String(d?.dep_desp||'').trim().charAt(0).toUpperCase();
+  if(l!=='H' && l!=='T') return true;
+  return l===((document.getElementById('nf-empresa')?.value)||'H').toUpperCase();
+}
 function nfDispDesp(d) {
   const stk=(d.dep_stk!=null)?d.dep_stk:((d.dep_ent||0)-(d.dep_sal||0));
   const ct=(typeof nfCtipActual==='function')?nfCtipActual():null;
@@ -2134,7 +2142,7 @@ async function nfCargarGrupo() {
       // Entre comillas: los códigos traen guiones y barras
       const lista=lote.map(c=>'"'+String(c).replace(/"/g,'')+'"').join(',');
       const rows=await sbGet('despachos',`dep_art=in.(${encodeURIComponent(lista)})&order=dep_fec.desc`);
-      (rows||[]).forEach(d=>{ (despsPorArt[d.dep_art]||(despsPorArt[d.dep_art]=[])).push(d); });
+      (rows||[]).filter(nfDespDeEmpresa).forEach(d=>{ (despsPorArt[d.dep_art]||(despsPorArt[d.dep_art]=[])).push(d); });
     }
   }catch(e){ console.error('nfCargarGrupo desps:',e); }
   // "Solo con stock" se decide por el stock de los DESPACHOS, no por el de la
@@ -2516,7 +2524,7 @@ async function nfItemArtChange(idx,cod) {
   FAC_ITEMS_NUEVA[idx].ite_iva_porc=art.ART_IVA!==null&&art.ART_IVA!==undefined?Number(art.ART_IVA):21;
   try {
     const esNC=nfEsNC();
-    const desps=await sbGet('despachos',`dep_art=eq.${encodeURIComponent(codUp)}&order=dep_fec.desc`);
+    const desps=((await sbGet('despachos',`dep_art=eq.${encodeURIComponent(codUp)}&order=dep_fec.desc`))||[]).filter(nfDespDeEmpresa);
     const despsFilt=esNC?desps:desps.filter(d=>nfDispDesp(d)>0);
     FAC_ITEMS_NUEVA[idx]._desps=despsFilt;
     // Se ofrece el despacho MÁS ANTIGUO (vienen del más nuevo al más viejo)

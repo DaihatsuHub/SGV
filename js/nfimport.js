@@ -243,7 +243,7 @@ async function nfiConfirmar(){
     for (let i = 0; i < cods.length; i += 200) {
       const lista = cods.slice(i, i+200).map(c => '"' + String(c).replace(/"/g,'') + '"').join(',');
       const rows = await sbGet('despachos', `dep_art=in.(${encodeURIComponent(lista)})&order=dep_fec.asc`);
-      (rows||[]).forEach(d => (desps[_nfiNorm(d.dep_art)] = desps[_nfiNorm(d.dep_art)] || []).push({ ...d, _libre: dispDesp(d) }));
+      (rows||[]).filter(nfDespDeEmpresa).forEach(d => (desps[_nfiNorm(d.dep_art)] = desps[_nfiNorm(d.dep_art)] || []).push({ ...d, _libre: dispDesp(d) }));
     }
   } catch (e) { nfiMostrar(); sgvAviso({ titulo:'No se pudieron traer los despachos', texto:e.message, tipo:'err' }); return; }
 

@@ -131,7 +131,7 @@ async function _nfbCargar(f, items, cotiz){
   const r = await apiPost('/facturas/disponibles', { ctId: ct.id, arts: cods });
   if (!r || !r.ok) throw new Error((r && r.error) || 'No se pudo leer el stock de los despachos');
   const desps = {};
-  (r.despachos || []).forEach(d => (desps[norm(d.dep_art)] = desps[norm(d.dep_art)] || []).push({ ...d, _libre: Number(d.libre) || 0 }));
+  (r.despachos || []).filter(nfDespDeEmpresa).forEach(d => (desps[norm(d.dep_art)] = desps[norm(d.dep_art)] || []).push({ ...d, _libre: Number(d.libre) || 0 }));
   const libre = d => Number(d.libre) || 0;
   const esA = nfEsFacturaA(), nuevos = [], faltan = [];
   for (const it of items) {
