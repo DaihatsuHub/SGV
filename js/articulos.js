@@ -243,7 +243,12 @@ function selArt(i) {
   }
 }
 
-function artDetail(idx){
+async function artDetail(idx){
+  // Detalle = datos del SERVER (stock y precios que pudo cambiar otro usuario)
+  try{
+    const r=await sbGet('articulos','art_cod=eq.'+encodeURIComponent(ARTS[idx].ART_COD));
+    if(r && r[0]) ARTS[idx]={...ARTS[idx], ...dbToArt(r[0])};
+  }catch(e){ console.warn('artDetail fresco',e); }
   const a = ARTS[idx];
   document.getElementById('art-dp-tit').textContent = a.ART_COD + ' — ' + a.ART_DES;
   const sH=a.ART_STK||0, sT=a.ART_STKT||0, sDH=a.ART_DEPH||0, sDT=a.ART_DEPT||0;

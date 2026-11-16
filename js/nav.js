@@ -28,7 +28,7 @@ function showPage(pg, el){
   const pageEl = document.getElementById('page-'+pg);
   if(pageEl) pageEl.classList.add('active');
   if(el) el.classList.add('active');
-  if(pg==='art') renderArts();
+  if(pg==='art'){ renderArts(); if(typeof nfStockFresco==='function') nfStockFresco(true).then(()=>renderArts()); }
   else if(pg==='usua') renderUsua();
 }
 
@@ -48,7 +48,7 @@ function showSubPage(menu, sub) {
   document.getElementById('tnav-'+menu)?.classList.add('active');
   document.getElementById('ddi-'+sub)?.classList.add('active');
   document.getElementById('page-'+sub)?.classList.add('active');
-  if      (sub==='art')  renderArts();
+  if      (sub==='art'){ renderArts(); if(typeof nfStockFresco==='function') nfStockFresco(true).then(()=>renderArts()); }
   else if (sub==='marc') renderTabGral('MARC');
   else if (sub==='rubr') renderTabGral('RUBR');
   else if (sub==='ccos') renderTabGral('CCOS');

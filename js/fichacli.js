@@ -40,7 +40,8 @@ async function renderFicha(){
     if(izq) izq.innerHTML=''; if(der) der.innerHTML=''; if(pie) pie.innerHTML=''; { const _cc=document.getElementById('ficha-cred'); if(_cc) _cc.innerHTML=''; }
     return;
   }
-  const c=CLIS.find(x=>(x.CLI_CODIGO||'').trim()===fichaCliCod);
+  // Datos del cliente frescos del server (domicilio, vendedor, crédito)
+  const c=(typeof cliFresco==='function' ? await cliFresco(fichaCliCod) : null) || CLIS.find(x=>(x.CLI_CODIGO||'').trim()===fichaCliCod);
   if(!c){ datos.innerHTML='<div style="color:var(--red);padding:14px">Cliente no encontrado.</div>'; return; }
 
   // Los datos los arma el SERVER (/ficha/:cli). Antes se calculaban en memoria

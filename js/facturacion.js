@@ -14,6 +14,20 @@ let FAC_MODO = null;
 
 // Carga de la grilla: las páginas de 1.000 se piden DE A 4 A LA VEZ en vez de
 // una detrás de otra (con 12.000 comprobantes eran 13 viajes seguidos, Oct 2026)
+// Comprobantes de UN cliente frescos del server (saldos al día): se usa antes
+// de armar un recibo, porque otro usuario pudo haber cobrado o facturado
+// (Ricardo, Nov 2026). Reemplaza en FACS los de ese cliente.
+async function facRefrescarCliente(cod){
+  const k=String(cod||'').trim(); if(!k) return;
+  try{
+    const rows=((await sbGet('facturas',`fac_cli=like.${encodeURIComponent(k)}*&limit=5000`))||[])
+      .filter(f=>String(f.fac_cli||'').trim()===k);
+    const nros=new Set(rows.map(f=>String(f.fac_nro||'').trim()));
+    FACS=(FACS||[]).filter(f=>!(String(f.fac_cli||'').trim()===k || nros.has(String(f.fac_nro||'').trim())));
+    FACS.push(...rows);
+    FACS.sort((a,b)=>(b.fac_fec||'').localeCompare(a.fac_fec||''));
+  }catch(e){ console.warn('facRefrescarCliente',e); }
+}
 async function sbLoadFacs() {
   try {
     const todas = [];

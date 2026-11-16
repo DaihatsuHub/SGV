@@ -439,6 +439,12 @@ async function reciClienteChange(){
   document.getElementById('rf-provin').textContent=(PCIA[c.CLI_PROVIN]||c.CLI_PROVIN||'—');
   document.getElementById('rf-vend').textContent=reciVendDesc(c.CLI_VEND)||(c.CLI_VEND||'—');
   await ensureFacturas();   // facturas cargadas antes de buscar los deudores
+  await facRefrescarCliente(c.CLI_CODIGO);   // saldos de ESE cliente frescos del server
+  { const cf=await cliFresco(c.CLI_CODIGO); if(cf){
+      document.getElementById('rf-domic').textContent=cf.CLI_DOMIC||'—';
+      document.getElementById('rf-local').textContent=cf.CLI_LOCAL||'—';
+      document.getElementById('rf-provin').textContent=(PCIA[cf.CLI_PROVIN]||cf.CLI_PROVIN||'—');
+      document.getElementById('rf-vend').textContent=reciVendDesc(cf.CLI_VEND)||(cf.CLI_VEND||'—'); } }
   reciLoadDeudores();
   // Recibo con talonario CONTABLE: el cliente tiene que deber algo contable,
   // si no, no se puede seguir (Ricardo, Oct 2026)
