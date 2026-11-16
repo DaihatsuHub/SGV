@@ -185,8 +185,15 @@ function nfMonSimbolo(cod){
   return (m && m.STRING1) ? m.STRING1 : '$';
 }
 // Parseo de número en formato es-AR ("1.234,56" -> 1234.56)
+// Importes que se TIPEAN (Ricardo, Nov 2026): el "." del teclado numérico
+// sirve como coma decimal. Si hay coma, la coma es el decimal y los puntos
+// son de miles ("146.090,81"); si hay un solo punto y ninguna coma, el punto
+// es el decimal ("16276.16"); con varios puntos, son de miles ("1.234.567").
 function nfParseNum(s){
-  return parseFloat(String(s||'').trim().replace(/\./g,'').replace(',','.'))||0;
+  let t=String(s||'').trim().replace(/[\s$]/g,'');
+  if(t.includes(',')) t=t.replace(/\./g,'').replace(',','.');
+  else if((t.match(/\./g)||[]).length>1) t=t.replace(/\./g,'');
+  return parseFloat(t)||0;
 }
 
 const TIPO_LABEL = { F:'Factura', C:'Nota de Crédito', D:'Nota de Débito', R:'Cheque Rechazado' };
@@ -847,16 +854,16 @@ async function renderFacDetalle(f, vista) {
       </div>` : `
       <div style="font-size:11px;color:var(--t3);font-family:var(--mono);margin-bottom:4px;letter-spacing:1px">ÍTEMS (${items.length})</div>
       <div style="background:var(--s2);border-radius:6px;overflow:hidden;margin-bottom:12px">
-        <div style="display:grid;grid-template-columns:100px 1fr 90px 55px 85px 85px 55px;gap:4px;padding:6px 10px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase">
+        <div style="display:grid;grid-template-columns:96px 230px 88px 44px minmax(100px,1fr) minmax(105px,1fr) 50px;gap:4px;padding:6px 10px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase">
           <span>Código</span><span>Descripción</span><span>Despacho</span><span style="text-align:right">Cant</span><span style="text-align:right">Precio</span><span style="text-align:right">Subtotal</span><span style="text-align:right">Dto</span>
         </div>
         <div style="max-height:220px;overflow-y:auto">
         ${items.length?items.map(it=>{
           const art=ARTS.find(a=>(a.ART_COD||'').trim()===(it.ite_art||'').trim());
           const desArt=art?art.ART_DES:(it.ite_desp||'');
-          return `<div style="display:grid;grid-template-columns:100px 1fr 90px 55px 85px 85px 55px;gap:4px;padding:6px 10px;border-bottom:1px solid var(--b1);font-size:12px;align-items:center">
+          return `<div style="display:grid;grid-template-columns:96px 230px 88px 44px minmax(100px,1fr) minmax(105px,1fr) 50px;gap:4px;padding:6px 10px;border-bottom:1px solid var(--b1);font-size:12px;align-items:center">
             <span style="font-family:var(--mono);color:var(--acc)">${esc(it.ite_art||'')}</span>
-            <span style="color:var(--t2)">${esc(desArt)}</span>
+            <span class="cond" style="color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(desArt||'')}">${esc(String(desArt||'').substring(0,40))}</span>
             <span style="font-family:var(--mono);font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(it.ite_desp||'')}">${esc(it.ite_desp||'')}</span>
             <span style="text-align:right;font-family:var(--mono)">${it.ite_can||0}</span>
             <span style="text-align:right;font-family:var(--mono)">${mon}${fmt((it.ite_uni||0)*_fac)}</span>
@@ -2677,7 +2684,8 @@ function nfRenderItems() {
     if(el) el.style.display = (nfEsCheque()||_nfLeyenda) ? 'none' : '';
   });
   const esA=nfEsFacturaA();
-  const cols=`90px 1fr 50px 100px 65px 90px 45px 90px 90px 28px`;
+  // Descripción condensada de 40 caracteres y más lugar para los importes
+  const cols=`88px 215px 42px 96px 56px minmax(112px,1fr) 38px minmax(100px,1fr) minmax(112px,1fr) 28px`;
   hdr.innerHTML=`<div style="display:grid;grid-template-columns:${cols};gap:4px;padding:6px 8px;background:var(--s3);font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase">
     <span>Código</span><span>Descripción</span><span style="text-align:right">Disp</span><span>Despacho</span>
     <span style="text-align:right">Cant</span><span style="text-align:right">Precio c/IVA</span>
@@ -2705,7 +2713,7 @@ function nfRenderItems() {
     const _max=nfItemMax(it);
     const _cap=(_max===null||_max===undefined)?99999:_max;
     const esInexistente=it.ite_art&&!ARTS.find(a=>(a.ART_COD||'').trim()===it.ite_art);
-    const des30=(it.ite_desp_art||'').substring(0,30);
+    const des30=(it.ite_desp_art||'').substring(0,40);
     const desps=it._desps||[];
     let despHtml='';
     if(desps.length>1&&!it._desp_id){
@@ -2722,7 +2730,7 @@ function nfRenderItems() {
     }
     return `<div class="nf-item-row" data-idx="${i}" style="display:grid;grid-template-columns:${cols};gap:4px;padding:5px 8px;border-bottom:1px solid var(--b1);align-items:center;background:${esInexistente?'#2a1a1a':'var(--s2)'}">
       <span style="font-family:var(--mono);font-size:11px;color:var(--acc);cursor:pointer" onclick="nfAbrirBusqArt(${i})" title="Cambiar artículo">${esc(it.ite_art||'—')}</span>
-      <span style="font-size:11px;color:${esInexistente?'var(--red)':'var(--t2)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(it.ite_desp_art||'')}">${esc(des30)}</span>
+      <span class="cond" style="font-size:12px;color:${esInexistente?'var(--red)':'var(--t2)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(it.ite_desp_art||'')}">${esc(des30)}</span>
       <span style="text-align:right;font-family:var(--mono);font-size:11px;${dispColor}">${dispTxt}</span>
       <div>${despHtml}</div>
       ${(_max===0)?
@@ -2736,7 +2744,7 @@ function nfRenderItems() {
       <div style="display:flex;align-items:center;gap:2px;justify-content:flex-end">
         <span style="font-size:9px;color:var(--t3)">${_simb}</span>
         <input class="finp" type="text" value="${fmtN(precioConIva,2)}"
-          style="text-align:right;font-family:var(--mono);font-size:11px;width:100%"
+          style="text-align:right;font-family:var(--mono);font-size:11px;width:100%" inputmode="decimal"
           onclick="this.select()"
           onchange="nfItemChange(${i},'ite_uni',nfParseNum(this.value))">
       </div>

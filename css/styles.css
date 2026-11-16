@@ -275,3 +275,5 @@ body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:10
 /* Artículos: buscadores más cortos para que la barra entre en un renglón */
 #art-q,#art-qb{width:150px}
 #desp-qart,#desp-qdesp{width:150px}
+/* Letra condensada (descripciones largas en grillas angostas) */
+.cond{font-family:'IBM Plex Sans Condensed','Arial Narrow',sans-serif;font-stretch:condensed}
