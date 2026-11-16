@@ -123,16 +123,16 @@ async function nfbTraer(){
 async function _nfbCargar(f, items, cotiz){
   const ct = nfCtipActual(), ms = !!ct.tab_stk, pf = !!ct.tab_fact;
   const emp = document.getElementById('nf-empresa')?.value || 'H';
-  const libre = d => { const s = (d.dep_stk!=null) ? d.dep_stk : ((d.dep_ent||0)-(d.dep_sal||0)); const c = (d.dep_costk!=null) ? d.dep_costk : s;
-    return ms && pf ? Math.min(s, c) : (pf ? c : s); };
   const norm = v => String(v ?? '').trim().toUpperCase();
   const cods = [...new Set(items.map(i => norm(i.ite_art)).filter(Boolean))];
+  // El disponible lo calcula el SERVER: la lectura común le saca al usuario los
+  // campos que su grupo tiene ocultos (dep_art, dep_stk…) y sin ellos todo
+  // parecía "sin stock" (Angy, Nov 2026)
+  const r = await apiPost('/facturas/disponibles', { ctId: ct.id, arts: cods });
+  if (!r || !r.ok) throw new Error((r && r.error) || 'No se pudo leer el stock de los despachos');
   const desps = {};
-  for (let i = 0; i < cods.length; i += 200) {
-    const lista = cods.slice(i, i+200).map(c => '"' + c.replace(/"/g,'') + '"').join(',');
-    const rows = await sbGet('despachos', `dep_art=in.(${encodeURIComponent(lista)})&order=dep_fec.asc`);
-    (rows||[]).forEach(d => (desps[norm(d.dep_art)] = desps[norm(d.dep_art)] || []).push({ ...d, _libre: libre(d) }));
-  }
+  (r.despachos || []).forEach(d => (desps[norm(d.dep_art)] = desps[norm(d.dep_art)] || []).push({ ...d, _libre: Number(d.libre) || 0 }));
+  const libre = d => Number(d.libre) || 0;
   const esA = nfEsFacturaA(), nuevos = [], faltan = [];
   for (const it of items) {
     const cod = norm(it.ite_art), can = Number(it.ite_can) || 0;
