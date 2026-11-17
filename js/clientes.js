@@ -271,6 +271,7 @@ function fillCliSelects() {
 }
 
 function cAlta(){
+  _cliSoloVer(false);
   clrCliForm();document.getElementById('cf-cod').disabled=false;
   document.getElementById('cli-mtit').textContent='Nuevo Cliente';
   setMtag('cli-mtag','ALTA','tag-a');
@@ -283,6 +284,7 @@ function cAlta(){
 // Se libera al confirmar o al cancelar (Ricardo, Sep 2026).
 let _cliEditando = null;
 async function cModif(){
+  _cliSoloVer(false);
   if(cliSelIdx===null){toast('Seleccioná un cliente','err');return;}
   const cod = CLIS[cliSelIdx].CLI_CODIGO;
   const reg = await sgvEditarAbrir('clientes', cod);
@@ -313,7 +315,36 @@ function cliDesdeFila(r){
 // Cierra el editor liberando la reserva
 function cliCerrarEditor(){
   if(_cliEditando){ sgvEditarCerrar('clientes', _cliEditando); _cliEditando=null; }
+  _cliSoloVer(false);
   closeOv('ov-cli');
+}
+
+// ── VER DATOS (Ricardo, Nov 2026): la misma ficha que Modificar pero sin
+// poder cambiar nada. Datos frescos del SERVER, que ya le saca al usuario los
+// campos que su grupo no ve; además la ficha oculta esos campos como siempre.
+// No reserva el registro (no se edita).
+async function cVer(){
+  if(cliSelIdx===null){toast('Seleccioná un cliente','err');return;}
+  const cod = CLIS[cliSelIdx].CLI_CODIGO;
+  const fresco = await cliFresco(cod);
+  if(!fresco){ toast('No se encontró el cliente','err'); return; }
+  _cliEditando = null;
+  document.getElementById('cli-mtit').textContent='Datos: '+String(cod).trim();
+  setMtag('cli-mtag','SÓLO VER','tag-m');
+  document.getElementById('ov-cli').classList.add('open');
+  fillCliSelects();
+  fillCliForm(fresco);
+  window._ce='V';
+  _cliSoloVer(true);
+}
+function _cliSoloVer(on){
+  const ov=document.getElementById('ov-cli'); if(!ov) return;
+  ov.classList.toggle('solo-ver', on);
+  const cancel=document.getElementById('cli-btn-cancel'); if(cancel) cancel.textContent = on ? 'Cerrar' : 'Cancelar';
+  ov.querySelectorAll('.mbdy input, .mbdy select, .mbdy textarea').forEach(el=>{
+    if(on){ if(!el.disabled){ el.disabled=true; el.dataset.sv='1'; } }
+    else if(el.dataset.sv){ el.disabled=false; delete el.dataset.sv; }
+  });
 }
 function cBaja(){
   if(cliSelIdx===null){toast('Seleccioná un cliente','err');return;}

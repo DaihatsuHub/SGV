@@ -277,3 +277,6 @@ body{font-family:var(--sans);background:var(--bg);color:var(--txt);min-height:10
 #desp-qart,#desp-qdesp{width:150px}
 /* Letra condensada (descripciones largas en grillas angostas) */
 .cond{font-family:'IBM Plex Sans Condensed','Arial Narrow',sans-serif;font-stretch:condensed}
+/* Clientes → Ver Datos: la ficha de modificación sólo para mirar */
+#ov-cli.solo-ver .mbdy button{pointer-events:none;opacity:.45}
+#ov-cli.solo-ver #cli-btn-save{display:none}
