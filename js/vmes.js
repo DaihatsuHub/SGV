@@ -332,7 +332,7 @@ function vmesLimpiarFiltros(){
    - NECESIDAD = venta mensual × meses a cubrir (3 = un trimestre).
    - SUGERIDO = necesidad − stock − REPO (redondeado hacia arriba).
    - COBERTURA = (stock + REPO) ÷ venta mensual, en meses.
-   Se listan sólo los que tienen sugerido > 0, de menor a mayor cobertura.
+   Se listan sólo los que tienen sugerido > 0, ordenados por código.
    =========================================================================== */
 let _vsug=[];
 function _vsCalc(meses){
@@ -363,7 +363,7 @@ function _vsCalc(meses){
       rot: r.ding ? vendIng/r.ding : null, rate, stock, repo, cob, sug, base,
       costo:Number(r.costo)||0, impo:sug*(Number(r.costo)||0) });
   }
-  out.sort((a,b)=>a.cob-b.cob || b.rate-a.rate);
+  out.sort((a,b)=>String(a.cod||'').localeCompare(String(b.cod||'')));   // por código (Ricardo, Nov 2026)
   return out;
 }
 function vmesSugerencia(){
@@ -382,7 +382,7 @@ function vmesSugerencia(){
         <button class="btn" onclick="vmesSugExcel()">⬇ Excel</button>
         <button class="btn" onclick="document.getElementById('vsug-ov').remove()">✕</button></span>
     </div>
-    <div style="padding:6px 16px;font-size:11px;color:var(--t3);border-bottom:1px solid var(--b1)">Venta mensual: desde el último ingreso si llegó dentro del período, si no el promedio del período. Sugerido = venta mensual × meses − stock − REPO. Ordenado por cobertura (lo más urgente primero).</div>
+    <div style="padding:6px 16px;font-size:11px;color:var(--t3);border-bottom:1px solid var(--b1)">Venta mensual: desde el último ingreso si llegó dentro del período, si no el promedio del período. Sugerido = venta mensual × meses − stock − REPO. Sólo los artículos a reponer, ordenados por código. La cobertura en rojo es lo más urgente.</div>
     <div id="vsug-body" style="flex:1;overflow:auto"></div>
   </div>`;
   document.body.appendChild(ov);
