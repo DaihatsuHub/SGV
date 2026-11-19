@@ -335,35 +335,62 @@ function vmesLimpiarFiltros(){
    Se listan sólo los que tienen sugerido > 0, ordenados por código.
    =========================================================================== */
 let _vsug=[];
-function _vsCalc(meses){
+// CÁLCULO "INTELIGENTE" (Ricardo, Nov 2026: "que estime realmente lo que reponer")
+//  1) DISCONTINUADOS: si el último ingreso fue hace más de X meses (12 por
+//     defecto) se asume que se liquidó y no se repone.
+//  2) VENTA MENSUAL REAL:
+//     - Si el último ingreso cae en el período y el artículo SE AGOTÓ, se mide
+//       cuánto tardó en venderse el ingreso (no se cuentan los meses sin stock,
+//       que bajan el promedio aunque no haya habido qué vender).
+//     - Si cae en el período y no se agotó: lo vendido desde el ingreso ÷ los
+//       meses que pasaron.
+//     - Si no: promedio PONDERADO (los últimos 3 meses pesan 60%), para tomar
+//       la tendencia.
+//  3) BAJA ROTACIÓN: si a ese ritmo un ingreso como el último tarda más de Y
+//     meses en venderse (6 por defecto), no se sugiere.
+//  4) SUGERIDO = venta mensual × meses a cubrir − stock − REPO.
+let _vsExcl={desc:[],lenta:[]};
+function _vsCalc(meses, maxSinIng, maxRot){
   const hoy=new Date(), diasMes=new Date(hoy.getFullYear(),hoy.getMonth()+1,0).getDate();
   const fracHoy=Math.max(hoy.getDate()/diasMes, 0.1);
   const nM=_vmesMonths.length, mesesEf=(nM-1)+fracHoy;
-  const desdePer=_vmesMonths.length?_vmesMonths[nM-1].key+'-01':'';
-  const out=[];
+  const desdePer=nM?_vmesMonths[nM-1].key+'-01':'';
+  const MS=1000*60*60*24*30.44;
+  const out=[]; _vsExcl={desc:[],lenta:[]};
   for(const r of _vmesRows){
-    const stock=Number(r.stock)||0, repo=Number(r.repo)||0;
-    let rate, base;
+    const stock=Number(r.stock)||0, repo=Number(r.repo)||0, ding=Number(r.ding)||0;
     const df=String(r.dfec||'').substring(0,10);
+    const mesesDesde = df ? Math.max((hoy-new Date(df+'T00:00:00'))/MS, 0.5) : null;
+    let rate=0, base='';
     if(df && desdePer && df>=desdePer){
       const mk=df.substring(0,7);
-      const vend=_vmesMonths.reduce((s,m,i)=>s+(m.key>=mk?(Number(r.mes[i])||0):0),0);
-      const mesesDesde=Math.max((hoy-new Date(df+'T00:00:00'))/(1000*60*60*24*30.44), 1);
-      rate=vend/mesesDesde; base=`desde el ingreso (${mesesDesde.toFixed(1)} meses)`;
-    } else {
-      rate=(Number(r.total)||0)/mesesEf; base=`promedio de ${nM} meses`;
-    }
+      const cron=_vmesMonths.map((m,i)=>({k:m.key,v:Number(r.mes[i])||0})).filter(x=>x.k>=mk).reverse();   // del ingreso a hoy
+      const vend=cron.reduce((t,x)=>t+x.v,0);
+      if(stock<=0 && ding>0 && vend>=ding*0.9){
+        // Se agotó: cuánto tardó en venderse
+        let acum=0, k=0; for(;k<cron.length;k++){ acum+=cron[k].v; if(acum>=ding*0.9) break; }
+        const diaIng=Number(df.substring(8,10))||1;
+        const tVenta=Math.max(k+1-(diaIng-1)/30, 0.5);
+        rate=vend/Math.min(tVenta, mesesDesde); base=`se agotó: vendió el ingreso en ${tVenta.toFixed(1)} meses`;
+      } else { rate=vend/mesesDesde; base=`desde el ingreso (${mesesDesde.toFixed(1)} meses)`; }
+    } else if(nM>3){
+      const ult3=(Number(r.mes[0])||0)+(Number(r.mes[1])||0)+(Number(r.mes[2])||0);
+      const rest=(Number(r.total)||0)-ult3;
+      rate=0.6*(ult3/(2+fracHoy)) + 0.4*(rest/(nM-3)); base='promedio ponderado (los últimos 3 meses pesan más)';
+    } else { rate=(Number(r.total)||0)/mesesEf; base=`promedio de ${nM} meses`; }
     if(!(rate>0)) continue;
-    const nec=rate*meses;
-    const sug=Math.ceil(nec-stock-repo);
+    const sug=Math.ceil(rate*meses-stock-repo);
     if(sug<=0) continue;
     const cob=(stock+repo)/rate;
-    const vendIng = r.ding ? _vmesMonths.reduce((s,m,i)=>s+(df && m.key>=df.substring(0,7)?(Number(r.mes[i])||0):0),0) : 0;
-    out.push({ cod:r.cod, marca:r.marca, des:r.des, dfec:df, ding:Number(r.ding)||0,
-      rot: r.ding ? vendIng/r.ding : null, rate, stock, repo, cob, sug, base,
-      costo:Number(r.costo)||0, impo:sug*(Number(r.costo)||0) });
+    const mesesIng = ding ? ding/rate : null;
+    const x={ cod:r.cod, marca:r.marca, des:r.des, dfec:df, ding, mesesIng, rate, stock, repo, cob, sug, base,
+      costo:Number(r.costo)||0, impo:sug*(Number(r.costo)||0), mesesDesde };
+    if(mesesDesde!==null && mesesDesde>maxSinIng){ x.motivo=`último ingreso hace ${Math.round(mesesDesde)} meses`; _vsExcl.desc.push(x); continue; }
+    if(mesesIng!==null && mesesIng>maxRot){ x.motivo=`vender un ingreso como el último tarda ${mesesIng.toFixed(1)} meses`; _vsExcl.lenta.push(x); continue; }
+    out.push(x);
   }
-  out.sort((a,b)=>String(a.cod||'').localeCompare(String(b.cod||'')));   // por código (Ricardo, Nov 2026)
+  const ord=(a,b)=>String(a.cod||'').localeCompare(String(b.cod||''));   // por código (Ricardo, Nov 2026)
+  out.sort(ord); _vsExcl.desc.sort(ord); _vsExcl.lenta.sort(ord);
   return out;
 }
 function vmesSugerencia(){
@@ -376,13 +403,17 @@ function vmesSugerencia(){
     <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--b1);flex-wrap:wrap">
       <span style="font-weight:600;color:var(--acc)">🛒 Sugerencia de Reposición</span>
       <label style="font-size:12px;color:var(--t2);margin-left:10px">Meses a cubrir</label>
-      <input id="vsug-meses" class="finp" type="number" min="1" max="12" step="1" value="3" style="width:60px;text-align:right" onchange="vmesSugRender()">
+      <input id="vsug-meses" class="finp" type="number" min="1" max="12" step="1" value="3" style="width:56px;text-align:right" onchange="vmesSugRender()">
+      <label style="font-size:12px;color:var(--t2)" title="Si el último ingreso es más viejo, se toma como discontinuado/liquidado">Discontinuado si no ingresa hace</label>
+      <input id="vsug-maxing" class="finp" type="number" min="3" max="60" step="1" value="12" style="width:56px;text-align:right" onchange="vmesSugRender()"><span style="font-size:12px;color:var(--t2)">meses</span>
+      <label style="font-size:12px;color:var(--t2)" title="Si a ese ritmo un ingreso como el último tarda más en venderse, no se sugiere">Baja rotación si el ingreso tarda más de</label>
+      <input id="vsug-maxrot" class="finp" type="number" min="1" max="36" step="1" value="6" style="width:56px;text-align:right" onchange="vmesSugRender()"><span style="font-size:12px;color:var(--t2)">meses</span>
       <span id="vsug-res" style="font-size:12px;color:var(--t2)"></span>
       <span style="margin-left:auto;display:flex;gap:6px"><button class="btn" onclick="vmesSugPrint()">🖨 Imprimir</button>
         <button class="btn" onclick="vmesSugExcel()">⬇ Excel</button>
         <button class="btn" onclick="document.getElementById('vsug-ov').remove()">✕</button></span>
     </div>
-    <div style="padding:6px 16px;font-size:11px;color:var(--t3);border-bottom:1px solid var(--b1)">Venta mensual: desde el último ingreso si llegó dentro del período, si no el promedio del período. Sugerido = venta mensual × meses − stock − REPO. Sólo los artículos a reponer, ordenados por código. La cobertura en rojo es lo más urgente.</div>
+    <div style="padding:6px 16px;font-size:11px;color:var(--t3);border-bottom:1px solid var(--b1)">Venta mensual: si el último ingreso se agotó, cuánto tardó en venderse; si no, lo vendido desde el ingreso; si el ingreso es anterior al período, promedio con más peso en los últimos 3 meses. Sugerido = venta mensual × meses − stock − REPO. No se sugieren los discontinuados ni los de baja rotación (van abajo, aparte). Pasá el mouse por un renglón para ver cómo se calculó.</div>
     <div id="vsug-body" style="flex:1;overflow:auto"></div>
   </div>`;
   document.body.appendChild(ov);
@@ -395,13 +426,20 @@ const _vsN=(n,d=0)=>(Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits
 const _vsF=d=>{ if(!d) return '—'; const p=d.split('-'); return `${p[2]}/${p[1]}/${p[0].slice(-2)}`; };
 function vmesSugRender(){
   const m=Math.min(12,Math.max(1,parseInt(document.getElementById('vsug-meses')?.value)||3));
-  _vsug=_vsCalc(m);
+  const mi=Math.max(3,parseInt(document.getElementById('vsug-maxing')?.value)||12);
+  const mr=Math.max(1,parseInt(document.getElementById('vsug-maxrot')?.value)||6);
+  _vsug=_vsCalc(m, mi, mr);
   const body=document.getElementById('vsug-body'); if(!body) return;
   const tot=_vsug.reduce((s,x)=>s+x.impo,0), uni=_vsug.reduce((s,x)=>s+x.sug,0);
   const res=document.getElementById('vsug-res'); if(res) res.textContent=`${_vsug.length} artículo(s) · ${_vsN(uni)} unidades · costo estimado (FOB+gastos) ${_vsN(tot,2)}`;
-  if(!_vsug.length){ body.innerHTML='<div class="empty" style="margin-top:40px">Con lo que hay y lo que viene alcanza para '+m+' mes(es) 👍</div>'; return; }
+  const excl=(tit,arr,color)=> !arr.length ? '' : `<details style="margin:10px 16px;border:1px solid var(--b1);border-radius:8px"><summary style="padding:8px 12px;cursor:pointer;font-size:12px;font-weight:600;color:${color}">${tit} · ${arr.length} artículo(s) no sugeridos</summary>`
+    + arr.map(x=>`<div style="display:grid;grid-template-columns:110px minmax(180px,1fr) 70px 70px 60px minmax(200px,1.2fr);gap:6px;padding:4px 12px;border-top:1px solid var(--b1);font-size:12px">
+        <span style="font-family:var(--mono);font-weight:700">${esc(x.cod)}</span><span class="cond" style="color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.des)}</span>
+        <span style="font-family:var(--mono)">${_vsF(x.dfec)}</span><span style="text-align:right">${_vsN(x.rate,1)}/mes</span><span style="text-align:right">st ${_vsN(x.stock)}</span><span style="color:var(--t3)">${esc(x.motivo)}</span></div>`).join('') + '</details>';
+  const extra = excl('🗄 Discontinuados / liquidados', _vsExcl.desc, 'var(--t2)') + excl('🐢 Baja rotación', _vsExcl.lenta, '#d97706');
+  if(!_vsug.length){ body.innerHTML='<div class="empty" style="margin-top:40px">Con lo que hay y lo que viene alcanza para '+m+' mes(es) 👍</div>'+extra; return; }
   const hd=`<div style="display:grid;grid-template-columns:${_vsCols};gap:6px;padding:7px 16px;background:var(--s2);font-size:11px;color:var(--t2);position:sticky;top:0;z-index:2">
-    <span>Código</span><span>Marca</span><span>Descripción</span><span>Últ. ingreso</span><span style="text-align:right">Cant.</span><span style="text-align:right" title="% del último ingreso ya vendido">Rotac.</span>
+    <span>Código</span><span>Marca</span><span>Descripción</span><span>Últ. ingreso</span><span style="text-align:right">Cant.</span><span style="text-align:right" title="Meses que tarda en venderse un ingreso como el último">Vende en</span>
     <span style="text-align:right">Venta/mes</span><span style="text-align:right">Stock</span><span style="text-align:right">REPO</span><span style="text-align:right" title="Meses que cubre stock + REPO">Cobert.</span>
     <span style="text-align:right">Sugerido</span><span style="text-align:right">Costo est.</span></div>`;
   const filas=_vsug.map(x=>{
@@ -410,21 +448,21 @@ function vmesSugRender(){
       <span style="font-family:var(--mono);font-weight:700">${esc(x.cod)}</span><span>${esc(x.marca)}</span>
       <span class="cond" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t2)">${esc(x.des)}</span>
       <span style="font-family:var(--mono)">${_vsF(x.dfec)}</span><span style="text-align:right">${x.ding?_vsN(x.ding):'—'}</span>
-      <span style="text-align:right">${x.rot==null?'—':Math.round(x.rot*100)+'%'}</span>
+      <span style="text-align:right">${x.mesesIng==null?'—':_vsN(x.mesesIng,1)+' m'}</span>
       <span style="text-align:right;font-family:var(--mono)">${_vsN(x.rate,1)}</span><span style="text-align:right">${_vsN(x.stock)}</span>
       <span style="text-align:right">${x.repo?_vsN(x.repo):''}</span>
       <span style="text-align:right;font-weight:600;color:${col}">${_vsN(x.cob,1)}</span>
       <span style="text-align:right;font-weight:700;color:var(--acc);font-size:13px">${_vsN(x.sug)}</span>
       <span style="text-align:right;font-family:var(--mono)">${x.costo?_vsN(x.impo,2):'—'}</span></div>`; }).join('');
-  body.innerHTML=hd+filas;
+  body.innerHTML=hd+filas+extra;
 }
 function vmesSugPrint(){
   if(!_vsug.length){ toast('No hay sugerencias','err'); return; }
   const m=parseInt(document.getElementById('vsug-meses')?.value)||3;
-  const tr=_vsug.map(x=>`<tr><td><b>${esc(x.cod)}</b></td><td>${esc(x.marca)}</td><td>${esc(sgvCorta?sgvCorta(x.des,38):x.des)}</td><td>${_vsF(x.dfec)}</td><td class="n">${x.ding?_vsN(x.ding):''}</td><td class="n">${x.rot==null?'':Math.round(x.rot*100)+'%'}</td><td class="n">${_vsN(x.rate,1)}</td><td class="n">${_vsN(x.stock)}</td><td class="n">${x.repo?_vsN(x.repo):''}</td><td class="n">${_vsN(x.cob,1)}</td><td class="n"><b>${_vsN(x.sug)}</b></td><td class="n">${x.costo?_vsN(x.impo,2):''}</td></tr>`).join('');
+  const tr=_vsug.map(x=>`<tr><td><b>${esc(x.cod)}</b></td><td>${esc(x.marca)}</td><td>${esc(sgvCorta?sgvCorta(x.des,38):x.des)}</td><td>${_vsF(x.dfec)}</td><td class="n">${x.ding?_vsN(x.ding):''}</td><td class="n">${x.mesesIng==null?'':_vsN(x.mesesIng,1)}</td><td class="n">${_vsN(x.rate,1)}</td><td class="n">${_vsN(x.stock)}</td><td class="n">${x.repo?_vsN(x.repo):''}</td><td class="n">${_vsN(x.cob,1)}</td><td class="n"><b>${_vsN(x.sug)}</b></td><td class="n">${x.costo?_vsN(x.impo,2):''}</td></tr>`).join('');
   const tot=_vsug.reduce((s,x)=>s+x.impo,0), uni=_vsug.reduce((s,x)=>s+x.sug,0);
   sgvPrint({ titulo:'Sugerencia de Reposición', subtitulo:`Para cubrir ${m} mes(es) · ${_vsug.length} artículos · ${_vsN(uni)} unidades · costo estimado (FOB+gastos) ${_vsN(tot,2)}`,
-    cuerpo:`<table><thead><tr><th>Código</th><th>Marca</th><th>Descripción</th><th>Últ. ingreso</th><th class="n">Cant.</th><th class="n">Rotac.</th><th class="n">Venta/mes</th><th class="n">Stock</th><th class="n">REPO</th><th class="n">Cobert.</th><th class="n">Sugerido</th><th class="n">Costo est.</th></tr></thead><tbody>${tr}</tbody></table>` });
+    cuerpo:`<table><thead><tr><th>Código</th><th>Marca</th><th>Descripción</th><th>Últ. ingreso</th><th class="n">Cant.</th><th class="n">Vende en (m)</th><th class="n">Venta/mes</th><th class="n">Stock</th><th class="n">REPO</th><th class="n">Cobert.</th><th class="n">Sugerido</th><th class="n">Costo est.</th></tr></thead><tbody>${tr}</tbody></table>` });
 }
 async function vmesSugExcel(){
   if(!_vsug.length){ toast('No hay sugerencias','err'); return; }
@@ -434,9 +472,9 @@ async function vmesSugExcel(){
   ws.columns=[{width:14},{width:12},{width:40},{width:11},{width:8},{width:8},{width:10},{width:8},{width:8},{width:9},{width:10},{width:14}];
   ws.addRow([`Sugerencia de Reposición — para cubrir ${m} mes(es)`]).font={bold:true,size:13};
   ws.addRow([]);
-  const h=ws.addRow(['Código','Marca','Descripción','Últ. ingreso','Cant.','Rotac. %','Venta/mes','Stock','REPO','Cobert. (meses)','Sugerido','Costo est. (FOB+gastos)']);
+  const h=ws.addRow(['Código','Marca','Descripción','Últ. ingreso','Cant.','Vende en (meses)','Venta/mes','Stock','REPO','Cobert. (meses)','Sugerido','Costo est. (FOB+gastos)']);
   h.eachCell(c=>{ c.font={bold:true}; c.border={bottom:{style:'thin'}}; });
-  _vsug.forEach(x=>{ const r=ws.addRow([x.cod,x.marca,x.des,_vsF(x.dfec),x.ding||null,x.rot==null?null:Math.round(x.rot*100),Math.round(x.rate*10)/10,x.stock,x.repo||null,Math.round(x.cob*10)/10,x.sug,x.costo?Math.round(x.impo*100)/100:null]);
+  _vsug.forEach(x=>{ const r=ws.addRow([x.cod,x.marca,x.des,_vsF(x.dfec),x.ding||null,x.mesesIng==null?null:Math.round(x.mesesIng*10)/10,Math.round(x.rate*10)/10,x.stock,x.repo||null,Math.round(x.cob*10)/10,x.sug,x.costo?Math.round(x.impo*100)/100:null]);
     r.getCell(12).numFmt='#,##0.00'; });
   const t=ws.addRow(['','','Total','','','','','','','',_vsug.reduce((s,x)=>s+x.sug,0),_vsug.reduce((s,x)=>s+x.impo,0)]);
   t.font={bold:true}; t.getCell(12).numFmt='#,##0.00';
