@@ -389,7 +389,8 @@
     <span class="tb-sep"></span>
     <button class="btn" onclick="gastResumen()">📊 Resumen</button>
     <div class="spacer"></div>
-    <span style="font-size:13px;color:var(--t2)">Desde el <b id="gast-desde-txt">—</b> · <b id="gast-count">0</b> gasto(s) · <b id="gast-total" style="font-family:var(--mono);color:var(--txt)">$ 0,00</b></span>
+    <input type="date" class="fsel" id="gast-fecha" onchange="gastIrFecha(this.value)" title="Ir a esa fecha" style="cursor:pointer">
+    <span style="font-size:13px;color:var(--t2)"><b id="gast-count">0</b> gasto(s) · <b id="gast-total" style="font-family:var(--mono);color:var(--txt)">$ 0,00</b></span>
   </div>
   <div class="tbl-wrap">
     <div id="gast-head"><span>Fecha</span><span>Centro de costos</span><span>Concepto</span><span class="r">Importe</span><span>Detalle</span><span></span></div>

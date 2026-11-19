@@ -3,7 +3,8 @@
    - Comunes a las dos empresas: los agrupa el CENTRO DE COSTOS.
    - Se editan EN LA MISMA GRILLA: cada celda es un campo. Al salir de un
      renglón modificado se graba solo (alta si es nuevo, modificación si no).
-   - La grilla muestra desde el día 1 del mes en curso, ordenada por fecha.
+   - La grilla muestra TODOS los gastos ordenados por fecha, parada en el 1er
+     gasto del mes en curso (o el anterior). Buscador por fecha.
    - "＋ Alta" agrega un renglón nuevo al final, en otro color.
    - "Resumen" tiene los parámetros (período, centro, concepto, agrupar).
    - "Duplicar" copia el renglón seleccionado con la fecha de hoy y deja el
@@ -38,19 +39,38 @@ function renderGastos(){
 
 async function gastConsultar(){
   const body=document.getElementById('gast-body'); if(!body) return;
-  const desde=_gDesdeMes();
-  const dt=document.getElementById('gast-desde-txt'); if(dt) dt.textContent=_gFechaTxt(desde);
   body.innerHTML='<div class="empty" style="margin-top:30px">⏳ Cargando…</div>';
   try{
-    const r=await apiGet('/gastos?desde='+desde);
+    const r=await apiGet('/gastos');   // TODOS los registros
     if(!r.ok){ body.innerHTML='<div class="empty" style="margin-top:30px">⚠️ '+_gEsc(r.error||'Error')+'</div>'; return; }
     _gastos=(r.gastos||[]).slice().sort(_gOrden);
     _gastoSel=null;
     _gPintar();
-    const w=document.getElementById('gast-body'); if(w) w.scrollTop=w.scrollHeight;   // lo último a la vista
+    _gPosicionar(_gDesdeMes(), true);   // parado en el 1er gasto del mes en curso
   }catch(e){
     body.innerHTML='<div class="empty" style="margin-top:30px">⚠️ '+_gEsc(e.message||'Error')+'</div>';
   }
+}
+
+// Se para en el primer gasto de esa fecha; si no hay, en el último ANTERIOR
+// a esa fecha (Ricardo, Nov 2026). "arriba": deja ese renglón arriba de todo.
+function _gPosicionar(fecha, arriba){
+  if(!_gastos.length) return -1;
+  let i=_gastos.findIndex(g=>!g._nuevo && String(g.fecha||'')>=fecha);
+  if(i<0 || String(_gastos[i].fecha||'').substring(0,10)!==fecha){
+    let j=-1; _gastos.forEach((g,k)=>{ if(!g._nuevo && String(g.fecha||'')<fecha) j=k; });
+    if(j>=0) i=j; else if(i<0) i=_gastos.length-1;
+  }
+  gastSel(i);
+  document.querySelector(`#gast-body .g-row[data-i="${i}"]`)?.scrollIntoView({block: arriba?'start':'center'});
+  return i;
+}
+// Buscador por fecha: se posiciona y blanquea el campo
+function gastIrFecha(val){
+  const inp=document.getElementById('gast-fecha'); if(inp) inp.value='';
+  if(!val) return;
+  const i=_gPosicionar(val, false);
+  if(i>=0 && String(_gastos[i].fecha||'').substring(0,10)!==val) toast(`No hay gastos del ${_gFechaTxt(val)}: fui al anterior (${_gFechaTxt(_gastos[i].fecha)})`);
 }
 
 // ALTA: agrega un renglón nuevo al final (en otro color) y pone el cursor ahí
@@ -95,7 +115,7 @@ function _gFila(g,i){
 
 function _gPintar(){
   const body=document.getElementById('gast-body'); if(!body) return;
-  if(!_gastos.length){ body.innerHTML='<div class="empty" style="margin-top:30px">Sin gastos este mes · tocá ＋ Alta para cargar uno</div>'; _gTotales(); return; }
+  if(!_gastos.length){ body.innerHTML='<div class="empty" style="margin-top:30px">Sin gastos · tocá ＋ Alta para cargar uno</div>'; _gTotales(); return; }
   body.innerHTML=_gastos.map(_gFila).join('');
   // Cada renglón se graba al SALIR de él (no en cada tecla)
   body.querySelectorAll('.g-row').forEach(row=>{
