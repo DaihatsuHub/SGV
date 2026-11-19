@@ -198,6 +198,7 @@ const MENU_DEF = [
     { id:'ddi-talo',    mod:'talo',    label:'📓 Talonarios' },
     { id:'ddi-rete',    mod:'rete',    label:'🧮 Tipo de Retenciones' },
     { id:'ddi-banc',    mod:'banc',    label:'🏦 Bancos', tabla:true },
+    { id:'ddi-ctab',    mod:'ctab',    label:'🏧 Cuentas Bancarias', tabla:true },
   ]},
   { grupo:'📊 Dashboard', items:[      // botón propio en la barra (no es un desplegable)
     { id:'ddi-dash', mod:'dash', label:'📊 Dashboard' },

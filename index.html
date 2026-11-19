@@ -172,6 +172,7 @@
         <button class="dd-item" id="ddi-talo" onclick="showSubPage('cob','talo')">📓 Talonarios</button>
         <button class="dd-item" id="ddi-rete" onclick="showSubPage('cob','rete')">🧮 Tipo de Retenciones</button>
         <button class="dd-item" id="ddi-banc" onclick="showSubPage('cob','banc')">🏦 Bancos</button>
+        <button class="dd-item" id="ddi-ctab" onclick="showSubPage('cob','ctab')">🏧 Cuentas Bancarias</button>
       </div>
     </div>
     <!-- Dashboard: opción propia en la barra, después de Cobranzas. Cada clic lo vuelve a calcular (Ricardo, Oct 2026) -->
@@ -540,6 +541,23 @@
   <div class="tbl-wrap">
     <div class="th-tab"><span>Código</span><span>Estuche</span><span></span><span></span></div>
     <div class="tbl-body" id="estu-body"></div>
+  </div>
+</div>
+
+<div class="page" id="page-ctab">
+  <div class="toolbar">
+    <button class="btn pri" id="btn-ctab-alta" onclick="tabAlta('CTAB')">＋ Alta</button>
+    <button class="btn" id="btn-ctab-modif" onclick="tabModif('CTAB')">✏️ Modificar</button>
+    <button class="btn dng" id="btn-ctab-baja" onclick="tabBaja('CTAB')">✕ Baja</button>
+    <div class="spacer"></div>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" onfocus="this.select()" onclick="this.select()" id="ctab-q" placeholder="Buscar..." oninput="renderTabGral('CTAB')">
+      <button class="srch-clr" onclick="clrSrch('ctab-q',function(){renderTabGral('CTAB')})" title="Limpiar">✕</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <div class="th-tab"><span>Código</span><span>Cuenta</span><span>Banco</span><span>Empresa</span></div>
+    <div class="tbl-body" id="ctab-body"></div>
   </div>
 </div>
 
@@ -1870,7 +1888,9 @@
     <div class="mbdy">
       <div class="fg">
         <div class="fgrp"><label class="flbl2">Código *</label><input class="finp" id="tf-cod" maxlength="6" style="text-transform:uppercase"></div>
-        <div class="fgrp full"><label class="flbl2">Detalle *</label><input class="finp" id="tf-det" maxlength="30" style="text-transform:uppercase"></div>
+        <div class="fgrp full"><label class="flbl2" id="tf-lbl-det">Detalle *</label><input class="finp" id="tf-det" maxlength="30" style="text-transform:uppercase"></div>
+        <div class="fgrp" id="tf-ctab-banco-grp" style="display:none"><label class="flbl2">Banco *</label><select class="finp" id="tf-ctab-banco"></select></div>
+        <div class="fgrp" id="tf-ctab-emp-grp" style="display:none"><label class="flbl2">Empresa *</label><select class="finp" id="tf-ctab-emp"><option value="H">Hatsu</option><option value="T">Tressa</option></select></div>
         <div class="fgrp"><label class="flbl2" id="tf-lbl1">Dato 1</label><input class="finp" id="tf-s1" maxlength="30"></div>
         <div class="fgrp"><label class="flbl2" id="tf-lbl2">Dato 2</label><input class="finp" id="tf-s2" maxlength="30"></div>
         <div class="fgrp" id="tf-num-grp" style="display:none"><label class="flbl2" id="tf-lbl-num">Importe</label><input class="finp" id="tf-num" type="number" step="0.01" value="0"></div>

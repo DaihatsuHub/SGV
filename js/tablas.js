@@ -24,7 +24,24 @@ const TAB_CONFIG = {
   CGAS: { label:'Conceptos de Gasto', lbl1:'', lbl2:'', sinExtras:true },
   ESTU: { label:'Estuches',           lbl1:'', lbl2:'', sinExtras:true },
   GRTR: { label:'Grupos de Trabajo',  lbl1:'', lbl2:'', sinExtras:true },
+  // Cuentas bancarias (Cobranzas): detalle = número de cuenta; STRING1 = banco
+  // (tabla Bancos), STRING2 = empresa H/T. Se editan con combos (Nov 2026).
+  CTAB: { label:'Cuentas Bancarias',  lbl1:'', lbl2:'', sinExtras:true, lblDet:'Cuenta *' },
 };
+
+// Campos propios de Cuentas Bancarias: combos de Banco y Empresa
+function _tabCtabUI(tipo, r){
+  const es = tipo==='CTAB';
+  document.getElementById('tf-ctab-banco-grp').style.display = es?'flex':'none';
+  document.getElementById('tf-ctab-emp-grp').style.display   = es?'flex':'none';
+  document.getElementById('tf-lbl-det').textContent = (TAB_CONFIG[tipo]||{}).lblDet || 'Detalle *';
+  if(!es) return;
+  const sb=document.getElementById('tf-ctab-banco');
+  sb.innerHTML='<option value="">— Elegí el banco —</option>'+(TABLAS['BANC']||[]).map(b=>`<option value="${esc(b.CODIGO)}">${esc(b.CODIGO)} — ${esc(b.DETALLE)}</option>`).join('');
+  sb.value = r ? (r.STRING1||'') : '';
+  document.getElementById('tf-ctab-emp').value = r ? (r.STRING2||'H') : 'H';
+}
+function _tabBancoDesc(cod){ const b=(TABLAS['BANC']||[]).find(x=>x.CODIGO===cod); return b?b.DETALLE:(cod||''); }
 
 
 
@@ -116,6 +133,12 @@ function saveTab() {
     const cod = document.getElementById('tf-cod').value.trim().toUpperCase();
     const det = document.getElementById('tf-det').value.trim().toUpperCase();
     if (!cod||!det) { toast('Código y detalle son obligatorios','err'); return; }
+    if (_tabEditTipo==='CTAB') {
+      const bco=document.getElementById('tf-ctab-banco').value;
+      if (!bco) { toast('Elegí el banco','err'); return; }
+      document.getElementById('tf-s1').value=bco;
+      document.getElementById('tf-s2').value=document.getElementById('tf-ctab-emp').value;
+    }
     const numGrpSave = document.getElementById('tf-num-grp');
     const s2val = numGrpSave && numGrpSave.style.display!=='none'
       ? String(document.getElementById('tf-num').value)
@@ -226,8 +249,9 @@ function renderTabGral(tipo) {
   if (!list.length) { body.innerHTML='<div class="empty">🔍 Sin resultados</div>'; return; }
   body.innerHTML = list.map((r,i) => {
     const sel = _tabGralSel[tipo]===i?'sel':'';
-    const c3 = tipo==='VEND' ? (r.STRING1||'0')+'%' : (r.STRING1||'');
-    const c4 = (tipo==='VEND' && r.STRING2==='S') ? '<span class="pill ps">👥 Gerencia</span>' : '';
+    const c3 = tipo==='VEND' ? (r.STRING1||'0')+'%' : (tipo==='CTAB' ? _tabBancoDesc(r.STRING1) : (r.STRING1||''));
+    const c4 = (tipo==='VEND' && r.STRING2==='S') ? '<span class="pill ps">👥 Gerencia</span>'
+             : (tipo==='CTAB' ? (r.STRING2==='T'?'Tressa':(r.STRING2==='H'?'Hatsu':esc(r.STRING2||''))) : '');
     return `<div class="tr-tab ${sel}" onclick="selTabGral('${tipo}',${i})">
       <span class="col-cod">${esc(r.CODIGO)}</span>
       <span class="col-des">${esc(r.DETALLE)}</span>
@@ -273,6 +297,7 @@ function tabAlta(tipo) {
   document.getElementById('tf-s2').closest('.fgrp').style.display = (tipo==='RUBR'||tipo==='MONE'||tipo==='PERC'||tipo==='VEND')?'none':'flex';
   _tabVendUI(tipo, null);
   _tabSinExtras(tipo);
+  _tabCtabUI(tipo, null);
   // Campo numérico
   const numGrp = document.getElementById('tf-num-grp');
   const cfgNum = TAB_CONFIG[tipo]||{};
@@ -311,6 +336,7 @@ async function tabModif(tipo) {
   document.getElementById('tf-s2').closest('.fgrp').style.display = (tipo==='RUBR'||tipo==='MONE'||tipo==='PERC'||tipo==='VEND')?'none':'flex';
   _tabVendUI(tipo, r);
   _tabSinExtras(tipo);
+  _tabCtabUI(tipo, r);
   // Campo numérico
   const numGrpM = document.getElementById('tf-num-grp');
   const cfgNumM = TAB_CONFIG[tipo]||{};
