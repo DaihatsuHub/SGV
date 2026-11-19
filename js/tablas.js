@@ -129,7 +129,7 @@ function setTabLabels() {
 }
 function saveTab() {
   // Si viene de subtabla (MARC/RUBR), usar _tabEditTipo
-  if (_tabEditTipo && ['MARC','RUBR','CCOS','PROV','VEND','CPAG','PCIA','GRUP','CATE','EXPR','SRUB','MONE','PERC','BANC','CGAS','ESTU','GRTR'].includes(_tabEditTipo)) {
+  if (_tabEditTipo && ['MARC','RUBR','CCOS','PROV','VEND','CPAG','PCIA','GRUP','CATE','EXPR','SRUB','MONE','PERC','BANC','CTAB','CGAS','ESTU','GRTR'].includes(_tabEditTipo)) {
     const cod = document.getElementById('tf-cod').value.trim().toUpperCase();
     const det = document.getElementById('tf-det').value.trim().toUpperCase();
     if (!cod||!det) { toast('Código y detalle son obligatorios','err'); return; }
