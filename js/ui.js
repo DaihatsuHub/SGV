@@ -466,6 +466,12 @@ document.addEventListener('change', e=>{
 const _SGV_VIG = {};          // pagina → { segs, editando, actualizar, base }
 let _sgvVigUlt = null, _sgvVigCorriendo = false;
 function sgvVigilar(pagina, cfg){ _SGV_VIG[pagina] = { ...cfg, base: null }; }
+// Re-pinta conservando el scroll de la grilla
+async function sgvConScroll(bodyId, fn){
+  const b=document.getElementById(bodyId), top=b?b.scrollTop:0;
+  await fn();
+  const b2=document.getElementById(bodyId); if(b2) b2.scrollTop=top;
+}
 function _sgvVigClave(r, segs){ return r ? r.boot + ':' + segs.map(k => (r.v && r.v[k]) || 0).join(',') : null; }
 async function sgvVigilarBase(pagina){
   const w=_SGV_VIG[pagina]; if(!w) return;
@@ -498,11 +504,15 @@ async function sgvVigilarAhora(forzar){
     const k=_sgvVigClave(r, w.segs);
     if(w.base===null){ w.base=k; return; }
     if(k===w.base && !forzar) return;
+    // Qué segmentos cambiaron (para que el módulo decida cuánto recargar)
+    const ant=String(w.base||'').split(':'), act=String(k||'').split(':');
+    const vA=(ant[1]||'').split(','), vN=(act[1]||'').split(',');
+    const cambiados = ant[0]!==act[0] ? w.segs.slice() : w.segs.filter((s,i)=>vA[i]!==vN[i]);
     const editando = forzar ? false : (w.editando ? w.editando() : _sgvVigEditandoDefault(pg));
     if(editando){ _sgvVigAviso(pg.id, true); return; }
     _sgvVigAviso(pg.id, false);
     w.base=k;
-    await w.actualizar();
+    await w.actualizar(cambiados.length?cambiados:w.segs.slice());
   }catch(e){ console.warn('sgvVigilar', e); }
   finally{ _sgvVigCorriendo=false; }
 }

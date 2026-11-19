@@ -655,3 +655,13 @@ function artLimpiarFiltros(){
   ['af-marca','af-rubro','aflt-srub','af-grupo'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
   artOnFiltro();
 }
+
+// ── Se actualiza sola (regla general): si cambió el maestro se recarga entero;
+//    si sólo se movió stock (ventas, despachos, movimientos), sólo los stocks ──
+sgvVigilar('page-art', { segs:['articulos','facturas','despachos','mstk'],
+  actualizar: async(camb)=>{
+    if(typeof _artsLoaded!=='undefined' && !_artsLoaded) return;
+    if(camb.includes('articulos')){ const r=await apiGet('/articulos'); if(r && r.articulos) ARTS=r.articulos; }
+    else if(typeof nfStockFresco==='function') await nfStockFresco(true);
+    await sgvConScroll('art-body', async()=>{ renderArts(); });
+  } });

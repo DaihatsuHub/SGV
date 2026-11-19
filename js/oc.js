@@ -598,3 +598,15 @@ async function ocCodintGrilla(id, val){
   }catch(e){ toast('Error: '+e.message,'err'); }
   const list=getOCRows(); if(ocSelIdx!==null && list[ocSelIdx]) renderOCDetail(list[ocSelIdx]);
 }
+
+// ── Se actualiza sola (regla general) ──
+sgvVigilar('page-oc', { segs:['oc'],
+  actualizar: async()=>{
+    if(!window._ocLoaded) return;
+    const l=getOCRows(), selPed=(ocSelIdx!==null && l[ocSelIdx]) ? l[ocSelIdx].pedido : null;
+    await sbLoadOC(); await sbLoadOCItems(); await sbLoadOCPagos();
+    await sgvConScroll('oc-body', async()=>{
+      if(selPed!=null){ const i=getOCRows().findIndex(o=>o.pedido===selPed); ocSelIdx = i>=0 ? i : null; }
+      renderOC();
+    });
+  } });

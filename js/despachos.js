@@ -680,3 +680,15 @@ function despLimpiarFiltros(){
   ['desp-nro','desp-emp','desp-stk'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
   renderDesp();
 }
+
+// ── Se actualiza sola (regla general): altas/modificaciones de despachos y stock que mueven las ventas ──
+sgvVigilar('page-desp', { segs:['despachos','facturas','mstk','articulos'],
+  actualizar: async()=>{
+    if(!window._despLoaded) return;
+    const l=filtDesps(), selId=(despSelIdx!==null && l[despSelIdx]) ? l[despSelIdx].dep_id : null;
+    await sbLoadDesps();
+    await sgvConScroll('desp-body', async()=>{
+      if(selId){ const i=filtDesps().findIndex(d=>d.dep_id===selId); despSelIdx = i>=0 ? i : null; }
+      renderDesp();
+    });
+  } });

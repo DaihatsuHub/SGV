@@ -533,3 +533,14 @@ function cartPrint(){
   s.textContent='#cart-thead>*,#cart-body .tr-art>*{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}';
   document.head.appendChild(s);
 })();
+
+// ── Se actualiza sola (regla general): cheques nuevos por recibos, cambios de estado ──
+sgvVigilar('page-cart', { segs:['cheques','recibos'],
+  actualizar: async()=>{
+    const l=getCheqRows(), selId=(cheqSelIdx!==null && l[cheqSelIdx]) ? l[cheqSelIdx].id : null;
+    await sbLoadCheques();
+    await sgvConScroll('cart-body', async()=>{
+      if(selId){ const i=getCheqRows().findIndex(c=>c.id===selId); cheqSelIdx = i>=0 ? i : null; }
+      renderCart();
+    });
+  } });

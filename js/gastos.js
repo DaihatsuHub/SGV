@@ -45,6 +45,7 @@ async function gastConsultar(){
     if(!r.ok){ body.innerHTML='<div class="empty" style="margin-top:30px">⚠️ '+_gEsc(r.error||'Error')+'</div>'; return; }
     _gastos=(r.gastos||[]).slice().sort(_gOrden);
     _gastoSel=null;
+    sgvVigilarBase('page-gast');
     _gPintar();
     _gPosicionar(_gDesdeMes(), true);   // parado en el 1er gasto del mes en curso
   }catch(e){
@@ -400,3 +401,18 @@ function _gStyle(){
   `;
   document.head.appendChild(st);
 }
+
+// ── Se actualiza sola si otro usuario carga o modifica (regla general) ──
+async function gastActualizar(){
+  const selId=(_gastoSel!==null && _gastos[_gastoSel]) ? _gastos[_gastoSel].id : null;
+  const r=await apiGet('/gastos'); if(!r || !r.ok) return;
+  const nuevos=_gastos.filter(g=>g._nuevo);
+  await sgvConScroll('gast-body', async()=>{
+    _gastos=(r.gastos||[]).slice().sort(_gOrden).concat(nuevos);
+    _gastoSel = selId ? _gastos.findIndex(g=>g.id===selId) : null; if(_gastoSel<0) _gastoSel=null;
+    _gPintar();
+  });
+}
+sgvVigilar('page-gast', { segs:['gastos'],
+  editando:()=>_gastos.some(g=>g._dirty) || !!document.activeElement?.closest?.('#gast-body'),
+  actualizar: gastActualizar });

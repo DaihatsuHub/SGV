@@ -1266,3 +1266,14 @@ function reciImprimir(){
     `
   });
 }
+
+// ── Se actualiza sola (regla general) ──
+sgvVigilar('page-reci', { segs:['recibos','acuenta','cheques'],
+  actualizar: async()=>{
+    if (typeof _recisLoaded!=='undefined' && !_recisLoaded) return;
+    await sbLoadRecis(); await sbLoadReciItems();
+    await sgvConScroll('reci-body', async()=>{
+      if(reciSelId){ const i=getReciRows().findIndex(r=>r.id===reciSelId); reciSelIdx = i>=0 ? i : null; }
+      renderReci();
+    });
+  } });
