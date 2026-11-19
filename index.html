@@ -1385,15 +1385,16 @@
     <button class="btn dng" id="btn-oc-baja" onclick="ocBaja()">🗑️ Eliminar</button>
     <button class="btn" id="btn-oc-pagar" onclick="ocPagarOpen()">📅 Órdenes a Pagar</button>
     <div class="spacer"></div>
+    <input type="date" class="fsel" id="oc-fecha" onchange="ocBuscarFecha(this.value)" title="Ir a la orden de esa fecha" style="cursor:pointer">
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" onfocus="this.select()" onclick="this.select()" id="oc-q" placeholder="Buscar pedido, proveedor u orden..." oninput="renderOC()">
       <button class="srch-clr" id="oc-q-clr" onclick="clrSrch('oc-q',function(){renderOC()})" title="Limpiar">✕</button>
     </div>
   </div>
-  <div style="flex:1;min-height:0;display:grid;grid-template-columns:340px 1fr;gap:10px;padding:10px 12px">
+  <div style="flex:1;min-height:0;display:grid;grid-template-columns:400px 1fr;gap:10px;padding:10px 12px">
     <div class="tbl-wrap" style="min-height:0">
-      <div class="th-tab" style="display:grid;grid-template-columns:54px 1fr 60px;gap:6px;padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--b1);font-size:11px;color:var(--t2);font-family:var(--mono)">
-        <span>Pedido</span><span>Proveedor</span>
+      <div class="th-tab" style="display:grid;grid-template-columns:54px 62px 1fr 60px;gap:6px;padding:8px 12px;background:var(--s2);border-bottom:1px solid var(--b1);font-size:11px;color:var(--t2);font-family:var(--mono)">
+        <span>Pedido</span><span>Fecha</span><span>Proveedor</span>
         <span style="display:grid;grid-template-columns:repeat(3,1fr);text-align:center"><span>A</span><span>S</span><span>D</span></span>
       </div>
       <div class="tbl-body" id="oc-body"></div>

@@ -24,6 +24,23 @@ function ocNum(v){
 }
 function ocInt(n){ return (Number(n)||0).toLocaleString('es-AR'); }
 function ocFecFmt(d){ return d ? String(d).substring(0,10).split('-').reverse().join('/') : ''; }
+function ocFecCorta(d){ const p=String(d||'').substring(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0].slice(-2)}`:''; }   // dd/mm/aa
+// Buscador por fecha: se posiciona en la orden de esa fecha (o la más cercana)
+// y blanquea el campo, como el de Facturación (Ricardo, Nov 2026)
+function ocBuscarFecha(val){
+  const inp=document.getElementById('oc-fecha');
+  if(!val) return;
+  const list=getOCRows();
+  if(!list.length){ if(inp) inp.value=''; return; }
+  const dia=s=>{ const t=Date.parse(String(s||'').substring(0,10)); return isNaN(t)?null:t; };
+  const v=dia(val); let best=-1, dif=Infinity;
+  list.forEach((o,i)=>{ const t=dia(o.fecha); if(t===null) return; const d=Math.abs(t-v); if(d<dif){ dif=d; best=i; } });
+  if(inp) inp.value='';
+  if(best<0){ toast('No hay órdenes con fecha','err'); return; }
+  ocSelIdx=best; renderOC();
+  document.getElementById('oc-body')?.querySelector(`[data-idx="${best}"]`)?.scrollIntoView({block:'center'});
+  if(dif>0) toast(`No hay órdenes del ${ocFecCorta(val)}: fui a la más cercana (${ocFecCorta(list[best].fecha)})`);
+}
 function ocFecISO(d){ return d ? String(d).substring(0,10) : ''; }
 function ocPend(o){ return (Number(o.saldo_ant)||0)+(Number(o.saldo_sal)||0)+(Number(o.saldo_der)||0); }
 function ocEmpLabel(r){ const x=(r||'').trim().toUpperCase(); return x==='H'?'Hatsu':(x==='T'?'Tressa':(r||'')); }
@@ -108,8 +125,9 @@ function renderOC(){
   body.innerHTML=list.map((o,i)=>{
     const sel=ocSelIdx===i?'sel':'';
     const ind=[ Number(o.saldo_ant)||0, Number(o.saldo_sal)||0, Number(o.saldo_der)||0 ];
-    return `<div class="tr-art ${sel}" data-idx="${i}" style="grid-template-columns:54px 1fr 60px;gap:6px;padding:8px 12px" onclick="selOC(${i})" ondblclick="ocModif()">`
+    return `<div class="tr-art ${sel}" data-idx="${i}" style="grid-template-columns:54px 62px 1fr 60px;gap:6px;padding:8px 12px" onclick="selOC(${i})" ondblclick="ocModif()">`
       + `<span class="col-cod" style="font-family:var(--mono)">${esc(String(o.pedido||''))}</span>`
+      + `<span style="font-family:var(--mono);font-size:11px;color:var(--t2)">${ocFecCorta(o.fecha)}</span>`
       + `<span class="col-des">${esc(o.proveedor||'')}</span>`
       + `<span style="display:grid;grid-template-columns:repeat(3,1fr);text-align:center">`
       +   `<span>${dmd(ind[0])}</span><span>${dmd(ind[1])}</span><span>${dmd(ind[2])}</span>`
