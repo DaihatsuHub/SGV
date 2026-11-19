@@ -384,7 +384,13 @@ function _gStyle(){
     #gast-head .r,.g-imp{text-align:right}
     .g-row{border-bottom:1px solid var(--b1)}
     .g-row.sel{background:var(--s3);box-shadow:inset 3px 0 0 var(--acc)}
-    .g-row.g-nuevo{background:#fff4d6;box-shadow:inset 3px 0 0 #e0a100}
+    .g-row.g-nuevo{background:#1e3a8a;box-shadow:inset 4px 0 0 #fbbf24}
+    .g-row.g-nuevo .g-in{background:#1e3a8a;color:#fff;font-weight:700;border-color:#4f6fc4}
+    .g-row.g-nuevo .g-in::placeholder{color:#c7d2fe;font-weight:400}
+    .g-row.g-nuevo .g-in:focus{background:#24449e;border-color:#fbbf24;outline:none}
+    .g-row.g-nuevo select.g-in option{background:#fff;color:#111;font-weight:400}
+    .g-row.g-nuevo input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
+    .g-row.g-nuevo .g-st{color:#fff}
     .g-in{height:28px;font-size:13px;padding:2px 6px;width:100%;min-width:0}
     .g-imp{font-family:var(--mono)}
     .g-st{text-align:center;font-size:14px}
