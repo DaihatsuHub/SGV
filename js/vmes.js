@@ -369,9 +369,15 @@ function _vsCalc(meses, maxSinIng, maxRot){
       if(stock<=0 && ding>0 && vend>=ding*0.9){
         // Se agotó: cuánto tardó en venderse
         let acum=0, k=0; for(;k<cron.length;k++){ acum+=cron[k].v; if(acum>=ding*0.9) break; }
+        // Los datos son MENSUALES: menos de 1 mes no se puede medir (con 0,5 un
+        // ingreso del día 31 daba ritmos absurdos, ej. A168WA-3A → 30/mes).
         const diaIng=Number(df.substring(8,10))||1;
-        const tVenta=Math.max(k+1-(diaIng-1)/30, 0.5);
-        rate=vend/Math.min(tVenta, mesesDesde); base=`se agotó: vendió el ingreso en ${tVenta.toFixed(1)} meses`;
+        const tVenta=Math.max(k+1-(diaIng-1)/30, 1);
+        const maxMes=Math.max(...cron.map(x=>x.v), 0);                   // nunca más que el mejor mes real
+        const ritmoAgote=Math.min(ding/tVenta, maxMes);
+        const prom=vend/mesesDesde;                                        // lo vendido desde el ingreso ÷ meses
+        rate=Math.max(prom, ritmoAgote);
+        base=`se agotó: el ingreso se vendió en ${tVenta.toFixed(1)} meses (ritmo ${ritmoAgote.toFixed(1)}/mes; promedio desde el ingreso ${prom.toFixed(1)}/mes; se toma el mayor)`;
       } else { rate=vend/mesesDesde; base=`desde el ingreso (${mesesDesde.toFixed(1)} meses)`; }
     } else if(nM>3){
       const ult3=(Number(r.mes[0])||0)+(Number(r.mes[1])||0)+(Number(r.mes[2])||0);
