@@ -318,3 +318,131 @@ function vmesLimpiarFiltros(){
   ['vmes-vend','vmes-rubro','vmes-srub'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
   vmesSyncFiltros(); vmesFiltrosCant();
 }
+
+
+/* ===========================================================================
+   SUGERENCIA DE REPOSICIÓN (Ricardo, Nov 2026)
+   Sale de los datos del informe (servidor): ventas por mes, stock, REPO (OC
+   pendientes sin derechos pagados) y el último ingreso (fecha y cantidad).
+   Por artículo:
+   - VENTA MENSUAL: si el último ingreso cae dentro del período, se toma lo
+     vendido DESDE ese ingreso dividido los meses que pasaron (así un artículo
+     que llegó hace poco no queda subestimado). Si no, el promedio del período,
+     contando el mes en curso por los días que van.
+   - NECESIDAD = venta mensual × meses a cubrir (3 = un trimestre).
+   - SUGERIDO = necesidad − stock − REPO (redondeado hacia arriba).
+   - COBERTURA = (stock + REPO) ÷ venta mensual, en meses.
+   Se listan sólo los que tienen sugerido > 0, de menor a mayor cobertura.
+   =========================================================================== */
+let _vsug=[];
+function _vsCalc(meses){
+  const hoy=new Date(), diasMes=new Date(hoy.getFullYear(),hoy.getMonth()+1,0).getDate();
+  const fracHoy=Math.max(hoy.getDate()/diasMes, 0.1);
+  const nM=_vmesMonths.length, mesesEf=(nM-1)+fracHoy;
+  const desdePer=_vmesMonths.length?_vmesMonths[nM-1].key+'-01':'';
+  const out=[];
+  for(const r of _vmesRows){
+    const stock=Number(r.stock)||0, repo=Number(r.repo)||0;
+    let rate, base;
+    const df=String(r.dfec||'').substring(0,10);
+    if(df && desdePer && df>=desdePer){
+      const mk=df.substring(0,7);
+      const vend=_vmesMonths.reduce((s,m,i)=>s+(m.key>=mk?(Number(r.mes[i])||0):0),0);
+      const mesesDesde=Math.max((hoy-new Date(df+'T00:00:00'))/(1000*60*60*24*30.44), 1);
+      rate=vend/mesesDesde; base=`desde el ingreso (${mesesDesde.toFixed(1)} meses)`;
+    } else {
+      rate=(Number(r.total)||0)/mesesEf; base=`promedio de ${nM} meses`;
+    }
+    if(!(rate>0)) continue;
+    const nec=rate*meses;
+    const sug=Math.ceil(nec-stock-repo);
+    if(sug<=0) continue;
+    const cob=(stock+repo)/rate;
+    const vendIng = r.ding ? _vmesMonths.reduce((s,m,i)=>s+(df && m.key>=df.substring(0,7)?(Number(r.mes[i])||0):0),0) : 0;
+    out.push({ cod:r.cod, marca:r.marca, des:r.des, dfec:df, ding:Number(r.ding)||0,
+      rot: r.ding ? vendIng/r.ding : null, rate, stock, repo, cob, sug, base,
+      costo:Number(r.costo)||0, impo:sug*(Number(r.costo)||0) });
+  }
+  out.sort((a,b)=>a.cob-b.cob || b.rate-a.rate);
+  return out;
+}
+function vmesSugerencia(){
+  if(!_vmesRows.length){ toast('Generá el listado primero','err'); return; }
+  if(_vmesFiltrado){ toast('La sugerencia se calcula sin filtro de cliente ni vendedor','err'); return; }
+  document.getElementById('vsug-ov')?.remove();
+  const ov=document.createElement('div'); ov.id='vsug-ov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML=`<div style="background:var(--s1);border-radius:12px;width:100%;max-width:1250px;height:90vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden">
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--b1);flex-wrap:wrap">
+      <span style="font-weight:600;color:var(--acc)">🛒 Sugerencia de Reposición</span>
+      <label style="font-size:12px;color:var(--t2);margin-left:10px">Meses a cubrir</label>
+      <input id="vsug-meses" class="finp" type="number" min="1" max="12" step="1" value="3" style="width:60px;text-align:right" onchange="vmesSugRender()">
+      <span id="vsug-res" style="font-size:12px;color:var(--t2)"></span>
+      <span style="margin-left:auto;display:flex;gap:6px"><button class="btn" onclick="vmesSugPrint()">🖨 Imprimir</button>
+        <button class="btn" onclick="vmesSugExcel()">⬇ Excel</button>
+        <button class="btn" onclick="document.getElementById('vsug-ov').remove()">✕</button></span>
+    </div>
+    <div style="padding:6px 16px;font-size:11px;color:var(--t3);border-bottom:1px solid var(--b1)">Venta mensual: desde el último ingreso si llegó dentro del período, si no el promedio del período. Sugerido = venta mensual × meses − stock − REPO. Ordenado por cobertura (lo más urgente primero).</div>
+    <div id="vsug-body" style="flex:1;overflow:auto"></div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  ov.addEventListener('keydown',e=>{ if(e.key==='Escape') ov.remove(); });
+  vmesSugRender();
+}
+const _vsCols='110px 80px minmax(180px,1fr) 70px 55px 60px 70px 60px 55px 70px 80px 105px';
+const _vsN=(n,d=0)=>(Number(n)||0).toLocaleString('es-AR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const _vsF=d=>{ if(!d) return '—'; const p=d.split('-'); return `${p[2]}/${p[1]}/${p[0].slice(-2)}`; };
+function vmesSugRender(){
+  const m=Math.min(12,Math.max(1,parseInt(document.getElementById('vsug-meses')?.value)||3));
+  _vsug=_vsCalc(m);
+  const body=document.getElementById('vsug-body'); if(!body) return;
+  const tot=_vsug.reduce((s,x)=>s+x.impo,0), uni=_vsug.reduce((s,x)=>s+x.sug,0);
+  const res=document.getElementById('vsug-res'); if(res) res.textContent=`${_vsug.length} artículo(s) · ${_vsN(uni)} unidades · costo estimado (FOB+gastos) ${_vsN(tot,2)}`;
+  if(!_vsug.length){ body.innerHTML='<div class="empty" style="margin-top:40px">Con lo que hay y lo que viene alcanza para '+m+' mes(es) 👍</div>'; return; }
+  const hd=`<div style="display:grid;grid-template-columns:${_vsCols};gap:6px;padding:7px 16px;background:var(--s2);font-size:11px;color:var(--t2);position:sticky;top:0;z-index:2">
+    <span>Código</span><span>Marca</span><span>Descripción</span><span>Últ. ingreso</span><span style="text-align:right">Cant.</span><span style="text-align:right" title="% del último ingreso ya vendido">Rotac.</span>
+    <span style="text-align:right">Venta/mes</span><span style="text-align:right">Stock</span><span style="text-align:right">REPO</span><span style="text-align:right" title="Meses que cubre stock + REPO">Cobert.</span>
+    <span style="text-align:right">Sugerido</span><span style="text-align:right">Costo est.</span></div>`;
+  const filas=_vsug.map(x=>{
+    const col=x.cob<1?'var(--red)':(x.cob<2?'#d97706':'var(--t2)');
+    return `<div style="display:grid;grid-template-columns:${_vsCols};gap:6px;padding:5px 16px;border-bottom:1px solid var(--b1);font-size:12px;align-items:center" title="Venta mensual ${x.base}">
+      <span style="font-family:var(--mono);font-weight:700">${esc(x.cod)}</span><span>${esc(x.marca)}</span>
+      <span class="cond" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t2)">${esc(x.des)}</span>
+      <span style="font-family:var(--mono)">${_vsF(x.dfec)}</span><span style="text-align:right">${x.ding?_vsN(x.ding):'—'}</span>
+      <span style="text-align:right">${x.rot==null?'—':Math.round(x.rot*100)+'%'}</span>
+      <span style="text-align:right;font-family:var(--mono)">${_vsN(x.rate,1)}</span><span style="text-align:right">${_vsN(x.stock)}</span>
+      <span style="text-align:right">${x.repo?_vsN(x.repo):''}</span>
+      <span style="text-align:right;font-weight:600;color:${col}">${_vsN(x.cob,1)}</span>
+      <span style="text-align:right;font-weight:700;color:var(--acc);font-size:13px">${_vsN(x.sug)}</span>
+      <span style="text-align:right;font-family:var(--mono)">${x.costo?_vsN(x.impo,2):'—'}</span></div>`; }).join('');
+  body.innerHTML=hd+filas;
+}
+function vmesSugPrint(){
+  if(!_vsug.length){ toast('No hay sugerencias','err'); return; }
+  const m=parseInt(document.getElementById('vsug-meses')?.value)||3;
+  const tr=_vsug.map(x=>`<tr><td><b>${esc(x.cod)}</b></td><td>${esc(x.marca)}</td><td>${esc(sgvCorta?sgvCorta(x.des,38):x.des)}</td><td>${_vsF(x.dfec)}</td><td class="n">${x.ding?_vsN(x.ding):''}</td><td class="n">${x.rot==null?'':Math.round(x.rot*100)+'%'}</td><td class="n">${_vsN(x.rate,1)}</td><td class="n">${_vsN(x.stock)}</td><td class="n">${x.repo?_vsN(x.repo):''}</td><td class="n">${_vsN(x.cob,1)}</td><td class="n"><b>${_vsN(x.sug)}</b></td><td class="n">${x.costo?_vsN(x.impo,2):''}</td></tr>`).join('');
+  const tot=_vsug.reduce((s,x)=>s+x.impo,0), uni=_vsug.reduce((s,x)=>s+x.sug,0);
+  sgvPrint({ titulo:'Sugerencia de Reposición', subtitulo:`Para cubrir ${m} mes(es) · ${_vsug.length} artículos · ${_vsN(uni)} unidades · costo estimado (FOB+gastos) ${_vsN(tot,2)}`,
+    cuerpo:`<table><thead><tr><th>Código</th><th>Marca</th><th>Descripción</th><th>Últ. ingreso</th><th class="n">Cant.</th><th class="n">Rotac.</th><th class="n">Venta/mes</th><th class="n">Stock</th><th class="n">REPO</th><th class="n">Cobert.</th><th class="n">Sugerido</th><th class="n">Costo est.</th></tr></thead><tbody>${tr}</tbody></table>` });
+}
+async function vmesSugExcel(){
+  if(!_vsug.length){ toast('No hay sugerencias','err'); return; }
+  try{ await vmesLoadExcelJS(); }catch(e){ toast('No se pudo cargar Excel','err'); return; }
+  const m=parseInt(document.getElementById('vsug-meses')?.value)||3;
+  const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('Reposición');
+  ws.columns=[{width:14},{width:12},{width:40},{width:11},{width:8},{width:8},{width:10},{width:8},{width:8},{width:9},{width:10},{width:14}];
+  ws.addRow([`Sugerencia de Reposición — para cubrir ${m} mes(es)`]).font={bold:true,size:13};
+  ws.addRow([]);
+  const h=ws.addRow(['Código','Marca','Descripción','Últ. ingreso','Cant.','Rotac. %','Venta/mes','Stock','REPO','Cobert. (meses)','Sugerido','Costo est. (FOB+gastos)']);
+  h.eachCell(c=>{ c.font={bold:true}; c.border={bottom:{style:'thin'}}; });
+  _vsug.forEach(x=>{ const r=ws.addRow([x.cod,x.marca,x.des,_vsF(x.dfec),x.ding||null,x.rot==null?null:Math.round(x.rot*100),Math.round(x.rate*10)/10,x.stock,x.repo||null,Math.round(x.cob*10)/10,x.sug,x.costo?Math.round(x.impo*100)/100:null]);
+    r.getCell(12).numFmt='#,##0.00'; });
+  const t=ws.addRow(['','','Total','','','','','','','',_vsug.reduce((s,x)=>s+x.sug,0),_vsug.reduce((s,x)=>s+x.impo,0)]);
+  t.font={bold:true}; t.getCell(12).numFmt='#,##0.00';
+  ws.views=[{state:'frozen', ySplit:3}];
+  const buf=await wb.xlsx.writeBuffer();
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  a.download=`Sugerencia_reposicion_${new Date().toISOString().substring(0,10)}.xlsx`; a.click(); URL.revokeObjectURL(a.href);
+}
