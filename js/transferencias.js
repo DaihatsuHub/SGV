@@ -60,6 +60,7 @@ async function trfConsultar(){
     if(!r.ok){ body.innerHTML='<div class="empty" style="margin-top:30px">⚠️ '+_tEsc(r.error||'Error')+'</div>'; return; }
     _trf=(r.transferencias||[]).slice().sort(_tOrden);
     _trfSel=null;
+    sgvVigilarBase('page-trf');
     const fc=document.getElementById('trf-f-cta');
     if(fc){ const v=fc.value; fc.innerHTML='<option value="">Todas las cuentas</option>'+(TABLAS['CTAB']||[]).map(x=>`<option value="${_tEsc(x.CODIGO)}">${_tEsc(x.CODIGO)} — ${_tEsc(x.DETALLE)}</option>`).join(''); fc.value=v; }
     _tPintar();
@@ -234,3 +235,17 @@ function trfFiltrar(){ _trfSel=null; _tPintar(); }
 let _tDem=null;
 function trfFiltrarDem(){ clearTimeout(_tDem); _tDem=setTimeout(trfFiltrar,300); }
 function trfLimpiarFiltros(){ ['trf-f-desde','trf-f-hasta','trf-f-cta','trf-f-cli','trf-f-txt'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; }); trfFiltrar(); _tPosicionar(_tMes(),true); }
+
+// ── Se actualiza sola si otro usuario carga o modifica (regla general) ──
+async function trfActualizar(){
+  const body=document.getElementById('trf-body'); const top=body?body.scrollTop:0;
+  const selId=(_trfSel!==null && _trf[_trfSel]) ? _trf[_trfSel].id : null;
+  const r=await apiGet('/transferencias'); if(!r || !r.ok) return;
+  const nuevos=_trf.filter(g=>g._nuevo);          // lo que se está cargando no se pierde
+  _trf=(r.transferencias||[]).slice().sort(_tOrden).concat(nuevos);
+  _trfSel = selId ? _trf.findIndex(g=>g.id===selId) : null; if(_trfSel<0) _trfSel=null;
+  _tPintar(); if(body) body.scrollTop=top;
+}
+sgvVigilar('page-trf', { segs:['transferencias'],
+  editando:()=>_trf.some(g=>g._dirty) || !!document.activeElement?.closest?.('#trf-body'),
+  actualizar: trfActualizar });

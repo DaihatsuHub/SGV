@@ -39,6 +39,7 @@ async function sbLoadFacs() {
     }
     FACS = todas;
     FACS.sort((a,b) => (b.fac_fec||'').localeCompare(a.fac_fec||''));
+    if(typeof sgvVigilarBase==='function') sgvVigilarBase('page-fac');
   } catch(e) { console.error('sbLoadFacs:', e); }
 }
 
@@ -3815,3 +3816,25 @@ function ncImpInput(i, saldoAfip){
   st.textContent='@keyframes facEspera{0%,49%{opacity:1}50%,100%{opacity:0}} .fac-espera{animation:facEspera 1s step-end infinite}';
   document.head.appendChild(st);
 })();
+
+// ── Se actualiza sola si otro usuario factura, anula, controla, prepara… ──
+// Trae del server los comprobantes de los últimos 90 días (los que se mueven)
+// y los reemplaza en la grilla, conservando el seleccionado y el scroll.
+async function facActualizarRecientes(){
+  if(!window._facsLoaded) return;
+  const d=new Date(); d.setDate(d.getDate()-90);
+  const desde=d.toISOString().substring(0,10);
+  const rows=[];
+  for(let off=0; ; off+=1000){
+    const r=await sbGet('facturas',`fac_fec=gte.${desde}&order=fac_fec.asc&limit=1000&offset=${off}`);
+    rows.push(...(r||[])); if(!r || r.length<1000) break;
+  }
+  const lista=filtFacs(), selNro=(facSelIdx!==null && lista[facSelIdx]) ? lista[facSelIdx].fac_nro : null;
+  const body=document.getElementById('fac-body'), top=body?body.scrollTop:0;
+  FACS=(FACS||[]).filter(f=>(f.fac_fec||'')<desde).concat(rows);
+  FACS.sort((a,b)=>(b.fac_fec||'').localeCompare(a.fac_fec||''));
+  if(selNro){ const i=filtFacs().findIndex(f=>f.fac_nro===selNro); facSelIdx = i>=0 ? i : null; }
+  renderFac();
+  if(body) body.scrollTop=top;
+}
+sgvVigilar('page-fac', { segs:['facturas','nc','recibos','acuenta','afip'], actualizar: facActualizarRecientes });

@@ -452,3 +452,60 @@ document.addEventListener('change', e=>{
   if(!String(el.value||'').trim()) return;
   el.value=sgvParseNum(el.value).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
 });
+
+/* ===========================================================================
+   GRILLAS QUE SE ACTUALIZAN SOLAS (Ricardo, Nov 2026) — REGLA GENERAL, también
+   para los módulos nuevos: cada 30 s la pantalla abierta le pregunta al server
+   si hubo grabaciones (GET /cambios: un contador en memoria, no va a la base).
+   - Si hubo y el usuario NO está editando → la grilla se actualiza sola.
+   - Si está editando → aviso arriba "Hay novedades · Actualizar".
+   - Con la pestaña en segundo plano no consulta; al volver, consulta ya.
+   Uso:  sgvVigilar('page-xxx', { segs:['transferencias'], editando:()=>bool,
+                                  actualizar: async()=>{…} })
+   =========================================================================== */
+const _SGV_VIG = {};          // pagina → { segs, editando, actualizar, base }
+let _sgvVigUlt = null, _sgvVigCorriendo = false;
+function sgvVigilar(pagina, cfg){ _SGV_VIG[pagina] = { ...cfg, base: null }; }
+function _sgvVigClave(r, segs){ return r ? r.boot + ':' + segs.map(k => (r.v && r.v[k]) || 0).join(',') : null; }
+async function sgvVigilarBase(pagina){
+  const w=_SGV_VIG[pagina]; if(!w) return;
+  try{ const r=await apiGet('/cambios'); w.base=_sgvVigClave(r, w.segs); }catch(_){ }
+}
+function _sgvVigEditandoDefault(pg){
+  if(document.querySelector('.ov.open, #rem-modal, #nfb-modal, #gres-ov, #vsug-ov, #sdp-ov')) return true;
+  const a=document.activeElement;
+  return !!(a && pg && pg.contains(a) && ['INPUT','SELECT','TEXTAREA'].includes(a.tagName) && !a.classList.contains('srch'));
+}
+function _sgvVigAviso(pagina, mostrar){
+  const pg=document.getElementById(pagina); if(!pg) return;
+  let av=pg.querySelector('.sgv-nov');
+  if(!mostrar){ av?.remove(); return; }
+  if(av) return;
+  av=document.createElement('div'); av.className='sgv-nov';
+  av.style.cssText='position:sticky;top:0;z-index:50;margin:0 0 6px;padding:7px 14px;background:#1e3a8a;color:#fff;font-size:13px;font-weight:600;border-radius:6px;display:flex;align-items:center;gap:10px';
+  av.innerHTML='🔔 Otro usuario hizo cambios <button class="btn" style="padding:2px 10px;margin-left:auto">↻ Actualizar</button>';
+  av.querySelector('button').onclick=()=>sgvVigilarAhora(true);
+  const tb=pg.querySelector('.toolbar'); if(tb) tb.after(av); else pg.prepend(av);
+}
+async function sgvVigilarAhora(forzar){
+  if(_sgvVigCorriendo) return;
+  const pg=document.querySelector('.page.active'); if(!pg) return;
+  const w=_SGV_VIG[pg.id]; if(!w) return;
+  if(document.hidden && !forzar) return;
+  _sgvVigCorriendo=true;
+  try{
+    const r=await apiGet('/cambios');
+    const k=_sgvVigClave(r, w.segs);
+    if(w.base===null){ w.base=k; return; }
+    if(k===w.base && !forzar) return;
+    const editando = forzar ? false : (w.editando ? w.editando() : _sgvVigEditandoDefault(pg));
+    if(editando){ _sgvVigAviso(pg.id, true); return; }
+    _sgvVigAviso(pg.id, false);
+    w.base=k;
+    await w.actualizar();
+  }catch(e){ console.warn('sgvVigilar', e); }
+  finally{ _sgvVigCorriendo=false; }
+}
+setInterval(()=>sgvVigilarAhora(false), 30000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) sgvVigilarAhora(false); });
+window.addEventListener('focus', ()=>sgvVigilarAhora(false));
