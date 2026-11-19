@@ -61,6 +61,7 @@ function showSubPage(menu, sub) {
   else if (sub==='regl2') { if(typeof renderReglas2==='function') renderReglas2(); }
   else if (sub==='regl') { if(typeof renderReglas==='function') renderReglas(); }
   else if (sub==='gast') { if(typeof renderGastos==='function') renderGastos(); }
+  else if (sub==='trf')  { if(typeof renderTransferencias==='function') renderTransferencias(); }
   else if (sub==='prov') renderTabGral('PROV');
   else if (sub==='desp') renderDesp();
   else if (sub==='cli')  renderClis();

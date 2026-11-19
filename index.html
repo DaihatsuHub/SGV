@@ -163,6 +163,7 @@
       <div class="dd-menu" id="dd-cob">
         <button class="dd-item" id="ddi-reci" onclick="showSubPage('cob','reci')">🧾 Recibos</button>
         <button class="dd-item" id="ddi-cart" onclick="showSubPage('cob','cart')">💼 Cartera de Valores</button>
+        <button class="dd-item" id="ddi-trf" onclick="showSubPage('cob','trf')">🏦 Transferencias de Clientes</button>
         <button class="dd-item" id="ddi-sdcob" onclick="showSubPage('cob','sdcob')">📗 Subdiario de Cobranzas</button>
         <button class="dd-item" id="ddi-listcob" onclick="showSubPage('cob','listcob')">📋 Listado de Cobranzas</button>
         <button class="dd-item" id="ddi-cobcc" onclick="showSubPage('cob','cobcc')">🏢 Cobranzas por Centro de Costos</button>
@@ -541,6 +542,20 @@
   <div class="tbl-wrap">
     <div class="th-tab"><span>Código</span><span>Estuche</span><span></span><span></span></div>
     <div class="tbl-body" id="estu-body"></div>
+  </div>
+</div>
+
+<div class="page" id="page-trf">
+  <div class="toolbar">
+    <button class="btn pri" id="btn-trf-alta" onclick="trfAlta()">＋ Alta</button>
+    <button class="btn dng" id="btn-trf-baja" onclick="trfBorrar()">✕ Borrar</button>
+    <div class="spacer"></div>
+    <input type="date" class="fsel" id="trf-fecha" onchange="trfIrFecha(this.value)" title="Ir a esa fecha" style="cursor:pointer">
+  </div>
+  <datalist id="trf-cli-list"></datalist>
+  <div class="tbl-wrap">
+    <div id="trf-head"><span>Fecha</span><span>Cuenta bancaria</span><span>Descripción</span><span>Origen</span><span class="r">Importe</span><span>Depositante</span><span>Cliente</span><span></span></div>
+    <div id="trf-body" class="tbl-body"></div>
   </div>
 </div>
 
@@ -2549,6 +2564,7 @@
 <script src="js/ctacte.js"></script>
 <script src="js/composicion.js"></script>
 <script src="js/gastos.js"></script>
+<script src="js/transferencias.js"></script>
 <script src="js/antiguedad.js"></script>
 <script src="js/ranking.js"></script>
 <script src="js/dashboard.js"></script>

@@ -190,6 +190,7 @@ const MENU_DEF = [
   { grupo:'💼 Cobranzas', tnav:'tnav-cob', items:[
     { id:'ddi-reci',    mod:'reci',    label:'🧾 Recibos' },
     { id:'ddi-cart',    mod:'cart',    label:'💼 Cartera de Valores' },
+    { id:'ddi-trf',     mod:'trf',     label:'🏦 Transferencias de Clientes' },
     { id:'ddi-sdcob',   mod:'sdcob',   label:'📗 Subdiario de Cobranzas' },
     { id:'ddi-listcob', mod:'listcob', label:'📋 Listado de Cobranzas' },
     { id:'ddi-cobcc',   mod:'cobcc',   label:'🏢 Cobranzas por Centro de Costos' },
