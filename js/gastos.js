@@ -105,7 +105,7 @@ function _gFila(g,i){
             : g._nuevo            ? '<span title="Renglón nuevo" style="color:var(--t3)">＋</span>' : '';
   return `<div class="g-row${sel}${g._nuevo?' g-nuevo':''}" data-i="${i}" onmousedown="gastSel(${i})">
     <input type="date" class="finp g-in" data-f="fecha" value="${_gEsc(g.fecha||'')}"${dis}>
-    <select class="finp g-in" data-f="ccos"${dis}>${_gOpts('CCOS',g.ccos)}</select>
+    <select class="finp g-in${g.ccos?'':' g-sinccos'}" data-f="ccos"${dis}>${_gOpts('CCOS',g.ccos)}</select>
     <select class="finp g-in" data-f="concepto"${dis}>${_gOpts('CGAS',g.concepto)}</select>
     <input class="finp g-in g-imp" data-f="importe" value="${g.importe?_gFmt(g.importe):''}" placeholder="0,00"${dis}>
     <input class="finp g-in" data-f="detalle" value="${_gEsc(g.detalle||'')}" placeholder="${g._nuevo?'Nuevo gasto…':''}"${dis}>
@@ -139,6 +139,7 @@ function _gCambio(i, inp){
   const g=_gastos[i]; if(!g) return;
   const f=inp.dataset.f;
   g[f] = f==='importe' ? _gNum(inp.value) : inp.value;
+  if(f==='ccos') inp.classList.toggle('g-sinccos', !inp.value);   // sin centro: en azul oscuro
   g._dirty=true;
   if(g._st==='ok'||g._st==='error'){ g._st=null; _gEstado(i); }
 }
@@ -391,6 +392,8 @@ function _gStyle(){
     .g-row.g-nuevo select.g-in option{background:#fff;color:#111;font-weight:400}
     .g-row.g-nuevo input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     .g-row.g-nuevo .g-st{color:#fff}
+    .g-in.g-sinccos{background:#1e3a8a !important;color:#fff;font-weight:700;border-color:#4f6fc4}
+    .g-in.g-sinccos option{background:#fff;color:#111;font-weight:400}
     .g-in{height:28px;font-size:13px;padding:2px 6px;width:100%;min-width:0}
     .g-imp{font-family:var(--mono)}
     .g-st{text-align:center;font-size:14px}
