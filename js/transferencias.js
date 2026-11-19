@@ -46,6 +46,8 @@ function renderTransferencias(){
   _tStyle();
   const dl=document.getElementById('trf-cli-list');
   if(dl && !dl.childElementCount) dl.innerHTML=(CLIS||[]).map(c=>`<option value="${_tEsc(String(c.CLI_CODIGO||'').trim())} — ${_tEsc(c.CLI_RAZON||'')}">`).join('');
+  const df=document.getElementById('trf-f-cli-list');
+  if(df && !df.childElementCount) df.innerHTML='<option value="(SIN DEFINIR)">'+(CLIS||[]).map(c=>`<option value="${_tEsc(String(c.CLI_CODIGO||'').trim())} — ${_tEsc(c.CLI_RAZON||'')}">`).join('');
   trfConsultar();
 }
 
@@ -58,6 +60,8 @@ async function trfConsultar(){
     if(!r.ok){ body.innerHTML='<div class="empty" style="margin-top:30px">⚠️ '+_tEsc(r.error||'Error')+'</div>'; return; }
     _trf=(r.transferencias||[]).slice().sort(_tOrden);
     _trfSel=null;
+    const fc=document.getElementById('trf-f-cta');
+    if(fc){ const v=fc.value; fc.innerHTML='<option value="">Todas las cuentas</option>'+(TABLAS['CTAB']||[]).map(x=>`<option value="${_tEsc(x.CODIGO)}">${_tEsc(x.CODIGO)} — ${_tEsc(x.DETALLE)}</option>`).join(''); fc.value=v; }
     _tPintar();
     _tPosicionar(_tMes(), true);
   }catch(e){ body.innerHTML='<div class="empty" style="margin-top:30px">⚠️ '+_tEsc(e.message||'Error')+'</div>'; }
@@ -75,6 +79,7 @@ function _tFila(g,i){
     <input class="finp t-in t-imp" data-f="importe" inputmode="decimal" value="${g.importe?_tFmt(g.importe):''}" placeholder="0,00"${dis}>
     <input class="finp t-in" data-f="depositante" value="${_tEsc(g.depositante||'')}" maxlength="120"${dis}>
     <input class="finp t-in" data-f="cliente" list="trf-cli-list" value="${_tEsc(_tCliTxt(g.cliente))}" placeholder="sin definir"${dis}>
+    <span class="t-usr" title="${_tEsc(g.modificado?'Modificado '+String(g.modificado).substring(0,16).replace('T',' '):(g.creado?'Cargado '+String(g.creado).substring(0,16).replace('T',' '):''))}">${_tEsc(g.usuario||'')}</span>
     <span class="t-st">${_tEstHtml(g)}</span>
   </div>`;
 }
@@ -89,7 +94,10 @@ function _tEstado(i){ const el=document.querySelector(`#trf-body .t-row[data-i="
 function _tPintar(){
   const body=document.getElementById('trf-body'); if(!body) return;
   if(!_trf.length){ body.innerHTML='<div class="empty" style="margin-top:30px">Sin transferencias · tocá ＋ Alta para cargar una</div>'; return; }
-  body.innerHTML=_trf.map(_tFila).join('');
+  _tFiltrosCant();
+  const vis=_trf.map((g,i)=>[g,i]).filter(([g])=>_tPasaFiltro(g));
+  if(!vis.length){ body.innerHTML='<div class="empty" style="margin-top:30px">Ninguna transferencia con esos filtros</div>'; return; }
+  body.innerHTML=vis.map(([g,i])=>_tFila(g,i)).join('');
   body.querySelectorAll('.t-row').forEach(row=>{
     row.addEventListener('focusout', e=>{ if(e.relatedTarget && row.contains(e.relatedTarget)) return; _tSalirFila(+row.dataset.i); });
     row.querySelectorAll('.t-in').forEach(inp=>{
@@ -131,6 +139,7 @@ async function _tSalirFila(i){
     Object.assign(g, res.transferencia||{}); delete g._cliTxt;
     g._dirty=false; g._st='ok';
     if(g._nuevo){ delete g._nuevo; document.querySelector(`#trf-body .t-row[data-i="${i}"]`)?.classList.remove('t-nuevo'); }
+    const u=document.querySelector(`#trf-body .t-row[data-i="${i}"] .t-usr`); if(u) u.textContent=g.usuario||'';
     _tEstado(i);
   }catch(e){ g._st='error'; g._err=e.message; _tEstado(i); }
 }
@@ -183,7 +192,7 @@ function _tStyle(){
   if(document.getElementById('trf-style')) return;
   const st=document.createElement('style'); st.id='trf-style';
   st.textContent=`
-    #trf-head,.t-row{display:grid;grid-template-columns:135px 230px minmax(140px,1.2fr) minmax(110px,1fr) 125px minmax(130px,1fr) minmax(200px,1.3fr) 24px;gap:6px;align-items:center;padding:3px 10px}
+    #trf-head,.t-row{display:grid;grid-template-columns:135px 220px minmax(130px,1.2fr) minmax(100px,1fr) 120px minmax(120px,1fr) minmax(190px,1.3fr) 80px 24px;gap:6px;align-items:center;padding:3px 10px}
     #trf-head{background:var(--s2);font-size:11px;color:var(--t2);border-bottom:1px solid var(--b1);position:sticky;top:0;z-index:3;padding:7px 10px}
     #trf-head .r,.t-imp{text-align:right}
     .t-row{border-bottom:1px solid var(--b1)}
@@ -191,6 +200,8 @@ function _tStyle(){
     .t-in{height:28px;font-size:13px;padding:2px 6px;width:100%;min-width:0}
     .t-imp{font-family:var(--mono)}
     .t-st{text-align:center;font-size:14px}
+    .t-usr{font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .t-row.t-nuevo .t-usr{color:#c7d2fe}
     .t-row.t-nuevo{background:#1e3a8a;box-shadow:inset 4px 0 0 #fbbf24}
     .t-row.t-nuevo .t-in{background:#1e3a8a;color:#fff;font-weight:700;border-color:#4f6fc4}
     .t-row.t-nuevo .t-in::placeholder{color:#c7d2fe;font-weight:400}
@@ -201,3 +212,25 @@ function _tStyle(){
   `;
   document.head.appendChild(st);
 }
+
+// ── Filtros generales (Ricardo, Nov 2026). Cliente acepta "(SIN DEFINIR)". ──
+function _tFVal(id){ return (document.getElementById(id)?.value||'').trim(); }
+function _tPasaFiltro(g){
+  if(g._nuevo) return true;                         // el renglón que se está cargando siempre se ve
+  const d=_tFVal('trf-f-desde'), h=_tFVal('trf-f-hasta'), c=_tFVal('trf-f-cta'), cl=_tFVal('trf-f-cli'), t=_tFVal('trf-f-txt').toUpperCase();
+  const f=String(g.fecha||'').substring(0,10);
+  if(d && f<d) return false;
+  if(h && f>h) return false;
+  if(c && g.cuenta!==c) return false;
+  if(cl){
+    if(cl.toUpperCase()==='(SIN DEFINIR)'){ if(String(g.cliente||'').trim()) return false; }
+    else { const cod=_tCliCod(cl); if(cod===null){ const q=cl.toUpperCase(); if(!_tCliTxt(g.cliente).toUpperCase().includes(q)) return false; } else if(String(g.cliente||'').trim()!==cod) return false; }
+  }
+  if(t && ![g.depositante,g.origen,g.descripcion].some(x=>String(x||'').toUpperCase().includes(t))) return false;
+  return true;
+}
+function _tFiltrosCant(){ if(typeof tbFiltrosCant==='function') tbFiltrosCant('trf-fbtn',['trf-f-desde','trf-f-hasta','trf-f-cta','trf-f-cli','trf-f-txt']); }
+function trfFiltrar(){ _trfSel=null; _tPintar(); }
+let _tDem=null;
+function trfFiltrarDem(){ clearTimeout(_tDem); _tDem=setTimeout(trfFiltrar,300); }
+function trfLimpiarFiltros(){ ['trf-f-desde','trf-f-hasta','trf-f-cta','trf-f-cli','trf-f-txt'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; }); trfFiltrar(); _tPosicionar(_tMes(),true); }

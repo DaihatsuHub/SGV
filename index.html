@@ -549,12 +549,27 @@
   <div class="toolbar">
     <button class="btn pri" id="btn-trf-alta" onclick="trfAlta()">＋ Alta</button>
     <button class="btn dng" id="btn-trf-baja" onclick="trfBorrar()">✕ Borrar</button>
+    <span class="tb-sep"></span>
+    <div class="tb-dd">
+      <button class="btn" id="trf-fbtn" onclick="tbDd(this)">🔽 Filtros ▾</button>
+      <div class="tb-dd-menu" style="padding:8px;width:300px" onchange="trfFiltrar()" oninput="trfFiltrarDem()">
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <div style="flex:1"><div style="font-size:11px;color:var(--t2)">Desde</div><input type="date" class="finp" id="trf-f-desde" style="width:100%"></div>
+          <div style="flex:1"><div style="font-size:11px;color:var(--t2)">Hasta</div><input type="date" class="finp" id="trf-f-hasta" style="width:100%"></div>
+        </div>
+        <select class="finp" id="trf-f-cta" style="width:100%;margin-bottom:6px"><option value="">Todas las cuentas</option></select>
+        <input class="finp" id="trf-f-cli" list="trf-f-cli-list" placeholder="Todos los clientes" style="width:100%;margin-bottom:6px" onfocus="this.select()" title="Cliente: por código o razón social, o (SIN DEFINIR)">
+        <datalist id="trf-f-cli-list"></datalist>
+        <input class="finp" id="trf-f-txt" placeholder="Depositante, origen o descripción…" style="width:100%;margin-bottom:6px">
+        <a href="#" style="font-size:12px;color:var(--acc)" onclick="event.preventDefault();trfLimpiarFiltros()">Limpiar filtros</a>
+      </div>
+    </div>
     <div class="spacer"></div>
     <input type="date" class="fsel" id="trf-fecha" onchange="trfIrFecha(this.value)" title="Ir a esa fecha" style="cursor:pointer">
   </div>
   <datalist id="trf-cli-list"></datalist>
   <div class="tbl-wrap">
-    <div id="trf-head"><span>Fecha</span><span>Cuenta bancaria</span><span>Descripción</span><span>Origen</span><span class="r">Importe</span><span>Depositante</span><span>Cliente</span><span></span></div>
+    <div id="trf-head"><span>Fecha</span><span>Cuenta bancaria</span><span>Descripción</span><span>Origen</span><span class="r">Importe</span><span>Depositante</span><span>Cliente</span><span>Usuario</span><span></span></div>
     <div id="trf-body" class="tbl-body"></div>
   </div>
 </div>
