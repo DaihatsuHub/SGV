@@ -383,19 +383,13 @@
 <!-- ══════ CENTROS DE COSTOS ══════ -->
 <div class="page" id="page-gast">
   <div class="toolbar">
-    <label style="font-size:12px;color:var(--t2)">Desde</label>
-    <input type="date" class="finp" id="gast-desde" style="width:140px">
-    <label style="font-size:12px;color:var(--t2)">Hasta</label>
-    <input type="date" class="finp" id="gast-hasta" style="width:140px">
-    <select class="fsel" id="gast-f-ccos" style="width:180px"><option value="">Todos los centros</option></select>
-    <select class="fsel" id="gast-f-conc" style="width:180px"><option value="">Todos los conceptos</option></select>
-    <button class="btn pri" onclick="gastConsultar()">🔍 Consultar</button>
+    <button class="btn pri" id="btn-gast-alta" onclick="gastAlta()">＋ Alta</button>
     <button class="btn" onclick="gastDuplicar()" title="Copia el gasto seleccionado con la fecha de hoy">⧉ Duplicar</button>
     <button class="btn dng" onclick="gastBorrar()">✕ Borrar</button>
-    <button class="btn" onclick="gastPrint()">🖨 Imprimir</button>
-    <button class="btn" onclick="gastExcel()">⬇ Excel</button>
+    <span class="tb-sep"></span>
+    <button class="btn" onclick="gastResumen()">📊 Resumen</button>
     <div class="spacer"></div>
-    <span style="font-size:13px;color:var(--t2)"><b id="gast-count">0</b> gasto(s) · <b id="gast-total" style="font-family:var(--mono);color:var(--txt)">$ 0,00</b></span>
+    <span style="font-size:13px;color:var(--t2)">Desde el <b id="gast-desde-txt">—</b> · <b id="gast-count">0</b> gasto(s) · <b id="gast-total" style="font-family:var(--mono);color:var(--txt)">$ 0,00</b></span>
   </div>
   <div class="tbl-wrap">
     <div id="gast-head"><span>Fecha</span><span>Centro de costos</span><span>Concepto</span><span class="r">Importe</span><span>Detalle</span><span></span></div>
