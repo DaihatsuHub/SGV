@@ -1385,6 +1385,14 @@
     <button class="btn dng" id="btn-oc-baja" onclick="ocBaja()">🗑️ Eliminar</button>
     <button class="btn" id="btn-oc-pagar" onclick="ocPagarOpen()">📅 Órdenes a Pagar</button>
     <div class="spacer"></div>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" style="width:130px" onfocus="this.select()" onclick="this.select()" id="oc-qprov" placeholder="Cód. proveedor" oninput="ocSelIdx=null;renderOC()">
+      <button class="srch-clr" onclick="clrSrch('oc-qprov',function(){ocSelIdx=null;renderOC()})" title="Limpiar">✕</button>
+    </div>
+    <div class="srch-wrap"><span class="srch-ico">⌕</span>
+      <input class="srch" style="width:130px" onfocus="this.select()" onclick="this.select()" id="oc-qint" placeholder="Cód. interno" oninput="ocSelIdx=null;renderOC()">
+      <button class="srch-clr" onclick="clrSrch('oc-qint',function(){ocSelIdx=null;renderOC()})" title="Limpiar">✕</button>
+    </div>
     <input type="date" class="fsel" id="oc-fecha" onchange="ocBuscarFecha(this.value)" title="Ir a la orden de esa fecha" style="cursor:pointer">
     <div class="srch-wrap"><span class="srch-ico">⌕</span>
       <input class="srch" onfocus="this.select()" onclick="this.select()" id="oc-q" placeholder="Buscar pedido, proveedor u orden..." oninput="renderOC()">

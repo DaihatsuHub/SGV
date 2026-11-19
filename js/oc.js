@@ -88,6 +88,19 @@ function getOCRows(){
     (o.proveedor||'').toLowerCase().includes(q) ||
     (o.orden||'').toLowerCase().includes(q)
   );
+  // Filtros por renglón (Ricardo, Nov 2026): sólo las OC que tienen algún
+  // renglón con ese código de proveedor / código interno (o leyenda)
+  const qp=(document.getElementById('oc-qprov')?.value||'').toUpperCase().trim();
+  const qi=(document.getElementById('oc-qint')?.value||'').toUpperCase().trim();
+  if(qp || qi){
+    const ok=new Set();
+    (OCITEMS||[]).forEach(it=>{
+      if(qp && !String(it.codprov||'').toUpperCase().includes(qp)) return;
+      if(qi && !(String(it.codint||'').toUpperCase().includes(qi) || String(it.leyenda||'').toUpperCase().includes(qi))) return;
+      ok.add(Number(it.pedido));
+    });
+    list=list.filter(o=>ok.has(Number(o.pedido)));
+  }
   // orden inicial por PEDIDO asc (ya viene ordenado de sbLoadOC)
   return list;
 }
