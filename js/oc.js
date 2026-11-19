@@ -69,7 +69,7 @@ function ocProxNumero(){ const m=(OCS||[]).reduce((x,o)=>Math.max(x,Number(o.ped
 function ocArt(cod){ const c=String(cod||'').trim().toUpperCase(); return c ? (ARTS||[]).find(a=>(a.ART_COD||'').trim().toUpperCase()===c) : null; }
 function ocItemDesc(it){
   const a=ocArt(it.codint);
-  if(a) return `<span class="mono" style="color:var(--txt)">${esc((a.ART_COD||'').trim())}</span> <span style="color:var(--t2)">${esc(a.ART_DES||'')}</span>`;
+  if(a) return `<span class="mono" style="color:var(--txt);font-weight:700">${esc((a.ART_COD||'').trim())}</span> <span style="color:var(--t2)">${esc(a.ART_DES||'')}</span>`;
   const ley=(it.leyenda||it.codint||'').trim();
   return ley ? `<span style="color:#b45309;font-style:italic" title="No es un artículo del maestro: leyenda">✎ ${esc(ley)}</span>` : '';
 }
@@ -195,12 +195,19 @@ function renderOCDetail(o){
     payc('Derecho', 'der', o.derecho,  o.fecha_der, o.pago_der, o.saldo_der);
 
   const its=ocItemsDe(o.pedido);
+  const puedeOcCodint = typeof puedeh==='function' ? puedeh('oc','modif') : false;   // editar el código en la grilla
   const tb=document.getElementById('ocd-items');
   tb.innerHTML = its.length ? its.map(it=>{
       const ped=Number(it.cantped)||0, ent=Number(it.cantent)||0, sld=ped-ent;
       return `<div class="oc-itrow">`
         + `<span class="mono">${esc(it.codprov||'')}</span>`
-        + `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">${ocItemDesc(it)}</span>`
+        + (puedeOcCodint
+            ? `<span style="display:flex;align-items:center;gap:6px;min-width:0">`
+              + `<input class="finp mono" list="oce-art-list" value="${esc((ocArt(it.codint)?.ART_COD||it.codint||it.leyenda||'').trim())}" title="Código interno: cambialo y Enter" `
+              + `style="width:120px;padding:2px 6px;font-size:12px;font-weight:700" onfocus="ocFillArtList();this.select()" `
+              + `onkeydown="if(event.key==='Enter')this.blur()" onchange="ocCodintGrilla(${Number(it.id)},this.value)">`
+              + `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t2);font-size:12px">${ocArt(it.codint)?esc(ocArt(it.codint).ART_DES||''):(it.leyenda?'<i style="color:#b45309">leyenda</i>':'')}</span></span>`
+            : `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">${ocItemDesc(it)}</span>`)
         + `<span style="text-align:right">${ocInt(ped)}</span>`
         + `<span style="text-align:right;color:${sld>0?'var(--txt)':'var(--t3)'}">${ocInt(sld)}</span>`
         + `<span style="text-align:right" class="mono">${ocFmt3(it.costo)}</span>`
@@ -560,4 +567,21 @@ function ocInstallNav(){
     selOC(next);
     document.getElementById('oc-body')?.querySelector(`[data-idx="${next}"]`)?.scrollIntoView({block:'nearest'});
   });
+}
+
+// Cambiar el CÓDIGO INTERNO de un renglón directo en la grilla del detalle
+// (sólo quien puede modificar OC). Si el código no existe en el maestro queda
+// como leyenda, igual que en la edición completa (Ricardo, Nov 2026).
+async function ocCodintGrilla(id, val){
+  const it=(OCITEMS||[]).find(x=>Number(x.id)===Number(id)); if(!it) return;
+  const v=String(val||'').trim();
+  const a=ocArt(v);
+  try{
+    const r=await apiPost('/oc/item-codint',{ id, codint: a ? (a.ART_COD||'').trim() : '', leyenda: a ? '' : v });
+    if(!r || !r.ok) throw new Error((r&&r.error)||'No se pudo guardar');
+    it.codint = a ? (a.ART_COD||'').trim() : null;
+    it.leyenda = a ? null : (v||null);
+    toast(a ? `Código ${it.codint} guardado` : (v ? 'No está en el maestro: quedó como leyenda' : 'Código borrado'), a||!v ? 'scs' : 'err');
+  }catch(e){ toast('Error: '+e.message,'err'); }
+  const list=getOCRows(); if(ocSelIdx!==null && list[ocSelIdx]) renderOCDetail(list[ocSelIdx]);
 }
